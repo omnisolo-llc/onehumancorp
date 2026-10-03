@@ -43,7 +43,7 @@ export default function BookingWidgetBuilder() {
       {/* Top Nav */}
       <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-[30px] saturate-[210%] border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-            <Link href="/dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
+            <Link href="/dashboard" aria-label="Back to Dashboard" className="text-gray-500 hover:text-gray-900 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
             </Link>
             <h1 className="text-xl font-bold font-outfit text-gray-900 flex items-center gap-2">

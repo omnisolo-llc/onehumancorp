@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/vitest";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import Integrations from "./page";
 
@@ -26,8 +27,8 @@ describe("Integrations", () => {
 
   it("does not call an unimplemented OAuth contract or mark it connected", async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+      if (url === '/api/v1/integrations') return Promise.resolve(Response.json({ success: true, integrations: [] }));
+      return Promise.resolve(Response.json({}, { status: 503 }));
     });
 
     render(<Integrations />);
@@ -41,15 +42,15 @@ describe("Integrations", () => {
 
   it('requires Twilio credentials and explicit backend connection confirmation', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'pending' }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+      if (url === '/api/v1/integrations') return Promise.resolve(Response.json({ success: true, integrations: [] }));
+      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve(Response.json({ success: true, status: 'pending' }));
+      return Promise.resolve(Response.json({}, { status: 503 }));
     });
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
 
-    const connect = screen.getByRole('button', { name: 'Connect Twilio' });
+    const connect = screen.getByRole('button', { name: 'Save & Connect' });
     expect(connect).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
     fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
@@ -65,16 +66,16 @@ describe("Integrations", () => {
 
   it('marks Twilio connected only when the backend confirms it is usable', async () => {
     vi.mocked(global.fetch, { partial: true }).mockImplementation((url: string) => {
-      if (url === '/api/v1/integrations') return Promise.resolve({ ok: true, json: async () => ({ success: true, integrations: [] }) });
-      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve({ ok: true, json: async () => ({ success: true, status: 'connected', usable: true }) });
-      return Promise.resolve({ ok: false, json: async () => ({}) });
+      if (url === '/api/v1/integrations') return Promise.resolve(Response.json({ success: true, integrations: [] }));
+      if (url === '/api/v1/integrations/twilio/connect') return Promise.resolve(Response.json({ success: true, status: 'connected', usable: true }));
+      return Promise.resolve(Response.json({}, { status: 503 }));
     });
     render(<Integrations />);
     await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/integrations'));
     fireEvent.click(screen.getAllByRole('button', { name: 'Connect' })[6]);
     fireEvent.change(screen.getByLabelText('Twilio Account SID'), { target: { value: 'AC123' } });
     fireEvent.change(screen.getByLabelText('Twilio Auth Token'), { target: { value: 'secret' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Connect Twilio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save & Connect' }));
 
     expect(await screen.findByText('Twilio Conversations connected.')).toBeDefined();
     expect(push).toHaveBeenCalledWith('/inbox');

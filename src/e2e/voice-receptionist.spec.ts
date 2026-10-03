@@ -1,47 +1,32 @@
 import { test, expect } from './fixtures';
 
-test.describe('Voice Receptionist', () => {
-  test('Admin can enable and configure the AI Voice Receptionist', async ({ page }) => {
-    // Navigate to settings page
+test.describe('Voice Receptionist deployment availability', () => {
+  test('hosted admin sees unavailable voice settings and cannot start provisioning', async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
+    const voiceWrites: string[] = [];
+    page.on('request', request => {
+      const path = new URL(request.url()).pathname;
+      if (request.method() === 'POST' && (path === '/api/v1/settings/voice' || path === '/api/v1/settings/voice/provision')) voiceWrites.push(path);
+    });
+
+    // The hosted fixture has no tenant-bound provisioning authority. Assert its
+    // real read contract before interacting; never attempt a phone purchase.
+    const response = page.waitForResponse(result => new URL(result.url()).pathname === '/api/v1/settings/voice' && result.request().method() === 'GET');
     await page.goto('/settings');
-    await expect(page).toHaveTitle(/Settings/);
+    const settingsResponse = await response;
+    expect(settingsResponse.status()).toBe(403);
+    expect(await settingsResponse.json()).toMatchObject({ success: false, error: 'hosted_global_provisioning_unavailable', provisioning_available: false });
+    await expect(page).toHaveTitle(/OmniSolo OneHumanCorp/);
+    await expect(page.getByText('Autonomous Voice Receptionist', { exact: true })).toBeVisible();
+    await expect(page.getByText('Voice settings are unavailable in this deployment. No provider action can be started.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Enable AI Voice Receptionist', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Get Number', exact: true })).toHaveCount(0);
+    await expect(page.getByRole('textbox', { name: 'Phone number', exact: true })).toHaveCount(0);
+    expect(voiceWrites).toEqual([]);
 
-    // Assert panel is visible
-    const panelTitle = page.locator('text=Autonomous Voice Receptionist');
-    await expect(panelTitle).toBeVisible();
-
-    // Enable the voice receptionist
-    const enableCheckbox = page.locator('label:has-text("Enable AI Voice Receptionist") >> input[type="checkbox"]');
-
-    // Check if it's already checked (to make test idempotent)
-    const isChecked = await enableCheckbox.isChecked();
-    if (!isChecked) {
-      await enableCheckbox.check();
-    }
-
-    // Wait for the dependent fields to appear
-    const personaSelect = page.locator('select', { hasText: 'Friendly & Casual' });
-    await expect(personaSelect).toBeVisible();
-
-    // Select a persona
-    await personaSelect.selectOption({ label: 'Professional & Crisp' });
-
-    // Click "Get Number" if number is not assigned yet
-    const getNumberBtn = page.locator('button:has-text("Get Number")');
-    if (await getNumberBtn.isVisible()) {
-      await getNumberBtn.click();
-    }
-
-    // Verify a number is assigned
-    const numberInput = page.locator('text=Assigned Phone Number >> xpath=..//input');
-    await expect(numberInput).not.toHaveValue('Not assigned');
-    const assignedNumber = await numberInput.inputValue();
-    expect(assignedNumber).toMatch(/^\+1555123\d{4}$/);
-
-    // Refresh page and verify settings persisted
     await page.reload();
-    await expect(enableCheckbox).toBeChecked();
-    await expect(personaSelect).toHaveValue('Professional');
-    await expect(numberInput).toHaveValue(assignedNumber);
+    await expect(page.getByText('Voice settings are unavailable in this deployment. No provider action can be started.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Enable AI Voice Receptionist', exact: true })).toBeDisabled();
+    expect(voiceWrites).toEqual([]);
   });
 });

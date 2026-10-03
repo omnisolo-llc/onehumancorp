@@ -15,6 +15,16 @@ describe('FlashSaleGeneratorPage', () => {
     localStorage.clear();
   });
 
+  it('marks unconfigured editor-preview actions unavailable with a visible reason', () => {
+    render(<FlashSaleGeneratorPage />);
+    for(const name of ['Shop Now']) {
+      const button=screen.getByRole('button',{name});
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription('No checkout destination is configured in this preview.');
+    }
+    expect(screen.getByText('No checkout destination is configured in this preview.')).toBeVisible();
+  });
+
   it('renders the Flash Sale Generator page correctly', () => {
     render(<FlashSaleGeneratorPage />);
     expect(screen.getByText('Flash Sale Generator ⚡')).toBeDefined();
@@ -55,7 +65,7 @@ describe('FlashSaleGeneratorPage', () => {
     fireEvent.change(titleInput, { target: { value: 'Super Sale' } });
 
     // Change Percent
-    const percentInput = screen.getByPlaceholderText('20');
+    const percentInput = screen.getByPlaceholderText('e.g. 20');
     fireEvent.change(percentInput, { target: { value: '50' } });
 
     // Change Code

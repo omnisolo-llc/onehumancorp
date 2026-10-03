@@ -32,6 +32,13 @@ pub fn parse_generation(body: &[u8], expected_model: &str) -> Result<ObservedGen
     if !value.done || value.response.trim().is_empty() || value.response.len() > 8 * 1024 * 1024 {
         return Err("Local model did not return a completed nonempty response".into());
     }
+    if value
+        .done_reason
+        .as_deref()
+        .is_some_and(|reason| reason != "stop")
+    {
+        return Err("Local model stopped before completing the requested response".into());
+    }
     if value.model != expected_model && value.model != format!("{expected_model}:latest") {
         return Err("Local model response does not match the requested model".into());
     }
@@ -90,13 +97,18 @@ pub async fn generate(
         .map_err(|_| "Cannot configure local model transport")?;
     // One request only: an unknown response may already have consumed resources.
     // A caller retry must be an explicit new attempt, not invisible extra work.
-    let mut response = client
+    let response_result = client
         .post(url)
         .json(&serde_json::json!({"model":model,"prompt":prompt,
         "stream":false,"options":{"num_predict":maximum_output}}))
         .send()
-        .await
-        .map_err(|_| "Local model outcome is unknown; no automatic retry was made")?;
+        .await;
+    let mut response = match response_result {
+        Ok(res) => res,
+        Err(_) => {
+            return Err("Local model outcome is unknown; no automatic retry was made".into());
+        }
+    };
     if !response.status().is_success() {
         return Err(format!(
             "Local model returned HTTP {}",
@@ -158,6 +170,7 @@ mod tests {
             br#"{"model":"other","response":"hello","done":true}"#.as_slice(),
             br#"{"model":"model","response":"hello","done":false}"#,
             br#"{"model":"model","response":"","done":true}"#,
+            br#"{"model":"model","response":"truncated","done":true,"done_reason":"length"}"#,
             b"not json",
         ] {
             assert!(parse_generation(body, "model").is_err());
@@ -185,5 +198,30 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+    #[tokio::test]
+    async fn loopback_connection_failure_cannot_invent_output_or_token_usage() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let endpoint = format!("http://{}/api/generate", listener.local_addr().unwrap());
+        drop(listener);
+        assert!(
+            generate(&endpoint, "model", "Website redesign for local bakery", 125)
+                .await
+                .is_err()
+        );
+    }
+    #[tokio::test]
+    async fn loopback_http_error_cannot_invent_output_or_token_usage() {
+        use axum::{Router, http::StatusCode, routing::post};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/api/generate", listener.local_addr().unwrap());
+        let app = Router::new().route(
+            "/api/generate",
+            post(|| async { StatusCode::INTERNAL_SERVER_ERROR }),
+        );
+        let task = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+        let result = generate(&url, "model", "Website redesign for local bakery", 125).await;
+        task.abort();
+        assert!(result.is_err());
     }
 }

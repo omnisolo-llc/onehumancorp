@@ -1,146 +1,101 @@
 'use client';
-import { errorMessage } from '@/lib/errors';
 
-import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { assertBuilderScope } from '../builder/ownedDraft';
+import { fetchForOwnedDefinition } from '../onboarding/draftSession';
+import { readCatalogue, type Definition, type Installation } from './definitions';
+import { useDefinitionSession } from './useDefinitionSession';
+import { OperationRecovery } from './OperationRecovery';
 
-type Agent = {
- id: string;
- name: string;
- description: string;
- author: string;
- version: string;
- endpoint: string;
-};
-
+function mergeRecords<T extends { id: string }>(previous: T[], incoming: T[], key: (item: T) => string = item => item.id): T[] {
+  const rows = new Map(previous.map(item => [key(item), item]));
+  for (const item of incoming) {
+    const old = rows.get(key(item));
+    if (old && JSON.stringify(old) !== JSON.stringify(item)) throw new Error('The catalogue returned conflicting immutable records. Reload before continuing.');
+    rows.set(key(item), item);
+  }
+  return [...rows.values()];
+}
 export default function AgentMarketplacePage() {
- const [agents, setAgents] = useState<Agent[]>([]);
- const [query, setQuery] = useState('');
- const [loading, setLoading] = useState(false);
- const [error, setError] = useState<string | null>(null);
- const [installedAgents, setInstalledAgents] = useState<string[]>([]);
- const [toastMessage, setToastMessage] = useState<string | null>(null);
-
- const fetchAgents = async (searchQuery: string) => {
-   setLoading(true);
-   setError(null);
-   try {
-     const res = await fetch(`/api/v1/agents/marketplace?q=${encodeURIComponent(searchQuery)}`);
-     if (!res.ok) {
-       throw new Error('Failed to fetch agents');
-     }
-     const data: Agent[] = await res.json();
-     setAgents(data);
-   } catch (err: unknown) {
-     setError(errorMessage(err, 'An error occurred while fetching agents'));
-   } finally {
-     setLoading(false);
-   }
- };
-
- useEffect(() => {
-   fetchAgents(query);
- }, [query]);
-
- return (
-   <div className="min-h-screen w-full min-w-0 max-w-full bg-[#f4f6f8] p-8 font-outfit flex flex-col items-center">
-     <div className="w-full min-w-0 max-w-6xl">
-       <header className="mb-8 flex w-full min-w-0 flex-wrap items-end justify-between gap-4">
-         <div className="min-w-0">
-           <h1 className="text-4xl font-bold text-[#18212f] mb-2">Agent Marketplace</h1>
-           <p className="text-xl text-gray-600">
-             Discover and install pre-built AI agents for your business. (AutoGPT Unique Harness Innovations)
-           </p>
-         </div>
-         <Link
-           href="/agent-marketplace/publish"
-           className="shrink-0 px-6 py-2.5 bg-white text-[#18212f] font-semibold border border-gray-200 rounded-[12px] shadow-sm hover:bg-gray-50 transition-colors"
-         >
-           Publish Agent
-         </Link>
-       </header>
-
-       <div className="mb-8 relative w-full">
-         <input
-           type="text"
-           placeholder="Search for agents..."
-           value={query}
-           onChange={(e) => setQuery(e.target.value)}
-           className="w-full px-4 py-4 pl-12 text-lg rounded-[16px] bg-white/80 shadow-sm focus:ring-2 focus:ring-[#007aff] focus:border-[#007aff] outline-none transition-shadow border border-white/40 backdrop-blur-[30px] saturate-[210%]"
-         />
-         <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
-           <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-         </div>
-       </div>
-
-       {error && (
-         <div className="p-6 mb-8 bg-red-50 text-red-800 border border-red-200 rounded-[16px] w-full text-center" role="alert">
-           <p className="font-semibold">{error}</p>
-           <p className="mt-1 text-sm text-red-700">The marketplace service is temporarily unavailable. Your installed agents are unaffected.</p>
-           <button
-             type="button"
-             onClick={() => fetchAgents(query)}
-             className="mt-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800"
-           >
-             Retry marketplace
-           </button>
-         </div>
-       )}
-
-       {loading ? (
-         <div className="flex justify-center items-center h-64 w-full">
-           <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#007aff]"></div>
-         </div>
-       ) : (
-         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
-           {agents.map((agent) => (
-             <div
-               key={agent.id}
-               className="p-6 rounded-[16px] flex flex-col bg-white/65 border border-white/40 shadow-sm hover:shadow-md transition-all backdrop-blur-[30px] saturate-[210%]"
-             >
-               <div className="mb-4 flex-grow">
-                 <h3 className="text-2xl font-bold text-[#18212f] mb-1">{agent.name}</h3>
-                 <p className="text-xs text-gray-500 mb-4 font-semibold uppercase tracking-wider">
-                   By {agent.author} • v{agent.version}
-                 </p>
-                 <p className="text-gray-600 leading-relaxed text-sm">{agent.description}</p>
-               </div>
-               <div className="mt-auto">
-                 <button
-                   onClick={() => {
-                     const isInstalled = installedAgents.includes(agent.id);
-                     if (!isInstalled) {
-                       setToastMessage(`Successfully installed ${agent.name}!`);
-                       setTimeout(() => setToastMessage(null), 3000);
-                     }
-                     setInstalledAgents((current) => current.includes(agent.id) ? current : [...current, agent.id]);
-                   }}
-                   aria-pressed={installedAgents.includes(agent.id)}
-                   className={`w-full py-2.5 px-4 font-semibold rounded-[10px] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 ${installedAgents.includes(agent.id) ? 'bg-[#34c759]/10 text-[#34c759] focus:ring-[#34c759]' : 'bg-[#007aff] hover:bg-[#005bb5] text-white focus:ring-[#007aff] shadow-sm'}`}
-                 >
-                   {installedAgents.includes(agent.id) ? 'Installed' : 'Install Agent'}
-                 </button>
-               </div>
-             </div>
-           ))}
-           {!error && agents.length === 0 && (
-             <div className="col-span-full flex flex-col items-center justify-center py-20 px-4 rounded-[16px] border border-dashed border-gray-300 text-gray-500 bg-white/50 backdrop-blur-[10px]">
-               <svg className="w-12 h-12 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-               <p className="text-lg font-medium text-gray-900 mb-1">No agents found</p>
-               <p className="text-sm text-gray-500">We couldn't find any agents matching "{query}"</p>
-             </div>
-           )}
-         </div>
-       )}
-
-       {toastMessage && (
-         <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-[#18212f]/90 backdrop-blur-[20px] shadow-lg rounded-[100px] px-5 py-3 text-white animate-in fade-in slide-in-from-bottom-4 flex items-center gap-3">
-           <div className="w-5 h-5 rounded-full bg-[#34c759] flex items-center justify-center text-white text-xs font-bold">✓</div>
-           <span className="font-medium text-sm tracking-wide">{toastMessage}</span>
-         </div>
-       )}
-
-     </div>
-   </div>
- );
+  const [query, setQuery] = useState(''); const [retry, setRetry] = useState(0);
+  const [definitions, setDefinitions] = useState<Definition[]>([]);
+  const [installations, setInstallations] = useState<Installation[]>([]);
+  const [cursors, setCursors] = useState<{ public: string | null; installed: string | null }>({ public: null, installed: null });
+  const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const [review, setReview] = useState<Definition | null>(null);
+  const records = useRef<{ definitions: Definition[]; installations: Installation[] }>({ definitions: [], installations: [] });
+  const loadEpoch = useRef(0); const controller = useRef<AbortController | null>(null); const moreBusy = useRef(false);
+  const session = useDefinitionSession({ retired: () => {
+    ++loadEpoch.current; controller.current?.abort(); moreBusy.current = false;
+    records.current = { definitions: [], installations: [] }; setDefinitions([]); setInstallations([]); setCursors({ public: null, installed: null }); setReview(null); setQuery(''); setLoading(true); setError('');
+  } });
+  const load = useCallback(async (append: boolean, publicCursor?: string | null, installedCursor?: string | null) => {
+    const scope = session.scope.current; if (!scope) return;
+    if (append && moreBusy.current) return;
+    const current = ++loadEpoch.current; controller.current?.abort(); const request = new AbortController(); controller.current = request;
+    moreBusy.current = true; setLoading(true); setError('');
+    if (!append) { records.current = { definitions: [], installations: [] }; setDefinitions([]); setInstallations([]); setCursors({ public: null, installed: null }); setReview(null); }
+    try {
+      if ([...query].length > 256) throw new Error('Search must be at most 256 characters.');
+      const params = new URLSearchParams({ q: query });
+      if (publicCursor) params.set('cursor', publicCursor); if (installedCursor) params.set('installation_cursor', installedCursor);
+      const response = await fetchForOwnedDefinition('/api/v1/agents/definitions?' + params, { method: 'GET', signal: request.signal }, scope.owner);
+      if (response.status !== 200) throw new Error('Failed to fetch agents. The catalogue is unavailable.');
+      const page = await readCatalogue(await response.json()); assertBuilderScope(scope);
+      if (current !== loadEpoch.current || session.scope.current !== scope) return;
+      // Each cursor advances only its collection. A repeated first page from the
+      // other collection must not reset that collection's completed cursor.
+      const next = { definitions: append ? mergeRecords(records.current.definitions, page.definitions, item => item.id + ':' + item.version) : page.definitions, installations: append ? mergeRecords(records.current.installations, page.installations) : page.installations };
+      records.current = next; setDefinitions(next.definitions); setInstallations(next.installations);
+      setCursors(previous => ({ public: !append || publicCursor ? page.next_cursor : previous.public, installed: !append || installedCursor ? page.next_installation_cursor : previous.installed }));
+    } catch (cause) {
+      if (current === loadEpoch.current && session.scope.current === scope) setError(cause instanceof Error ? cause.message : 'Failed to fetch agents.');
+    } finally {
+      if (current === loadEpoch.current) { moreBusy.current = false; setLoading(false); }
+    }
+  }, [query, session.scope]);
+  useEffect(() => {
+    void load(false);
+    return () => { ++loadEpoch.current; controller.current?.abort(); moreBusy.current = false; };
+  }, [load, retry, session.version]);
+  useEffect(() => {
+    if (session.saved?.state === 'confirmed' && session.saved.receipt?.installation) {
+      const installation = session.saved.receipt.installation;
+      try { const next = mergeRecords(records.current.installations, [installation]); records.current.installations = next; setInstallations(next); }
+      catch (cause) { setError(cause instanceof Error ? cause.message : 'The installation receipt conflicts with this view.'); }
+    }
+  }, [session.saved]);
+  async function install() {
+    if (!review || session.phase !== 'ready') return;
+    const result = await session.perform({ kind: 'install', request_id: crypto.randomUUID(), definition: review });
+    if (result?.status === 'installed_inactive') setReview(null);
+  }
+  const canInstall = session.phase === 'ready' && !loading && !error && !cursors.installed;
+  return <main className="min-h-screen bg-[#f4f6f8] p-8 font-outfit">
+    <div className="max-w-6xl mx-auto">
+      <header className="flex justify-between gap-4 mb-6"><div><h1 className="text-4xl font-bold">Agent Marketplace</h1><p>Review public definitions and save inactive copies for your account.</p></div><Link href="/agent-marketplace/publish">Publish New Agent</Link></header>
+      <p role="status" aria-label="Agent operation status">{session.message}</p>
+      {(session.saved?.state === 'pending' || session.phase === 'held') && <OperationRecovery saved={session.saved} available={!!session.scope.current} busy={session.phase === 'working'} recover={() => void session.perform()} replay={() => { if (session.saved?.state === 'pending') void session.perform(session.saved.operation, true); }} />}
+      {session.saved?.state === 'confirmed' && session.saved.receipt?.status === 'installed_inactive' && <p role="status">Agent installed successfully as an inactive definition. No work started. <Link href="/agents">Open Agents to review a separate Hire action</Link></p>}
+      <label htmlFor="agent-search" className="sr-only">Search agents</label><input id="agent-search" placeholder="Search for agents..." value={query} onChange={event => setQuery(event.target.value)} className="w-full border rounded-xl p-4 my-6" />
+      {error && <div role="alert"><p>{error}</p><button type="button" onClick={() => setRetry(value => value + 1)}>Retry marketplace</button></div>}
+      {loading && <p role="status">Loading agent definitions…</p>}
+      {!loading && !error && definitions.length === 0 && <p>No agents found.</p>}
+      <div className="grid md:grid-cols-2 gap-6">{definitions.map(item => {
+        const installed = installations.some(value => value.definition_id === item.id && value.version === item.version && value.digest === item.digest);
+        return <article key={item.id + ':' + item.version} aria-label={item.name} className="rounded-xl bg-white p-6 space-y-3">
+          <h2 className="text-xl font-semibold">{item.name}</h2><p>{item.description}</p><p>{item.source === 'first_party' ? 'First-party definition' : 'Community definition'} · Version {item.version}</p><p>Role: {item.role}</p>
+          <button type="button" aria-pressed={installed} disabled={installed || !canInstall} onClick={() => setReview(item)}>{installed ? 'Installed' : 'Install Agent'}</button>
+        </article>;
+      })}</div>
+      {cursors.public && <button type="button" disabled={loading} onClick={() => void load(true, cursors.public)}>Load More Definitions</button>}
+      {cursors.installed && <div><p>Load the remaining private installations before installing another definition.</p><button type="button" disabled={loading} onClick={() => void load(true, null, cursors.installed)}>Load More Installations</button></div>}
+      {review && <section aria-label="Review inactive installation" className="my-6 rounded-xl bg-white p-6 space-y-3">
+        <h2>Review {review.name}</h2><p>{review.description}</p><p>Role: {review.role}</p><pre className="whitespace-pre-wrap break-words">{review.system_prompt}</pre><p>Version {review.version} · Digest {review.digest}</p>
+        <p>This saves an inactive definition for your verified account and business. No work starts, and no tools or network permissions are granted. Hire remains a separate authorized action.</p>
+        <button type="button" disabled={!canInstall} onClick={() => void install()}>Confirm Inactive Installation</button><button type="button" disabled={session.phase === 'working'} onClick={() => setReview(null)}>Cancel</button>
+      </section>}
+    </div>
+  </main>;
 }

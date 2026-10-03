@@ -1658,6 +1658,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         is_subscribable BOOLEAN DEFAULT FALSE,
                         subscription_frequency TEXT,
                         subscription_discount_percent INTEGER DEFAULT 0,
+                        is_sold_out BOOLEAN DEFAULT FALSE,
                         _sync_status TEXT DEFAULT 'pending',
                         version INTEGER DEFAULT 1
                     );
@@ -2059,6 +2060,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         confidence_score REAL DEFAULT 0,
                         product_id TEXT,
                         payload TEXT DEFAULT '{}',
+                        description TEXT,
+                        department_type TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
@@ -2443,10 +2446,23 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT,
                         product_id TEXT,
-                        location TEXT NOT NULL, -- 'online' or 'in-store'
+                        variant_id TEXT,
+                        location TEXT NOT NULL DEFAULT 'in-store', -- 'online' or 'in-store'
+                        location_id TEXT,
                         quantity INT DEFAULT 0,
+                        available_count INT DEFAULT 0,
+                        committed_count INT DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inventory_transactions (
+                        id TEXT PRIMARY KEY,
+                        tenant_id TEXT,
+                        inventory_level_id TEXT,
+                        type TEXT NOT NULL,
+                        quantity_change INT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
                     CREATE TABLE IF NOT EXISTS inventory_predictions (
@@ -3253,6 +3269,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     );
 "#;
                 sqlx::query(schema).execute(sqlite_pool).await?;
+                sqlx::raw_sql(include_str!("persistence/agent_definitions_sqlite.sql"))
+                    .execute(sqlite_pool)
+                    .await?;
                 ensure_sqlite_column(
                     sqlite_pool,
                     "orders",
@@ -3581,6 +3600,8 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         payload JSON,
                         source VARCHAR(255),
                         agent_type VARCHAR(255),
+                        description TEXT,
+                        department_type VARCHAR(255),
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                         INDEX idx_agent_action_requests_tenant (tenant_id)

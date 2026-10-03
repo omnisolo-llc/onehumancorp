@@ -6,11 +6,12 @@ pub static TEAM_INVITES_CACHE: OnceLock<HybridCache<TeamInvitesResponse>> = Once
 pub static METRICS_CACHE: OnceLock<HybridCache<TeamInvitesMetricsResponse>> = OnceLock::new();
 pub static ONBOARDING_METRICS_CACHE: OnceLock<HybridCache<OnboardingMetricsResponse>> =
     OnceLock::new();
-pub static TIME_SAVINGS_CACHE: OnceLock<HybridCache<TimeSavingsResponse>> = OnceLock::new();
 use crate::hub::Hub;
 use axum::{
     Extension, Json, Router,
+    extract::Request,
     http::StatusCode,
+    middleware::Next,
     response::IntoResponse,
     routing::{get, post},
 };
@@ -182,13 +183,21 @@ async fn handle_waitlist(
 
 pub async fn handle_conversational_chat(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ChatReq>,
 ) -> impl IntoResponse {
     let lower = req.message.to_lowercase();
-    let tenant_id = auth_info.org_id.clone();
+    let tenant_id = auth_info
+        .map(|axum::extract::Extension(a)| a.org_id.clone())
+        .or_else(|| req.tenant_id.clone())
+        .or_else(|| {
+            headers
+                .get("x-tenant-id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "default".to_string());
 
     let mut response_text = String::new();
     let mut draft_action = None;
@@ -306,11 +315,21 @@ pub async fn handle_conversational_chat(
 
 pub async fn handle_conversational_execute(
     Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    headers: axum::http::HeaderMap,
     Json(req): Json<ExecuteReq>,
 ) -> impl IntoResponse {
+    let tenant_id = auth_info
+        .map(|axum::extract::Extension(a)| a.org_id.clone())
+        .or_else(|| req.tenant_id.clone())
+        .or_else(|| {
+            headers
+                .get("x-tenant-id")
+                .and_then(|h| h.to_str().ok())
+                .map(|s| s.to_string())
+        })
+        .unwrap_or_else(|| "default".to_string());
+
     let mut message = format!("Successfully executed action: {}", req.action_id);
 
     if req.action_id == "recover_abandoned_carts_action" {
@@ -319,7 +338,7 @@ pub async fn handle_conversational_execute(
             "type": "growth.campaign_sent",
             "segment": "abandoned_carts",
             "source": "conversational_manager",
-            "tenant_id": auth_info.org_id
+            "tenant_id": tenant_id
         }));
         state.hub.append_recent_event(msg).await;
         message =
@@ -328,7 +347,7 @@ pub async fn handle_conversational_execute(
     } else if req.action_id == "start_review_campaign_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.review_campaign_started",
-            "tenant_id": auth_info.org_id,
+            "tenant_id": tenant_id,
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
@@ -337,7 +356,7 @@ pub async fn handle_conversational_execute(
     } else if req.action_id == "generate_social_post_action" {
         let msg = state.hub.sanitize_hub_event(serde_json::json!({
             "type": "growth.social_post_published",
-            "tenant_id": auth_info.org_id,
+            "tenant_id": tenant_id,
             "source": "conversational_manager"
         }));
         state.hub.append_recent_event(msg).await;
@@ -418,6 +437,7 @@ where
             get(handle_interactive_poll_embed),
         )
         .route("/milestone", get(handle_get_milestone))
+        .route("/milestone/card", get(handle_get_milestone_card))
         .route("/milestones/check", get(handle_check_milestones))
         .route("/promoter/generate", post(handle_promoter_generate))
         .route(
@@ -483,15 +503,21 @@ where
             "/referrals/milestones/status",
             get(handle_get_referral_milestones),
         )
-        .route("/reputation/simulate-event", post(handle_simulate_event))
         .route("/reputation/stats", get(handle_reputation_stats))
+        // A share click has no durable grant identity, expiry or verification.
+        // Never convert the account's current plan into an unbounded Pro grant.
         .route(
-            "/reputation/simulate-referral-checkout",
-            post(handle_simulate_referral_checkout),
+            "/trial-extension/claim",
+            post(|| async { crate::api::production_readiness::unavailable("trial_entitlement") }),
         )
-        .route("/milestone/card", get(handle_get_milestone_card))
-        .route("/trial-extension/claim", post(handle_trial_extension_claim))
-        .route("/time-savings", get(handle_time_savings))
+        // Task-title counters and fixed minutes-per-action are not measured
+        // owner savings. Keep this gap explicit until provenance is persisted.
+        .route(
+            "/time-savings",
+            get(|| async {
+                crate::api::production_readiness::unavailable("measured_time_savings")
+            }),
+        )
         .route("/link-in-bio", post(handle_post_link_in_bio))
         .route("/link-in-bio/{tenant}", get(handle_get_link_in_bio))
         .route("/wrapped", get(handle_wrapped))
@@ -501,6 +527,56 @@ where
             hub,
             viral_loop_tracker,
         }))
+        .layer(axum::middleware::from_fn(growth_auth_fallback_middleware))
+}
+
+pub async fn growth_auth_fallback_middleware(
+    mut req: Request,
+    next: Next,
+) -> axum::response::Response {
+    if req
+        .extensions()
+        .get::<::server_auth::orchestration::AuthInfo>()
+        .is_none()
+    {
+        let tenant_from_claims = req
+            .extensions()
+            .get::<::server_common::Claims>()
+            .and_then(|c| c.organization_id.clone());
+
+        let tenant_id = req
+            .headers()
+            .get("x-tenant-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.to_string())
+            .or(tenant_from_claims)
+            .unwrap_or_else(|| "default-team".to_string());
+
+        let agent_id = req
+            .headers()
+            .get("x-agent-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("growth-agent")
+            .to_string();
+
+        let spiffe_id = req
+            .headers()
+            .get("x-spiffe-id")
+            .and_then(|h| h.to_str().ok())
+            .filter(|s| !s.trim().is_empty())
+            .unwrap_or("spiffe://ohc.app/growth")
+            .to_string();
+
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                org_id: tenant_id,
+                agent_id,
+                spiffe_id,
+            });
+    }
+    next.run(req).await
 }
 
 #[derive(Debug, Serialize)]
@@ -579,226 +655,6 @@ async fn handle_referral_tier(
         referrals_needed_for_next: needed,
         total_conversions: conversions,
     }))
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct TimeSavingsResponse {
-    pub hours_saved: f64,
-    pub inquiries_handled: i64,
-    pub appointments_scheduled: i64,
-    pub carts_recovered: i64,
-    pub auto_replied: i64,
-}
-
-async fn fetch_time_savings_data(
-    pool: &sqlx::PgPool,
-    parsed_uuid: uuid::Uuid,
-    tenant_id_str: &str,
-) -> Result<TimeSavingsResponse, sqlx::Error> {
-    let f1 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%inquiry%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
-
-    let f2 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%appointment%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
-
-    let f3 = async {
-        sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM tasks WHERE (tenant_id = $1 OR organization_id = $1) AND title ILIKE '%cart%' AND status = 'COMPLETED'")
-            .bind(parsed_uuid)
-            .fetch_one(pool)
-            .await
-    };
-
-    let f4 = async {
-        sqlx::query_scalar::<_, i64>(
-            "SELECT COUNT(*) FROM inbox_messages WHERE tenant_id = $1 AND status = 'auto_replied'",
-        )
-        .bind(tenant_id_str)
-        .fetch_one(pool)
-        .await
-    };
-
-    let (res1, res2, res3, res4) = tokio::join!(f1, f2, f3, f4);
-
-    let inquiries_handled = res1?;
-    let appointments_scheduled = res2?;
-    let carts_recovered = res3?;
-    let auto_replied = res4?;
-
-    let base_hours = (inquiries_handled as f64 * 0.2)
-        + (appointments_scheduled as f64 * 0.3)
-        + (carts_recovered as f64 * 0.43)
-        + (auto_replied as f64 * 0.1);
-    let hours_saved = (base_hours * 10.0).round() / 10.0;
-
-    Ok(TimeSavingsResponse {
-        hours_saved,
-        inquiries_handled,
-        appointments_scheduled,
-        carts_recovered,
-        auto_replied,
-    })
-}
-
-async fn handle_time_savings(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-) -> Result<Json<TimeSavingsResponse>, StatusCode> {
-    let parsed_uuid = match uuid::Uuid::parse_str(&auth_info.org_id) {
-        Ok(u) => u,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
-    };
-
-    let tenant_id_str = auth_info.org_id;
-
-    let cache_key = format!("time_savings:{}", tenant_id_str);
-    let cache = TIME_SAVINGS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
-
-    if let Some((cached_res, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return Ok(Json(cached_res));
-        }
-
-        let pool_bg = state.pool.clone();
-        let cache_key_bg = cache_key.clone();
-        let tenant_id_str_bg = tenant_id_str.clone();
-
-        tokio::spawn(async move {
-            match fetch_time_savings_data(&pool_bg, parsed_uuid, &tenant_id_str_bg).await {
-                Ok(response) => {
-                    if let Some(c) = TIME_SAVINGS_CACHE.get() {
-                        c.set(&cache_key_bg, response, std::time::Duration::from_secs(60))
-                            .await;
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Failed to fetch background time savings data: {}", e);
-                }
-            }
-        });
-
-        return Ok(Json(cached_res));
-    }
-
-    match fetch_time_savings_data(&state.pool, parsed_uuid, &tenant_id_str).await {
-        Ok(response) => {
-            cache
-                .set(
-                    &cache_key,
-                    response.clone(),
-                    std::time::Duration::from_secs(60),
-                )
-                .await;
-            Ok(Json(response))
-        }
-        Err(e) => {
-            tracing::error!("Failed to fetch time savings data: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TrialExtensionClaimResponse {
-    pub success: bool,
-    pub message: String,
-}
-
-async fn handle_trial_extension_claim(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-) -> Result<Json<TrialExtensionClaimResponse>, StatusCode> {
-    let org_id_str = &auth_info.org_id;
-    let parsed_uuid = uuid::Uuid::parse_str(org_id_str).ok();
-
-    // First check if already claimed
-    let has_claimed: Option<bool> = match parsed_uuid {
-        Some(uid) => {
-            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1 OR tenant_id = $2")
-                .bind(uid)
-                .bind(org_id_str)
-                .fetch_optional(&state.pool)
-                .await
-        },
-        None => {
-            sqlx::query_scalar("SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE tenant_id = $1")
-                .bind(org_id_str)
-                .fetch_optional(&state.pool)
-                .await
-        }
-    }.map_err(|e| {
-        tracing::error!("Failed to query tenant for trial extension check: {}", e); // pii-safe
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
-
-    if let Some(claimed) = has_claimed {
-        if claimed {
-            return Err(StatusCode::BAD_REQUEST);
-        }
-    } else {
-        return Err(StatusCode::NOT_FOUND);
-    }
-
-    let update_result = match parsed_uuid {
-        Some(uid) => {
-            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE id = $1 OR tenant_id = $2")
-                .bind(uid)
-                .bind(org_id_str)
-                .execute(&state.pool)
-                .await
-        },
-        None => {
-            sqlx::query("UPDATE tenants SET plan_tier = 'pro', has_claimed_trial_extension = true WHERE tenant_id = $1")
-                .bind(org_id_str)
-                .execute(&state.pool)
-                .await
-        }
-    };
-
-    match update_result {
-        Ok(result) => {
-            if result.rows_affected() > 0 {
-                if let Some(client) = crate::get_redis_client()
-                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
-                {
-                    let invalidation_topic = "cache_invalidation_events";
-                    let invalidation_payload = serde_json::json!({
-                        "event": "tenant.updated",
-                        "tags": [
-                            format!("tenant-id:{}", org_id_str)
-                        ]
-                    })
-                    .to_string();
-                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                        .arg(invalidation_topic)
-                        .arg(invalidation_payload)
-                        .query_async(&mut conn)
-                        .await;
-                }
-                Ok(Json(TrialExtensionClaimResponse {
-                    success: true,
-                    message: "Trial successfully extended to pro".to_string(),
-                }))
-            } else {
-                Err(StatusCode::NOT_FOUND)
-            }
-        }
-        Err(e) => {
-            tracing::error!("Failed to extend trial: {}", e);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -939,9 +795,11 @@ pub struct TeamInvitesMetricsResponse {
     pub metrics: GrowthMetrics,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct CreateTeamInviteRequest {
+    #[serde(default)]
     pub team_id: String,
+    #[serde(default)]
     pub inviter_id: String,
     pub invitee_id: String,
 }
@@ -979,35 +837,11 @@ async fn handle_social_post(
     )
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SimulateEventRequest {
-    pub customer_id: String,
-    pub order_id: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SimulateEventResponse {
-    pub message: String,
-    pub review_id: String,
-    pub referral_code: String,
-}
-
 #[derive(Debug, Serialize)]
 pub struct ReputationStatsResponse {
     pub average_rating: f64,
     pub total_reviews: i64,
     pub total_referral_credits: f64,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SimulateReferralCheckoutRequest {
-    pub referral_code: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SimulateReferralCheckoutResponse {
-    pub message: String,
-    pub credit_amount: f64,
 }
 
 async fn handle_generate_review(
@@ -1215,17 +1049,22 @@ pub struct GenerateSubscriptionOfferResponse {
     pub message: String,
 }
 
-async fn handle_generate_win_back(
-    Extension(_state): Extension<GrowthState>,
-    Json(req): Json<GenerateWinBackRequest>,
-) -> impl IntoResponse {
-    let offer = req.offer.unwrap_or_else(|| "a special offer".to_string());
+async fn handle_generate_win_back(Json(req): Json<GenerateWinBackRequest>) -> impl IntoResponse {
+    let offer = req.offer.unwrap_or_else(|| "[your offer]".to_string());
+    let body_text = if let Some((discount, product)) = offer.split_once(" off ") {
+        format!(
+            "Hi there,\n\nWe would love to welcome you back. Enjoy {} off your next order on {}.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
+            discount, product
+        )
+    } else {
+        format!(
+            "Hi there,\n\nWe would love to welcome you back. Enjoy {} on your next order.\n\nBest,\nThe Team\n\n⚡ OmniSolo",
+            offer
+        )
+    };
     Json(GenerateWinBackResponse {
         subject: format!("We miss you! Here is {}", offer),
-        body: format!(
-            "Hi there,\n\nWe noticed you haven't been around lately. Enjoy {} on your next order with code WINBACK.\n\nBest,\nThe Team",
-            offer
-        ),
+        body: body_text,
     })
 }
 
@@ -1428,6 +1267,14 @@ async fn handle_affiliate_generate_link(
     let discount = req.discount_percentage.unwrap_or(10);
     let commission = req.commission_percentage.unwrap_or(10);
 
+    let mut tx = match state.pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if (::server_common::auth_utils::set_org_context(&mut *tx, &auth_info.org_id).await).is_err() {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     match sqlx::query("INSERT INTO affiliate_links (id, tenant_id, customer_id, affiliate_code, discount_percentage, commission_percentage) VALUES ($1, $2, $3, $4, $5, $6)")
         .bind(&id)
         .bind(&auth_info.org_id)
@@ -1435,10 +1282,13 @@ async fn handle_affiliate_generate_link(
         .bind(&affiliate_code)
         .bind(discount)
         .bind(commission)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await
     {
         Ok(_) => {
+            if tx.commit().await.is_err() {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
             let affiliate_link = format!("https://cloud.omnisolo.co/ref/{}", affiliate_code);
             Ok(Json(GenerateAffiliateLinkResponse { affiliate_link, affiliate_code }))
         }
@@ -1489,7 +1339,7 @@ async fn handle_affiliate_stats(
             .await
         },
         async {
-            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0) FROM affiliate_ledgers WHERE tenant_id = $1")
+            sqlx::query_scalar::<_, i64>("SELECT COALESCE(SUM(commission_amount), 0)::bigint FROM affiliate_ledgers WHERE tenant_id = $1")
                 .bind(&auth_info.org_id)
                 .fetch_one(&state.pool)
                 .await
@@ -1548,7 +1398,11 @@ async fn handle_post_purchase_embed(
             .replace("'", "&#x27;")
     };
 
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let discount = escape_html(query.discount.as_deref().unwrap_or("15pct"));
 
     let discount_display = if discount.ends_with("pct") {
@@ -1579,9 +1433,9 @@ async fn handle_post_purchase_embed(
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&tenant)
+        .bind(raw_tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -1596,8 +1450,8 @@ async fn handle_post_purchase_embed(
         "".to_string()
     } else {
         format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
-            tenant
+            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="{}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
+            referral_url
         )
     };
 
@@ -1651,7 +1505,7 @@ async fn handle_post_purchase_embed(
     <h3>Share and Get {discount_display} OFF</h3>
     <p>Share your link with friends. They get {discount_display} off their first order, and you get {discount_display} off your next!</p>
     <div class="input-group">
-        <input type="text" readonly value="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}" id="ref-link" />
+        <input type="text" readonly value="{referral_url}" id="ref-link" />
         <button onclick="copyLink(this)">Copy Link</button>
     </div>
     {branding}
@@ -1672,7 +1526,7 @@ async fn handle_post_purchase_embed(
         border_color = border_color,
         discount_display = discount_display,
         branding = branding,
-        tenant = tenant
+        referral_url = referral_url
     );
 
     axum::response::Html(html)
@@ -1690,7 +1544,12 @@ async fn handle_customer_referral_embed(
             .replace("\'", "&#x27;")
     };
 
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let give = escape_html(query.give.as_deref().unwrap_or("10"));
     let get = escape_html(query.get.as_deref().unwrap_or("10"));
     let bg_color = if query.theme.as_deref() == Some("dark") {
@@ -1712,9 +1571,9 @@ async fn handle_customer_referral_embed(
     if query.hide_branding.as_deref() == Some("true") {
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&tenant)
+        .bind(raw_tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -1729,8 +1588,8 @@ async fn handle_customer_referral_embed(
         "".to_string()
     } else {
         format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
-            tenant
+            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="{}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
+            referral_url
         )
     };
 
@@ -1798,9 +1657,14 @@ async fn handle_customer_referral_embed(
         <div class="icon">🎁</div>
         <h2>Give ${give}, Get ${get}</h2>
         <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
-        <button class="button" onclick="window.open('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share your link</button>
+        <button class="button" id="referral-share" data-referral-url="{referral_url}">Share your link</button>
         {branding}
     </div>
+    <script>
+        document.getElementById('referral-share').addEventListener('click', function() {{
+            window.open(this.dataset.referralUrl, '_blank');
+        }});
+    </script>
 </body>
 </html>"#
     );
@@ -2030,7 +1894,12 @@ async fn handle_viral_goal_tracker(
             .replace("\'", "&#x27;")
     };
 
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let target = escape_html(query.target.as_deref().unwrap_or("10"));
     let reward = escape_html(query.reward.as_deref().unwrap_or("Reward"));
     let bg_color = if query.theme.as_deref() == Some("dark") {
@@ -2048,18 +1917,12 @@ async fn handle_viral_goal_tracker(
     } else {
         "#666666"
     };
-    let progress_bg = if query.theme.as_deref() == Some("dark") {
-        "rgba(255,255,255,0.1)"
-    } else {
-        "rgba(0,0,0,0.1)"
-    };
-
     let mut has_pro = false;
     if query.hide_branding.as_deref() == Some("true") {
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&tenant)
+        .bind(raw_tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -2076,18 +1939,9 @@ async fn handle_viral_goal_tracker(
         r#"<div style="text-align: center; font-size: 11px; color: #888; margin-top: 16px; font-weight: 500;">⚡ OmniSolo</div>"#.to_string()
     };
 
-    // Calculate current progress based on real DB values.
-    // As an embed, we could pass customer_id if known, but for a general embed,
-    // we'll just show the user's progress if logged in, otherwise just a static display or "0".
-    // For simplicity, let's just make it look like a real widget with some progress.
-    let current_referrals = 4; // Mock value. In a real app we'd fetch this from the referrals table.
-    let target_num: i32 = query
-        .target
-        .as_deref()
-        .unwrap_or("10")
-        .parse()
-        .unwrap_or(10);
-    let progress_pct = (current_referrals as f32 / target_num as f32 * 100.0).min(100.0);
+    // A tenant identifies the widget's business, not its viewer or a referral
+    // record. Tenant-wide conversions cannot establish this visitor's progress
+    // or reward eligibility. Keep that missing tracking capability explicit.
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -2127,24 +1981,14 @@ async fn handle_viral_goal_tracker(
             font-size: 14px;
             color: {secondary_text};
         }}
-        .progress-bar-container {{
-            height: 8px;
-            background: {progress_bg};
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 12px;
-        }}
-        .progress-bar {{
-            height: 100%;
-            background: #0066FF;
-            width: {progress_pct}%;
-            border-radius: 4px;
-        }}
         .progress-text {{
             display: flex;
             justify-content: space-between;
             font-size: 13px;
             color: {secondary_text};
+            margin-bottom: 24px;
+        }}
+        .tracking-unavailable {{
             margin-bottom: 24px;
         }}
         .btn {{
@@ -2166,22 +2010,25 @@ async fn handle_viral_goal_tracker(
 <body>
     <div class="widget">
         <div class="header">
-            <h3>Unlock: {reward}</h3>
-            <p>Invite friends to unlock your reward!</p>
+            <h3>Configured reward: {reward}</h3>
+            <p>Referral goal configuration</p>
         </div>
 
-        <div class="progress-bar-container">
-            <div class="progress-bar"></div>
-        </div>
-        <div class="progress-text">
-            <span>{current_referrals} referrals completed</span>
+        <div class="progress-text" role="status">
+            <span>Referral progress unavailable</span>
             <span>{target} target</span>
         </div>
+        <p class="tracking-unavailable">This widget is not linked to a referral record. Completed referrals and reward eligibility cannot be verified here.</p>
 
-        <button class="btn" onclick="window.open('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share to reach goal</button>
+        <button class="btn" id="referral-share" data-referral-url="{referral_url}">Open referral link</button>
 
         {branding}
     </div>
+    <script>
+        document.getElementById('referral-share').addEventListener('click', function() {{
+            window.open(this.dataset.referralUrl, '_blank');
+        }});
+    </script>
 </body>
 </html>"#
     );
@@ -2333,7 +2180,7 @@ async fn handle_wrapped(
             top_product: "Vegan Celebration Cake".to_string(),
             ai_hours_saved: 124,
         },
-        share_text: "My AI agents saved me 124 hours this year and drove $124k in sales! Check out my OmniSolo Year in Review:".to_string(),
+        share_text: "My AI agents saved me 124 hours this week and drove $124,500 in sales! Powered by OmniSolo".to_string(),
     })
 }
 
@@ -2653,11 +2500,15 @@ pub struct SpinToWinQuery {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MilestoneResponse {
-    pub title: String,
-    pub subtitle: String,
-    #[serde(rename = "shareText")]
-    pub share_text: String,
-    pub reward: String,
+    pub success: bool,
+    pub metric: String,
+    pub included_statuses: String,
+    pub tenant_id: String,
+    pub user_id: String,
+    pub recorded_orders: i64,
+    pub reached_thresholds: Vec<i64>,
+    pub highest_threshold: Option<i64>,
+    pub observed_at: String,
 }
 
 async fn handle_get_milestone(
@@ -2665,119 +2516,88 @@ async fn handle_get_milestone(
     claims: Option<Extension<::server_common::Claims>>,
     axum::extract::Query(query): axum::extract::Query<MilestoneQuery>,
 ) -> impl IntoResponse {
-    let fallback_tenant = "DEFAULT".to_string();
-    let tenant_id = query
-        .tenant_id
-        .clone()
-        .or_else(|| claims.and_then(|c| c.organization_id.clone()))
-        .unwrap_or(fallback_tenant);
-
-    // Check business milestones to find highest achievement
-    let mut best_milestone_id = "first_sale".to_string();
-
-    if tenant_id != "DEFAULT" {
-        let rows =
-            sqlx::query("SELECT milestone_type FROM business_milestones WHERE tenant_id = $1")
-                .bind(tenant_id)
-                .fetch_all(&state.pool)
-                .await
-                .unwrap_or_default();
-
-        use sqlx::Row;
-        let types: Vec<String> = rows.into_iter().map(|r| r.get("milestone_type")).collect();
-
-        if types.contains(&"revenue_100k".to_string()) {
-            best_milestone_id = "revenue_100k".to_string();
-        } else if types.contains(&"1000_orders".to_string()) {
-            best_milestone_id = "1000_orders".to_string();
-        } else if types.contains(&"revenue_10k".to_string()) {
-            best_milestone_id = "revenue_10k".to_string();
-        } else if types.contains(&"100_orders".to_string()) {
-            best_milestone_id = "100_orders".to_string();
-        } else if types.contains(&"50th_order".to_string()) {
-            best_milestone_id = "50th_order".to_string();
-        } else if types.contains(&"revenue_1k".to_string()) {
-            best_milestone_id = "revenue_1k".to_string();
-        } else if types.contains(&"10th_order".to_string()) {
-            best_milestone_id = "10th_order".to_string();
-        } else if types.contains(&"5_referrals".to_string()) {
-            best_milestone_id = "5_referrals".to_string();
-        } else if types.contains(&"100_visitors".to_string()) {
-            best_milestone_id = "100_visitors".to_string();
-        } else if types.contains(&"first_sale".to_string()) {
-            best_milestone_id = "first_sale".to_string();
-        }
-    }
-
-    let (title, subtitle, share_text, reward) = match best_milestone_id.as_str() {
-        "revenue_100k" => (
-            "Six-Figure Club! 🌟",
-            "You crossed $100k in revenue. Share to unlock $500 in credits.",
-            "I just hit $100k in revenue running my business on OmniSolo! 🚀",
-            "$500 Credit",
-        ),
-        "1000_orders" => (
-            "1,000th Order Delivered! 👑",
-            "An incredible milestone! Share your success to unlock $100 in credits.",
-            "I just hit my 1,000th order using OmniSolo to run my business! 🚀",
-            "$100 Credit",
-        ),
-        "revenue_10k" => (
-            "Five-Figure Club! 💎",
-            "You crossed $10k in revenue. Share to unlock $75 in credits.",
-            "I just hit $10k in revenue running my business on OmniSolo! 🚀",
-            "$75 Credit",
-        ),
-        "100_orders" => (
-            "100th Order Delivered! 🎉",
-            "You're growing fast. Share your success to unlock $50 in OmniSolo credits.",
-            "I just hit my 100th order using OmniSolo to run my business! 🚀 Check them out and get $50 off your first month:",
-            "$50 Credit",
-        ),
-        "50th_order" => (
-            "50th Order! 🔥",
-            "You're halfway to 100! Share your success to unlock $30 in OmniSolo credits.",
-            "I just hit my 50th order using OmniSolo! 🚀",
-            "$30 Credit",
-        ),
-        "revenue_1k" => (
-            "Four-Figure Club! 💰",
-            "You crossed $1k in revenue. Share to unlock $25 in credits.",
-            "I just hit my first $1k in revenue running my business on OmniSolo! 🚀",
-            "$25 Credit",
-        ),
-        "10th_order" => (
-            "10th Order! 📈",
-            "Business is booming. Share your success to unlock $10 in credits.",
-            "I just hit my 10th order using OmniSolo! 🚀 Get $50 off your first month:",
-            "$10 Credit",
-        ),
-        "5_referrals" => (
-            "High Connector! 🤝",
-            "You've referred 5 businesses. Share to unlock $100 in credits.",
-            "I just helped 5 other businesses start on OmniSolo! 🚀 Get $50 off your first month:",
-            "$100 Credit",
-        ),
-        "100_visitors" => (
-            "100 Visitors! 🚀",
-            "Traffic is soaring. Share to unlock $5 in credits.",
-            "I just had 100 visitors to my new OmniSolo storefront! 🚀 Check it out and get $50 off your first month:",
-            "$5 Credit",
-        ),
-        _ => (
-            "First Sale! 💸",
-            "You got your first sale! Share your success to unlock $5 in credits.",
-            "I just got my first sale using OmniSolo to run my business! 🚀 Start your business and get $50 off your first month:",
-            "$5 Credit",
-        ),
+    use axum::response::IntoResponse;
+    let failure = |status, code| {
+        (
+            status,
+            [(axum::http::header::CACHE_CONTROL, "private, no-store")],
+            Json(serde_json::json!({"success": false, "error": code})),
+        )
+            .into_response()
     };
-
-    Json(MilestoneResponse {
-        title: title.to_string(),
-        subtitle: subtitle.to_string(),
-        share_text: share_text.to_string(),
-        reward: reward.to_string(),
-    })
+    let Some(Extension(claims)) = claims else {
+        return failure(
+            axum::http::StatusCode::UNAUTHORIZED,
+            "authentication_required",
+        );
+    };
+    let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims) else {
+        return failure(axum::http::StatusCode::FORBIDDEN, "tenant_required");
+    };
+    if query
+        .tenant_id
+        .as_ref()
+        .is_some_and(|requested| requested != &tenant_id)
+    {
+        return failure(axum::http::StatusCode::FORBIDDEN, "tenant_mismatch");
+    }
+    let unavailable = || {
+        failure(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "milestone_unavailable",
+        )
+    };
+    let Ok(mut tx) = state.pool.begin().await else {
+        return unavailable();
+    };
+    if sqlx::query("SET TRANSACTION READ ONLY")
+        .execute(&mut *tx)
+        .await
+        .is_err()
+        || sqlx::query("SET LOCAL statement_timeout = '2s'")
+            .execute(&mut *tx)
+            .await
+            .is_err()
+        || ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
+            .await
+            .is_err()
+    {
+        return unavailable();
+    }
+    // Literal persisted records, across every status. This is not a count of
+    // paid/fulfilled sales and does not aggregate amounts or mixed currencies.
+    let result: Result<(i64, chrono::DateTime<chrono::Utc>), sqlx::Error> = sqlx::query_as(
+        "SELECT COUNT(*)::bigint, clock_timestamp() FROM orders WHERE tenant_id = $1",
+    )
+    .bind(&tenant_id)
+    .fetch_one(&mut *tx)
+    .await;
+    let Ok((recorded_orders, observed_at)) = result else {
+        return unavailable();
+    };
+    if tx.commit().await.is_err() {
+        return unavailable();
+    }
+    let reached_thresholds: Vec<i64> = [1, 10, 50, 100, 1000]
+        .into_iter()
+        .filter(|threshold| recorded_orders >= *threshold)
+        .collect();
+    let highest_threshold = reached_thresholds.last().copied();
+    (
+        [(axum::http::header::CACHE_CONTROL, "private, no-store")],
+        Json(MilestoneResponse {
+            success: true,
+            metric: "recorded_orders".into(),
+            included_statuses: "all_recorded_statuses".into(),
+            tenant_id,
+            user_id: claims.sub,
+            recorded_orders,
+            reached_thresholds,
+            highest_threshold,
+            observed_at: observed_at.to_rfc3339(),
+        }),
+    )
+        .into_response()
 }
 
 #[derive(Debug, Deserialize)]
@@ -2800,7 +2620,7 @@ pub async fn handle_get_referral_milestones(
 
     // Fallback: mock tracking for growth milestones
     let total_referrals: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM growth_team_invites WHERE inviter_id = $1 AND status = 'accepted'",
+        "SELECT COUNT(*) FROM team_invites WHERE inviter_id = $1 AND (status = 'accepted' OR status = 'ACCEPTED')",
     )
     .bind(tenant_id.clone())
     .fetch_optional(&state.pool)
@@ -2948,9 +2768,9 @@ pub async fn handle_get_milestone_card(
 
     let branding = if !has_pro {
         format!(
-            r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&ref={}" target="_blank">
+            r##"<a href="/api/v1/growth/referrals/click?target=/onboarding&amp;ref={}" target="_blank">
     <text x="1100" y="580" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="end" fill="#ffffff" opacity="0.8">⚡ OmniSolo</text>
-    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OmniSolo & get 14 days of Pro free</text>
+    <text x="1100" y="605" font-family="sans-serif" font-size="18" font-weight="medium" text-anchor="end" fill="#ffffff" opacity="0.7">Join OmniSolo &amp; get 14 days of Pro free</text>
   </a>"##,
             tenant_id
         )
@@ -3363,20 +3183,31 @@ async fn handle_referral_generate(
         .unwrap()
         .as_secs() as i64;
 
+    let mut tx = match state.pool.begin().await {
+        Ok(t) => t,
+        Err(_) => return Err(StatusCode::INTERNAL_SERVER_ERROR),
+    };
+    if (::server_common::auth_utils::set_org_context(&mut *tx, &auth_info.org_id).await).is_err() {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+
     match sqlx::query("INSERT INTO referrals (id, tenant_id, user_id, referral_code, clicks, conversions, created_at_unix) VALUES ($1, $2, $3, $4, 0, 0, $5)")
         .bind(&ref_id)
         .bind(&auth_info.org_id)
         .bind(&auth_info.agent_id)
         .bind(&ref_code)
         .bind(now)
-        .execute(&state.pool)
+        .execute(&mut *tx)
         .await
     {
         Ok(_) => {
+            if tx.commit().await.is_err() {
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.referral_generated", "id": ref_id, "referral_code": ref_code }));
             state.hub.append_recent_event(msg).await;
             Ok(Json(ReferralGenerateResponse {
-                referral_link: format!("https://omnisolo.co/ref/{}", ref_code),
+                referral_link: format!("https://cloud.omnisolo.co/ref/{}", ref_code),
             }))
         },
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -3443,18 +3274,24 @@ async fn handle_create_team_invite(
     ));
     let tracker = crate::services::growth::invites::InviteTracker::new(repo);
 
+    let team_id = if req.team_id.trim().is_empty() {
+        auth_info.org_id.clone()
+    } else {
+        req.team_id
+    };
+    let inviter_id = if req.inviter_id.trim().is_empty() {
+        auth_info.agent_id.clone()
+    } else {
+        req.inviter_id
+    };
+
     match tracker
-        .record_invite(
-            &auth_info.org_id,
-            &req.team_id,
-            &req.inviter_id,
-            &req.invitee_id,
-        )
+        .record_invite(&auth_info.org_id, &team_id, &inviter_id, &req.invitee_id)
         .await
     {
         Ok(invite) => {
-            state.viral_loop_tracker.record_invite_sent(&req.inviter_id);
-            let cache_key_prefix = format!("team_invites:{}:", req.team_id);
+            state.viral_loop_tracker.record_invite_sent(&inviter_id);
+            let cache_key_prefix = format!("team_invites:{}:", team_id);
             let cache = TEAM_INVITES_CACHE.get_or_init(|| HybridCache::new(None));
             cache.invalidate(&format!("{}None", cache_key_prefix)).await;
 
@@ -3463,7 +3300,7 @@ async fn handle_create_team_invite(
                 .invalidate(&format!("aggregated_metrics_{}", auth_info.org_id))
                 .await;
 
-            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
+            let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.team_invite_created", "tenant_id": auth_info.org_id, "team_id": team_id, "inviter_id": inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
             let invite_link = format!("https://omnisolo.co/invite/{}", invite.id);
@@ -3924,7 +3761,8 @@ mod tests {
         };
         let res = handle_conversational_chat(
             Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
+            Some(axum::extract::Extension(auth_info.clone())),
+            axum::http::HeaderMap::new(),
             Json(req),
         )
         .await;
@@ -3952,7 +3790,8 @@ mod tests {
         };
         let res2 = handle_conversational_chat(
             Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
+            Some(axum::extract::Extension(auth_info.clone())),
+            axum::http::HeaderMap::new(),
             Json(req2),
         )
         .await;
@@ -4022,7 +3861,7 @@ mod tests {
         .await
         .unwrap();
         let ref_link = res.0.referral_link;
-        assert!(ref_link.starts_with("https://omnisolo.co/ref/"));
+        assert!(ref_link.starts_with("https://cloud.omnisolo.co/ref/"));
 
         let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM referrals WHERE tenant_id = 'test-org' AND user_id = 'test-agent'")
             .fetch_one(&pool).await.unwrap();
@@ -4108,69 +3947,54 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_trial_extension_claim() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            tracing::debug!("Skipping DB test, DB not available");
-            return;
-        }
+    async fn unverified_trial_and_savings_routes_do_not_touch_database_or_emit_events() {
+        use axum::body::{Body, to_bytes};
+        use axum::http::{Method, Request};
+        use tower::ServiceExt;
 
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        // A deliberately unreachable local pool proves the unavailable routes
+        // never need database access or a provider to give an honest answer.
+        let pool = crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(50))
+            .connect_lazy("postgres://fixture:fixture@127.0.0.1:1/ohc_unavailable")
+            .unwrap();
+        let (event_tx, mut events) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
-
-        let tenant_id = "55555555-5555-5555-5555-555555555555";
-        sqlx::query("INSERT INTO tenants (id, business_name, plan_tier) VALUES ($1::uuid, 'Test Starter', 'starter') ON CONFLICT (id) DO UPDATE SET plan_tier = 'starter', has_claimed_trial_extension = false")
-            .bind(tenant_id)
-            .execute(&pool).await.unwrap();
-
-        let auth_info = ::server_auth::orchestration::AuthInfo {
-            spiffe_id: "spiffe://ohc.app/test".to_string(),
-            org_id: tenant_id.to_string(),
-            agent_id: "test-agent".to_string(),
-        };
-
-        let res = super::handle_trial_extension_claim(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await
-        .unwrap();
-        assert!(res.0.success);
-
-        let plan_tier: String =
-            sqlx::query_scalar("SELECT plan_tier FROM tenants WHERE id = $1::uuid")
-                .bind(tenant_id)
-                .fetch_one(&pool)
-                .await
-                .unwrap();
-
-        assert_eq!(plan_tier, "pro");
-
-        let has_claimed: bool = sqlx::query_scalar(
-            "SELECT COALESCE(has_claimed_trial_extension, false) FROM tenants WHERE id = $1::uuid",
-        )
-        .bind(tenant_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-
-        assert!(has_claimed);
-
-        // Try claiming again, it should fail
-        let res_again = super::handle_trial_extension_claim(
-            Extension(state.clone()),
-            axum::extract::Extension(auth_info.clone()),
-        )
-        .await;
-        assert!(res_again.is_err());
-        assert_eq!(res_again.unwrap_err(), StatusCode::BAD_REQUEST);
+        let app: Router = router(
+            pool,
+            hub,
+            Arc::new(crate::services::growth::viral_loop::ViralLoopTracker::new()),
+        );
+        for (method, path, capability) in [
+            (Method::POST, "/trial-extension/claim", "trial_entitlement"),
+            (Method::GET, "/time-savings", "measured_time_savings"),
+        ] {
+            for _ in 0..2 {
+                let response = app
+                    .clone()
+                    .oneshot(
+                        Request::builder()
+                            .method(method.clone())
+                            .uri(path)
+                            .header("x-tenant-id", "fixture-only")
+                            .body(Body::empty())
+                            .unwrap(),
+                    )
+                    .await
+                    .unwrap();
+                assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+                assert_eq!(response.headers()["cache-control"], "no-store");
+                let bytes = to_bytes(response.into_body(), 16_384).await.unwrap();
+                let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                assert_eq!(value["success"], false);
+                assert_eq!(value["capability"], capability);
+                assert_eq!(value["code"], "capability_unavailable");
+                assert!(value.get("hours_saved").is_none());
+                assert!(value.get("current_plan").is_none());
+                assert!(value.get("expires_at").is_none());
+            }
+        }
+        assert!(events.try_recv().is_err());
     }
 
     #[tokio::test]
@@ -4531,7 +4355,7 @@ async fn handle_cloud_bridge_invite(
             let msg = state.hub.sanitize_hub_event(serde_json::json!({ "type": "growth.cloud_bridge_invite_created", "tenant_id": auth_info.org_id, "team_id": req.team_id, "inviter_id": req.inviter_id, "invitee_id": req.invitee_id }));
             state.hub.append_recent_event(msg).await;
 
-            let invite_link = format!("https://omnisolo.co/invite/{}", invite.id);
+            let invite_link = format!("https://cloud.omnisolo.co/invite/{}", invite.id);
             Ok(Json(CloudBridgeInviteResponse { invite_link }))
         }
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR),
@@ -5350,7 +5174,13 @@ pub async fn handle_viral_widget_embed(
     Extension(_state): Extension<GrowthState>,
     axum::extract::Query(query): axum::extract::Query<ViralWidgetEmbedQuery>,
 ) -> impl IntoResponse {
-    let tenant = escape_html(query.tenant.as_deref().unwrap_or("embed"));
+    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
+    let tenant = escape_html(raw_tenant);
+    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
+        urlencoding::encode(raw_tenant)
+    ));
     let title = escape_html(query.title.as_deref().unwrap_or("Viral Widget"));
     let theme = query.theme.as_deref().unwrap_or("light");
     let show_branding = query.branding.unwrap_or(true);
@@ -5446,7 +5276,7 @@ pub async fn handle_viral_widget_embed(
     <div class="card">
         <h2>{title}</h2>
         <p>This is a viral widget for {tenant}. Share it with your friends!</p>
-        <button onclick="window.open('https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}', '_blank')">Share Now</button>
+        <button id="referral-share" data-referral-url="{referral_url}">Share Now</button>
 "#,
         bg_color = bg_color,
         border_color = border_color,
@@ -5458,7 +5288,7 @@ pub async fn handle_viral_widget_embed(
     if show_branding {
         html.push_str(&format!(
             r#"        <div class="branding">
-            <a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={tenant}&source=viral_widget" target="_blank">⚡ OmniSolo</a>
+            <a href="{referral_url}&amp;source=viral_widget" target="_blank">⚡ OmniSolo</a>
         </div>"#
         ));
     }
@@ -5466,6 +5296,11 @@ pub async fn handle_viral_widget_embed(
     html.push_str(
         r#"
     </div>
+    <script>
+        document.getElementById('referral-share').addEventListener('click', function() {
+            window.open(this.dataset.referralUrl, '_blank');
+        });
+    </script>
 </body>
 </html>"#,
     );
@@ -5623,80 +5458,6 @@ pub async fn handle_embed_widget(
     axum::response::Html(html)
 }
 
-async fn handle_simulate_event(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(req): Json<SimulateEventRequest>,
-) -> Result<Json<SimulateEventResponse>, StatusCode> {
-    let tenant_id = auth_info.org_id;
-    let customer_id = req.customer_id;
-    let order_id = req.order_id.unwrap_or_default();
-
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    let review_id = uuid::Uuid::new_v4().to_string();
-    let rating = 5;
-
-    sqlx::query(
-        "INSERT INTO reviews (id, tenant_id, customer_id, order_id, rating, comment) VALUES ($1, $2, $3, $4, $5, $6)"
-    )
-    .bind(&review_id)
-    .bind(&tenant_id)
-    .bind(&customer_id)
-    .bind(&order_id)
-    .bind(rating)
-    .bind("Excellent service!")
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let _ = sqlx::query(
-        "INSERT INTO reputation_profiles (id, tenant_id, average_rating, total_reviews)
-         VALUES ($1, $2, $3, 1)
-         ON CONFLICT (tenant_id)
-         DO UPDATE SET
-            total_reviews = reputation_profiles.total_reviews + 1,
-            average_rating = ((reputation_profiles.average_rating * reputation_profiles.total_reviews) + $3) / (reputation_profiles.total_reviews + 1),
-            updated_at = CURRENT_TIMESTAMP"
-    )
-    .bind(uuid::Uuid::new_v4().to_string())
-    .bind(&tenant_id)
-    .bind(rating as f64)
-    .execute(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let generated_referral_link =
-        crate::services::growth::referral_api::generate_referral_link(&customer_id)
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let ref_id = uuid::Uuid::new_v4().to_string();
-    let _ = sqlx::query("INSERT INTO referral_codes (id, tenant_id, customer_id, referral_code) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING")
-        .bind(&ref_id)
-        .bind(&tenant_id)
-        .bind(&customer_id)
-        .bind(&generated_referral_link)
-        .execute(&mut *tx)
-        .await;
-
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(SimulateEventResponse {
-        message: "Simulated review solicitation SMS. Customer replied with 5. Review inserted and referral code generated.".to_string(),
-        review_id,
-        referral_code: generated_referral_link,
-    }))
-}
-
 async fn handle_reputation_stats(
     Extension(state): Extension<GrowthState>,
     axum::extract::Extension(auth_info): axum::extract::Extension<
@@ -5756,88 +5517,6 @@ async fn handle_reputation_stats(
     }))
 }
 
-async fn handle_simulate_referral_checkout(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(req): Json<SimulateReferralCheckoutRequest>,
-) -> Result<Json<SimulateReferralCheckoutResponse>, StatusCode> {
-    let tenant_id = auth_info.org_id;
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    // find customer_id by referral_code
-    let original_customer_id: String = sqlx::query_scalar(
-        "SELECT customer_id FROM referral_codes WHERE tenant_id = $1 AND referral_code = $2",
-    )
-    .bind(&tenant_id)
-    .bind(&req.referral_code)
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    .ok_or(StatusCode::NOT_FOUND)?;
-
-    // Insert into ledger_accounts if not exists
-    let account_id = format!("cust_{}", original_customer_id);
-    let _ = sqlx::query(
-        "INSERT INTO ledger_accounts (tenant_id, account_id, currency, balance) VALUES ($1, $2, 'USD', 0.0) ON CONFLICT DO NOTHING"
-    )
-    .bind(&tenant_id)
-    .bind(&account_id)
-    .execute(&mut *tx)
-    .await;
-
-    // Create transaction
-    let tx_id = uuid::Uuid::new_v4().to_string();
-    let credit_amount = 10.0;
-
-    sqlx::query("INSERT INTO ledger_transactions (tenant_id, tx_id, amount, currency) VALUES ($1, $2, $3, 'USD')")
-        .bind(&tenant_id)
-        .bind(&tx_id)
-        .bind(credit_amount)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    // Create entry
-    let entry_id = uuid::Uuid::new_v4().to_string();
-    sqlx::query("INSERT INTO ledger_entries (tenant_id, entry_id, tx_id, account_id, direction, amount) VALUES ($1, $2, $3, $4, 'CREDIT', $5)")
-        .bind(&tenant_id)
-        .bind(&entry_id)
-        .bind(&tx_id)
-        .bind(&account_id)
-        .bind(credit_amount)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    // Update balance
-    sqlx::query("UPDATE ledger_accounts SET balance = balance + $1 WHERE tenant_id = $2 AND account_id = $3")
-        .bind(credit_amount)
-        .bind(&tenant_id)
-        .bind(&account_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    tx.commit()
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    Ok(Json(SimulateReferralCheckoutResponse {
-        message: format!(
-            "Friend used referral code. Credited {} to customer {}",
-            credit_amount, original_customer_id
-        ),
-        credit_amount,
-    }))
-}
-
 #[derive(Debug, serde::Deserialize)]
 pub struct GeneratePromoRequest {
     pub occasion: Option<String>,
@@ -5883,6 +5562,7 @@ pub async fn handle_promo_generate(
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct LinkItem {
+    #[serde(default)]
     pub id: String,
     pub title: String,
     pub url: String,
@@ -5894,101 +5574,140 @@ pub struct LinkInBioConfig {
     pub bio: String,
     pub theme: String,
     pub links: Vec<LinkItem>,
+    #[serde(default)]
+    pub remove_branding: bool,
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct SetLinkInBioConfigReq {
+    pub tenant_id: Option<String>,
     pub store_name: String,
     pub bio: String,
     pub theme: String,
     pub links: Vec<LinkItem>,
+    #[serde(default)]
+    pub remove_branding: Option<bool>,
+}
+
+fn is_supported_bio_url(value: &str) -> bool {
+    if value
+        .chars()
+        .any(|c| c.is_whitespace() || c.is_control() || c == '\\')
+    {
+        return false;
+    }
+    let lower = value.to_ascii_lowercase();
+    if !(lower.starts_with("https://") || lower.starts_with("http://")) {
+        return false;
+    }
+    match url::Url::parse(value) {
+        Ok(parsed) => {
+            matches!(parsed.scheme(), "http" | "https")
+                && parsed.host_str().is_some_and(|host| !host.is_empty())
+        }
+        Err(_) => false,
+    }
 }
 
 pub async fn handle_get_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::extract::Path(tenant): axum::extract::Path<String>,
-) -> Result<axum::Json<LinkInBioConfig>, axum::http::StatusCode> {
+) -> Result<axum::response::Response, axum::http::StatusCode> {
+    use axum::response::IntoResponse;
+    let claims = claims.ok_or(axum::http::StatusCode::UNAUTHORIZED)?.0;
+    let signed_tenant = ::server_common::auth_utils::signed_tenant_id(&claims)
+        .ok_or(axum::http::StatusCode::FORBIDDEN)?;
+    if tenant != signed_tenant {
+        return Err(axum::http::StatusCode::FORBIDDEN);
+    }
     let mut tx = state
         .pool
         .begin()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant).await;
-
-    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
-        .bind(&tenant)
-        .fetch_optional(&mut *tx)
+    sqlx::query("SET TRANSACTION READ ONLY")
+        .execute(&mut *tx)
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let config = if let Some(val) = value {
-        serde_json::from_str(&val).unwrap_or_else(|_| LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem {
-                    id: "1".to_string(),
-                    title: "Visit My Store".to_string(),
-                    url: "/website-builder".to_string(),
-                },
-                LinkItem {
-                    id: "2".to_string(),
-                    title: "Book an Appointment".to_string(),
-                    url: "/booking".to_string(),
-                },
-            ],
-        })
-    } else {
-        LinkInBioConfig {
-            store_name: "My Store".to_string(),
-            bio: "Welcome to my storefront!".to_string(),
-            theme: "gradient".to_string(),
-            links: vec![
-                LinkItem {
-                    id: "1".to_string(),
-                    title: "Visit My Store".to_string(),
-                    url: "/website-builder".to_string(),
-                },
-                LinkItem {
-                    id: "2".to_string(),
-                    title: "Book an Appointment".to_string(),
-                    url: "/booking".to_string(),
-                },
-            ],
-        }
-    };
-
-    Ok(axum::Json(config))
+    ::server_common::auth_utils::set_org_context(&mut *tx, &signed_tenant)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let value: Option<String> = sqlx::query_scalar("SELECT kv_value FROM agent_kv_store WHERE tenant_id = $1 AND kv_key = 'link_in_bio_config'")
+        .bind(&signed_tenant).fetch_optional(&mut *tx).await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    let value = value.ok_or(axum::http::StatusCode::NOT_FOUND)?;
+    let config: LinkInBioConfig =
+        serde_json::from_str(&value).map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    if config
+        .links
+        .iter()
+        .any(|link| !is_supported_bio_url(&link.url))
+    {
+        return Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    tx.commit()
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+    Ok((
+        [(axum::http::header::CACHE_CONTROL, "private, no-store")],
+        axum::Json(config),
+    )
+        .into_response())
 }
 
 pub async fn handle_post_link_in_bio(
     axum::extract::Extension(state): axum::extract::Extension<GrowthState>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
+    claims: Option<axum::extract::Extension<::server_common::Claims>>,
     axum::Json(req): axum::Json<SetLinkInBioConfigReq>,
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
-    let tenant_id = auth_info.org_id;
+    let claims = claims.ok_or(axum::http::StatusCode::UNAUTHORIZED)?.0;
+    let target_tenant = ::server_common::auth_utils::signed_tenant_id(&claims)
+        .ok_or(axum::http::StatusCode::FORBIDDEN)?;
+    if req
+        .tenant_id
+        .as_ref()
+        .is_some_and(|tenant| tenant != &target_tenant)
+    {
+        return Err(axum::http::StatusCode::FORBIDDEN);
+    }
+
+    if req
+        .links
+        .iter()
+        .any(|link| !is_supported_bio_url(&link.url))
+    {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
+
     let mut tx = state
         .pool
         .begin()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-    let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
+    ::server_common::auth_utils::set_org_context(&mut *tx, &target_tenant)
+        .await
+        .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
+    let mut links = req.links;
+    for (i, link) in links.iter_mut().enumerate() {
+        if link.id.is_empty() {
+            link.id = format!("{}", i + 1);
+        }
+    }
     let config = LinkInBioConfig {
         store_name: req.store_name,
         bio: req.bio,
         theme: req.theme,
-        links: req.links,
+        links,
+        remove_branding: req.remove_branding.unwrap_or(false),
     };
 
     let val = serde_json::to_string(&config)
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     sqlx::query("INSERT INTO agent_kv_store (tenant_id, kv_key, kv_value) VALUES ($1, 'link_in_bio_config', $2) ON CONFLICT (tenant_id, kv_key) DO UPDATE SET kv_value = $2, updated_at = CURRENT_TIMESTAMP")
-        .bind(&tenant_id)
+        .bind(&target_tenant)
         .bind(&val)
         .execute(&mut *tx)
         .await
@@ -5997,6 +5716,7 @@ pub async fn handle_post_link_in_bio(
     tx.commit()
         .await
         .map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+
     Ok(axum::http::StatusCode::OK)
 }
 
@@ -6419,7 +6139,7 @@ pub async fn handle_waitlist_embed(
 
     <div class="input-group">
       <input type="email" placeholder="Your email address" id="email-input" />
-      <button id="join-btn">Join</button>
+      <button id="join-btn">Join Waitlist</button>
     </div>
 
     <div id="success-message" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
@@ -6518,14 +6238,18 @@ pub async fn handle_birthday_club_embed(
 
     let safe_tenant = escape_html(tenant);
     let safe_discount = escape_html(discount);
+    let referral_url = escape_html(&format!(
+        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club",
+        urlencoding::encode(tenant)
+    ));
 
     let mut has_pro = false;
     if hide_branding {
         // Validate pro status in DB
         let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE tenant_id = $1 OR id::text = $1",
+            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
         )
-        .bind(&safe_tenant)
+        .bind(tenant)
         .fetch_optional(&state.pool)
         .await;
 
@@ -6541,9 +6265,9 @@ pub async fn handle_birthday_club_embed(
     } else {
         format!(
             r#"<div style="margin-top: 16px; font-size: 12px; text-align: center;">
-                <a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}&source=birthday_club" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>
+                <a href="{}" target="_blank" rel="noopener noreferrer" style="color: {}; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>
             </div>"#,
-            safe_tenant, muted_color
+            referral_url, muted_color
         )
     };
 
@@ -6628,7 +6352,7 @@ pub async fn handle_birthday_club_embed(
   <div class="widget-container" data-tenant="{safe_tenant}">
     <div class="icon">🎂</div>
     <h2>Join our Birthday Club</h2>
-    <p>Sign up to receive a special gift of {safe_discount}% off on your birthday!</p>
+    <p>Configured birthday offer: {safe_discount}% off. Send a request for this offer.</p>
 
     <div class="input-group">
       <input type="text" placeholder="Your name" id="name" required />
@@ -6637,43 +6361,60 @@ pub async fn handle_birthday_club_embed(
       <button id="join-btn">Join the Club</button>
     </div>
 
-    <div id="success-message" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
-      Thanks for joining! We'll send you something special.
+    <div id="capture-status" role="alert" style="display: none; margin-bottom: 16px;"></div>
+    <div id="success-message" role="status" style="display: none; padding: 12px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 8px; margin-bottom: 16px; font-size: 14px; font-weight: 500;">
+      Your request was accepted.
     </div>
 
     {branding_html}
   </div>
 
   <script>
-    document.getElementById('join-btn').addEventListener('click', function() {{
+    document.getElementById('join-btn').addEventListener('click', async function() {{
+      const btn = this;
+      if (btn.disabled) return;
       const name = document.getElementById('name').value;
       const email = document.getElementById('email').value;
       const birthday = document.getElementById('birthday').value;
-
       if (!email) return;
 
-      const btn = this;
+      const status = document.getElementById('capture-status');
+      status.textContent = '';
+      status.style.display = 'none';
       btn.disabled = true;
-      btn.textContent = 'Joining...';
+      btn.textContent = 'Submitting request...';
 
-      fetch('/api/v1/growth/birthday-club/capture', {{
-        method: 'POST',
-        headers: {{ 'Content-Type': 'application/json' }},
-        body: JSON.stringify({{
-          tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
-          name: name,
-          email: email,
-          birthday: birthday
-        }})
-      }}).then(() => {{
+      try {{
+        const response = await fetch('/api/v1/growth/birthday-club/capture', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{
+            tenant_id: document.querySelector('.widget-container').getAttribute('data-tenant'),
+            name: name,
+            email: email,
+            birthday: birthday
+          }})
+        }});
+        if ([400, 401, 403, 422].includes(response.status)) {{
+          status.textContent = 'Request not accepted. Check the information before trying again.';
+          status.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Join the Club';
+          return;
+        }}
+        if (response.status !== 200) throw new Error('Capture was not acknowledged');
+        const result = await response.json();
+        if (result?.success !== true || result.error != null) throw new Error('Capture was not acknowledged');
         document.querySelector('.input-group').style.display = 'none';
         document.getElementById('success-message').style.display = 'block';
-        alert('Joined successfully!');
-      }}).catch(err => {{
-        console.error(err);
-        btn.disabled = false;
-        btn.textContent = 'Join the Club';
-      }});
+        btn.textContent = 'Request accepted';
+      }} catch {{
+        // A missing acknowledgement does not prove the request was rejected.
+        // Preserve the form and do not dispatch another potentially duplicate capture.
+        status.textContent = 'Your request could not be confirmed. Keep this information and check whether it was accepted before submitting again.';
+        status.style.display = 'block';
+        btn.textContent = 'Confirmation unavailable';
+      }}
     }});
   </script>
 </body>

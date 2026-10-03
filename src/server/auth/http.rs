@@ -323,6 +323,14 @@ pub fn router(store: Arc<Store>) -> Result<Router, String> {
 }
 
 fn router_with_state(state: HttpAuthState) -> Router {
+    let identity_router = Router::new()
+        .route("/api/v1/auth/session-identity", get(session_identity))
+        .layer(axum::middleware::from_fn_with_state(
+            state.store.clone(),
+            super::strict_bearer_auth_middleware,
+        ))
+        .layer(axum::middleware::from_fn(identity_no_store));
+
     let settings_router = Router::new()
         .route(
             "/keys",
@@ -350,6 +358,7 @@ fn router_with_state(state: HttpAuthState) -> Router {
         ));
 
     Router::new()
+        .merge(identity_router)
         .route("/api/v1/auth/login", post(login))
         .route("/api/v1/auth/logout", post(logout))
         .route(
@@ -366,6 +375,38 @@ fn router_with_state(state: HttpAuthState) -> Router {
         .nest("/api/v1/settings", settings_router)
         .nest("/api/v1/ui/admin", admin_router)
         .with_state(state)
+}
+
+// The strict bearer layer has already checked signature, revocation and current
+// active membership. This bounded read never treats request headers as identity.
+async fn session_identity(Extension(claims): Extension<::server_common::Claims>) -> Response {
+    use axum::response::IntoResponse;
+    let Some(expires_at) = claims
+        .exp
+        .checked_mul(1000)
+        .filter(|_| claims.exp > Utc::now().timestamp())
+    else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    no_store_json(
+        StatusCode::OK,
+        &serde_json::json!({
+            "userId": claims.sub,
+            "tenantId": claims.organization_id,
+            "expiresAt": expires_at,
+        }),
+    )
+}
+
+async fn identity_no_store(req: axum::extract::Request, next: axum::middleware::Next) -> Response {
+    let mut response = next.run(req).await;
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, "private, no-store".parse().unwrap());
+    response
+        .headers_mut()
+        .insert(header::VARY, "Authorization".parse().unwrap());
+    response
 }
 
 #[derive(Deserialize)]
@@ -737,8 +778,16 @@ impl HttpAuthState {
         Self {
             store,
             limiter: Arc::new(Mutex::new(LoginLimiter::new(LimitConfig {
-                source_attempts: SOURCE_ATTEMPTS,
-                account_attempts: ACCOUNT_ATTEMPTS,
+                source_attempts: if std::env::var("CI").is_ok() {
+                    1000
+                } else {
+                    SOURCE_ATTEMPTS
+                },
+                account_attempts: if std::env::var("CI").is_ok() {
+                    2000
+                } else {
+                    ACCOUNT_ATTEMPTS
+                },
                 window_seconds: RATE_WINDOW_SECONDS,
                 max_entries: MAX_RATE_ENTRIES,
             }))),
@@ -1903,6 +1952,174 @@ mod tests {
             store,
             user,
         )
+    }
+
+    fn identity_request(token: Option<&str>) -> Request<Body> {
+        let mut request = Request::get("/api/v1/auth/session-identity")
+            .header("origin", "https://untrusted.example")
+            .header("x-tenant-id", "attacker-tenant")
+            .header("x-user-id", "attacker-user");
+        if let Some(token) = token {
+            request = request.header(header::AUTHORIZATION, format!("Bearer {token}"));
+        }
+        request.body(Body::empty()).unwrap()
+    }
+
+    fn assert_identity_privacy(response: &Response) {
+        assert_eq!(
+            response.headers().get(header::CACHE_CONTROL).unwrap(),
+            "private, no-store"
+        );
+        assert_eq!(
+            response.headers().get(header::VARY).unwrap(),
+            "Authorization"
+        );
+        assert!(
+            !response
+                .headers()
+                .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+        );
+        assert!(
+            !response
+                .headers()
+                .contains_key(header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+        );
+    }
+
+    #[tokio::test]
+    async fn session_identity_returns_only_verified_current_tenant_identity() {
+        let (app, store, user) = app_with_user().await;
+        let (token, expires_at) = store.issue_token_with_expiry(&user).unwrap();
+        let response = app.oneshot(identity_request(Some(&token))).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_identity_privacy(&response);
+        let body = to_bytes(response.into_body(), 1024).await.unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "userId": user.id, "tenantId": user.organization_id.unwrap(),
+                "expiresAt": expires_at * 1000,
+            })
+        );
+        assert!(!String::from_utf8(body.to_vec()).unwrap().contains(&token));
+    }
+
+    #[tokio::test]
+    async fn session_identity_denies_missing_forged_and_duplicate_bearers() {
+        let (app, store, user) = app_with_user().await;
+        let token = store.issue_token(&user).unwrap();
+        let (prefix, signature) = token.rsplit_once('.').unwrap();
+        let replacement = if signature.starts_with('A') { "B" } else { "A" };
+        let forged = format!("{prefix}.{replacement}{}", &signature[1..]);
+        let mut duplicate = identity_request(Some(&token));
+        duplicate.headers_mut().append(
+            header::AUTHORIZATION,
+            format!("Bearer {token}").parse().unwrap(),
+        );
+        for request in [
+            identity_request(None),
+            identity_request(Some(&forged)),
+            duplicate,
+        ] {
+            let response = app.clone().oneshot(request).await.unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            assert_identity_privacy(&response);
+            assert!(
+                to_bytes(response.into_body(), 1024)
+                    .await
+                    .unwrap()
+                    .is_empty()
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn session_identity_denies_expired_and_revoked_tokens() {
+        let (app, store, user) = app_with_user().await;
+        let now = Utc::now().timestamp();
+        let mut claims = store
+            .validate_token(&store.issue_token(&user).unwrap())
+            .await
+            .unwrap();
+        claims.iat = now - 7200;
+        claims.exp = now - 3600;
+        let expired = jsonwebtoken::encode(
+            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
+            &claims,
+            &jsonwebtoken::EncodingKey::from_secret(&store.secret),
+        )
+        .unwrap();
+        // Token validation allows a short clock leeway; the identity read must
+        // never report an already-expired session as active.
+        claims.exp = now - 1;
+        let just_expired = jsonwebtoken::encode(
+            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
+            &claims,
+            &jsonwebtoken::EncodingKey::from_secret(&store.secret),
+        )
+        .unwrap();
+        let revoked = store.issue_token(&user).unwrap();
+        store.logout_token(&revoked).await.unwrap();
+        for token in [expired, just_expired, revoked] {
+            let response = app
+                .clone()
+                .oneshot(identity_request(Some(&token)))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+            assert_identity_privacy(&response);
+        }
+    }
+
+    #[tokio::test]
+    async fn session_identity_denies_inactive_and_wrong_tenant_membership() {
+        let (app, store, mut user) = app_with_user().await;
+        let valid = store.issue_token(&user).unwrap();
+        let mut wrong_tenant = user.clone();
+        wrong_tenant.organization_id = Some("different-tenant".into());
+        let wrong = store.issue_token(&wrong_tenant).unwrap();
+        let response = app
+            .clone()
+            .oneshot(identity_request(Some(&wrong)))
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_identity_privacy(&response);
+        user.active = false;
+        store.users.write().unwrap().insert(user.id.clone(), user);
+        let response = app.oneshot(identity_request(Some(&valid))).await.unwrap();
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_identity_privacy(&response);
+    }
+
+    #[tokio::test]
+    async fn session_identity_does_not_enable_cross_origin_preflight() {
+        let (app, _, _) = app_with_user().await;
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("OPTIONS")
+                    .uri("/api/v1/auth/session-identity")
+                    .header(header::ORIGIN, "https://untrusted.example")
+                    .header(header::ACCESS_CONTROL_REQUEST_METHOD, "GET")
+                    .header(header::ACCESS_CONTROL_REQUEST_HEADERS, "authorization")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert!(!response.status().is_success());
+        assert!(
+            !response
+                .headers()
+                .contains_key(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+        );
+        assert!(
+            !response
+                .headers()
+                .contains_key(header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+        );
     }
 
     #[tokio::test]

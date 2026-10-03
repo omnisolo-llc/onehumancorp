@@ -24,6 +24,12 @@ describe("interactive quote", () => {
     vi.mocked(fetch).mockReset();
   });
 
+  it("loads the resolved route quote without reading asynchronous Next props", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(Response.json(quoteResponse));
+    render(<InteractiveQuotePage />);
+    expect(await screen.findByText(/Site visit/)).toBeVisible();
+  });
+
   it("loads and accepts the real quote through versioned endpoints", async () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(Response.json(quoteResponse))

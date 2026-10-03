@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { lstat } from 'node:fs/promises';
+import ts from 'typescript';
 
 test('browser runtime uses the same native Cargo target directory as the build', () => {
   const repository = path.resolve('fixture-repository');
@@ -29,7 +30,7 @@ test('obsolete Bazel launchers are absent, including dangling symlinks', async (
   }
 });
 
-test('complete browser discovery works without Docker, built binaries or provider credentials', () => {
+test('complete browser discovery works without Docker, built binaries or provider credentials', t => {
   const result = spawnSync(process.execPath, [fileURLToPath(new URL('./run-playwright.mjs', import.meta.url)), '--list'], {
     cwd: fileURLToPath(new URL('..', import.meta.url)), env: testEnvironment(),
     encoding: 'utf8', timeout: 90000, maxBuffer: 8 * 1024 * 1024,
@@ -38,6 +39,19 @@ test('complete browser discovery works without Docker, built binaries or provide
   assert.equal(result.status, 0, result.stderr + result.stdout.slice(-3000));
   assert.match(result.stdout, /Total:\s*[1-9]\d* tests? in [1-9]\d* files/);
   assert.doesNotMatch(result.stdout + result.stderr, /Requiring @playwright\/test second time|unknown parameter|not a function/);
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const project = ts.readConfigFile(path.join(root, 'playwright.tsconfig.json'), ts.sys.readFile);
+  assert.equal(project.error, undefined, 'browser TypeScript configuration must be readable');
+  const parsed = ts.parseJsonConfigFileContent(project.config, ts.sys, root);
+  assert.deepEqual(parsed.errors, [], 'browser TypeScript project must parse');
+  const included = new Set(parsed.fileNames.map(filename => path.resolve(filename)));
+  const discovered = new Set([...result.stdout.matchAll(/^\s+\[[^\]]+\] › (.+?):\d+:\d+ ›/gm)]
+    .map(match => path.resolve(root, 'src', match[1])));
+  assert.ok(discovered.size > 0, 'actual native spec filenames must be accounted for');
+  const missing = [...discovered].filter(filename => !included.has(filename));
+  assert.deepEqual(missing.map(filename => path.relative(root, filename)), [],
+    'every actually discovered native browser spec must be included in the required TypeScript gate');
+  t.diagnostic(`TypeScript includes all ${discovered.size} discovered native spec files`);
 });
 
 test('CI keeps dependency caches separate from source-bound application outputs', async () => {
@@ -119,8 +133,10 @@ test('CI shards use complete native browser spec discovery, not a smoke allowlis
   assert.match(runner, /PLAYWRIGHT_TEST_DIR:\s*['"]\.\/src['"]/);
   assert.match(config, /testMatch:\s*['"]\*\*\/\*\.spec\.ts['"]/);
   assert.doesNotMatch(runner, /const maintained\s*=|ciSelection\s*\?\s*\[/);
-  assert.match(ci, /shard:\s*\[1, 2, 3, 4\]/);
+  assert.match(ci, /shard:\s*\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12\]/);
   assert.match(ci, /test:e2e -- --ci --shard=/);
+  assert.match(ci, /--workers=2/);
+  assert.match(ci, /--retries=0/);
   assert.match(runner, /pass-with-no-tests/);
 });
 

@@ -48,6 +48,8 @@ Full gates require GNU Make, the pinned Rust/Node toolchains, Python 3 with PyYA
 
 Install Rust with rustup and the pinned Node release. Ensure `$HOME/.cargo/bin` is on PATH on Unix. Use `npm ci` at the repository root, `npm --prefix src/ui/next ci` and `npm --prefix src/cli ci`; none should update a lockfile. Use `--locked` with Cargo in automation. Proto generation uses the workspace build scripts and vendored protoc; do not invoke deleted Bazel targets.
 
+Standalone backend startup requires explicitly supplied `OMNISOLO_AGENT_TOKEN` and `OMNISOLO_AGENT_AUTH_KEY` (at least 32 bytes), using the operator's existing secret-management mechanism. Missing or invalid configuration fails before database initialization; the server never inserts development credentials. `OMNISOLO_AGENT_AUTH_DISABLED` is rejected by production binaries, and SPIFFE mode remains unavailable until verified peer extraction is implemented. The isolated browser runner supplies its own test-only credentials. Cluster mode does not create or overwrite agent credentials.
+
 The default Cargo members are the backend and harness worker. `app` is the Tauri package and is excluded only from focused headless checks. Full `make test` and `make lint` include it and require native desktop dependencies.
 
 ```sh
@@ -59,8 +61,11 @@ cargo test --locked -p server_integrations_stripe
 cargo test --locked --workspace --exclude app
 npm run test:contracts
 npm run typecheck:web
+npm run typecheck:e2e
 npm run test:web
 ```
+
+`typecheck:e2e` checks every source included by `playwright.tsconfig.json`, including archived contract files. It is required by `make lint` and the Node CI job. Static checking does not change native browser discovery or certify archived mock contracts as runtime acceptance.
 
 Focused checks accelerate iteration; they do not replace the complete regression suite. Test output must include nonzero executed tests where tests are expected. No `--pass-with-no-tests`, hidden failures, disabled assertions or changed business expectations merely to obtain green output.
 
@@ -117,8 +122,8 @@ The engineering target is **X = 30 minutes for the complete Linux CI required ga
 The CI graph now separates work that can run independently:
 
 - Rust executable build publishes this run's backend, agent, worker and mTLS probe. The headless test/lint job and desktop test/lint job partition the complete Rust workspace without making the desktop lane rebuild every backend crate.
-- The production Next build publishes promptly. Root/web/CLI/legacy-desktop Node tests, typechecks and lint run in an independent **required** job; a passing build cannot bypass them.
-- Four browser shards consume the same source-validated web/binary artifacts and may run concurrently. They retain the complete browser discovery, not a smoke allowlist.
+- The production Next build publishes promptly. Root/web/CLI/legacy-desktop Node tests, the complete Playwright TypeScript project, application typechecks and lint run in an independent **required** job; a passing build cannot bypass them.
+- Twelve browser shards consume the same source-validated web/binary artifacts, with four shards running concurrently and two workers per shard. Browser execution waits for the independent dependency audit, Node quality and PostgreSQL isolation lanes to release their runner slots; failures in those lanes do not conceal browser results when both build artifacts are valid. At most four Rust, desktop, Kind and Compose jobs can overlap this matrix, keeping the complete workflow at eight concurrent runners or fewer. CI reports each browser failure once. The shards retain the complete browser discovery, not a smoke allowlist.
 - One production Docker build produces the server/agent image layers. Kind and Compose both load that same run's archive and still execute their full deployment checks. `scripts/native-images.py` checks the source fingerprint, tar checksum, image tags and loaded image IDs; caches and arbitrary local images are not accepted as current build evidence. Both deployment suites reuse the compiled mTLS probe rather than installing another Rust toolchain and recompiling it.
 - PostgreSQL tenant-isolation tests remain independently required under the non-superuser application role. `CI Required` fails on failed/cancelled or unexpectedly skipped builds, tests, lint, dependency audit and security lanes.
 
@@ -138,6 +143,29 @@ The final gate fetches the complete job list for the **exact run attempt** with 
 A clean build means a fresh source checkout can pass the full declared gates; a warm invocation, successful binary build or a configured timeout alone cannot certify that. See the remediation ledger for outstanding lint and runtime acceptance work.
 
 ## Browser and provider verification
+
+Normal Rust and Next builds expose no demo-seeding, mock-inbox, approval simulation,
+or reputation simulation HTTP routes. This applies to debug builds as well as
+release builds; there is no environment variable or Cargo feature to re-enable them.
+The native browser runner applies explicit SQL fixtures only to the PostgreSQL
+container it just created. A private per-run proof binds fixture SQL helpers to
+that running container's ID, generated run label, database and loopback port;
+arbitrary `DATABASE_URL` values are rejected before any SQL connection. The runner
+then authenticates its fixture owner through the real login and requires HTTP 404
+for all 18 retired backend fixture routes before browser execution. Unit tests of
+the isolation helper and HTTP probe are not a substitute for that real-stack gate.
+
+Compose verification loads its explicit SQL fixture into its own project-verified
+PostgreSQL container, then checks exact record IDs through the real authenticated
+UI APIs. Kind verification creates and reloads a vendor through the real API in
+both database modes. Neither uses a production fixture endpoint. The retired
+operator seeder fails closed and never modifies an existing installation.
+
+Historical `*.mock-contract.ts` files remain as an inventory of unproven flows;
+they are not evidence of working production capabilities. This boundary repair
+does not claim to implement automatic review solicitation, referral checkout,
+newsletter generation, invoice drafting, or other simulated provider workflows.
+Those capabilities still require real implementations and their own acceptance.
 
 The native E2E runner starts isolated PostgreSQL/Valkey containers, the real Rust binaries and the newly built web package. It seeds only its own database and reconstructs an environment without production database or provider credentials. CI shards the complete browser-spec discovery. Per-test filters are available for local diagnosis without changing CI discovery.
 

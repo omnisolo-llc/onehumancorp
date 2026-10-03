@@ -12,7 +12,7 @@ test.describe('Spin to Win Generator', () => {
 
     await expect(page.locator('h2').filter({ hasText: 'Embed Spin to Win' })).toBeVisible();
 
-    const embedCode = await page.inputValue('textarea');
+    const embedCode = await page.locator('code').innerText();
     expect(embedCode).toContain('10%');
     expect(embedCode).toContain('20%');
     expect(embedCode).toContain('30%');
@@ -55,7 +55,7 @@ test.describe('Spin to Win Generator', () => {
 
     await expect(page.locator('h2').filter({ hasText: 'Embed Spin to Win' })).toBeVisible();
 
-    const embedCode = await page.inputValue('textarea');
+    const embedCode = await page.locator('code').innerText();
     expect(embedCode).toContain('10%');
     expect(embedCode).toContain('20%');
     expect(embedCode).toContain('Free Shipping');

@@ -10,6 +10,17 @@ pub struct CostConfig {
     pub cost_per_gb_month: f64,
     pub cost_per_compute_hour: f64,
     pub cost_per_network_gb: f64,
+    pub storage_quota_gb: i64,
+}
+
+impl CostConfig {
+    pub fn is_storage_quota_exceeded(&self, current_storage_bytes: i64) -> bool {
+        if self.storage_quota_gb <= 0 {
+            return false;
+        }
+        let current_storage_gb = (current_storage_bytes as f64) / (1024.0 * 1024.0 * 1024.0);
+        current_storage_gb >= self.storage_quota_gb as f64
+    }
 }
 
 pub struct ModelPricing {
@@ -420,10 +431,16 @@ pub fn calculate_projected_monthly_cost(
     days_elapsed: u32,
     total_days: u32,
 ) -> f64 {
-    if days_elapsed == 0 || current_cost < 0.0 {
+    if current_cost < 0.0 {
         return 0.0;
     }
+    if days_elapsed == 0 || total_days == 0 {
+        return current_cost;
+    }
     let projected = (current_cost / days_elapsed as f64) * total_days as f64;
+    if projected < current_cost {
+        return current_cost;
+    }
     (projected * 10000.0).round() / 10000.0
 }
 
@@ -497,6 +514,7 @@ mod tests {
             cost_per_cached_input_token: 0.0005,
             cost_per_local_embedding: 0.0001,
             discount_factor: 0.1,
+            storage_quota_gb: 5,
             ..Default::default()
         };
 
@@ -619,20 +637,20 @@ mod tests {
     #[test]
     fn test_calculate_projected_monthly_cost() {
         assert_eq!(calculate_projected_monthly_cost(10.0, 5, 30), 60.0);
-        assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 0, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(10.0, 30, 30), 10.0);
         assert_eq!(calculate_projected_monthly_cost(15.5, 10, 31), 48.05);
-        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 0.0);
+        assert_eq!(calculate_projected_monthly_cost(10.0, 5, 0), 10.0);
         assert_eq!(calculate_projected_monthly_cost(-10.0, 5, 30), 0.0);
     }
 
     #[test]
     fn test_calculate_projected_monthly_cost_cents() {
         assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 30), 6000);
-        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 0, 30), 0);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 0, 30), 1000);
         assert_eq!(calculate_projected_monthly_cost_cents(10.0, 30, 30), 1000);
         assert_eq!(calculate_projected_monthly_cost_cents(15.5, 10, 31), 4805);
-        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 0), 0);
+        assert_eq!(calculate_projected_monthly_cost_cents(10.0, 5, 0), 1000);
     }
 
     #[test]

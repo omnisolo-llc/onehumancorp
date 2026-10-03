@@ -11,6 +11,7 @@ export default function ProposalGeneratorPage() {
   const [shareLink, setShareLink] = useState('');
   const [copied, setCopied] = useState(false);
   const [tenantId, setTenantId] = useState('my-store');
+  const canGenerate = Boolean(clientName.trim() && projectScope.trim() && timeline.trim() && amount.trim()) && Number.isFinite(Number(amount)) && Number(amount) >= 0;
 
   useEffect(() => {
     const tenant = localStorage.getItem('business_display_name') || 'my-store';
@@ -18,10 +19,7 @@ export default function ProposalGeneratorPage() {
   }, []);
 
   const generateLink = () => {
-    if (!clientName || !projectScope || !amount || !timeline) {
-      alert('Please fill out all fields.');
-      return;
-    }
+    if (!canGenerate) return;
 
     const data = {
       tenant: tenantId,
@@ -52,7 +50,7 @@ export default function ProposalGeneratorPage() {
   return (
     <div className="flex flex-col min-h-screen font-inter" style={{ backgroundColor: '#F5F5F7' }}>
       <header className="px-6 py-4 flex items-center justify-between border-b" style={{ background: 'rgba(255, 255, 255, 0.65)', backdropFilter: 'blur(30px) saturate(210%)', borderBottom: '1px solid rgba(255, 255, 255, 0.4)', position: 'sticky', top: 0, zIndex: 50 }}>
-         <h1 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Proposal Generator 📝</h1>
+         <h2 className="text-2xl font-bold font-outfit" style={{ color: '#1D1D1F', letterSpacing: '-0.02em' }}>Proposal Generator 📝</h2>
          <div className="flex items-center gap-3">
              <Link href="/dashboard" className="px-4 py-2 bg-gray-200 rounded-md text-sm font-medium hover:bg-gray-300 transition-colors">
                Back to Dashboard
@@ -72,8 +70,9 @@ export default function ProposalGeneratorPage() {
         <div className="glassmorphism glass-card p-6 md:p-8">
           <div className="space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Client or Company Name</label>
+              <label htmlFor="client-name" className="block text-sm font-medium text-gray-700 mb-2">Client or Company Name</label>
               <input
+                id="client-name"
                 type="text"
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
@@ -83,8 +82,9 @@ export default function ProposalGeneratorPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Project Scope / Details</label>
+              <label htmlFor="project-scope" className="block text-sm font-medium text-gray-700 mb-2">Project Scope / Details</label>
               <textarea
+                id="project-scope"
                 value={projectScope}
                 onChange={(e) => setProjectScope(e.target.value)}
                 placeholder="e.g. Website Redesign, SEO Optimization, and Content Strategy"
@@ -95,8 +95,9 @@ export default function ProposalGeneratorPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Total Amount ($)</label>
+                  <label htmlFor="proposal-amount" className="block text-sm font-medium text-gray-700 mb-2">Total Amount ($)</label>
                   <input
+                id="proposal-amount"
                     type="number"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
@@ -105,8 +106,9 @@ export default function ProposalGeneratorPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Timeline</label>
+                  <label htmlFor="proposal-timeline" className="block text-sm font-medium text-gray-700 mb-2">Estimated Timeline</label>
                   <input
+                id="proposal-timeline"
                     type="text"
                     value={timeline}
                     onChange={(e) => setTimeline(e.target.value)}
@@ -119,10 +121,15 @@ export default function ProposalGeneratorPage() {
             <div className="pt-4">
               <button
                 onClick={generateLink}
-                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-lg"
+                disabled={!canGenerate}
+                aria-describedby="proposal-requirements"
+                className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Generate Shareable Proposal
               </button>
+              <p id="proposal-requirements" role="status" aria-label="Proposal requirements" className="mt-3 text-sm text-gray-600">
+                {canGenerate ? 'Ready to generate a shareable proposal from these details.' : 'Enter a client name, project scope, a non-negative amount, and timeline to generate a proposal.'}
+              </p>
             </div>
           </div>
         </div>

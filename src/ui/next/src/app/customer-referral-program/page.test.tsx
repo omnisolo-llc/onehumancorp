@@ -104,10 +104,10 @@ describe('CustomerReferralProgramPage', () => {
   });
 
   it('removes branding when pro is true and toggle is clicked', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    global.fetch = vi.fn(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'plan-owner', tenantId: 'plan-tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Pro' }));
 
     render(<CustomerReferralProgramPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan', expect.objectContaining({ credentials: 'same-origin' }))); await act(async () => { await new Promise(r => setTimeout(r, 100)); });
 
     const toggle = screen.getByRole('checkbox', { name: /Remove "Powered by OmniSolo"/i });
 
@@ -115,7 +115,7 @@ describe('CustomerReferralProgramPage', () => {
         fireEvent.click(toggle);
     });
 
-    expect(screen.queryByText('Pro Feature')).toBeNull();
+    await waitFor(() => { expect(screen.queryByText('Pro Feature')).toBeNull(); });
     // The exact text "⚡ Powered by OmniSolo" in the preview should be removed
     expect(screen.queryByText('⚡ Powered by OmniSolo')).toBeNull();
   });

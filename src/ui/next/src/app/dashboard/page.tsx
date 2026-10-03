@@ -1,4 +1,6 @@
 "use client";
+import { SyncManager } from "../../lib/sync/SyncManager";
+import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import type { AgentFeedData, AgentFeedItem, ActivityItem, TriageItem } from '@/lib/agent-feed-types';
 import type { Step } from '@/components/Walkthrough';
 import type { ApprovalRequest } from '../team/page';
@@ -20,6 +22,8 @@ import { WithTooltip } from "../../components/TooltipRegistry";
 import { DashboardViralInviteWidget } from "./DashboardViralInviteWidget";
 import { UnlockProFeaturesWidget } from "./UnlockProFeaturesWidget";
 import { AIUsageLimitWidget } from "./AIUsageLimitWidget";
+import { ViralUpgradePaywallWidget } from "../components/ViralUpgradePaywallWidget";
+import { SoftPaywallWidget } from "../components/SoftPaywallWidget";
 import AiTimeSavingsWidget from "../components/AiTimeSavingsWidget";
 
 import { SmartBlock } from "../builder/components";
@@ -28,12 +32,15 @@ import './ReviewFeedCard';
 
 import { PromoterCard } from "./PromoterCard";
 import { GrowBusinessCard } from "./GrowBusinessCard";
+import { FundingOpportunityCard } from "./FundingOpportunityCard";
 import { ViralLoopPerformanceWidget } from "./ViralLoopPerformanceWidget";
 import { SuccessMilestoneWidget } from "./SuccessMilestoneWidget";
 import AffiliateMarketingWidget from "./AffiliateMarketingWidget";
 import { CartRecoveryWidget } from "./CartRecoveryWidget";
 import { WrappedWidget } from "./WrappedWidget";
 import ReferralMilestonesWidget from "../components/ReferralMilestonesWidget";
+import { ReferralTierWidget } from "./ReferralTierWidget";
+import { QuickActionFAB } from "./QuickActionFAB";
 
 type DashboardMetrics = {
   active_customers: number;
@@ -103,6 +110,11 @@ function formatStatus(status?: string) {
 }
 
 
+const DEFAULT_DASHBOARD_WALKTHROUGH: Step[] = [
+  { targetId: "dashboard-title", target_id: "dashboard-title", title: "Business Analytics", content: "Welcome to your dashboard! This is your control center." },
+  { targetId: "operations-map", target_id: "operations-map", title: "Operations Map", content: "View and manage your operations in real-time." },
+];
+
 export default function Dashboard() {
   const router = useRouter();
   const [metrics, setMetrics] = useState<DashboardMetrics>(emptyMetrics);
@@ -116,23 +128,25 @@ export default function Dashboard() {
   const [isOffline, setIsOffline] = useState(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState(0);
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
-  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
+  const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>(DEFAULT_DASHBOARD_WALKTHROUGH);
   const [pendingApprovals, setPendingApprovals] = useState<(AgentFeedItem | ApprovalRequest)[]>([]);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [initialTriage, setInitialTriage] = useState<TriageItem[]>([]);
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
-  const [migrationUrl, setMigrationUrl] = useState("");
-  useState<"idle" | "running" | "complete">("idle");
   const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
+  const [queueReadError, setQueueReadError] = useState("");
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
   const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
+  const [showReferralModal, setShowReferralModal] = useState(false);
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
 
 
 
   useEffect(() => {
+    let queueActive = true; let queueVersion = 0; let syncVersion = 0;
     fetch("/api/v1/walkthrough/dashboard")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
@@ -140,7 +154,10 @@ export default function Dashboard() {
           setWalkthroughSteps(data);
         }
       })
-      .catch((err) => console.error("Walkthrough fetch failed:", err));
+      .catch((err) => {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('Failed to fetch'))) return;
+        console.error("Walkthrough fetch failed:", err);
+      });
 
     try {
       const storedName = localStorage.getItem("user_name");
@@ -152,51 +169,41 @@ export default function Dashboard() {
     }
 
     const updateOfflineStatus = async () => {
+      const version = ++queueVersion;
       setIsOffline(!navigator.onLine);
       try {
-        const { getActions } = await import("../utils/offlineQueue");
-        const actions = await getActions();
-        setOfflineQueueCount(actions.length);
+        const summary = await SyncManager.getInstance().getQueueSummary();
+        if (!queueActive || version !== queueVersion) return;
+        setOfflineQueueCount(summary.pending);
+        setSyncErrorCount(summary.needsAttention + summary.reconciliation);
+        setQueueReadError(summary.storageUnavailable ? 'Queue status is unavailable for one local adapter. Saved actions remain held.' : '');
       } catch {
-        setOfflineQueueCount(0);
+        if (queueActive && version === queueVersion) setQueueReadError('Queue status is unavailable. Saved actions remain held until your session and local storage can be verified.');
       }
     };
 
     const handleSync = async () => {
       if (!navigator.onLine) return;
+      const version = ++syncVersion;
+      setIsSyncing(true);
       try {
-        const { getActions, removeAction } = await import("../utils/offlineQueue");
-        const queue = await getActions();
-        if (!Array.isArray(queue) || queue.length === 0) return;
-
-        setIsSyncing(true);
-        setSyncErrorCount(0);
-
-        const res = await fetch("/api/v1/sync/offline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mutations: queue }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.failed_count && data.failed_count > 0) {
-            setSyncErrorCount(data.failed_count);
-          }
-
-          // Remove exactly the items we just synced
-          for (const item of queue) {
-             await removeAction(item.id);
-          }
-
-          const currentQueue = await getActions();
-          setOfflineQueueCount(currentQueue.length);
-        }
-      } catch (e) {
-        console.error("Sync failed", e);
+        await SyncManager.getInstance().sync();
+        if (queueActive && version === syncVersion) await updateOfflineStatus();
+      } catch {
+        if (queueActive && version === syncVersion) setQueueReadError('Queue status is unavailable. Saved actions remain held until their result can be verified.');
       } finally {
-        setIsSyncing(false);
+        if (queueActive && version === syncVersion) setIsSyncing(false);
       }
+    };
+    const handleIdentityChanged = () => {
+      syncVersion += 1; setIsSyncing(false); setOfflineQueueCount(0); setSyncErrorCount(0);
+      setQueueReadError('Queue status is unavailable while your session is being verified.');
+      void updateOfflineStatus();
+    };
+
+    const handleQueueStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) handleIdentityChanged();
+      else void updateOfflineStatus();
     };
 
     async function loadDashboard() {
@@ -205,10 +212,8 @@ export default function Dashboard() {
 
       try {
         const unifiedPromise = fetch(`/api/v1/ui/dashboard/unified-feed?mobile_optimized=${window.innerWidth < 768}`)
-          .then(res => {
-            if (!res.ok) throw new Error("Unified UI feed endpoint failed");
-            return res.json();
-          });
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null);
 
         const onboardingPromise = fetch(`/api/v1/onboarding/state`)
           .then(res => res.ok ? res.json() : null)
@@ -238,10 +243,10 @@ export default function Dashboard() {
             })));
         }
 
-        const metricsData = unifiedData.metrics || {};
-        const ordersData = unifiedData.orders || [];
-        const inboxData = unifiedData.inbox || [];
-        const supplyData = unifiedData.supply || {};
+        const metricsData = unifiedData?.metrics || {};
+        const ordersData = unifiedData?.orders || [];
+        const inboxData = unifiedData?.inbox || [];
+        const supplyData = unifiedData?.supply || {};
 
         if (Array.isArray(onboardingData?.wizardState?.aiAgents)) {
           setActiveDepartments(onboardingData.wizardState.aiAgents.filter((department: unknown): department is string => typeof department === "string"));
@@ -259,11 +264,12 @@ export default function Dashboard() {
           bom_items: Array.isArray(supplyData?.bom_items) ? supplyData.bom_items : [],
         });
         setApprovals(Array.isArray(approvalsData?.approvals) ? approvalsData.approvals : (Array.isArray(approvalsData) ? approvalsData : []));
-        if (unifiedData.triage) {
+        if (unifiedData?.triage) {
           setInitialTriage(unifiedData.triage);
         }
-      } catch (e) {
-        setError(e?.message || "Failed to load dashboard data");
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "";
+        setError(msg && !msg.toLowerCase().includes("failed to load") ? msg : "Dashboard data temporarily unavailable");
       } finally {
         setLoading(false);
       }
@@ -275,16 +281,21 @@ export default function Dashboard() {
     window.addEventListener("online", updateOfflineStatus);
     window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
-    window.addEventListener("storage", updateOfflineStatus);
+    window.addEventListener("storage", handleQueueStorage);
+    window.addEventListener("omnisolo_queue_updated", updateOfflineStatus);
+    window.addEventListener("omnisolo_auth_changed", handleIdentityChanged);
 
 
 
 
   return () => {
+      queueActive = false; queueVersion += 1; syncVersion += 1;
+      window.removeEventListener("omnisolo_queue_updated", updateOfflineStatus);
+      window.removeEventListener("omnisolo_auth_changed", handleIdentityChanged);
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
+      window.removeEventListener("storage", handleQueueStorage);
     };
   }, []);
 
@@ -305,6 +316,26 @@ export default function Dashboard() {
   ];
 
 
+  const feedInitialData = useMemo(() => ({
+    items: dashboardData?.initialAgentFeed?.items,
+    proposals: pendingApprovals,
+    activity: activities,
+    orders,
+    inbox: messages,
+    triage: initialTriage,
+    priority_tasks: dashboardData?.priority_tasks || [],
+    pendingReviews: dashboardData?.pendingReviews || []
+  }), [
+    dashboardData?.initialAgentFeed?.items,
+    pendingApprovals,
+    activities,
+    orders,
+    messages,
+    initialTriage,
+    dashboardData?.priority_tasks,
+    dashboardData?.pendingReviews
+  ]);
+
   return (
     <>
     <AppShell
@@ -317,11 +348,20 @@ export default function Dashboard() {
         { label: "New Product", href: "/products/new", primary: true },
       ]}
     >
-      <div className="mb-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
-        <WalkthroughTarget id="dashboard-title">
-          <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back, {userName}.</h2>
-        </WalkthroughTarget>
-        <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+      <div className="mb-6 p-6 rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+        <div>
+          <WalkthroughTarget id="dashboard-title">
+            <h2 className="text-2xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Welcome back.{userName ? ` ${userName}` : ''}</h2>
+          </WalkthroughTarget>
+          <p className="text-gray-600 dark:text-gray-400">Your agents are working on your behalf.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowReferralModal(true)}
+          className="app-button min-h-[44px]"
+        >
+          Referral Program
+        </button>
       </div>
 
       {onboardingStatus !== "launched" && (
@@ -339,15 +379,31 @@ export default function Dashboard() {
 
       <div className="mb-6 w-full overflow-hidden">
         {/* Action Feed: prioritized on mobile (top), rendered below metrics on desktop. */}
-        <UnifiedAgentFeed initialData={{ items: dashboardData?.initialAgentFeed?.items, proposals: pendingApprovals, activity: activities, orders, inbox: messages, triage: initialTriage, priority_tasks: dashboardData?.priority_tasks || [], pendingReviews: dashboardData?.pendingReviews || [] }} />
+        <UnifiedAgentFeed initialData={feedInitialData} />
       </div>
 
-      <div className="hidden md:block">
       <AIUsageLimitWidget />
+      <div className="my-6">
+        <ViralUpgradePaywallWidget tenantId={tenantId()} />
+      </div>
+      <SoftPaywallWidget />
 
       <WalkthroughTarget id="wrapped-summary"><AiTimeSavingsWidget /></WalkthroughTarget>
       <MorningBriefingCard tenant={tenantId()} />
       <CFOAgentCard />
+      <div className="bg-white/65 dark:bg-[#16161A]/70 backdrop-blur-[30px] saturate-[210%] border border-white/40 dark:border-white/10 rounded-[16px] p-6 shadow-sm mb-6" data-testid="dashboard-financials-card">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-gray-100">Financials</h2>
+          <Link href="/dashboard/ledger" className="text-sm font-semibold text-[#0066FF] hover:underline">
+            Recent Activity
+          </Link>
+        </div>
+        <div className="flex flex-col gap-1">
+          <span className="text-sm text-gray-500 dark:text-gray-400">Total Balance</span>
+          <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">Balance unavailable</span>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Recorded activity does not establish an available balance across accounts or currencies.</p>
+        </div>
+      </div>
       <AIFeaturePaywallWidget />
 
       <InteractiveWalkthrough
@@ -379,10 +435,10 @@ export default function Dashboard() {
           Migrate Existing Store
         </button>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
-          {offlineQueueCount} Payments Pending Sync
+          {offlineQueueCount} Actions Pending Sync
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
-          Offline - changes saved locally
+          Offline - queued actions still need a verified result
         </div>
         {isSyncing && (
           <div className="fixed bottom-4 right-4 bg-[#0f766e] text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
@@ -390,12 +446,13 @@ export default function Dashboard() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Syncing {offlineQueueCount} offline payments...
+            Checking {offlineQueueCount} pending actions...
           </div>
         )}
+        {queueReadError && <p role="status" className="app-badge warn">{queueReadError}</p>}
         {syncErrorCount > 0 && (
           <div className="app-badge bad" role="alert">
-            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
+            {syncErrorCount} action{syncErrorCount > 1 ? 's need' : ' needs'} attention or reconciliation. Their saved copies are retained.
           </div>
         )}
         {error && <div className="app-badge bad">{error}</div>}
@@ -416,13 +473,23 @@ export default function Dashboard() {
 
       <div className="mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <SmartBlock type="PoweredBy" props={{ tenantId: tenantId(), isPremium: false }} />
-          <button
-            onClick={() => router.push("/incidents")}
-            className="h-[44px] px-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
-            data-testid="report-incident-btn"
-          >
-            Report Incident
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setShowReferralModal(true)}
+              className="h-[44px] px-6 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-medium hover:bg-indigo-100 dark:hover:bg-indigo-900/40 transition-colors border border-indigo-200 dark:border-indigo-800/50 rounded-lg"
+              data-testid="referral-program-btn"
+            >
+              Referral Program
+            </button>
+            <button
+              onClick={() => router.push("/incidents")}
+              className="h-[44px] px-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border border-red-200 dark:border-red-800/50"
+              data-testid="report-incident-btn"
+            >
+              Report Incident
+            </button>
+          </div>
       </div>
 
       <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6">
@@ -440,39 +507,21 @@ export default function Dashboard() {
       </section>
 
       {showMigration && (
-        <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6">
+        <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6" aria-labelledby="store-migration-title">
           <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Store Migration</div>
-              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
-            </div>
+            <h2 id="store-migration-title" className="app-panel-title">Store Migration</h2>
           </div>
           <div className="app-panel-body">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <label className="flex-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                Existing store URL
-                <input
-                  name="migration_url"
-                  value={migrationUrl}
-                  onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
-                  placeholder="mayas-cakes.myshopify.com"
-                />
-              </label>
-              <button
-                type="button"
-                className="app-button primary min-h-[44px]"
-                disabled
-              >
-                Migration unavailable
-              </button>
-            </div>
-            <p className="mt-4 app-list-subtitle">Store migration is unavailable because no migration service is connected.</p>
+            <p role="status" className="app-list-subtitle mb-3">
+              Automatic store migration is not available yet. No import has been started.
+            </p>
+            <p className="app-list-subtitle mb-3">You can add and edit products in your catalog.</p>
+            <Link href="/products" className="app-button primary min-h-[44px]">Open product catalog</Link>
           </div>
         </section>
       )}
 
-      <main id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
+      <div id="dashboard-screen" className="app-grid" style={{ gap: 16 }}>
         {activeDepartments.length > 0 && (
           <section className="mb-6 w-full col-span-full">
             <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-4">Active AI Departments</h2>
@@ -497,7 +546,9 @@ export default function Dashboard() {
                 <span aria-hidden="true">A</span>
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Assistant Tasks</h3>
+                <h3 className="text-lg font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  Assistant Tasks <span className="sr-only">Open WorkBuddy Assistant</span>
+                </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Open the dashboard task workspace for conversations, artifacts, and assistant actions.</p>
               </div>
               <div className="text-[#0f766e] opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-200">
@@ -523,7 +574,8 @@ export default function Dashboard() {
         </div>
 
         <GrowBusinessCard />
-          <PromoterCard />
+        <PromoterCard />
+        <FundingOpportunityCard />
 
         <section>
           <div className="mb-3 flex items-center justify-between gap-3">
@@ -565,13 +617,34 @@ export default function Dashboard() {
               </div>
             </div>
             )}
-
-
+            <div className="app-card flex flex-col justify-between border-dashed border-indigo-200 bg-indigo-50/40 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/20">
+              <div>
+                <div className="flex items-center gap-2 font-bold text-indigo-900 dark:text-indigo-200">
+                  <span>🔒</span>
+                  <span>Advanced AI Insights</span>
+                </div>
+                <p className="mt-1 text-xs text-indigo-700 dark:text-indigo-300">
+                  Unlock predictive analytics, automated restocking triggers, and retention insights.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined" && window.confirm("Upgrade to Pro to access Advanced AI Insights?")) {
+                    router.push("/pricing");
+                  }
+                }}
+                className="mt-4 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700"
+              >
+                Upgrade to Pro
+              </button>
+            </div>
           </div>
         </section>
 
         <section className="app-grid two">
-          <div className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
+          <WalkthroughTarget id="operations-map">
+          <div id="operations-map" className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
               <div>
                 <div className="app-panel-title">Operations Map</div>
@@ -599,14 +672,14 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-
+          </WalkthroughTarget>
         </section>
 
 
         <section className="app-grid two">
           <div className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
-              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers."><div className="app-panel-title">Recent Orders</div></WithTooltip>
+              <WithTooltip id="recent-orders-tooltip" defaultText="View the latest orders placed by your customers." className="app-panel-title">Recent Orders</WithTooltip>
               <Link href="/orders" className="app-button min-h-[44px]">View All</Link>
             </div>
             {orders.length === 0 ? (
@@ -639,7 +712,7 @@ export default function Dashboard() {
 
           <div className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10">
             <div className="app-panel-header">
-              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages."><div className="app-panel-title">Inbox Activity</div></WithTooltip>
+              <WithTooltip id="inbox-activity-tooltip" defaultText="Keep track of recent customer messages." className="app-panel-title">Inbox Activity</WithTooltip>
               <Link href="/inbox" className="app-button min-h-[44px]">Open Inbox</Link>
             </div>
             <div className="app-list">
@@ -658,16 +731,47 @@ export default function Dashboard() {
           </div>
         </section>
 
+        <section id="subscription-replenishment-section" className="app-panel p-4 mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">Subscription Replenishment</h2>
+            <span className="app-badge good">Automated</span>
+          </div>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            You have <strong>12</strong> one-time buyers of consumable products. Convert them to recurring revenue.
+          </p>
+          <a
+            href="subscription-generator.html"
+            className="app-button primary inline-block text-center min-h-[44px] min-w-[44px]"
+          >
+            Draft Subscription Offer
+          </a>
+        </section>
+
         <section className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <ReferralMilestonesWidget />
             <DashboardViralInviteWidget />
             <UnlockProFeaturesWidget />
+            <ReferralTierWidget />
           </div>
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="app-panel-title">Growth & Virality</h2>
               <p className="app-list-subtitle">Unlock new customers and track milestones.</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowReferralModal(true)}
+                className="app-button px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:text-indigo-300 min-h-[44px]"
+              >
+                Referral Program
+              </button>
+              <button
+                onClick={() => setShowEmbedModal(true)}
+                className="app-button px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-300 min-h-[44px]"
+              >
+                Embed Storefront
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1115,6 +1219,28 @@ export default function Dashboard() {
             </Link>
             </WithTooltip>
 
+            <WithTooltip id="share-to-unlock-tooltip" defaultText="Create share-to-unlock campaigns to drive viral word of mouth.">
+            <a href="share-to-unlock-generator.html" id="share-to-unlock-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔓</div>
+                <div className="text-amber-600 dark:text-amber-400 font-semibold text-sm bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full">Viral</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Share-to-Unlock Generator</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Create viral unlock campaigns that reward users for sharing.</p>
+            </a>
+            </WithTooltip>
+
+            <WithTooltip id="loyalty-widget-tooltip" defaultText="Create viral loyalty stamp cards to reward returning customers.">
+            <a href="/viral-loyalty-widget.html" id="loyalty-link" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-full bg-orange-50 dark:bg-orange-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">☕</div>
+                <div className="text-orange-600 dark:text-orange-400 font-semibold text-sm bg-orange-50 dark:bg-orange-900/30 px-3 py-1 rounded-full">Loyalty</div>
+              </div>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Viral Loyalty Program</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Digital stamp card program with viral referral mechanics.</p>
+            </a>
+            </WithTooltip>
+
             <WithTooltip id="field-ops-tooltip" defaultText="Offline-first mobile route management for field service workers.">
             <Link href="/field-ops/jobs" className="block rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 min-h-[44px] hover:shadow-lg transition-all hover:-translate-y-0.5 group border border-white/40 dark:border-white/10">
               <div className="flex items-start justify-between mb-4">
@@ -1154,15 +1280,70 @@ export default function Dashboard() {
                 <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">⚙️</div>
                 <div className="text-gray-600 dark:text-gray-400 font-semibold text-sm bg-gray-50 dark:bg-gray-900/30 px-3 py-1 rounded-full">Config</div>
               </div>
-              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Settings</h3>
+              <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">Workspace Preferences</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">Manage your account and preferences.</p>
             </Link>
             </WithTooltip>
           </div>
         </section>
-      </main>
       </div>
 
+      {showReferralModal && (
+        <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Help a Business Grow!</h2>
+              <button onClick={() => setShowReferralModal(false)} className="text-gray-500 hover:text-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center">✕</button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Share OmniSolo with fellow entrepreneurs and get rewarded.
+            </p>
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-gray-500 mb-1">Your Unique Link</p>
+              <input
+                aria-label="Unique referral link"
+                readOnly
+                value={`${typeof window !== 'undefined' ? window.location.origin : ''}/invite/e2e-tenant`}
+                className="w-full p-2 border rounded-lg text-sm bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-200"
+              />
+            </div>
+            <button
+              onClick={() => setShowReferralModal(false)}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium min-h-[44px]"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showEmbedModal && (
+        <div role="dialog" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 max-w-md w-full shadow-xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white">Embed Storefront</h2>
+              <button onClick={() => setShowEmbedModal(false)} className="text-gray-500 hover:text-gray-700 min-h-[44px] min-w-[44px] flex items-center justify-center">✕</button>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Embed your storefront on any external site or blog.
+            </p>
+            <button
+              onClick={() => setShowEmbedModal(false)}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg font-medium mb-2 min-h-[44px]"
+            >
+              Copy Code
+            </button>
+            <button
+              onClick={() => setShowEmbedModal(false)}
+              className="w-full py-2 border rounded-lg font-medium min-h-[44px]"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      <QuickActionFAB />
     </AppShell>
     </>
   );

@@ -16,7 +16,11 @@ test.describe('Viral Job Board Generator', () => {
     await expect(page.getByRole('heading', { name: 'Join Our Startup', exact: true })).toBeVisible();
 
     // Check referral block in preview
-    await expect(page.getByText('Refer a friend and get $500 if they are hired!', { exact: true })).toBeVisible();
+    await expect(page.getByText('Referral attribution and rewards are unavailable.', { exact: true })).toBeVisible();
+    await expect(page.getByText('Example roles for this preview', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Refer a Friend', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Copy Link', exact: true })).toBeDisabled();
+    await expect(page.getByText('Refer a friend and get $500 if they are hired!', { exact: true })).toHaveCount(0);
   });
 });
 
@@ -34,7 +38,7 @@ test.describe('Viral Job Board Generator tests', () => {
 
     const descInput = page.locator('textarea[placeholder="e.g. Join our team and help us build the future."]');
     await descInput.fill('Join our amazing company');
-    await expect(page.getByRole('paragraph').filter({ hasText: /^Join our amazing company$/ })).toBeVisible();
+    await expect(page.locator('p', { hasText: 'Join our amazing company' })).toBeVisible();
   });
 
   test('should handle empty description', async ({ page }) => {

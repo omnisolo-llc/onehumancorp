@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import { useProPlan } from '../components/useProPlan';
 
@@ -12,10 +14,10 @@ export default function TestimonialWidgetGenerator() {
   const [rating, setRating] = useState('5');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [showModal, setShowModal] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const { hasPro } = useProPlan();
-  const [hideBranding, setHideBranding] = useState(false);
+  const [requestedBrandingRemoval, setHideBranding] = useState(false);
+  const hideBranding = requestedBrandingRemoval && hasPro;
   const [showPaywall, setShowPaywall] = useState(false);
 
   useEffect(() => {
@@ -25,11 +27,8 @@ export default function TestimonialWidgetGenerator() {
   const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/testimonial/embed?tenant=${encodeURIComponent(tenant)}&authorName=${encodeURIComponent(authorName)}&reviewText=${encodeURIComponent(reviewText)}&rating=${rating}&theme=${theme}&branding=${!hideBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="250" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(embedCode);
+  const handleCopy = () => { void clipboard.copy(embedCode); };
 
   const getThemeStyles = () => {
       if (theme === 'dark') {
@@ -48,9 +47,9 @@ export default function TestimonialWidgetGenerator() {
 
       <header className="px-6 py-4 flex items-center justify-between border-b sticky top-0 z-50 bg-white/65 backdrop-blur-[30px] saturate-[210%] border-white/40 shadow-sm">
         <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Testimonial Widget 🌟</h1>
-        <button className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
+        <Link href="/dashboard" className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors">
           Back to Dashboard
-        </button>
+        </Link>
       </header>
 
       <main className="p-6 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8">
@@ -135,7 +134,7 @@ export default function TestimonialWidgetGenerator() {
                         checked={hideBranding}
                         onChange={(e) => {
                             if (!hasPro) {
-                                e.preventDefault();
+                                setHideBranding(false);
                                 setShowPaywall(true);
                             } else {
                                 setHideBranding(e.target.checked);
@@ -144,7 +143,7 @@ export default function TestimonialWidgetGenerator() {
                         className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                     <label htmlFor="removeBranding" className="text-sm font-medium text-gray-700 flex items-center gap-2 cursor-pointer">
-                        Remove "Powered by OmniSolo" Badge
+                        Remove "OmniSolo" Badge
                         {!hasPro && <span className="bg-yellow-100 text-yellow-800 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider">PRO</span>}
                     </label>
                 </div>
@@ -231,6 +230,7 @@ export default function TestimonialWidgetGenerator() {
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                          <button
                             onClick={handleCopy}
+                        disabled={clipboard.state === 'pending'}
                             className="p-2 bg-white rounded-lg border shadow-sm text-gray-600 hover:text-indigo-600 transition-colors"
                             title="Copy to clipboard"
                         >
@@ -242,10 +242,12 @@ export default function TestimonialWidgetGenerator() {
                 <div className="mt-6 flex flex-col sm:flex-row gap-3">
                     <button
                         onClick={handleCopy}
+                        disabled={clipboard.state === 'pending'}
                         className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors shadow-sm flex items-center justify-center gap-2"
                     >
-                        {copied ? 'Copied!' : 'Copy Code'}
+                        {clipboard.state === 'copied' ? 'Copied!' : 'Copy Code'}
                     </button>
+                    {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                     <button
                         onClick={() => setShowModal(false)}
                         className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium min-h-[44px] min-w-[44px] transition-colors"
@@ -279,7 +281,7 @@ export default function TestimonialWidgetGenerator() {
 
             <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-3">Upgrade to Remove Branding</h2>
             <p className="text-gray-600 mb-6 text-sm leading-relaxed">
-              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "Powered by OmniSolo" watermark.
+              Make the Testimonial Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark.
             </p>
 
             <button

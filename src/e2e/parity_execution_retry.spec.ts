@@ -1,10 +1,15 @@
+import { randomUUID } from 'node:crypto';
 import { test, expect } from '@playwright/test';
+
+// These finite mutation responses have stalled after headers in hosted runs.
+// Retain the original failure trace even when CI retries are disabled.
+test.use({ trace: 'retain-on-failure' });
 
 test.describe('Agent Jobs DB Sync Parity CUJ', () => {
   // Test 1: Simulating Task Creation to Verify No Timeout Failures
   test('verify owner can create a task successfully and UI reflects correct state', async ({ page }) => {
     await page.goto('/tasks');
-    await expect(page.locator('text=Tasks')).toBeVisible();
+    await expect(page.locator('text=Tasks').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'New Task' }).click();
     await page.getByLabel('Title').fill('Task Parity E2E Test');
@@ -17,7 +22,7 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
   // Test 2: Simulating Empty Form Submission and Empty String handling
   test('verify empty task title handles null correctly', async ({ page }) => {
     await page.goto('/tasks');
-    await expect(page.locator('text=Tasks')).toBeVisible();
+    await expect(page.locator('text=Tasks').first()).toBeVisible();
 
     await page.getByRole('button', { name: 'New Task' }).click();
     await page.getByRole('button', { name: 'Save' }).click();
@@ -38,22 +43,61 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
     await page.getByLabel('Title').fill('Edited Task');
     await page.getByRole('button', { name: 'Save Changes' }).click();
 
-    await expect(page.locator('text=Edited Task')).toBeVisible({ timeout: 10000 });
+    await expect(page.locator('#task-list').getByText('Edited Task', { exact: true })).toBeVisible({ timeout: 10000 });
+    await page.reload();
+    await expect(page.locator('#task-list').getByText('Edited Task', { exact: true })).toBeVisible();
   });
 
   // Test 4: Delete Task (Database Delete Action)
-  test('verify owner can delete a task and handle degradation gracefully', async ({ page }) => {
+  test('verify owner can delete a task and handle degradation gracefully', async ({ page }, testInfo) => {
+    const transportEvents: { event: string; at: number; error?: string | null }[] = [];
+    const isDeletion = (request: import('@playwright/test').Request) => request.method() === 'DELETE'
+      && new URL(request.url()).pathname.startsWith('/api/v1/staff/tasks/');
+    page.on('requestfinished', request => { if (isDeletion(request)) transportEvents.push({ event: 'requestfinished', at: Date.now() }); });
+    page.on('requestfailed', request => { if (isDeletion(request)) transportEvents.push({ event: 'requestfailed', at: Date.now(), error: request.failure()?.errorText }); });
+    const title = `Delete Me Task ${randomUUID()}`;
     await page.goto('/tasks');
 
     await page.getByRole('button', { name: 'New Task' }).click();
-    await page.getByLabel('Title').fill('Delete Me Task');
+    await page.getByLabel('Title').fill(title);
     await page.getByRole('button', { name: 'Save' }).click();
 
-    await page.locator('text=Delete Me Task').click();
+    await page.locator('#task-list').getByText(title, { exact: true }).click();
+    const deletion = page.waitForResponse(response => new URL(response.url()).pathname.startsWith('/api/v1/staff/tasks/')
+      && response.request().method() === 'DELETE');
     await page.getByRole('button', { name: 'Delete' }).click();
 
-    // UI should reflect successful removal
-    await expect(page.locator('text=Delete Me Task')).not.toBeVisible();
+    const deleted = await deletion;
+    await testInfo.attach('delete-response-headers', {
+      contentType: 'application/json',
+      body: JSON.stringify({ status: deleted.status(), path: new URL(deleted.url()).pathname, headers: { contentType: await deleted.headerValue('content-type'), contentLength: await deleted.headerValue('content-length'), transferEncoding: await deleted.headerValue('transfer-encoding') } }),
+    });
+    // Capture whether the finite backend response finished before requesting its
+    // diagnostic body. A transport/body stall stays a failure with an exact stage.
+    const bounded = async <T,>(promise: Promise<T>, stage: string): Promise<T> => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([promise, new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`DELETE ${stage} did not finish within 10 seconds (HTTP ${deleted.status()})`)), 10_000);
+        })]);
+      } finally { clearTimeout(timer); }
+    };
+    let completion;
+    try { completion = await bounded(deleted.finished(), 'response'); }
+    finally {
+      await testInfo.attach('delete-transport-events', { contentType: 'application/json', body: JSON.stringify({ fromServiceWorker: deleted.fromServiceWorker(), resourceType: deleted.request().resourceType(), events: transportEvents }) });
+    }
+    await testInfo.attach('delete-response-completion', { contentType: 'application/json', body: JSON.stringify({ error: completion?.message ?? null }) });
+    expect(completion).toBeNull();
+    const body = await bounded(deleted.text(), 'body retrieval');
+    await testInfo.attach('delete-response-body', { contentType: 'text/plain', body: body.slice(0, 4096) });
+    expect(deleted.ok(), body).toBe(true);
+    expect(JSON.parse(body)).toMatchObject({ success: true });
+    // Both the selected detail and the list row must be removed after persistence.
+    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByText('Loading tasks...', { exact: true })).not.toBeVisible();
+    await expect(page.locator('#task-list').getByText(title, { exact: true })).toHaveCount(0);
   });
 
   // Test 5: Verify task list rendering
@@ -64,6 +108,7 @@ test.describe('Agent Jobs DB Sync Parity CUJ', () => {
         await page.getByRole('button', { name: 'New Task' }).click();
         await page.getByLabel('Title').fill(`Task Stress ${i}`);
         await page.getByRole('button', { name: 'Save' }).click();
+        await expect(page.locator('#task-list').getByText(`Task Stress ${i}`, { exact: true })).toBeVisible();
     }
 
     await page.goto('/'); // force reload

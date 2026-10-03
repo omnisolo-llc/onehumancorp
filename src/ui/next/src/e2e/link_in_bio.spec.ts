@@ -1,50 +1,40 @@
 import { test, expect } from '../../../../e2e/fixtures';
 
 test.describe('Link-in-Bio Generator E2E', () => {
-  test('User can create and publish link in bio, then view it publicly', async ({ page }) => {
-    // 1. Navigate to the link-in-bio generator page
+  test('reviews and publishes selected bio fields, serves them anonymously, then revokes that version', async ({ page, anonymousPage }) => {
     await page.goto('/link-in-bio-generator');
-
-    // 2. Wait for the page to be ready (ensure "Publish Changes" button is visible)
-    const publishButton = page.locator('button', { hasText: 'Publish Changes' });
-    await expect(publishButton).toBeVisible();
-
-    // 3. Update the business name and bio
-    const businessNameInput = page.getByRole('textbox', { name: 'Business name' });
-    await businessNameInput.fill('Playwright Test Bakery');
-
-    const bioInput = page.getByRole('textbox', { name: 'Bio tagline' });
-    await bioInput.fill('We bake the best E2E cakes!');
-
-    // 4. Update the first link
-    const linkTitleInput = page.locator('input[placeholder="Title (e.g. Visit my Shop)"]').first();
-    await linkTitleInput.fill('Our Menu');
-
-    const linkUrlInput = page.locator('input[placeholder="URL (e.g. https://...)"]').first();
-    await linkUrlInput.fill('https://example.com/menu');
-
-    // We can't rely on `window.alert` directly without setting up a listener,
-    // so we handle the alert. Playwright automatically dismisses dialogs unless specified,
-    // but let's be explicit.
-    page.on('dialog', dialog => dialog.accept());
-
-    // 5. Publish changes
-    await publishButton.click();
-
-    // Wait a brief moment for the save
-    await page.waitForTimeout(500);
-
-    // 6. Navigate to the public bio page
-    // By default, the generator uses 'my-store' as the default tenant id in localStorage if none is set
-    await page.goto('/bio/my-store');
-
-    // 7. Verify the changes are visible on the public page
-    // Using a more specific selector, as Next.js layout might have other h1s (like "Bio" in the header)
-    await expect(page.locator('h1.font-outfit.text-3xl')).toHaveText('Playwright Test Bakery');
-    await expect(page.locator('p.leading-relaxed')).toHaveText('We bake the best E2E cakes!');
-
-    const publishedLink = page.locator('a:has-text("Our Menu")');
-    await expect(publishedLink).toBeVisible();
-    await expect(publishedLink).toHaveAttribute('href', 'https://example.com/menu');
+    const save = page.getByRole('button', { name: 'Save private configuration' });
+    await expect(save).toBeEnabled();
+    await page.getByRole('textbox', { name: 'Store / Creator Name Business name' }).fill('Playwright Test Bakery');
+    await page.getByRole('textbox', { name: 'Bio / Description Bio tagline' }).fill('We bake the best E2E cakes!');
+    if (await page.getByRole('textbox', { name: 'Link 1 Title' }).count() === 0) await page.getByRole('button', { name: '+ Add Link' }).click();
+    await page.getByRole('textbox', { name: 'Link 1 Title' }).fill('Our Menu');
+    await page.getByRole('textbox', { name: 'Link 1 URL' }).fill('https://example.com/menu');
+    await save.click();
+    await expect(page.getByRole('status', { name: 'Private profile status' })).toContainText('Saved private configuration');
+    await expect(page.getByRole('link', { name: 'Open published website' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Review public version' }).click();
+    const snapshot = page.getByLabel('Public website snapshot');
+    await expect(snapshot).toContainText('Playwright Test Bakery');
+    await expect(snapshot).toContainText('Our Menu');
+    await page.getByRole('button', { name: 'Publish reviewed version' }).click();
+    const published = page.getByRole('link', { name: 'Open published website' });
+    await expect.poll(async () => {
+      if (await published.count()) return true;
+      const refresh = page.getByRole('button', { name: 'Check publication status' });
+      if (await refresh.isEnabled().catch(() => false)) await refresh.click();
+      return await published.count() > 0;
+    }, { timeout: 30_000, message: 'The mounted publication worker must commit a published receipt' }).toBe(true);
+    const publicPath = await published.getAttribute('href');
+    expect(publicPath).toMatch(/^\/api\/v1\/public\/sites\/[0-9a-f-]{36}$/);
+    const response = await anonymousPage.goto(publicPath!);
+    expect(response?.status()).toBe(200);
+    await expect(anonymousPage.getByRole('heading', { name: 'Playwright Test Bakery' })).toBeVisible();
+    await expect(anonymousPage.getByText('We bake the best E2E cakes!')).toBeVisible();
+    await expect(anonymousPage.getByRole('link', { name: 'Our Menu' })).toHaveAttribute('href', 'https://example.com/menu');
+    await page.getByRole('button', { name: 'Revoke publication version' }).click();
+    await expect(page.getByText('This publication version is revoked.')).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Open published website' })).toHaveCount(0);
+    expect((await anonymousPage.request.get(publicPath!)).status()).toBe(404);
   });
 });

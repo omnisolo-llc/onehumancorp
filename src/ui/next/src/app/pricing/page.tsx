@@ -1,7 +1,7 @@
 "use client";
 
 // Pricing Page Implementation
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { WithTooltip } from '../../components/TooltipRegistry';
@@ -17,6 +17,8 @@ export default function PricingPage() {
   const [planDetails, setPlanDetails] = useState<import('@/lib/business-records').BillingPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAnnual, setIsAnnual] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const checkoutPending = useRef(false);
 
   useEffect(() => {
     const fetchPlanData = async () => {
@@ -28,6 +30,7 @@ export default function PricingPage() {
           setPlanDetails(json);
         }
       } catch (error) {
+        if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
         console.error('Failed to fetch plan data:', error);
       } finally {
         setLoading(false);
@@ -61,6 +64,9 @@ export default function PricingPage() {
   };
 
   const handleUpgrade = async (tier: string, isAnnualSelected?: boolean) => {
+    if (checkoutPending.current) return;
+    checkoutPending.current = true;
+    setCheckoutError(null);
     try {
       const response = await fetch('/api/v1/billing/create-checkout-session', {
         method: 'POST',
@@ -70,17 +76,27 @@ export default function PricingPage() {
         body: JSON.stringify({ tier, is_subscription: true, subscription_interval: isAnnualSelected ? 'year' : 'month' }),
       });
 
-      if (!response.ok) {
+      if (!response.ok || ![200, 201].includes(response.status)) {
         throw new Error('Failed to create checkout session');
       }
 
-      const data = await response.json();
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+      const data: unknown = await response.json();
+      if (!data || typeof data !== 'object' || Array.isArray(data)
+        || ('success' in data && data.success !== true) || ('error' in data && data.error != null)
+        || !('checkout_url' in data) || typeof data.checkout_url !== 'string'
+        || data.checkout_url.trim() !== data.checkout_url || data.checkout_url.includes('\\')) {
+        throw new Error('Invalid checkout receipt');
       }
-    } catch (error) {
-      console.error('Error upgrading plan:', error);
-      alert('Failed to initiate upgrade. Please try again.');
+      const checkoutUrl = new URL(data.checkout_url);
+      if (checkoutUrl.protocol !== 'https:' || checkoutUrl.hostname !== 'checkout.stripe.com'
+        || checkoutUrl.port || checkoutUrl.username || checkoutUrl.password || checkoutUrl.pathname === '/') {
+        throw new Error('Invalid checkout destination');
+      }
+      window.location.href = checkoutUrl.href;
+    } catch {
+      setCheckoutError('Checkout is unavailable. Your plan has not changed. Please try again.');
+    } finally {
+      checkoutPending.current = false;
     }
   };
 
@@ -94,6 +110,7 @@ export default function PricingPage() {
       </header>
 
       <main id="pricing-screen" className="p-4 md:p-8 flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
+        {checkoutError && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{checkoutError}</p>}
         <div className="text-center mb-4 md:mb-8 max-w-2xl mx-auto">
           <p className="text-base md:text-lg text-gray-600 leading-relaxed">Plain-language pricing — no hidden fees. Choose the best plan to grow your small business.</p>
         </div>
@@ -216,7 +233,15 @@ export default function PricingPage() {
             </div>
         </div>
 
-        <div className="flex justify-center mt-4">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-4">
+          <a
+            href="https://omnisolo.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-gray-200 bg-white/50 backdrop-blur-[30px] saturate-[210%] hover:bg-white/80 hover:shadow-sm transition-all text-xs font-semibold hover:text-indigo-600 uppercase tracking-widest font-outfit text-gray-600"
+          >
+            ⚡ OmniSolo
+          </a>
           <PoweredByOmniSolo tenantId="omnisolo" />
         </div>
       </main>

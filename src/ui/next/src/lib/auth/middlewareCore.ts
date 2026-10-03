@@ -121,6 +121,9 @@ export async function evaluateAuthMiddleware(
     return next(false, true);
   }
 
+  // Publication reads ignore session credentials entirely; the route and backend recheck public eligibility.
+  if (decision.access === "public" && decision.entry.owner === "publication") return next(false, true);
+
   const session = await validSession(request, dependencies);
   if (decision.access === "public") {
     if (
@@ -128,7 +131,10 @@ export async function evaluateAuthMiddleware(
       descriptor.invocation === "page" &&
       descriptor.pathname === "/login"
     ) {
-      return redirect(safeReturnPath(url.searchParams.get("next")));
+      const nextParam = url.searchParams.get("next");
+      if (nextParam !== null && nextParam !== "") {
+        return redirect(safeReturnPath(nextParam));
+      }
     }
     return next(session.clearCookie);
   }

@@ -1,11 +1,11 @@
-import { test, expect, adminPage } from './fixtures';
+import { test, expect } from './fixtures';
 
 import { db } from './db_utils';
 
 test.describe('Department Handoff Protocol', () => {
-    test('Owner Feed correctly displays and allows approval of Task Envelopes', async ({ page }) => {
+    test('Owner Feed correctly displays and allows approval of Task Envelopes', async ({ page, loginAs, adminUser }) => {
         // 1. Arrange: Seed a TaskEnvelope directly into the database to simulate background agent work
-        const tenantId = 'e2e-tenant';
+        const tenantId = adminUser.organizationId;
         const envelopeId = `env-${Date.now()}`;
         const initialPayload = JSON.stringify({
             title: "New Custom Cake Inquiry",
@@ -24,12 +24,12 @@ test.describe('Department Handoff Protocol', () => {
         `, [envelopeId, tenantId, initialPayload, routingHistory]);
 
         // 2. Act: Owner navigates to the Work Triage feed
-        page = await adminPage(page);
-        await page.goto('/ui/triage.html');
+        await loginAs(page, adminUser);
+        await page.goto(`/ui/triage.html?tenant_id=${tenantId}&bypass_cache=true&t=${Date.now()}`);
         await page.waitForLoadState('networkidle');
 
         // 3. Assert: The task envelope is displayed correctly
-        await expect(page.locator('text=New Custom Cake Inquiry')).toBeVisible();
+        await expect(page.locator('text=New Custom Cake Inquiry')).toBeVisible({ timeout: 15000 });
         await expect(page.locator('text=Customer Service replied. Sales drafted a $150 quote. Ops confirmed delivery date.')).toBeVisible();
         await expect(page.locator('text=$150.00')).toBeVisible();
         await expect(page.locator('text=$50.00')).toBeVisible(); // 33% deposit
@@ -37,10 +37,13 @@ test.describe('Department Handoff Protocol', () => {
         // 4. Act: Owner clicks "Approve & Send Quote"
         const approveButton = page.locator('button:has-text("Approve & Send Quote")');
         await expect(approveButton).toBeVisible();
+        const decision = page.waitForResponse(response => response.url().includes('/api/v1/ui/triage/action') && response.request().method() === 'POST');
         await approveButton.click();
 
         // 5. Assert: The item is removed and marked completed
-        await page.waitForResponse(response => response.url().includes('/api/v1/ui/triage/action') && response.status() === 200);
+        expect((await decision).status()).toBe(200);
+        const saved = await db.query('SELECT status FROM task_envelopes WHERE id = $1 AND tenant_id = $2', [envelopeId, tenantId]);
+        expect(saved[0].status).toBe('COMPLETED');
         await expect(page.locator('text=New Custom Cake Inquiry')).not.toBeVisible();
 
         // Clean up the DB

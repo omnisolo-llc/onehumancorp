@@ -1,63 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useCloudInvitation } from '../referrals/useCloudInvitation';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
+
+const noPrivateDraft = () => {};
 
 export function DashboardViralInviteWidget() {
-  const [copied, setCopied] = useState(false);
-  const [, setTenantId] = useState("default-team");
-  const [referralLink, setReferralLink] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedTenant = localStorage.getItem('business_display_name');
-      const finalTenant = storedTenant || "default-team";
-      setTenantId(finalTenant);
-    }
-  }, []);
-
-  const handleGenerate = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    try {
-      const w = window as unknown as { __TAURI__?: { core?: { invoke: (cmd: string) => Promise<string> } } };
-      if (w.__TAURI__ && w.__TAURI__.core) {
-        const link = await w.__TAURI__.core.invoke('generate_referral_link');
-        setReferralLink(link);
-      } else {
-        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-
-        const res = await fetch('/api/v1/growth/referrals/generate', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ custom_message: "" })
-        });
-        if (!res.ok) throw new Error('Referral service unavailable');
-        const data = await res.json();
-        if (typeof data.referral_link !== 'string' || !data.referral_link) throw new Error('Invalid referral response');
-        setReferralLink(data.referral_link);
-      }
-    } catch {
-      setError('A referral link could not be generated.');
-    }
-    setLoading(false);
-  };
-
-  const handleCopy = () => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(referralLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleShareX = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const text = `Start your business on OmniSolo OneHumanCorp using my referral link: ${referralLink}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-  };
+  const invitation = useCloudInvitation(noPrivateDraft);
+  const referralLink = invitation.link;
+  const clipboard = useClipboardFeedback(referralLink);
+  const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on OmniSolo OneHumanCorp: ${referralLink}`)}`;
 
   return (
     <div className="mb-6 omnisolo-growth-card p-6 backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30 border border-white/20 dark:border-white/10 bg-gradient-to-r from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-xl" data-testid="dashboard-viral-invite-widget">
@@ -65,17 +18,17 @@ export function DashboardViralInviteWidget() {
         <div>
           <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">Invite a Business Owner</h2>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Generate a referral link through the OmniSolo referral service and share it.
+            Create an invitation for your verified account. Creating a link does not send it or confirm that anyone has joined. Referral rewards have not been verified.
           </p>
         </div>
         {!referralLink ? (
           <button
             id="dashboard-invite-btn"
-            onClick={handleGenerate}
-            disabled={loading}
+            onClick={() => void invitation.create('pending')}
+            disabled={invitation.phase !== 'ready'}
             className="w-full min-h-[44px] min-w-[44px] bg-[#0f766e] hover:bg-[#0d645d] text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-md"
           >
-            {loading ? (
+            {invitation.phase === 'requesting' ? (
               <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -90,6 +43,7 @@ export function DashboardViralInviteWidget() {
             <input
               id="dashboard-invite-link"
               type="text"
+              aria-label="Invitation link"
               readOnly
               value={referralLink}
               className="w-full px-4 py-2 rounded-lg bg-white/50 dark:bg-black/20 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200"
@@ -97,22 +51,26 @@ export function DashboardViralInviteWidget() {
             <div className="flex flex-wrap gap-2">
               <button
                 id="dashboard-copy-btn"
-                onClick={handleCopy}
+                onClick={() => void clipboard.copy(referralLink)}
+                disabled={clipboard.state === 'pending'}
                 className="flex-1 bg-white dark:bg-gray-800 text-gray-800 dark:text-white hover:bg-gray-50 border border-gray-200 py-2 px-4 rounded-lg font-medium transition-colors"
               >
-                {copied ? 'Copied!' : 'Copy'}
+                {clipboard.state === 'copied' ? 'Copied!' : clipboard.state === 'pending' ? 'Copying…' : 'Copy'}
               </button>
-              <button
+              <a
                 id="dashboard-share-x-btn"
-                onClick={handleShareX}
+                href={shareUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex-1 bg-black text-white hover:bg-gray-800 py-2 px-4 rounded-lg font-medium transition-colors"
               >
                 Share on X
-              </button>
+              </a>
             </div>
           </div>
         )}
-        {error && <p className="text-sm text-red-600" role="alert">{error}</p>}
+        <p role="status" aria-label="Dashboard invitation status" className="text-sm">{invitation.message}</p>
+        {referralLink && clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'} className="text-sm">{clipboard.message}</p>}
       </div>
     </div>
   );

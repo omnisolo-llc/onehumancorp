@@ -4,4 +4,6 @@ Welcome to the OmniSolo Help Center.
 
 - [Managing Quotes, Invoices, and Approvals](/docs/help_center/managing_quotes_invoices_approvals.md)
 - [Setup, Accounts & Authority](/docs/help_center/setup_accounts_authority.md)
-- [Compute/API charging and BYOK](/docs/help_center/compute_api_charging_and_byok.md)
+- [Connected Accounts and Standing Authority](/docs/help_center/connected_accounts.md)
+- [Invoices and Checkout Links](/docs/help_center/fabricated_checkout_links.md)
+- [Cost, Exceptions, and Recovery](/docs/help_center/cost_exceptions_and_recovery.md)

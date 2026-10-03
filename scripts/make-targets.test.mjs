@@ -33,6 +33,8 @@ test('make test covers Rust, Node, CLI, desktop UI, contracts and fresh real-sta
   const result = await runMake('test');
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.commands, [
+    'npm run build:web',
+    'npm run desktop:prepare',
     'cargo test --locked --workspace',
     'npm run test:scripts',
     'npm run test:web',
@@ -45,7 +47,7 @@ test('make test covers Rust, Node, CLI, desktop UI, contracts and fresh real-sta
   ]);
 });
 
-for (const failed of ['cargo test', 'test:web', 'test:contracts', 'build:web', 'test:e2e']) {
+for (const failed of ['desktop:prepare', 'cargo test', 'test:web', 'test:contracts', 'build:web', 'test:e2e']) {
   test(`make test propagates ${failed} failure without reporting success`, async () => {
     const result = await runMake('test', failed);
     assert.notEqual(result.status, 0);
@@ -57,10 +59,13 @@ test('make lint checks Rust formatting/Clippy and JavaScript/TypeScript lint/typ
   const result = await runMake('lint');
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(result.commands, [
+    'npm run build:web',
+    'npm run desktop:prepare',
     'cargo fmt --all -- --check',
     'cargo clippy --locked --workspace --all-targets -- -D warnings',
     'npm run lint:node',
     'npm run typecheck:web',
+    'npm run typecheck:e2e',
     'npm --prefix src/cli run typecheck',
   ]);
 });
@@ -69,4 +74,20 @@ test('make lint propagates linter failures', async () => {
   const result = await runMake('lint', 'lint:node');
   assert.notEqual(result.status, 0);
   assert.equal(result.commands.at(-1), 'npm run lint:node');
+});
+
+test('make lint propagates browser typecheck failures', async () => {
+  const result = await runMake('lint', 'typecheck:e2e');
+  assert.notEqual(result.status, 0);
+  assert.equal(result.commands.at(-1), 'npm run typecheck:e2e');
+});
+
+test('required Node quality checks the complete Playwright TypeScript project', async () => {
+  const packageJson = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.equal(packageJson.scripts['typecheck:e2e'], 'tsc --noEmit -p playwright.tsconfig.json');
+  const workflow = await readFile(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const nodeJob = workflow.split('  native-node:')[1]?.split('  native-web:')[0];
+  assert.ok(nodeJob, 'required Node quality job must exist');
+  assert.match(nodeJob, /^ {10}npm run typecheck:e2e$/m);
+  assert.doesNotMatch(nodeJob, /continue-on-error:\s*true|typecheck:e2e[^\n]+\|\|/);
 });

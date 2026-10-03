@@ -13,9 +13,10 @@ export default function LeadMagnetGeneratorPage() {
   const [buttonText, setButtonText] = useState('Download Now');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [copied, setCopied] = useState(false);
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   useEffect(() => {
     if (typeof localStorage !== 'undefined') {
@@ -58,9 +59,12 @@ export default function LeadMagnetGeneratorPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
+                <label htmlFor="lead-magnet-title" className="block text-sm font-medium text-gray-700 mb-1">Headline</label>
                 <input
+                  id="lead-magnet-title"
                   type="text"
+                  aria-label="Headline"
+                  placeholder="e.g. Unlock 10% Off"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
@@ -68,8 +72,11 @@ export default function LeadMagnetGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label htmlFor="lead-magnet-desc" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
                 <textarea
+                  id="lead-magnet-desc"
+                  aria-label="Description"
+                  placeholder="e.g. Join our newsletter..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
@@ -78,9 +85,12 @@ export default function LeadMagnetGeneratorPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
+                <label htmlFor="lead-magnet-btn" className="block text-sm font-medium text-gray-700 mb-1">Button Text</label>
                 <input
+                  id="lead-magnet-btn"
                   type="text"
+                  aria-label="Button Text"
+                  placeholder="e.g. Download Now"
                   value={buttonText}
                   onChange={(e) => setButtonText(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 animate-all duration-200"
@@ -94,6 +104,7 @@ export default function LeadMagnetGeneratorPage() {
                     <input
                       type="radio"
                       name="theme"
+                      aria-label="Light theme"
                       checked={theme === 'light'}
                       onChange={() => setTheme('light')}
                       className="text-indigo-600 focus:ring-indigo-500"
@@ -104,6 +115,7 @@ export default function LeadMagnetGeneratorPage() {
                     <input
                       type="radio"
                       name="theme"
+                      aria-label="Dark theme"
                       checked={theme === 'dark'}
                       onChange={() => setTheme('dark')}
                       className="text-indigo-600 focus:ring-indigo-500"
@@ -117,6 +129,7 @@ export default function LeadMagnetGeneratorPage() {
                 <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
+                    aria-label="Remove Powered by OmniSolo Branding"
                     checked={removeBranding}
                     onChange={handleBrandingToggle}
                     className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
@@ -165,14 +178,15 @@ export default function LeadMagnetGeneratorPage() {
                 <p className={`text-sm mb-6 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{description}</p>
                 <div className="space-y-3 flex flex-col items-center">
                   <input type="email" placeholder="Enter your email address" className={`w-full px-4 py-3 rounded-xl border text-sm ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400' : 'bg-white border-gray-200 text-gray-900 placeholder-gray-400'} focus:outline-none focus:ring-2 focus:ring-indigo-500`} readOnly />
-                  <button className="min-h-[40px] px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-full shadow-md transition-all text-sm active:scale-[0.98] cursor-pointer inline-flex justify-center items-center">
+                  <button disabled aria-describedby="lead-magnet-preview-note" className="disabled:opacity-60 disabled:cursor-not-allowed min-h-[40px] px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-full shadow-md transition-all text-sm active:scale-[0.98] cursor-pointer inline-flex justify-center items-center">
                     {buttonText}
                   </button>
                 </div>
+                <p id="lead-magnet-preview-note" className="mt-2 text-sm text-gray-500">No downloadable resource is configured in this preview.</p>
                 {!removeBranding && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
                     <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} className={`text-xs font-semibold no-underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                      ⚡ Powered by OmniSolo
+                      ⚡ OmniSolo <span className="sr-only">⚡ Powered by OmniSolo</span>
                     </a>
                   </div>
                 )}

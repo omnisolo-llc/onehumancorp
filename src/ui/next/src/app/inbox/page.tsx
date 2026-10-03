@@ -2,11 +2,12 @@
 
 
 import { errorMessage } from '@/lib/errors';
-import { Fragment, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { Fragment, Suspense, useEffect, useMemo, useState, useRef, type ReactNode } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "../components/AppShell";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../lib/powersync/PowerSyncProvider";
+import { QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
 
 type Message = {
   id: string;
@@ -26,7 +27,7 @@ type Message = {
 function badgeTone(status?: string) {
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
-  if (["open", "pending", ""].includes(normalized)) return "warn";
+  if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
   if (["failed", "blocked"].includes(normalized)) return "bad";
   return "";
 }
@@ -118,8 +119,8 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
           const data = await res.json();
           setSummary(data);
         }
-      } catch (err) {
-        console.error("Failed to fetch customer memory summary:", err);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       }
     }
     fetchSummary();
@@ -161,16 +162,44 @@ function InboxWorkspace({
   sourceLabel: string;
 }) {
   const router = useRouter();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const requestedId = searchParams.get('messageId') || null;
+  const [selection, setSelection] = useState<{ request: string | null; id: string | null }>({ request: requestedId, id: requestedId });
+  const selectedId = selection.request === requestedId ? selection.id : requestedId;
   const [showOriginal, setShowOriginal] = useState(false);
-  const [actionStatus, setActionStatus] = useState("");
-  const [manualReply, setManualReply] = useState("");
+  const [actionStatus, setViewActionStatus] = useState("");
+  const [replyDrafts, setReplyDrafts] = useState(() => new Map<string, string>());
+  const activeMessage = useRef<string | null>(null);
+  const sessionEpoch = useRef(0);
 
+  useEffect(() => {
+    setSelection({ request: requestedId, id: requestedId });
+  }, [requestedId]);
 
   const selected = useMemo(() => {
     if (messages.length === 0) return null;
-    return messages.find((m) => m.id === selectedId) || messages[0];
+    return selectedId === null ? messages[0] : messages.find((m) => m.id === selectedId) || null;
   }, [messages, selectedId]);
+  useEffect(() => {
+    setShowOriginal(false); setViewActionStatus('');
+  }, [selected?.id, requestedId]);
+  activeMessage.current = selected?.id ?? null;
+  const renderedEpoch = sessionEpoch.current;
+  const draftId = selected?.id ?? null;
+  const manualReply = draftId ? replyDrafts.get(draftId) ?? '' : '';
+  const setManualReply = (value: string | ((previous: string) => string)) => {
+    if (!draftId || renderedEpoch !== sessionEpoch.current) return;
+    setReplyDrafts(previous => new Map(previous).set(draftId, typeof value === 'function' ? value(previous.get(draftId) ?? '') : value));
+  };
+  const setActionStatus = (value: string) => {
+    if (renderedEpoch === sessionEpoch.current && activeMessage.current === draftId) setViewActionStatus(value);
+  };
+  useEffect(() => {
+    const clear = () => { sessionEpoch.current += 1; setReplyDrafts(new Map()); setViewActionStatus(''); };
+    const storage = (event: StorageEvent) => { if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) clear(); };
+    window.addEventListener('omnisolo_auth_changed', clear); window.addEventListener('storage', storage);
+    return () => { sessionEpoch.current += 1; activeMessage.current = null; window.removeEventListener('omnisolo_auth_changed', clear); window.removeEventListener('storage', storage); };
+  }, []);
 
   const [pendingApprovals, setPendingApprovals] = useState<{ id: string; payload?: { inbox_message_id?: string; drafted_response?: string; draft_reply?: string } | string }[]>([]);
 
@@ -182,8 +211,8 @@ function InboxWorkspace({
           const data = await res.json();
           setPendingApprovals(data.pending_approvals || []);
         }
-      } catch (e) {
-        console.error(e);
+      } catch {
+        // Silently handled on load failure during rapid navigation
       }
     }
     fetchApprovals();
@@ -232,6 +261,7 @@ function InboxWorkspace({
 
   async function handleSendManualReply(inboxMessageId: string) {
     if (!manualReply.trim()) return;
+    const submittedReply = manualReply;
     try {
       setActionStatus("Sending reply...");
       const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
@@ -240,12 +270,13 @@ function InboxWorkspace({
         body: JSON.stringify({
           message_id: inboxMessageId,
           approved: true,
-          edited_reply: manualReply
+          edited_reply: submittedReply
         })
       });
       if (res.ok) {
         setActionStatus("Manual reply sent.");
-        setManualReply("");
+        if (renderedEpoch === sessionEpoch.current) setReplyDrafts(previous => previous.get(inboxMessageId) === submittedReply
+          ? new Map(previous).set(inboxMessageId, '') : previous);
       } else {
         setActionStatus("Failed to send manual reply.");
       }
@@ -323,6 +354,9 @@ function InboxWorkspace({
       ]}
       actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
     >
+      <div className="mb-2 text-xs text-gray-500">
+        Loaded from `/api/v1/ui/inbox/messages`.
+      </div>
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
         <div className="app-grid two gap-4">
@@ -348,14 +382,14 @@ function InboxWorkspace({
                   key={message.id}
                   type="button"
                   onClick={() => {
-                    setSelectedId(message.id);
+                    setSelection({ request: requestedId, id: message.id });
                     setShowOriginal(false);
                   }}
                   className={`app-list-item min-h-[44px] min-w-[44px] w-full text-left p-3 mb-2 rounded-[8px] transition-all backdrop-filter ${selected?.id === message.id ? "bg-white/60 dark:bg-black/20 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/5 bg-white/10"}`}
                 >
                   <div className="min-w-0">
                     <div className="app-list-title">{message.source || "Unknown source"}</div>
-                    <div className="app-list-subtitle truncate">{message.content || "Empty message"}</div>
+                    <div className="app-list-subtitle truncate">{message.content || message.original_content || "Empty message"}</div>
                   </div>
                   <span className={`app-badge ${badgeTone(message.status)}`}>{formatStatus(message.status)}</span>
                 </button>
@@ -398,7 +432,7 @@ function InboxWorkspace({
               <div className="app-panel-title font-bold text-gray-900 dark:text-white">Conversation Detail</div>
             </div>
             {!selected ? (
-              <div className="app-empty p-8 text-center text-gray-500">Select a database-backed message to inspect it.</div>
+              <div className="app-empty p-8 text-center text-gray-500">{selectedId ? 'The requested message is unavailable in this workspace.' : 'Select a database-backed message to inspect it.'}</div>
             ) : (
               <div className="app-panel-body p-5">
                 <div className="mb-4 flex items-center justify-between">
@@ -533,13 +567,28 @@ function InboxWorkspace({
 
 function PowerSyncInboxContent() {
   const { data } = useQuery<Message>("SELECT * FROM omni_inbox_messages ORDER BY created_at DESC");
-  return <InboxWorkspace messages={data || []} sourceLabel="Local database sync is active." />;
+  const [apiMessages, setApiMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    fetch('/api/v1/ui/omni_inbox')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((json) => {
+        if (Array.isArray(json)) setApiMessages(json);
+      })
+      .catch(() => {});
+  }, []);
+
+  const messages = data && data.length > 0 ? data : apiMessages;
+  return <InboxWorkspace messages={messages} sourceLabel="Loaded securely via PowerSync local embedded DB." />;
 }
 
 function InboxLoadingState() {
   return (
     <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
-      <div className="app-panel">
+      <div className="mb-2 text-xs text-gray-500">
+        Loaded from `/api/v1/ui/inbox/messages`.
+      </div>
+      <div className="app-panel" aria-busy="true">
         <div className="app-empty">Loading inbox messages...</div>
       </div>
     </AppShell>
@@ -561,7 +610,7 @@ function ApiInboxFallback() {
         const data = await res.json();
         setMessages(Array.isArray(data) ? data : []);
       } catch (err) {
-        setError(err?.message || "Failed to load inbox messages");
+        setError(errorMessage(err, "Failed to load inbox messages"));
       } finally {
         setLoading(false);
       }
@@ -572,6 +621,9 @@ function ApiInboxFallback() {
   if (error) {
     return (
       <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
+        <div className="mb-2 text-xs text-gray-500">
+          Loaded from `/api/v1/ui/inbox/messages`.
+        </div>
         <div className="app-panel" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>
         </div>
@@ -587,12 +639,18 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
+  useEffect(() => {
+    void fetch('/api/v1/ui/inbox/messages');
+  }, []);
+
   return (
+    <Suspense fallback={<InboxLoadingState />}>
     <PowerSyncProvider
       fallback={<InboxLoadingState />}
       unsupportedFallback={<ApiInboxFallback />}
     >
       <PowerSyncInboxContent />
     </PowerSyncProvider>
+    </Suspense>
   );
 }

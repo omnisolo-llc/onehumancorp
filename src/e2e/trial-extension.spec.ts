@@ -1,125 +1,25 @@
 import { test, expect } from './fixtures';
-import './fixtures';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from './support/entitlement_fixture';
 
-async function navigateToTrialExtension(page: import("@playwright/test").Page) {
-  try {
-    await page.goto('/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-  } catch  {
-    try {
-      await page.goto('http://127.0.0.1:3000/trial-extension', { waitUntil: 'domcontentloaded', timeout: 5000 });
-    } catch { /* Optional local state or response decoding failed; retain the existing fallback. */ }
-  }
+for (const path of ['/trial-extension.html', '/ui/trial-extension.html']) {
+  test(`${path} preserves plan review without share-to-Pro claims`, async ({ page, baseURL }) => {
+    const fixture = await createEntitlementOwner(page, baseURL);
+    const claims = trackTrialClaims(page);
+    await page.goto(path);
+    await expect(page.getByRole('heading', { name: 'Plan and Trial Availability' })).toBeVisible();
+    await expect(page.getByRole('status')).toContainText('durable grant is not verified');
+    await expect(page.getByRole('button', { name: /Share on X|Unlock 7 Days/ })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: 'Review plans' })).toHaveAttribute('href', '/pricing');
+    await page.getByRole('link', { name: 'Check current plan' }).click();
+    await expect(page).toHaveURL(/\/trial-extension$/);
+    await expect(page.getByRole('status', { name: 'Current plan' })).toHaveText('Current verified plan: Free.');
+    await page.getByRole('button', { name: 'Check trial availability' }).click();
+    await expect(page.getByText(/durable grant is not verified/)).toBeVisible();
+    await page.goBack();
+    await expect(page).toHaveURL(new URL(path, baseURL).href);
+    await page.getByRole('link', { name: 'Back to Dashboard' }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    expect(claims).toEqual([]);
+    await expectEntitlementUnchanged(page, fixture);
+  });
 }
-
-test.describe.serial('Trial Extension', () => {
-
-  test('should display the trial extension page', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await navigateToTrialExtension(page);
-
-    await expect(page.locator('h1', { hasText: 'Interactive Trial Extension' }).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText('Want 7 Extra Days of Pro?')).toBeVisible();
-
-    const poweredByLink = page.locator('a', { hasText: /OmniSolo/i }).first();
-    await expect(poweredByLink).toBeVisible();
-    await expect(poweredByLink).toHaveAttribute('href', /.*\/api\/v1\/growth\/referrals\/click\?target=\/onboarding&ref=trial_extension/);
-  });
-
-  test('should claim trial extension successfully', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await navigateToTrialExtension(page);
-
-    // Stub window.open so the test doesn't actually open Twitter
-    await page.evaluate(() => {
-      window.open = function() { return null; };
-    });
-
-    const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-    await expect(shareButton).toBeVisible();
-
-    await shareButton.click();
-
-    // We expect either success or an alert
-    let dialogMessage = '';
-    page.on('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
-    });
-
-    try {
-        await expect(page.getByText('Trial Extended!')).toBeVisible({ timeout: 15000 });
-    } catch(e) {
-        if (!dialogMessage.includes('Failed to claim')) {
-            throw e;
-        }
-    }
-  });
-
-  test('should fail gracefully if backend returns error (already claimed)', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await navigateToTrialExtension(page);
-
-    await page.evaluate(() => {
-      window.open = function() { return null; };
-    });
-
-    let dialogMessage = '';
-    page.on('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
-    });
-
-    const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-    await shareButton.click();
-
-    await expect(async () => {
-        expect(dialogMessage).toContain('Failed to claim trial extension');
-    }).toPass({ timeout: 15000 });
-
-    await expect(page.getByText('Trial Extended!')).not.toBeVisible();
-  });
-
-  test('should fail gracefully on network error', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await navigateToTrialExtension(page);
-
-    await page.evaluate(() => {
-      window.open = function() { return null; };
-    });
-
-    await page.evaluate(() => {
-      const originalFetch = window.fetch;
-      window.fetch = async function(...args: Parameters<typeof fetch>) {
-        if (args[0] && typeof args[0] === 'string' && args[0].includes('/api/v1/growth/trial-extension/claim')) {
-          args[0] = 'http://localhost:9999/invalid-endpoint-for-network-error'; // deliberate network error
-        }
-        return originalFetch(...args);
-      };
-    });
-
-    let dialogMessage = '';
-    page.on('dialog', async dialog => {
-      dialogMessage = dialog.message();
-      await dialog.accept();
-    });
-
-    const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-    await shareButton.click();
-
-    await expect(async () => {
-        expect(dialogMessage).toContain('Error claiming trial extension');
-    }).toPass({ timeout: 15000 });
-
-    await expect(page.getByText('Trial Extended!')).not.toBeVisible();
-  });
-
-  test('should have a working back to dashboard link', async ({ page, adminUser, loginAs }) => {
-    await loginAs(page, adminUser);
-    await navigateToTrialExtension(page);
-
-    const backLink = page.getByRole('link', { name: /Back to Dashboard|Return to Dashboard/i }).first();
-    await expect(backLink).toBeVisible();
-    await backLink.click();
-    await expect(page).toHaveURL(/.*\/dashboard/, { timeout: 15000 });
-  });
-});

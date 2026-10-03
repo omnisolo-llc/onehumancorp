@@ -9,6 +9,55 @@ use ::server_pricing::rate_limit::{PlanTier, RedisRateLimiter};
 use omnisolo_builtin_agent::mesh::transport::InProcessTransport;
 use std::sync::Arc;
 
+// Public fixture signing key, never a provider credential. Serialize process-local
+// configuration changes so these middleware tests cannot borrow another key.
+const TEST_STRIPE_SIGNING_SECRET: &str = "whsec_public_billing_webhook_fixture";
+static STRIPE_SIGNING_ENV: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+struct StripeSigningEnvironment {
+    _lock: tokio::sync::MutexGuard<'static, ()>,
+    value: Option<std::ffi::OsString>,
+    file: Option<std::ffi::OsString>,
+}
+impl Drop for StripeSigningEnvironment {
+    fn drop(&mut self) {
+        unsafe {
+            if let Some(value) = &self.value {
+                std::env::set_var("STRIPE_WEBHOOK_SECRET", value);
+            } else {
+                std::env::remove_var("STRIPE_WEBHOOK_SECRET");
+            }
+            if let Some(file) = &self.file {
+                std::env::set_var("STRIPE_WEBHOOK_SECRET_FILE", file);
+            } else {
+                std::env::remove_var("STRIPE_WEBHOOK_SECRET_FILE");
+            }
+        }
+    }
+}
+async fn stripe_signing_environment() -> StripeSigningEnvironment {
+    let guard = StripeSigningEnvironment {
+        _lock: STRIPE_SIGNING_ENV.lock().await,
+        value: std::env::var_os("STRIPE_WEBHOOK_SECRET"),
+        file: std::env::var_os("STRIPE_WEBHOOK_SECRET_FILE"),
+    };
+    unsafe {
+        std::env::set_var("STRIPE_WEBHOOK_SECRET", TEST_STRIPE_SIGNING_SECRET);
+        std::env::remove_var("STRIPE_WEBHOOK_SECRET_FILE");
+    }
+    guard
+}
+fn test_stripe_signature(payload: &serde_json::Value, timestamp: i64) -> String {
+    use hmac::Mac;
+    let mut mac =
+        hmac::Hmac::<sha2::Sha256>::new_from_slice(TEST_STRIPE_SIGNING_SECRET.as_bytes()).unwrap();
+    mac.update(format!("{timestamp}.").as_bytes());
+    mac.update(&serde_json::to_vec(payload).unwrap());
+    format!(
+        "t={timestamp},v1={}",
+        hex::encode(mac.finalize().into_bytes())
+    )
+}
+
 #[test]
 fn payment_failure_extracts_subscription_and_customer_refs() {
     let object = json!({
@@ -177,6 +226,7 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_completed() {
+    let _signing_environment = stripe_signing_environment().await;
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
 
     // Only run if redis is available
@@ -241,10 +291,10 @@ async fn test_stripe_webhook_handler_completed() {
 
     let client_req = reqwest::Client::new();
     let now = chrono::Utc::now().timestamp();
-    let valid_sig = format!("t={},v1=valid_sig", now);
+    let valid_sig = test_stripe_signature(&payload, now);
     let response = client_req
         .post(format!("http://{}/api/v1/webhooks/stripe", addr))
-        .header("X-Signature", valid_sig)
+        .header("Stripe-Signature", valid_sig)
         .json(&payload)
         .send()
         .await
@@ -266,6 +316,7 @@ async fn test_stripe_webhook_handler_completed() {
 
 #[tokio::test]
 async fn test_stripe_webhook_handler_deleted() {
+    let _signing_environment = stripe_signing_environment().await;
     let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
 
     // Only run if redis is available
@@ -329,10 +380,10 @@ async fn test_stripe_webhook_handler_deleted() {
 
     let client_req = reqwest::Client::new();
     let now = chrono::Utc::now().timestamp();
-    let valid_sig = format!("t={},v1=valid_sig", now);
+    let valid_sig = test_stripe_signature(&payload, now);
     let response = client_req
         .post(format!("http://{}/api/v1/webhooks/stripe", addr))
-        .header("X-Signature", valid_sig)
+        .header("Stripe-Signature", valid_sig)
         .json(&payload)
         .send()
         .await
@@ -411,6 +462,7 @@ async fn test_mercadopago_webhook_handler_payment_created() {
 
 #[tokio::test]
 async fn test_webhook_security_invalid_signature() {
+    let _signing_environment = stripe_signing_environment().await;
     use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
     use axum::routing::post;
 
@@ -462,7 +514,7 @@ async fn test_webhook_security_invalid_signature() {
     let client_req = reqwest::Client::new();
     let response = client_req
         .post(format!("http://{}/api/v1/webhooks/stripe", addr))
-        .header("X-Signature", "invalid")
+        .header("Stripe-Signature", "invalid")
         .json(&payload)
         .send()
         .await
@@ -473,6 +525,7 @@ async fn test_webhook_security_invalid_signature() {
 
 #[tokio::test]
 async fn test_webhook_security_expired_timestamp() {
+    let _signing_environment = stripe_signing_environment().await;
     use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
     use axum::routing::post;
 
@@ -525,7 +578,10 @@ async fn test_webhook_security_expired_timestamp() {
     let client_req = reqwest::Client::new();
     let response = client_req
         .post(format!("http://{}/api/v1/webhooks/stripe", addr))
-        .header("X-Signature", format!("t={},v1=abc", expired_ts))
+        .header(
+            "Stripe-Signature",
+            test_stripe_signature(&payload, expired_ts),
+        )
         .json(&payload)
         .send()
         .await
@@ -536,6 +592,7 @@ async fn test_webhook_security_expired_timestamp() {
 
 #[tokio::test]
 async fn test_webhook_security_replay_protection() {
+    let _signing_environment = stripe_signing_environment().await;
     use crate::api::billing_webhook::{WebhookState, stripe_webhook_handler};
     use axum::routing::post;
 
@@ -582,16 +639,16 @@ async fn test_webhook_security_replay_protection() {
     });
 
     let payload =
-        json!({ "id": "evt_replay_test", "type": "checkout.session.completed", "data": {} });
+        json!({ "id": "evt_replay_test", "type": "fixture.unhandled", "data": {"object": {}} });
     let ts = chrono::Utc::now().timestamp();
-    let sig = format!("t={},v1=abc", ts);
+    let sig = test_stripe_signature(&payload, ts);
 
     let client_req = reqwest::Client::new();
 
     // First request should be 200 OK
     let response1 = client_req
         .post(format!("http://{}/api/v1/webhooks/stripe", addr))
-        .header("X-Signature", &sig)
+        .header("Stripe-Signature", &sig)
         .json(&payload)
         .send()
         .await
@@ -601,7 +658,7 @@ async fn test_webhook_security_replay_protection() {
     // Second request with same ID should also be 200 OK (idempotent ignore)
     let response2 = client_req
         .post(format!("http://{}/api/v1/webhooks/stripe", addr))
-        .header("X-Signature", &sig)
+        .header("Stripe-Signature", &sig)
         .json(&payload)
         .send()
         .await

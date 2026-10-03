@@ -3,6 +3,24 @@ pub use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 pub fn get_catalog() -> Vec<IntegrationProvider> {
     vec![
         metadata_provider(
+            "slack",
+            "Slack",
+            "messaging",
+            "https://slack.com/api".to_string(),
+        ),
+        metadata_provider(
+            "telegram",
+            "Telegram",
+            "messaging",
+            "https://api.telegram.org".to_string(),
+        ),
+        metadata_provider(
+            "discord",
+            "Discord Webhooks",
+            "messaging",
+            "https://discord.com/api/webhooks".to_string(),
+        ),
+        metadata_provider(
             "taxjar",
             "TaxJar",
             "finance",
@@ -37,6 +55,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "WhatsApp Cloud API",
             "social",
             "https://graph.facebook.com/v19.0".to_string(),
+        ),
+        metadata_provider(
+            "google_workspace",
+            "Google Workspace",
+            "productivity",
+            "https://www.googleapis.com".to_string(),
         ),
         metadata_provider(
             "google_calendar",
@@ -170,6 +194,12 @@ pub fn get_catalog() -> Vec<IntegrationProvider> {
             "calendar",
             "https://graph.microsoft.com/v1.0".to_string(),
         ),
+        metadata_provider(
+            "trello",
+            "Trello",
+            "project_management",
+            "https://api.trello.com/1".to_string(),
+        ),
     ]
 }
 
@@ -202,4 +232,34 @@ fn chromadb_base_url() -> String {
     let port = std::env::var("CHROMADB_PORT").unwrap_or_else(|_| "8000".to_string());
 
     format!("http://{host}:{port}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn catalog_provider_identities_are_unique() {
+        let catalog = get_catalog();
+        let ids: std::collections::BTreeSet<_> = catalog.iter().map(|p| &p.metadata.id).collect();
+        assert_eq!(
+            ids.len(),
+            catalog.len(),
+            "each registry provider needs one catalog identity"
+        );
+    }
+
+    #[test]
+    fn google_workspace_has_one_consistent_catalog_entry() {
+        let catalog = get_catalog();
+        let entries: Vec<_> = catalog
+            .iter()
+            .filter(|p| p.metadata.id == "google_workspace")
+            .collect();
+        assert_eq!(entries.len(), 1);
+        let metadata = &entries[0].metadata;
+        assert_eq!(metadata.name, "Google Workspace");
+        assert_eq!(metadata.category, "productivity");
+        assert_eq!(metadata.base_url, "https://www.googleapis.com");
+    }
 }

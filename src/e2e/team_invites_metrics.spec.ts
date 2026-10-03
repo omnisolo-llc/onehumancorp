@@ -3,11 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Growth Loop: Team Invites Metrics Component', () => {
 
   test('TC1: Should display Referral Program section on dashboard', async ({ page }) => {
-    // Note: The `page` fixture automatically logs us in and lands on the /dashboard via `loginAs` in fixtures.ts.
-    // The prompt requested that we navigate exactly as a real user.
-    // From dashboard (which we land on after login), we can click home/dashboard buttons if available, or just assert.
-
-    // We are already on the dashboard per fixtures.ts
+    await page.goto('/dashboard');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
     await expect(page.locator('text=Viral Loop Performance')).toBeVisible();
   });

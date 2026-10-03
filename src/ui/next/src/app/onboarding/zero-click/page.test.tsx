@@ -1,3 +1,7 @@
+import {beforeEach as beforeLocks} from 'vitest';
+beforeLocks(() => installOnboardingLocks());
+import {installOnboardingLocks} from '../testLocks';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
@@ -18,8 +22,19 @@ vi.mock('../../components/PoweredByOmniSolo', () => ({
 describe('ZeroClickBuilderPage', () => {
   beforeEach(() => {
     // Reset fetch mock
-    global.fetch = vi.fn() as unknown as typeof fetch;
-    localStorage.clear();
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (url === '/api/v1/onboarding/state') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ chatMessages: [] }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+    }) as unknown as typeof fetch;
+    localStorage.clear(); notifyQueueIdentityChange();
     vi.stubEnv('NODE_ENV', 'test');
   });
 
@@ -27,8 +42,9 @@ describe('ZeroClickBuilderPage', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders the initial form', () => {
+  it('renders the initial form', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     expect(screen.getByText('Tell us about your business')).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i)).toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
@@ -36,10 +52,11 @@ describe('ZeroClickBuilderPage', () => {
     expect(submitBtn).toBeDisabled();
   });
 
-  it('enables the button when prompt is entered', () => {
+  it('enables the button when prompt is entered', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
-    fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
+    fireEvent.change(input, { target: { value: 'I sell custom sneakers in New York.' } });
 
     const buttons = screen.getAllByRole('button');
     const submitBtn = buttons[buttons.length - 1];
@@ -48,6 +65,7 @@ describe('ZeroClickBuilderPage', () => {
 
   it('submits the form and displays the result', async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === '/api/v1/onboarding/state') return Promise.resolve({ ok: true, json: async () => ({}) });
       if (url === '/api/v1/billing/my-plan') {
         return Promise.resolve({ ok: true, json: async () => ({ current_plan: 'free' }) });
       }
@@ -61,7 +79,7 @@ describe('ZeroClickBuilderPage', () => {
               business_name: 'Custom Sneakers Store',
               business_type: 'Retail',
               categories: ['physical'],
-              initial_products: [{ name: 'Sneakers', price: '100' }]
+              initial_products: [{ name: 'Sneakers', price: '100', description: null, variants: [{ name: 'Large', price_modifier: 5, model_note: 'not a request field' }] }]
             }
           }),
         });
@@ -69,13 +87,14 @@ describe('ZeroClickBuilderPage', () => {
       if (url === '/api/v1/onboarding/start') {
         return Promise.resolve({
           ok: true,
-          json: async () => ({ organization_id: 'org_123', user_id: 'user_123' }),
+          json: async () => ({ success: true, preparation_id: 'prep-1', status: 'prepared', organization_id: 'org_123', user_id: 'user_123', preparation: { preparation_id: 'prep-1', status: 'prepared', organization_id: 'org_123', user_id: 'user_123', primary_product_id: 'product-1', reviewed_request: {}, catalog: [{product_id:'product-1',name:'Sneakers',price:'100',description:'',variants:[]}] } }),
         });
       }
       return Promise.resolve({ ok: false, json: async () => ({}) });
     });
 
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
 
     const input = screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i);
     fireEvent.change(input, { target: { value: 'I sell custom sneakers' } });
@@ -84,35 +103,44 @@ describe('ZeroClickBuilderPage', () => {
     const submitBtn = buttons[buttons.length - 1];
     fireEvent.click(submitBtn);
 
-    // Wait for the result to appear
+    fireEvent.click(await screen.findByRole('button', { name: /Approve.*Prepare/i }));
+    // Wait for the acknowledged preparation to appear
     await waitFor(() => {
-      expect(screen.getByText('Your business is live!')).toBeInTheDocument();
+      expect(screen.getByText('Your workspace is prepared')).toBeInTheDocument();
     }, { timeout: 3000 });
 
-    expect(screen.getByTitle('Live Storefront Preview')).toBeInTheDocument();
+    expect(screen.getByTitle('Storefront Preview')).toBeInTheDocument();
     const launch = screen.getByRole('button', { name: /Launch My Store/i });
     expect(launch).toBeInTheDocument();
     const startCall = vi.mocked(global.fetch).mock.calls.find(([url]) => url === '/api/v1/onboarding/start');
     const startBody = JSON.parse(String(startCall?.[1]?.body));
+    expect(startBody.initial_products).toEqual([{ name: 'Sneakers', price: '100', description: '', variants: [{ name: 'Large', price_modifier: '5' }] }]);
     expect(startBody.admin_name).toBeUndefined();
     expect(startBody.admin_email).toBeUndefined();
     expect(startBody.admin_password).toBeUndefined();
 
+    expect(localStorage.getItem('has_onboarded')).toBeNull();
     fireEvent.click(launch);
+    await screen.findByRole('alert');
+    expect(localStorage.getItem('has_onboarded')).toBeNull();
     expect(localStorage.getItem('business_display_name')).toBeNull();
     expect(localStorage.getItem('business_display_name')).toBeNull();
     expect(localStorage.getItem('user_display_name')).toBeNull();
   });
 
-  it('renders Powered by OmniSolo branding', () => {
+  it('renders Powered by OmniSolo branding', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const texts = screen.getAllByText(/Powered by OmniSolo/i);
     expect(texts.length).toBeGreaterThan(0);
   });
 
-  it('renders the PoweredByOmniSolo component', () => {
+  it('renders the PoweredByOmniSolo component', async () => {
     render(<ZeroClickBuilderPage />);
+    await waitFor(() => screen.getByPlaceholderText(/e.g. I am a home baker in Austin selling custom vegan cakes./i));
     const components = screen.getAllByTestId('powered-by-omnisolo');
     expect(components.length).toBeGreaterThan(0);
   });
 });
+
+vi.mock('@/lib/sync/queueIdentity', async importOriginal => ({ ...await importOriginal<typeof import('@/lib/sync/queueIdentity')>(), readQueueOwner: vi.fn(async () => ({ userId: 'user_123', tenantId: 'org_123' })) }));

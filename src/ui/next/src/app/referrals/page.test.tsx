@@ -10,6 +10,14 @@ vi.mock('../components/GrowthReferralWidget', () => ({
   default: () => <div data-testid="growth-referral-widget" />
 }));
 
+function mockReferral(reply: () => Promise<Response>) {
+  vi.mocked(global.fetch).mockImplementation(async url => {
+    if (url === '/api/v1/auth/session-identity') return Response.json({error:'identity unavailable in this referral-only fixture'}, {status:401});
+    if (url === '/api/v1/growth/referrals/generate') return reply();
+    throw new Error(`Unexpected request: ${String(url)}`);
+  });
+}
+
 describe('ReferralsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -41,10 +49,7 @@ describe('ReferralsPage', () => {
   });
 
   it('renders how it works section', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
-    });
+    mockReferral(async () => Response.json({referral_link:'https://cloud.omnisolo.co/ref/test1234'}));
     await act(async () => {
       render(<ReferralsPage />);
     });
@@ -55,10 +60,7 @@ describe('ReferralsPage', () => {
   });
 
   it('fetches and displays dynamic referral link', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
-    });
+    mockReferral(async () => Response.json({referral_link:'https://cloud.omnisolo.co/ref/test1234'}));
 
     await act(async () => {
       render(<ReferralsPage />);
@@ -79,7 +81,7 @@ describe('ReferralsPage', () => {
 
   it('falls back to tenant link on api error', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.mocked(global.fetch, { partial: true }).mockRejectedValueOnce(new Error('API failed'));
+    mockReferral(async () => {throw new Error('API failed');});
     vi.mocked(window.localStorage.getItem, { partial: true }).mockReturnValue('my-tenant-store');
 
     await act(async () => {
@@ -97,13 +99,20 @@ describe('ReferralsPage', () => {
   });
 
   it('renders Powered by OmniSolo footer', async () => {
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ referral_link: 'https://cloud.omnisolo.co/ref/test1234' }),
-    });
+    mockReferral(async () => Response.json({referral_link:'https://cloud.omnisolo.co/ref/test1234'}));
     await act(async () => {
       render(<ReferralsPage />);
     });
     expect(screen.getByTestId('powered-by-omnisolo')).toBeDefined();
+  });
+
+  it('renders embed code snippet area', async () => {
+    mockReferral(async () => Response.json({referral_link:'https://cloud.omnisolo.co/ref/test1234'}));
+    await act(async () => {
+      render(<ReferralsPage />);
+    });
+    const embedCodeEl = document.getElementById('embed-code');
+    expect(embedCodeEl).not.toBeNull();
+    expect(embedCodeEl?.textContent).toContain('<iframe src="https://mybusiness.cloud.omnisolo.co');
   });
 });

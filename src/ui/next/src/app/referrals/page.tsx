@@ -1,8 +1,9 @@
 'use client';
 
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useCallback } from 'react';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import GrowthReferralWidget from '../components/GrowthReferralWidget';
+import { useCloudInvitation } from './useCloudInvitation';
 
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
@@ -10,9 +11,9 @@ export default function ReferralsPage() {
   const [referralLink, setReferralLink] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [dataAction, setDataAction] = useState('');
-  useState('');
-  useState<{message: string, isError: boolean} | null>(null);
-  useState(false);
+  const [cloudEmail, setCloudEmail] = useState('');
+  const clearCloudEmail = useCallback(() => setCloudEmail(''), []);
+  const invitation = useCloudInvitation(clearCloudEmail);
 
   useEffect(() => {
     const fallbackReferralLink = () => {
@@ -37,8 +38,7 @@ export default function ReferralsPage() {
         } else {
           setReferralLink(fallbackReferralLink());
         }
-      } catch (e) {
-        console.error("Failed to generate dynamic referral link", e);
+      } catch {
         setReferralLink(fallbackReferralLink());
       } finally {
         setIsLoading(false);
@@ -165,9 +165,52 @@ export default function ReferralsPage() {
           </div>
         </div>
 
+        <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8 mb-8">
+          <h2 className="text-2xl font-bold font-outfit text-gray-900 mb-4">Cloud Bridge Invite</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Invite a team member or client to connect their OmniSolo cloud workspace.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              id="cloud-bridge-email"
+              type="email"
+              placeholder="team-member@example.com"
+              value={cloudEmail}
+              onChange={(e) => setCloudEmail(e.target.value)}
+              disabled={invitation.phase !== 'ready'}
+              className="flex-1 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-indigo-500"
+            />
+            <button
+              onClick={() => void invitation.create(cloudEmail)}
+              disabled={invitation.phase !== 'ready'}
+              className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
+            >
+              Generate Cloud Invite
+            </button>
+          </div>
+          <p role="status" aria-label="Cloud invitation status" className="mt-4 text-sm font-medium">
+            {invitation.message}
+          </p>
+        </div>
+
         <GrowthReferralWidget />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Embed on Your Website</h3>
+                <p className="text-sm text-gray-600 mb-4">Add a beautiful, high-converting OmniSolo storefront widget directly to your existing website.</p>
+                <div className="bg-gray-900 text-gray-300 p-4 rounded-xl font-mono text-xs overflow-x-auto mb-4">
+                    <pre id="embed-code">
+{`<iframe src="https://mybusiness.cloud.omnisolo.co/api/v1/growth/storefront/embed"
+  width="100%"
+  height="600"
+  frameborder="0"
+  style="border-radius: 12px; border: 1px solid #eaeaea;">
+</iframe>`}
+                    </pre>
+                </div>
+            </div>
+
             <div className="app-card rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
                <h3 className="text-xl font-bold font-outfit text-gray-900 mb-6">Manage Data</h3>
                <p className="text-sm text-gray-600 mb-6">Track your referral performance, view recent invites, or export your growth data.</p>

@@ -2,6 +2,7 @@
 import { PoweredByOmniSolo } from "../components/PoweredByOmniSolo";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useClipboardFeedback } from '../../hooks/useClipboardFeedback';
 
 export default function ShareToUnlockGeneratorPage() {
   const router = useRouter();
@@ -9,9 +10,9 @@ export default function ShareToUnlockGeneratorPage() {
   const [campaignTitle, setCampaignTitle] = useState('Secret Weekend Deal');
   const [reward, setReward] = useState('20% Off Your Entire Order');
   const [hiddenCode, setHiddenCode] = useState('SECRET20');
-  const [shareMessage, setShareMessage] = useState('I just unlocked a secret 20% discount!');
+  const [shareMessage, setShareMessage] = useState('Preview this configured offer.');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [copied, setCopied] = useState(false);
+  const [shareStatus, setShareStatus] = useState('');
   const [origin, setOrigin] = useState('');
 
   useEffect(() => {
@@ -22,13 +23,22 @@ export default function ShareToUnlockGeneratorPage() {
     }
   }, []);
 
-  const generatedLink = `${origin}/unlock?tenant=${tenant}&title=${encodeURIComponent(campaignTitle)}&reward=${encodeURIComponent(reward)}&code=${encodeURIComponent(hiddenCode)}&msg=${encodeURIComponent(shareMessage)}&theme=${theme}`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const parameters = new URLSearchParams({ tenant, title: campaignTitle, reward, code: hiddenCode, msg: shareMessage, theme });
+  const generatedLink = origin ? `${origin}/unlock?${parameters}` : '';
+  const clipboard = useClipboardFeedback(generatedLink);
+  const handleCopy = () => { void clipboard.copy(generatedLink); };
+  const openShare = (provider: 'x' | 'whatsapp') => {
+    if (!generatedLink) return;
+    const intent = new URL(provider === 'x' ? 'https://twitter.com/intent/tweet' : 'https://wa.me/');
+    intent.searchParams.set('text', `${shareMessage} ${generatedLink}`);
+    try {
+      window.open(intent.href, '_blank', 'noopener,noreferrer');
+      setShareStatus('Share draft requested. Reward verification is unavailable; this preview stays locked.');
+    } catch {
+      setShareStatus('The share draft could not be opened. Reward verification is unavailable.');
+    }
   };
+  useEffect(() => { setShareStatus(''); }, [generatedLink]);
 
   const getThemeStyles = () => {
     return theme === 'light'
@@ -56,8 +66,9 @@ export default function ShareToUnlockGeneratorPage() {
                 <h2 className="text-xl font-bold font-outfit text-gray-900 mb-6">Campaign Settings</h2>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Campaign Title</label>
+                    <label htmlFor="campaign-title" className="block text-sm font-medium text-gray-700 mb-2">Campaign Title</label>
                     <input
+                        id="campaign-title"
                         type="text"
                         value={campaignTitle}
                         onChange={(e) => setCampaignTitle(e.target.value)}
@@ -67,8 +78,9 @@ export default function ShareToUnlockGeneratorPage() {
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Reward Description</label>
+                    <label htmlFor="reward" className="block text-sm font-medium text-gray-700 mb-2">Reward Description</label>
                     <input
+                        id="reward"
                         type="text"
                         value={reward}
                         onChange={(e) => setReward(e.target.value)}
@@ -78,8 +90,9 @@ export default function ShareToUnlockGeneratorPage() {
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Hidden Discount Code</label>
+                    <label htmlFor="hidden-code" className="block text-sm font-medium text-gray-700 mb-2">Hidden Discount Code</label>
                     <input
+                        id="hidden-code"
                         type="text"
                         value={hiddenCode}
                         onChange={(e) => setHiddenCode(e.target.value)}
@@ -89,13 +102,14 @@ export default function ShareToUnlockGeneratorPage() {
                 </div>
 
                 <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Pre-filled Share Message</label>
+                    <label htmlFor="share-message" className="block text-sm font-medium text-gray-700 mb-2">Pre-filled Share Message</label>
                     <textarea
+                        id="share-message"
                         value={shareMessage}
                         onChange={(e) => setShareMessage(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 min-h-[44px] min-w-[44px] focus:outline-none focus:ring-2 focus:ring-[#0066FF]"
                         rows={2}
-                        placeholder="e.g. I just unlocked a secret 20% discount!"
+                        placeholder="e.g. Preview this configured offer."
                     />
                 </div>
 
@@ -104,12 +118,14 @@ export default function ShareToUnlockGeneratorPage() {
                     <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
                         <button
                             onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
                             className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Light
                         </button>
                         <button
                             onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
                             className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'dark' ? 'bg-gray-800 shadow-sm text-white' : 'text-gray-500 hover:text-gray-700'}`}
                         >
                             Dark
@@ -135,10 +151,12 @@ export default function ShareToUnlockGeneratorPage() {
 
                 <button
                     onClick={handleCopy}
+                    disabled={!generatedLink || clipboard.state === 'pending'}
                     className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors"
                 >
-                    {copied ? 'Copied!' : 'Copy Link'}
+                    {clipboard.state === 'pending' ? 'Copying…' : clipboard.state === 'copied' ? 'Copied!' : 'Copy Link'}
                 </button>
+                {clipboard.message && <p role="status">{clipboard.message}</p>}
             </div>
         </div>
 
@@ -169,7 +187,7 @@ export default function ShareToUnlockGeneratorPage() {
                             {campaignTitle || 'Secret Deal'}
                         </h2>
                         <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                            Unlock your special reward: <br/>
+                            Configured offer: <br/>
                             <strong id="preview-reward-text" className="text-purple-500">{reward || '20% Off'}</strong>
                         </p>
 
@@ -186,13 +204,15 @@ export default function ShareToUnlockGeneratorPage() {
                         </div>
 
                         <div className="w-full space-y-3 mb-6">
-                            <button className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-medium min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
-                                Share on X to Unlock
+                            <button onClick={() => openShare('x')} disabled={!generatedLink} className="w-full py-3 px-4 bg-black hover:bg-gray-800 text-white font-medium min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
+                                Share preview on X
                             </button>
-                            <button className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
+                            <button onClick={() => openShare('whatsapp')} disabled={!generatedLink} className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#128C7E] text-white font-medium min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2">
                                 Share on WhatsApp
                             </button>
                         </div>
+
+                        {shareStatus && <p role="status">{shareStatus}</p>}
 
                         <div className="mt-4 pt-4 border-t w-full text-center" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
                             <PoweredByOmniSolo tenantId="growth" />

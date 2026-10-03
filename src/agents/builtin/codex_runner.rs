@@ -186,12 +186,9 @@ pub struct AppServer {
 
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
-        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(Box::new(
-            crate::tools::marketplace::HttpMarketplaceProvider::new(
-                &std::env::var("AGENT_MARKETPLACE_URL")
-                    .unwrap_or_else(|_| "https://marketplace.example.com".to_string()),
-            ),
-        )));
+        let marketplace_url = std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_default();
+        let provider = crate::tools::marketplace::configured_provider(&marketplace_url);
+        let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(provider));
         Self {
             runner,
             marketplace,
@@ -336,32 +333,18 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
-            let name = req
-                .params
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let description = req
-                .params
-                .get("description")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let author = req
-                .params
-                .get("role")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string(); // mapping role to author
-
-            let new_agent = crate::tools::marketplace::MarketplaceAgent {
-                id: "".to_string(),
-                name,
-                description,
-                author,
-                version: "1.0.0".to_string(),
-                endpoint: "http://localhost".to_string(),
+            let new_agent = match serde_json::from_value::<
+                crate::tools::marketplace::MarketplaceAgent,
+            >(req.params.clone())
+            {
+                Ok(agent) => agent,
+                Err(_) => {
+                    let response = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(), id: req.id.clone(), result: None,
+                        error: Some(JsonRpcError { code: -32602, message: "A complete marketplace descriptor is required; role and system_prompt publication is unsupported".to_string() }), meta: None,
+                    };
+                    return serde_json::to_string(&response).unwrap_or_default();
+                }
             };
 
             let published = self.marketplace.publish_agent(new_agent).await;
@@ -708,6 +691,17 @@ impl AppServer {
                 .unwrap_or("")
                 .to_string();
 
+            let mut run_cfg = self.runner.core.runtime_config.clone();
+            if let Some(lg) = req
+                .params
+                .get("config")
+                .and_then(|c| c.as_object())
+                .and_then(|o| o.get("enable_langgraph_mechanic"))
+                .and_then(|v| v.as_bool())
+            {
+                run_cfg.enable_langgraph_mechanic = lg;
+            }
+
             let mut total_cost = 0.0;
             let mut on_event = |e: AgentEvent| {
                 if let AgentEvent::CostUpdate { total_cost_usd } = e {
@@ -730,7 +724,7 @@ impl AppServer {
                 );
             }
 
-            if let Some(guardrail_cfg) = self.runner.core.runtime_config.guardrails.as_ref()
+            if let Some(guardrail_cfg) = run_cfg.guardrails.as_ref()
                 && let Err(e) = guardrail_cfg.check_input(&ctx_message)
             {
                 let resp = JsonRpcResponse {
@@ -750,11 +744,7 @@ impl AppServer {
                 .runner
                 .core
                 .agent
-                .run(
-                    &self.runner.core.runtime_config,
-                    &ctx_message,
-                    &mut on_event,
-                )
+                .run(&run_cfg, &ctx_message, &mut on_event)
                 .await
             {
                 Ok(result) => {
@@ -1394,7 +1384,7 @@ mod tests {
         assert!(resp_am_fetch.error.is_none());
 
         // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
-        let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
+        let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "author": "Tester", "version": "1.0.0", "endpoint": "https://registry.example.test/definitions/new"}}"#;
         let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
         assert!(resp_am_publish.error.is_none());

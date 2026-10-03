@@ -12,11 +12,11 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     // Check if Videos tab works in dashboard widget
     const widgetBtn = page.locator('#ohc-floating-help-btn');
     await expect(widgetBtn).toBeVisible();
-    await widgetBtn.dispatchEvent('click');
+    await widgetBtn.click();
 
     const videosTab = page.locator('button[data-target="tab-videos"]');
     await expect(videosTab).toBeVisible();
-    await videosTab.dispatchEvent('click');
+    await videosTab.click();
 
     // Verify we fetch and render videos
     await expect(page.locator('#video-list')).not.toContainText('Loading videos...', { timeout: 10000 });
@@ -29,9 +29,9 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
     await chatButton.dispatchEvent('click');
     await expect(page.locator('text=Ask AI Help').first()).toBeVisible();
 
-    const input = page.locator('input[placeholder="Ask anything..."]');
+    const input = page.locator('#ohc-help-input, #omnisolo-help-chat-input, input[placeholder="Ask anything..."]').first();
     await input.fill('How do I accept credit cards?');
-    await page.locator('button[aria-label="Send message"]').dispatchEvent('click');
+    await page.locator('#ohc-help-send, #omnisolo-help-chat-send, button[aria-label="Send message"]').first().dispatchEvent('click');
 
     await expect(page.locator('text=How do I accept credit cards?').first()).toBeVisible();
     await expect(page.locator('text=I am your AI Help Agent!').first()).toBeVisible();

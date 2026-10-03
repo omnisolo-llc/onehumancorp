@@ -15,14 +15,15 @@ export default function DiscoveryReportPage() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const res = await fetch("/api/v1/seo/discovery_report");
+        const res = await fetch("/api/v1/local_seo/discovery_report");
         if (res.ok) {
           const data = await res.json();
           setReports(data);
         } else {
           setReports([]);
         }
-      } catch (err) {
+      } catch (err: unknown) {
+        if (err instanceof Error && (err.name === 'AbortError' || err.message?.includes('Failed to fetch') || err.message?.includes('aborted'))) return;
         console.error("Failed to fetch discovery reports:", err);
         setReports([]);
       } finally {

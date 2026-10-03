@@ -9,7 +9,7 @@ test.describe('Unified Agent Feed Viewport Constraint', () => {
     await page.goto('/dashboard');
     const dashboardH1 = page.locator('h1#dashboard-title');
     await expect(dashboardH1).toBeAttached({ timeout: 25000 });
-    const container = page.locator('.container.app-panel');
+    const container = page.locator('.app-panel').first();
     await expect(container).toBeAttached();
 
 

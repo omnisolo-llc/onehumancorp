@@ -7,7 +7,7 @@ test.describe('Help Chat Flow', () => {
     await page.goto('/dashboard');
 
     // Check that the floating chat button exists
-    const chatButton = page.locator('#ohc-floating-help-btn');
+    const chatButton = page.locator('#omnisolo-floating-help-btn').first();
     await expect(chatButton).toBeVisible();
 
     // Open chat
@@ -76,8 +76,8 @@ test.describe('Tooltip functionality', () => {
     // Wait until tooltips load dynamically or are preloaded on Help page
     await page.goto('/api-docs');
 
-    // The component wrapper has class inline-block relative cursor-help
-    const tooltipTrigger = page.locator('.cursor-help').first();
+    const tooltipTrigger = page.locator('#api-docs-tooltip');
+    await tooltipTrigger.waitFor({ state: "visible", timeout: 10000 });
     await expect(tooltipTrigger).toBeVisible();
 
     await tooltipTrigger.hover();

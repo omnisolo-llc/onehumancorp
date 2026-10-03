@@ -9,11 +9,18 @@ const trustedShareHosts = new Set(['cloud.omnisolo.co', 'omnisolo.co']);
 
 function normalizeShareTarget(rawUrl: string) {
   try {
+    // Shared links may name an app path or a canonical HTTPS public host.
+    // Credentials, ambiguous separators and nested share redirects are not destinations.
+    if (Array.from(rawUrl).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127 || char === '\\')) return defaultTargetUrl;
     const parsedUrl = new URL(rawUrl, 'http://localhost:3000');
+    if (parsedUrl.username || parsedUrl.password) return defaultTargetUrl;
+    const targetPath = decodeURIComponent(parsedUrl.pathname).replace(/\/+/g, '/').replace(/\/$/, '');
+    if (targetPath.toLowerCase() === '/share-card') return defaultTargetUrl;
     if (parsedUrl.origin === 'http://localhost:3000') {
+      if (parsedUrl.pathname.startsWith('//')) return defaultTargetUrl;
       return `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
     }
-    if (trustedShareHosts.has(parsedUrl.hostname)) {
+    if (parsedUrl.protocol === 'https:' && !parsedUrl.port && trustedShareHosts.has(parsedUrl.hostname)) {
       return parsedUrl.href;
     }
   } catch {

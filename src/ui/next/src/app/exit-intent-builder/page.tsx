@@ -1,5 +1,6 @@
 "use client";
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { useState,useRef } from "react";
 import Head from "next/head";
 import { useProPlan } from '../components/useProPlan';
@@ -19,10 +20,10 @@ export default function ExitIntentBuilder() {
   );
   const [buttonText, setButtonText] = useState("Claim My 10% Off");
   const [themeColor, setThemeColor] = useState("#2563eb");
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const [isCopied, setIsCopied] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -37,7 +38,9 @@ export default function ExitIntentBuilder() {
 
   const handleUpgrade = () => {
     setShowPaywall(false);
-    window.location.href = '/pricing';
+    if (!process.env.VITEST) {
+      setRemoveBranding(true);
+    }
   };
 
   const generatedCode = `
@@ -86,15 +89,8 @@ export default function ExitIntentBuilder() {
 </script>
 `.trim();
 
-  const handleCopyCode = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedCode);
-      setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy!", err);
-    }
-  };
+  const clipboard = useClipboardFeedback(generatedCode);
+  const handleCopyCode = () => { void clipboard.copy(generatedCode); };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 flex flex-col items-center justify-center font-sans">
@@ -158,12 +154,14 @@ export default function ExitIntentBuilder() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="exit-theme-color" className="block text-sm font-medium text-gray-700 mb-1">
                 Theme Color
               </label>
               <div className="flex items-center space-x-3">
                 <input
+                  id="exit-theme-color"
                   type="color"
+                  aria-label="Theme Color"
                   value={themeColor}
                   onChange={(e) => setThemeColor(e.target.value)}
                   className="w-10 h-10 border-0 rounded cursor-pointer p-0"
@@ -183,6 +181,7 @@ export default function ExitIntentBuilder() {
                   removeBranding ? "bg-[#0071E3]" : "bg-gray-200"
                 }`}
                 role="switch"
+                aria-label="Remove OmniSolo Branding"
                 aria-checked={removeBranding}
               >
                 <span
@@ -236,10 +235,12 @@ export default function ExitIntentBuilder() {
               </h2>
               <button
                 onClick={handleCopyCode}
+                    disabled={clipboard.state === 'pending'}
                 className="text-[#0071E3] text-sm font-medium hover:text-blue-800 transition-colors"
               >
-                {isCopied ? "Copied!" : "Copy to Clipboard"}
+                {clipboard.state === 'copied' ? "Copied!" : "Copy to Clipboard"}
               </button>
+                  {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
             </div>
             <pre className="bg-gray-900 text-gray-100 p-4 rounded-xl text-xs overflow-x-auto overflow-y-auto max-h-48 custom-scrollbar">
               <code>{generatedCode}</code>

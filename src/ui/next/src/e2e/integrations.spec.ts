@@ -37,7 +37,7 @@ test.describe('Integrations Loop', () => {
     test('Checkout verifies catalog product details before offering payment', async ({ page }) => {
         await page.goto('/checkout?product_id=e2e-product-cake&quantity=2');
         await expect(page.getByRole('heading', { name: 'Vegan Celebration Cake' })).toBeVisible();
-        await expect(page.getByText('$79.98')).toBeVisible();
+        await expect(page.getByText('$79.98').first()).toBeVisible();
         await expect(page.getByRole('button', { name: 'Pay', exact: true })).toBeVisible();
     });
 

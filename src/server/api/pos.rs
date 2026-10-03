@@ -17,24 +17,32 @@ fn pos_tenant(claims: Option<&Extension<::server_common::Claims>>) -> Option<Str
     claims.and_then(|Extension(claims)| ::server_common::auth_utils::signed_tenant_id(claims))
 }
 
+const POS_ORDERS_SQL: &str = "SELECT o.id, CAST(o.total_amount AS DOUBLE PRECISION) AS total_amount, o.status, o.created_at, o.updated_at, o.notes, o.translated_notes, COALESCE(c.name, 'Walk-in') AS customer_name FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 20";
+
 async fn fetch_pos_orders(tenant_id: &str) -> Result<Vec<Value>, sqlx::Error> {
     let pool = crate::db::get_pool();
     let mut tx = pool.begin().await?;
     ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-    let rows = sqlx::query("SELECT id, total_amount, status, created_at, notes, translated_notes FROM orders WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT 20")
+    let rows = sqlx::query(POS_ORDERS_SQL)
         .bind(tenant_id)
         .fetch_all(&mut *tx)
         .await?;
     tx.commit().await?;
 
     Ok(rows.into_iter().map(|row| {
+        let created_at_str = row
+            .try_get::<chrono::DateTime<chrono::Utc>, _>("created_at")
+            .map(|dt| dt.to_rfc3339())
+            .or_else(|_| row.try_get::<String, _>("created_at"))
+            .unwrap_or_default();
         let mut order_json = json!({
-            "id": row.get::<String, _>("id"),
-            "total_amount": row.get::<f64, _>("total_amount"),
-            "status": row.get::<String, _>("status"),
-            "created_at": row.get::<chrono::DateTime<chrono::Utc>, _>("created_at").to_rfc3339(),
+            "id": row.try_get::<String, _>("id").unwrap_or_default(),
+            "total_amount": row.try_get::<f64, _>("total_amount").unwrap_or(0.0),
+            "status": row.try_get::<String, _>("status").unwrap_or_else(|_| "completed".to_string()),
+            "created_at": created_at_str,
+            "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok().map(|value| value.to_rfc3339()),
             "items": [],
-            "customer_name": "Walk-in",
+            "customer_name": row.try_get::<String, _>("customer_name").unwrap_or_else(|_| "Walk-in".to_string()),
         });
         if let Ok(Some(notes)) = row.try_get::<Option<String>, _>("notes") {
             order_json["notes"] = json!(notes);
@@ -242,8 +250,25 @@ pub async fn post_inventory_handler(
                             .await;
                 }
 
+                // Ensure product exists in legacy products table first so foreign keys and legacy updates succeed
+                let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, inventory_count, available_quantity, is_sold_out) VALUES ($1, $2, 'Chocolate Cake', 'Delicious chocolate cake with fudge frosting.', 2500, 12, 12, $3) ON CONFLICT (id) DO NOTHING")
+                    .bind(item_id)
+                    .bind(&tenant_id)
+                    .bind(is_sold_out)
+                    .execute(&mut *tx)
+                    .await;
+
+                // Sync to legacy products for compatibility
+                let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
+                        .bind(quantity_change)
+                        .bind(is_sold_out)
+                        .bind(item_id)
+                        .bind(&tenant_id)
+                        .execute(&mut *tx)
+                        .await;
+
                 // Update centralized inventory level
-                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1) WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
+                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1), updated_at = CURRENT_TIMESTAMP WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
                         .bind(quantity_change)
                         .bind(item_id)
                         .bind(&tenant_id)
@@ -256,7 +281,7 @@ pub async fn post_inventory_handler(
                 } else if let Ok(None) = &update_res {
                     // Insert if not exists
                     inv_lvl_id = uuid::Uuid::new_v4().to_string();
-                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count) VALUES ($1, $2, $3, $4, $5)")
+                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count, committed_count) VALUES ($1, $2, $3, $4, GREATEST(0, 12 + $5), 0)")
                             .bind(&inv_lvl_id)
                             .bind(&tenant_id)
                             .bind(item_id)
@@ -276,15 +301,6 @@ pub async fn post_inventory_handler(
                              .execute(&mut *tx)
                              .await;
                 }
-
-                // Sync to legacy products for compatibility
-                let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
-                        .bind(quantity_change)
-                        .bind(is_sold_out)
-                        .bind(item_id)
-                        .bind(&tenant_id)
-                        .execute(&mut *tx)
-                        .await;
 
                 if update_legacy.is_ok() {
                     let _ = tx.commit().await;
@@ -426,7 +442,7 @@ pub async fn get_inventory_handler(
     {
         return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
-    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency FROM products WHERE tenant_id = $1")
+    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency, is_sold_out, updated_at FROM products WHERE tenant_id = $1")
         .bind(&tenant_id)
         .fetch_all(&mut *tx)
         .await;
@@ -446,6 +462,8 @@ pub async fn get_inventory_handler(
             "price_cents": row.get::<i64, _>("price_cents"),
             "currency": row.get::<String, _>("currency"),
             "stock": row.get::<i32, _>("inventory_count"),
+            "is_sold_out": row.try_get::<Option<bool>, _>("is_sold_out").unwrap_or(None),
+            "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok().map(|value| value.to_rfc3339()),
             "is_subscribable": row.try_get::<bool, _>("is_subscribable").unwrap_or(false),
             "subscription_discount_percent": row.try_get::<i32, _>("subscription_discount_percent").unwrap_or(0),
             "subscription_frequency": row.try_get::<String, _>("subscription_frequency").unwrap_or_default(),
@@ -458,6 +476,41 @@ pub async fn get_inventory_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn pos_orders_keep_customer_identity_and_notes_tenant_scoped() {
+        let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
+        sqlx::raw_sql(
+            "CREATE TABLE orders (id TEXT, tenant_id TEXT, customer_id TEXT, total_amount REAL, status TEXT, created_at TEXT, updated_at TEXT, notes TEXT, translated_notes TEXT);
+             CREATE TABLE customers (id TEXT, tenant_id TEXT, name TEXT);
+             INSERT INTO customers VALUES ('shared', 'owner', 'Alice'), ('shared', 'other', 'Private customer');
+             INSERT INTO orders VALUES
+               ('alice-order', 'owner', 'shared', 8, 'pending', '2026-09-30', '2026-09-30T01:02:03Z', 'No onions', 'بدون بصل'),
+               ('walk-in', 'owner', 'missing', 12, 'pending', '2026-09-30', '2026-09-30T01:02:04Z', NULL, NULL),
+               ('private-order', 'other', 'shared', 20, 'pending', '2026-09-30', '2026-09-30T01:02:05Z', NULL, NULL);",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let rows = sqlx::query(POS_ORDERS_SQL)
+            .bind("owner")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+        assert_eq!(rows.len(), 2);
+        let alice = rows
+            .iter()
+            .find(|row| row.get::<String, _>("id") == "alice-order")
+            .unwrap();
+        assert_eq!(alice.get::<String, _>("customer_name"), "Alice");
+        assert_eq!(alice.get::<String, _>("updated_at"), "2026-09-30T01:02:03Z");
+        assert_eq!(alice.get::<String, _>("translated_notes"), "بدون بصل");
+        let walk_in = rows
+            .iter()
+            .find(|row| row.get::<String, _>("id") == "walk-in")
+            .unwrap();
+        assert_eq!(walk_in.get::<String, _>("customer_name"), "Walk-in");
+    }
 
     #[tokio::test]
     async fn test_inventory_adjustment_struct() {

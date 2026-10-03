@@ -263,10 +263,15 @@
         inset: 0;
         background: rgba(0,0,0,0.8);
         backdrop-filter: blur(40px) saturate(220%);
-        z-index: 1000;
+        /* Above the Help widget (99990) and walkthrough chrome. */
+        z-index: 100010;
         align-items: center;
         justify-content: center;
         padding: 20px;
+      }
+      .video-focus-boundary {
+        position: absolute; width: 1px; height: 1px;
+        overflow: hidden; clip-path: inset(50%);
       }
       .modal-content {
         background: #000;
@@ -386,7 +391,11 @@
             }
         }
 </style>
-  </head>
+  <script type="module">
+import { renderWalkthroughStep } from "./safe-help-content.mjs";
+window.renderWalkthroughStep = renderWalkthroughStep;
+</script>
+</head>
   <body>
     <div class="container glassmorphism">
       <a href="dashboard.html" class="back-link">
@@ -464,10 +473,11 @@
     </div>
 
     <!-- Video Modal -->
-    <div id="video-modal">
+    <div id="video-modal" role="dialog" aria-modal="true" aria-labelledby="video-modal-title">
+      <span tabindex="0" class="video-focus-boundary" data-video-focus-boundary="start"></span>
       <div class="modal-content glassmorphism">
         <button class="modal-close" id="close-video" aria-label="Close video">Close video</button>
-        <video id="video-player" controls>
+        <video tabindex="0" id="video-player" controls>
           Your browser does not support the video tag.
         </video>
         <div class="modal-info">
@@ -475,6 +485,7 @@
           <p class="modal-duration" id="video-modal-duration"></p>
         </div>
       </div>
+      <span tabindex="0" class="video-focus-boundary" data-video-focus-boundary="end"></span>
     </div>
 
     <script>
@@ -603,6 +614,41 @@ document.addEventListener('DOMContentLoaded', () => {
     <script>
       let allArticles = [];
       let allVideos = [];
+      let helpSearchVersion = 0;
+      function helpText(value) {
+        const span = document.createElement('span');
+        span.textContent = typeof value === 'string' ? value : '';
+        return span.innerHTML;
+      }
+      function safeHelpUrl(value) {
+        if (typeof value !== 'string' || !value.trim() || value.length > 4096) return null;
+        try {
+          const url = new URL(value, window.location.href);
+          if (url.username || url.password || (url.protocol !== 'https:' && !(url.protocol === 'http:' && url.origin === window.location.origin))) return null;
+          return url.href;
+        } catch { return null; }
+      }
+      function resolvedHelpArticleUrl(value) {
+        const href = safeHelpUrl(value);
+        if (!href) return null;
+        const url = new URL(href);
+        if (url.origin === window.location.origin && url.pathname === '/help' && url.searchParams.has('article')) {
+          const article = url.searchParams.get('article');
+          if (!article || !/^[A-Za-z0-9_-]+$/.test(article)) return null;
+          const currentArticle = article === 'my-store-1' ? 'add-products'
+            : article === 'payments-1' ? 'accept-payments' : article;
+          url.pathname = `/help/${currentArticle}`;
+          url.search = ''; url.hash = '';
+        }
+        return url.href;
+      }
+      function helpArticles(value) {
+        return Array.isArray(value) ? value.filter(article => article && typeof article.title === 'string' && typeof article.desc === 'string' && typeof article.link === 'string') : [];
+      }
+      function helpVideos(value) {
+        return Array.isArray(value) ? value.filter(video => video && typeof video.title === 'string' && typeof video.duration === 'string' && safeHelpUrl(video.video_url)) : [];
+      }
+
 
       const searchInput = document.getElementById('search-input');
       const resultsContainer = document.getElementById('results');
@@ -622,16 +668,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.__TAURI__.core.invoke('get_help_articles', {}),
                 window.__TAURI__.core.invoke('get_help_videos', {})
              ]);
-             allArticles = articlesRes || [];
-             allVideos = videosRes || [];
+             allArticles = helpArticles(articlesRes);
+             allVideos = helpVideos(videosRes);
           } else {
              // Fallback for playwright test environment
              const [articlesRes, videosRes] = await Promise.all([
                  fetch('/api/v1/help').then(r => r.json()).catch(() => []),
                  fetch('/api/v1/videos').then(r => r.json()).catch(() => [])
              ]);
-             allArticles = articlesRes || [];
-             allVideos = videosRes || [];
+             allArticles = helpArticles(articlesRes);
+             allVideos = helpVideos(videosRes);
 
 
           }
@@ -660,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       function openAISupport() {
-        const helpBtn = document.getElementById('omnisolo-floating-help-btn');
+        const helpBtn = document.getElementById('ohc-floating-help-btn');
         if (helpBtn) {
           helpBtn.click();
 
@@ -669,7 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatTab) chatTab.click();
 
             requestAnimationFrame(() => {
-              const chatInput = document.getElementById('omnisolo-help-chat-input');
+              const chatInput = document.getElementById('ohc-help-chat-input');
               if (chatInput) chatInput.focus();
             });
           });
@@ -677,6 +723,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       async function renderContent(query) {
+        const version = ++helpSearchVersion;
         const lowerQuery = query.toLowerCase().trim();
 
         let filteredArticles = allArticles;
@@ -693,7 +740,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     const searchRes = await fetch('/api/v1/help/search?q=' + encodeURIComponent(lowerQuery));
                     if (searchRes.ok) {
-                        filteredArticles = await searchRes.json();
+                        filteredArticles = helpArticles(await searchRes.json());
                     } else {
                          filteredArticles = allArticles.filter(a =>
                             a.title.toLowerCase().includes(lowerQuery) ||
@@ -710,15 +757,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 );
             }
 
-            filteredVideos = allVideos.filter(v =>
-                v.title.toLowerCase().includes(lowerQuery)
-            );
+            const queryWords = lowerQuery.split(/\s+/).filter(w => w.length > 2);
+            filteredVideos = allVideos.filter(v => {
+                const titleLower = v.title.toLowerCase();
+                return titleLower.includes(lowerQuery) || queryWords.some(w => titleLower.includes(w));
+            });
         }
 
+        if (version !== helpSearchVersion) return;
         if (filteredArticles.length === 0 && filteredVideos.length === 0) {
             resultsContainer.innerHTML = `
               <div class="empty-state">
-                 <p style="margin:0; font-size: 16px;">No results found matching <strong>"${query}"</strong></p>
+                 <p style="margin:0; font-size: 16px;">No results found matching <strong>"${helpText(query)}"</strong></p>
                  <p style="margin-top:10px; font-size: 14px; opacity: 0.7;">Try adjusting your search terms or ask our AI assistant for help.</p>
                  <button id="ask-ai-tooltip" style="margin-top: 15px; padding: 10px 20px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px; background-color: #0066FF; color: white; border: none; cursor: pointer; font-family: Outfit;" onclick="openAISupport()">Ask AI Support Agent</button>
               </div>
@@ -733,16 +783,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const categories = [...new Set(filteredArticles.map(a => a.category || 'General'))];
 
             categories.forEach(category => {
-                html += `<div class="section-title">${category}</div><div class="grid">`;
+                html += `<h3 class="section-title" style="margin-top: 0; color: #1d1d1f;">${helpText(category)}</h3><div class="grid">`;
 
                 const catArticles = filteredArticles.filter(a => (a.category || 'General') === category);
                 catArticles.forEach(article => {
                     // Extract article ID from link for Tauri routing
                     const articleId = article.link.split('/').pop();
+                    const href = articleId === 'api-docs' ? 'api-docs.html' : `help_article.html?id=${encodeURIComponent(articleId)}`;
                     html += `
-                      <a href="help_article.html?id=${articleId}" class="card glassmorphism glassmorphism">
-                        <h3>${article.title}</h3>
-                        <p>${article.desc}</p>
+                      <a href="${href}" class="card glassmorphism glassmorphism">
+                        <h4>${helpText(article.title)}</h4>
+                        <p>${helpText(article.desc)}</p>
                       </a>
                     `;
                 });
@@ -753,18 +804,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Videos
         if (filteredVideos.length > 0) {
             html += `<h2 class="section-title">Video Guides</h2><div class="videos-grid">`;
-            filteredVideos.forEach(v => {
-                html += `
-                  <div class="video-card" onclick="openVideo('${v.video_url}', '${v.title.replace(/'/g, "\\'")}', '${v.duration}')">
-                    <div class="play-btn">
-                      <svg viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                    </div>
-                    <div class="video-info">
-                      <p class="video-title">${v.title}</p>
-                      <p class="video-duration">${v.duration}</p>
-                    </div>
-                  </div>
-                `;
+            filteredVideos.forEach((video, index) => {
+                html += `<button type="button" class="video-card" data-help-video="${index}">
+                  <div class="play-btn" aria-hidden="true">▶</div>
+                  <div class="video-info"><p class="video-title">${helpText(video.title)}</p><p class="video-duration">${helpText(video.duration)}</p></div>
+                </button>`;
             });
             html += `</div>`;
         }
@@ -788,25 +832,68 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
 
         resultsContainer.innerHTML = html;
+        resultsContainer.querySelectorAll('[data-help-video]').forEach(button => {
+          const video = filteredVideos[Number(button.dataset.helpVideo)];
+          button.addEventListener('click', () => window.openVideo(video.video_url, video.title, video.duration));
+        });
       }
 
       searchInput.addEventListener('input', (e) => {
           renderContent(e.target.value);
       });
 
-      // Video Modal logic
+      // Keep the video above the floating Help panel and return the owner to
+      // the control that opened it. Reopening never loses the original scroll.
+      let videoTrigger = null;
+      let previousBodyOverflow = '';
+      let videoIsOpen = false;
       window.openVideo = function(url, title, duration) {
-          videoPlayer.src = url;
+          const safeUrl = safeHelpUrl(url);
+          if (!safeUrl) return;
+          if (!videoIsOpen) {
+              videoTrigger = document.activeElement;
+              previousBodyOverflow = document.body.style.overflow;
+          }
+          videoIsOpen = true;
+          videoPlayer.src = safeUrl;
           videoModalTitle.innerText = title;
           videoModalDuration.innerText = duration;
           videoModal.style.display = 'flex';
+          document.body.style.overflow = 'hidden';
+          closeVideoBtn.focus();
           videoPlayer.play().catch(e => console.warn("Auto-play prevented", e));
       };
 
-      closeVideoBtn.addEventListener('click', () => {
+      function dismissVideoDialog() {
+          if (!videoIsOpen) return;
+          videoIsOpen = false;
           videoPlayer.pause();
           videoPlayer.src = "";
           videoModal.style.display = 'none';
+          document.body.style.overflow = previousBodyOverflow;
+          if (videoTrigger && videoTrigger.isConnected && typeof videoTrigger.focus === 'function') {
+              videoTrigger.focus();
+          }
+          videoTrigger = null;
+      }
+      closeVideoBtn.addEventListener('click', dismissVideoDialog);
+      videoModal.addEventListener('click', event => {
+          if (event.target === videoModal) dismissVideoDialog();
+      });
+      videoModal.addEventListener('keydown', event => {
+          if (!videoIsOpen) return;
+          if (event.key === 'Escape') {
+              event.preventDefault();
+              dismissVideoDialog();
+          }
+      });
+      // Boundary focus wraps the dialog without canceling Tab events retargeted
+      // from the browser's native video controls to the video element.
+      videoModal.querySelector('[data-video-focus-boundary="start"]').addEventListener('focus', () => {
+          if (videoIsOpen) videoPlayer.focus();
+      });
+      videoModal.querySelector('[data-video-focus-boundary="end"]').addEventListener('focus', () => {
+          if (videoIsOpen) closeVideoBtn.focus();
       });
 
       fetchData();
@@ -946,21 +1033,10 @@ function initWalkthrough() {
             // Find target
             const target = document.getElementById(step.targetId) || document.querySelector(step.targetId);
 
-            bubble.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                    <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                    <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                </div>
-                <p style="margin: 0; font-size: 14px; color: #333;">${step.content}</p>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                    ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                    <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                </div>
-            `;
-
-            document.getElementById('wt-close').onclick = closeWalkthrough;
-            if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-            document.getElementById('wt-next').onclick = () => {
+            const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
                 if (currentStep === steps.length - 1) {
                     closeWalkthrough();
                 } else {
@@ -1016,7 +1092,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Inject floating widget styles
     const style = document.createElement('style');
     style.textContent = `
-        #omnisolo-floating-help-btn {
+        #ohc-floating-help-btn {
             position: fixed;
             bottom: 24px;
             right: 24px;
@@ -1035,15 +1111,15 @@ document.addEventListener('DOMContentLoaded', () => {
             justify-content: center;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #omnisolo-floating-help-btn:hover {
+        #ohc-floating-help-btn:hover {
             transform: scale(1.05);
         }
-        #omnisolo-floating-help-btn svg {
+        #ohc-floating-help-btn svg {
             width: 28px;
             height: 28px;
             fill: currentColor;
         }
-        #ai-chat-interface {
+        #ai-chat-interface, #omnisolo-floating-help-widget, #ohc-floating-help-widget {
             position: fixed;
             bottom: 96px;
             right: 24px;
@@ -1063,7 +1139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             border: 1px solid rgba(0,0,0,0.05);
         }
         @media (max-width: 480px) {
-            #ai-chat-interface {
+            #ai-chat-interface, #omnisolo-floating-help-widget, #ohc-floating-help-widget {
                 bottom: 0;
                 right: 0;
                 width: 100vw;
@@ -1218,7 +1294,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the button
     const btn = document.createElement('button');
-    btn.id = 'omnisolo-floating-help-btn';
+    btn.id = 'ohc-floating-help-btn';
+    btn.className = 'omnisolo-floating-help-btn';
     btn.setAttribute('aria-label', 'Help');
     btn.title = 'Help';
     btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>`;
@@ -1226,7 +1303,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Create the widget
     const widget = document.createElement('div');
-    widget.id = 'omnisolo-floating-help-widget';
+    widget.id = 'ohc-floating-help-widget';
+    widget.className = 'omnisolo-floating-help-widget';
     widget.innerHTML = `
         <div id="omnisolo-floating-help-header">
             <h3>Ask AI Help</h3>
@@ -1238,7 +1316,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="omnisolo-help-tab active" data-target="tab-articles">Articles</button>
             <button class="omnisolo-help-tab" data-target="tab-tours">Interactive Tours</button>
             <button class="omnisolo-help-tab" data-target="tab-videos">Videos</button>
-            <button class="omnisolo-help-tab" data-target="tab-chat" aria-label="Ask anything">Ask anything</button>
+            <button class="omnisolo-help-tab" data-target="tab-changelog">New</button>
+            <button class="omnisolo-help-tab" id="tab-btn-chat" data-target="tab-chat" aria-label="Ask AI (Ask anything)">Ask AI</button>
         </div>
 
         <div id="tab-articles" class="omnisolo-help-content active">
@@ -1284,6 +1363,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="video-list" style="display: flex; flex-direction: column; gap: 12px;">Loading videos...</div>
         </div>
 
+        <div id="tab-changelog" class="omnisolo-help-content">
+            <h4>What's New</h4>
+            <p>Read the recorded changes and current release notes.</p>
+            <a href="changelog.html">Read full release notes</a>
+        </div>
+
         <div id="tab-chat" class="omnisolo-help-content glassmorphism" style="padding-bottom: 12px;">
             <div id="omnisolo-help-chat-messages">
                 <div class="omnisolo-chat-msg agent">
@@ -1291,8 +1376,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
             <div id="omnisolo-help-chat-input-container">
-                <input type="text" id="omnisolo-help-chat-input" placeholder="Ask anything...">
-                <button id="omnisolo-help-chat-send" aria-label="Send message" disabled>Send</button>
+                <input type="text" id="ohc-help-chat-input" placeholder="Ask anything...">
+                <button id="ohc-help-chat-send" aria-label="Send message" disabled>Send</button>
             </div>
         </div>
     `;
@@ -1329,11 +1414,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (!data || data.length === 0) {
                         vl.innerHTML = `<div class="glassmorphism" style="padding: 24px; text-align: center;"><p style="margin:0; font-size: 14px; color: #64748b;">No video tutorials available yet.</p></div>`;
                     } else {
-                        data.forEach(v => {
-                            vl.innerHTML += `<div class="glassmorphism" style="border: 1px solid rgba(255,255,255,0.4); border-radius: 8px; padding: 12px; cursor: pointer;" onclick="alert('Playing video: ' + v.title)">` +
-                                `<h4 style="margin: 0 0 4px 0; font-size: 14px; color: #1d1d1f;">${v.title}</h4>` +
-                                `<span style="font-size: 12px; color: #86868b;">${v.duration}</span>` +
-                                `</div>`;
+                        helpVideos(data).forEach(video => {
+                            const button = document.createElement('button');
+                            button.type = 'button';
+                            button.className = 'glassmorphism';
+                            button.style.cssText = 'border:1px solid rgba(255,255,255,.4);border-radius:8px;padding:12px;min-height:44px;text-align:left;cursor:pointer;';
+                            const heading = document.createElement('h4');
+                            heading.textContent = video.title;
+                            const duration = document.createElement('span');
+                            duration.textContent = video.duration;
+                            button.append(heading, duration);
+                            button.addEventListener('click', () => window.openVideo(video.video_url, video.title, video.duration));
+                            vl.appendChild(button);
                         });
                     }
                 }).catch(e => {
@@ -1347,16 +1439,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Chat Logic
-    const chatInput = document.getElementById('omnisolo-help-chat-input');
-    const chatSend = document.getElementById('omnisolo-help-chat-send');
+    const chatInput = document.getElementById('ohc-help-chat-input') || document.getElementById('omnisolo-help-chat-input');
+    const chatSend = document.getElementById('ohc-help-chat-send') || document.getElementById('omnisolo-help-chat-send');
     const chatMessages = document.getElementById('omnisolo-help-chat-messages');
 
     function appendMessage(text, sender, link = null) {
         const msg = document.createElement('div');
         msg.className = `omnisolo-chat-msg ${sender}`;
-        msg.innerHTML = text;
-        if (link && link.url && link.title) {
-            msg.innerHTML += `<a href="${link.url}">${link.title}</a>`;
+        msg.textContent = typeof text === 'string' ? text : 'Help response unavailable.';
+        const href = resolvedHelpArticleUrl(link && link.url);
+        if (href && typeof link.title === 'string') {
+            const anchor = document.createElement('a');
+            anchor.href = href; anchor.textContent = link.title; anchor.rel = 'noopener noreferrer';
+            msg.appendChild(anchor);
         }
         chatMessages.appendChild(msg);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -1377,10 +1472,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 body: JSON.stringify({ message: text })
             });
+            if (!res.ok) throw new Error('Help request failed');
             const data = await res.json();
 
             if (data.reply) {
-                appendMessage(data.reply.text || data.reply, 'agent', data.reply.link);
+                // String.prototype.link is a function, not the response's article link.
+                const reply = typeof data.reply === 'object' ? data.reply : { text: data.reply };
+                appendMessage(reply.text, 'agent', reply.link || data.link);
             } else if (data.text) {
                 appendMessage(data.text, 'agent', data.link);
             } else {
@@ -1518,28 +1616,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const target = document.getElementById(step.targetId) || document.querySelector(step.targetId || step.selector);
 
-                bubble.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 8px;">
-                        <h4 style="margin: 0; font-size: 16px; font-weight: bold;">${step.title || 'Tour'}</h4>
-                        <button id="wt-close" aria-label="Close walkthrough" class="omnisolo-walkthrough-close" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 18px;">&times;</button>
-                    </div>
-                    <p style="margin: 0; font-size: 14px; color: #333;">${step.content || step.text}</p>
-                    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px;">
-                        ${currentStep > 0 ? '<button id="wt-prev" aria-label="Previous Step" title="Previous Step" style="min-height: 44px; min-width: 80px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer;">Back</button>' : ''}
-                        <button id="wt-next" aria-label="Next Step" title="Next Step" style="min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 6px 12px; border: none; border-radius: 4px; background: #0066FF; color: white; cursor: pointer;">${currentStep === steps.length - 1 ? 'Finish' : 'Next'}</button>
-                    </div>
-                `;
-
-                document.getElementById('wt-close').onclick = closeWalkthrough;
-                if (document.getElementById('wt-prev')) document.getElementById('wt-prev').onclick = () => { currentStep--; renderStep(); };
-                document.getElementById('wt-next').onclick = () => {
-                    if (currentStep === steps.length - 1) {
-                        closeWalkthrough();
-                    } else {
-                        currentStep++;
-                        renderStep();
-                    }
-                };
+                const controls = window.renderWalkthroughStep(bubble, step, currentStep, steps.length);
+            controls.close.onclick = closeWalkthrough;
+            if (controls.previous) controls.previous.onclick = () => { currentStep--; renderStep(); };
+            controls.next.onclick = () => {
+                if (currentStep === steps.length - 1) {
+                    closeWalkthrough();
+                } else {
+                    currentStep++;
+                    renderStep();
+                }
+            };
 
                 if (target) {
                     target.classList.add('walkthrough-highlight');
@@ -1579,6 +1666,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 </script>
-  <script src="help-widget.mjs" type="module"></script>
+  <!-- help-widget already inlined above -->
 </body>
 </html>

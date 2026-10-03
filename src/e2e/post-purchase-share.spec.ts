@@ -1,8 +1,10 @@
+import { createGrowthOwner } from './growth_owner';
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
 test.describe('Post-Purchase Share Widget Generator', () => {
-    test('verify post-purchase widget setup flow and viral branding', async ({ page }) => {
+    test('verify post-purchase widget setup flow and viral branding', async ({ page, baseURL }) => {
+        const owner = await createGrowthOwner(page, baseURL);
         await page.setViewportSize({ width: 1440, height: 900 });
 
         // Navigate directly to post-purchase widget builder
@@ -46,7 +48,7 @@ test.describe('Post-Purchase Share Widget Generator', () => {
         await expect(page.getByRole('link', { name: /OmniSolo/i })).toBeHidden();
 
         // Verify embed API HTML renders successfully (integration with backend)
-        const response = await page.request.get('/api/v1/growth/post-purchase/embed?tenant=test-tenant&discount=20pct&hideBranding=false');
+        const response = await page.request.get(`/api/v1/growth/post-purchase/embed?tenant=${encodeURIComponent(owner.tenantId)}&discount=20pct&hideBranding=false`);
         expect(response.ok()).toBeTruthy();
         const html = await response.text();
 
@@ -55,7 +57,7 @@ test.describe('Post-Purchase Share Widget Generator', () => {
         expect(html).toContain('⚡ OmniSolo');
 
         // Verify hideBranding parameter works on API
-        const responseNoBranding = await page.request.get('/api/v1/growth/post-purchase/embed?tenant=test-tenant&discount=20pct&hideBranding=true');
+        const responseNoBranding = await page.request.get(`/api/v1/growth/post-purchase/embed?tenant=${encodeURIComponent(owner.tenantId)}&discount=20pct&hideBranding=true`);
         expect(responseNoBranding.ok()).toBeTruthy();
         const htmlNoBranding = await responseNoBranding.text();
         expect(htmlNoBranding).not.toContain('⚡ OmniSolo');

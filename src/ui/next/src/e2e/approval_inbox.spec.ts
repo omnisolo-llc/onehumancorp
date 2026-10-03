@@ -25,7 +25,7 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     await page.locator('button', { hasText: /Proposals/ }).first().click({ force: true });
 
     // Verify the backend-backed feed produced at least one actionable proposal.
-    await expect(page.locator('[data-testid^="triage-card-"]').first()).toBeVisible();
+    await expect(page.locator('[data-testid*="triage-card-"]').first()).toBeVisible();
   });
 
   test('should display Action Needed tag correctly', async ({ page }) => {

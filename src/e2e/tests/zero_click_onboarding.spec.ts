@@ -1,9 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../onboarding_fixtures';
+import {captureSetupPost,captureSetupLaunch,completeManualSetup,expectLaunchedSetup,expectPreparedSetup,verifiedSetupOwner} from '../support/legacy_manual_setup';
 
 test.describe('Zero-Click Onboarding to Agent Feed', () => {
   test('User completes chat onboarding and sees welcome card on feed', async ({ page }) => {
     // Navigate to the setup route
     await page.goto('/setup.html');
+    const identity=await verifiedSetupOwner(page);
 
     // Make sure we're on a mobile viewport
     await page.setViewportSize({ width: 375, height: 812 });
@@ -19,25 +21,27 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
 
     // Type a simple sentence and press Enter
     await chatInput.fill('I run a mobile dog grooming service in Austin');
-    await chatInput.press('Enter');
-
-    // The app should automatically transition to provisioning state or approval
-    const approvalHeading = page.locator('h1', { hasText: 'Ready to Launch' });
-    const successHeading = page.getByRole('heading', { name: /You're Live!/ });
-
-    // In chat flow we may skip straight or show approval, wait for one
-    await expect(async () => {
-      const isApproval = await approvalHeading.isVisible();
-      const isSuccess = await successHeading.isVisible();
-      expect(isApproval || isSuccess).toBeTruthy();
-    }).toPass({ timeout: 45000 });
-
-    if (await approvalHeading.isVisible()) {
-        await page.locator('#approve-publish-btn').click();
+    const chat=captureSetupPost(page,'chat');
+    const [reply]=await Promise.all([chat,chatInput.press('Enter')]);
+    if(reply.status===503){
+      expect(reply.body).toMatchObject({error:'onboarding_ai_unconfigured'});
+      expect(reply.body.success).not.toBe(true);
+      await completeManualSetup(page,'chat','I run a mobile dog grooming service in Austin',identity);
+    }else{
+      expect(reply.status).toBe(200);expect(reply.body).toMatchObject({is_complete:true});
+      expect(reply.body.error??null).toBeNull();
+      const approval=page.locator('#step-approval');
+      await expect(approval.getByRole('heading',{name:'Ready to Launch'})).toBeVisible({timeout:45000});
+      await expect(approval.locator('#approval-details')).not.toBeEmpty();
+      const launch=await captureSetupLaunch(page);
+      try {
+        const preparation=captureSetupPost(page,'start');
+        const [prepared,launched]=await Promise.all([preparation,launch.response,approval.getByRole('button',{name:'Approve & Complete Setup'}).click()]);
+        const id=expectPreparedSetup(prepared,identity);await expectLaunchedSetup(page,launched,id,identity);
+      } finally { await launch.dispose(); }
     }
-
-    // Since this uses the real backend, the UI will eventually redirect to /dashboard
-    await expect(successHeading).toBeVisible({ timeout: 60000 });
+    await expect(page).toHaveURL(/\/dashboard(?:\.html)?$/, { timeout: 60000 });
+    await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
 
     // Check horizontal scroll by verifying document width equals window innerWidth
     const hasHorizontalScroll = await page.evaluate(() => {
@@ -85,7 +89,7 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     await expect(imageContainer).toBeVisible();
   });
 
-  test('Conversational Setup maintains history after reload', async ({ page }) => {
+  test('Conversational Setup maintains history after reload', async ({ page, onboardingOwner }) => {
     await page.goto('/setup.html');
 
     // Start conversational flow
@@ -103,8 +107,12 @@ test.describe('Zero-Click Onboarding to Agent Feed', () => {
     const userMessages = page.locator('.chat-message.user');
     await expect(userMessages).toHaveCount(1);
 
-    // Ensure draft save occurs
-    await page.waitForTimeout(1000);
+    // Wait for this verified owner's actual durable local snapshot, not a delay.
+    await expect.poll(() => page.evaluate(({ userId, tenantId }) => {
+      const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+      const saved = JSON.parse(localStorage.getItem(key) || '{}');
+      return saved.state?.chat_history?.some((message: {role: string; content: string}) => message.role === 'user' && message.content === 'This is a test message to ensure history persistence.') ?? false;
+    }, onboardingOwner)).toBe(true);
 
     // Reload page
     await page.reload();

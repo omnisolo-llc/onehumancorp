@@ -1,68 +1,55 @@
 import { test, expect } from './fixtures';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from './support/entitlement_fixture';
 
-test.describe('Customer Win-back Campaign Growth Loop', () => {
-  test.beforeEach(async ({ page }) => {
-    // Navigate to the new win-back page
+test.describe('Customer Win-back Campaign', () => {
+  test('free-owner trial checks preserve the paywall, entered offer and server entitlement', async ({ page, baseURL }) => {
+    const fixture = await createEntitlementOwner(page, baseURL);
+    const claims = trackTrialClaims(page);
+    const generations: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/growth/campaign/generate-win-back') generations.push(request.url());
+    });
     await page.goto('/win-back');
-    await page.waitForLoadState('networkidle');
-  });
-
-  test('should display the win-back campaign page and handle soft paywall', async ({ page }) => {
-    // 1. Verify the page header
     await expect(page.getByRole('heading', { name: 'Customer Win-back Campaign 💌' })).toBeVisible();
-
-    // 2. Fill in the campaign details
     await page.getByLabel('Product to Feature (Optional)').fill('Premium Leather Bag');
     await page.getByLabel('Discount Offer (%)').fill('20');
+    await page.getByRole('button', { name: 'Generate Campaign Template' }).click();
+    const paywall = page.getByRole('heading', { name: 'Upgrade to Pro' });
+    await expect(paywall).toBeVisible();
+    await page.getByRole('button', { name: 'Check trial availability' }).click();
+    await expect(page.getByText(/durable grant is not verified/)).toBeVisible();
+    await expect(paywall).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Campaign draft' })).not.toBeVisible();
+    await page.getByRole('button', { name: 'Close paywall' }).click();
+    await expect(paywall).not.toBeVisible();
+    await expect(page.getByLabel('Product to Feature (Optional)')).toHaveValue('Premium Leather Bag');
+    await expect(page.getByLabel('Discount Offer (%)')).toHaveValue('20');
+    await page.getByRole('button', { name: 'Generate Campaign Template' }).click();
+    await expect(paywall).toBeVisible();
+    expect(generations).toEqual([]);
+    expect(claims).toEqual([]);
+    await expectEntitlementUnchanged(page, fixture);
+  });
 
-    // 3. Click "Generate AI Campaign" which should trigger the soft paywall since the user doesn't have Pro
-    await page.getByRole('button', { name: 'Generate AI Campaign' }).click();
-
-    // 4. Verify the soft paywall modal appears
-    const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Pro' });
-    await expect(paywallHeading).toBeVisible();
-
-    // 5. Intercept the Twitter share which extends the trial
-    const shareBtn = page.getByRole('button', { name: 'Share on X to get 7 Days Free' });
-    await expect(shareBtn).toBeVisible();
-
-    // We can't easily wait for the dialog because it is inside setTimeout
-    // So let's mock window.open to prevent the actual popup and make testing more reliable
-    await page.evaluate(() => {
-        window.open = function() { return window; };
-    });
-
-    // Instead of waiting for page, we just intercept the alert dialog
-    page.on('dialog', async dialog => {
-      expect(dialog.message()).toContain('Your 7-day Pro trial has been activated.');
-      await dialog.accept();
-    });
-
-    await shareBtn.click();
-
-    // 6. Verify soft paywall is closed
-    await expect(paywallHeading).toBeHidden({ timeout: 15000 });
-
-    // Wait until the modal overlay is completely gone before clicking anything else
-    // Using evaluate to force remove the modal background just in case it is still lingering
-    await page.evaluate(() => {
-        const modals = document.querySelectorAll('.fixed.inset-0');
-        modals.forEach(m => m.remove());
-    });
-
-    // 7. Wait for AI generation to complete and verify the generated text
-    const draft = page.locator('pre');
-    await expect(draft).toContainText("Subject: We miss you!", { timeout: 15000 });
-    await expect(draft).toContainText("20% off your next order");
-
-    // Verify the "OmniSolo" viral loop branding is inside the generated draft
-    await expect(draft).toContainText('OmniSolo');
-
-    // 8. Test sending the campaign
-    // Instead of evaluate, we click via Playwright to ensure React events fire
-    await page.getByRole('button', { name: /Send to 34 Inactive Customers/i }).click({ force: true });
-
-    // Verify success message
-    await expect(page.getByText(/✅ Campaign sent to 34 inactive customers!/i)).toBeVisible({ timeout: 15000 });
+  test('an existing Pro plan can create the real offer template while delivery stays unavailable', async ({ page, baseURL }) => {
+    const fixture = await createEntitlementOwner(page, baseURL, 'Pro');
+    const claims = trackTrialClaims(page);
+    await page.goto('/win-back');
+    await page.getByLabel('Product to Feature (Optional)').fill('Owner Product');
+    await page.getByLabel('Discount Offer (%)').fill('17');
+    const generated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/growth/campaign/generate-win-back' && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Generate Campaign Template' }).click();
+    const response = await generated;
+    expect(response.status()).toBe(200);
+    const body = await response.json();
+    expect(body.subject).toContain('17% off Owner Product');
+    expect(body.body).toContain('17% off');
+    expect(body.body).toContain('Owner Product');
+    expect(body.body).not.toContain('WINBACK');
+    await expect(page.getByRole('textbox', { name: 'Campaign draft' })).toHaveValue(`Subject: ${body.subject}\n\n${body.body}`);
+    await expect(page.getByText(/template does not create a discount code/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Campaign sending unavailable' })).toBeDisabled();
+    expect(claims).toEqual([]);
+    await expectEntitlementUnchanged(page, fixture);
   });
 });

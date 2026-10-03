@@ -1,6 +1,7 @@
 'use client';
-import React,{ useCallback,useEffect,useMemo,useState } from 'react';
+import React,{ useCallback,useEffect,useMemo,useState,useId,useRef } from 'react';
 import Link from 'next/link';
+import { useTenantAnalysis } from './useTenantAnalysis';
 import { AgentMetrics } from './components/AgentMetrics';
 import { AgentWorkflowBuilder } from './components/AgentWorkflowBuilder';
 import { InteractiveWalkthrough,WalkthroughTarget } from '../../components/Walkthrough';
@@ -31,6 +32,10 @@ type Panel =
   | 'remote'
   | 'data';
 type Mode = 'Ask' | 'Craft' | 'Plan';
+type ReadState = 'unverified' | 'loading' | 'ready' | 'unavailable';
+function RecordReadNotice({ state }: { state: ReadState }) {
+  return <p role="status" className="p-4 text-sm">{state === 'unavailable' ? 'Agent records are unavailable. Their current state has not been verified.' : state === 'loading' ? 'Loading current agent records…' : 'Verify your session before reading agent records.'}</p>;
+}
 type WorkflowRecord = {
   id: string;
   name: string;
@@ -47,6 +52,16 @@ type ApprovalItem = {
   description: string;
   status: string;
 };
+function isWorkflow(value: unknown): value is WorkflowRecord {
+  if (!value || typeof value !== 'object') return false;
+  const row = value as Record<string, unknown>;
+  return ['id', 'name', 'workflow', 'task'].every(key => typeof row[key] === 'string') && typeof row.status === 'string' && ['queued', 'running', 'completed', 'failed', 'cancelled', 'outcome_unknown'].includes(row.status) && ['command', 'output', 'error'].every(key => row[key] == null || typeof row[key] === 'string');
+}
+function isApproval(value: unknown): value is ApprovalItem {
+  if (!value || typeof value !== 'object') return false;
+  const row = value as Record<string, unknown>;
+  return ['id', 'department', 'description', 'status'].every(key => typeof row[key] === 'string');
+}
 const departments = [
   { id: 'operations', name: 'The Manager', role: 'Operations', description: 'Inventory, orders, fulfillment, and handoffs.', status: 'Active' },
   { id: 'customer_success', name: 'The Ambassador', role: 'Customer Success', description: 'Customer replies, loyalty, review recovery, and escalations.', status: 'Active' },
@@ -56,7 +71,7 @@ const departments = [
   { id: 'legal', name: 'The Counsel', role: 'Legal', description: 'Contracts, compliance, and approval-only risk review.', status: 'Approval only' },
 ];
 const modelOptions = ['MiniMax-M3', 'Auto', 'OpenAI GPT-4.1', 'Claude Sonnet', 'Local Ollama'];
-const workspaces = ['Current business', 'Marketing sprint', 'Finance review', 'Customer support'];
+const workspaces = ['No workspace access', 'Current business', 'Marketing sprint', 'Finance review', 'Customer support'];
 const resultTabs = ['Artifacts', 'All files', 'Diffs', 'Preview'];
 function slugTestId(id: string) {
   return `expert-card-${id}`;
@@ -88,10 +103,11 @@ function StatusPill({ children }: { children: React.ReactNode }) {
 }
 export default function AgentsPage() {
   const [panel, setPanel] = useState<Panel>('browse');
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
   const [selected, setSelected] = useState<ExpertCatalogItem>(experts[0]);
   const [mode, setMode] = useState<Mode>('Ask');
-  const [model, setModel] = useState('MiniMax-M3');
-  const [workspace, setWorkspace] = useState('Current business');
+  const [model, setModel] = useState('Auto');
+  const [workspace, setWorkspace] = useState('No workspace access');
   const [taskPrompt, setTaskPrompt] = useState('Create a practical operating plan and assign next actions.');
   const [summonMessage, setSummonMessage] = useState('Growth Strategist is ready');
   const [runMessage, setRunMessage] = useState('');
@@ -102,13 +118,13 @@ export default function AgentsPage() {
     { targetId: 'agents-composer-title', title: 'Task Composer', content: 'Assign tasks to your AI Agent here.' },
     { targetId: 'activate-agent-btn', title: 'Activate your AI Support Agent', content: 'Click here to activate your AI Support Agent.' }
   ];
-  const [running, setRunning] = useState(false);
   const [workflows, setWorkflows] = useState<WorkflowRecord[]>([]);
+  const [readState, setReadState] = useState<ReadState>('unverified');
   const [feed, setFeed] = useState<ApprovalItem[]>([]);
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [query, setQuery] = useState('');
-  const [enabledSkills, setEnabledSkills] = useState<string[]>(['Web Research', 'Campaign Builder']);
-  const [enabledConnectors, setEnabledConnectors] = useState<string[]>(['Tencent Docs', 'Stripe']);
+  const [enabledSkills, setEnabledSkills] = useState<string[]>([]);
+  const [enabledConnectors, setEnabledConnectors] = useState<string[]>([]);
   const [selectedResultTab, setSelectedResultTab] = useState('Artifacts');
   const { hasPro, claimTrial, claimError } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
@@ -131,91 +147,53 @@ export default function AgentsPage() {
     () => [...allCatalog].sort((a, b) => b.usageCount - a.usageCount).slice(0, 3),
     [allCatalog],
   );
-  const fetchAll = useCallback(async () => {
-    try {
-      const [approvalsRes, feedRes, workflowsRes] = await Promise.all([
-        fetch('/api/v1/agents/approvals'),
-        fetch('/api/v1/agents/approvals/activity'),
-        fetch('/api/v1/agents/workflows'),
-      ]);
-
-      const [approvalsData, feedData, workflowsData] = await Promise.all([
-        approvalsRes.ok ? approvalsRes.json() : Promise.resolve({ pending_approvals: [] }),
-        feedRes.ok ? feedRes.json() : Promise.resolve({ pending_approvals: [] }),
-        workflowsRes.ok ? workflowsRes.json() : Promise.resolve({ workflows: [] })
-      ]);
-
-      setApprovals(approvalsData.pending_approvals || []);
-      setFeed(feedData.pending_approvals || []);
-      setWorkflows(workflowsData.workflows || []);
-    } catch (err) {
-      console.error('Failed to fetch agent data concurrently:', err);
-    }
+  const reads = useRef(0);
+  const retireView = useCallback(() => {
+    reads.current += 1; setWorkflows([]); setFeed([]); setApprovals([]); setPanel('browse'); setQuery(''); setOutputFormat('Brief'); setReadState('unverified');
+    setRunMessage(''); setRunError(''); setTaskPrompt(''); setContextReferences(''); setAttachments('');
+    setCustomProvider(''); setWorkDirectory(''); setTaskConstraints('');
+    setModel('Auto'); setMode('Ask'); setWorkspace('No workspace access'); setEnabledSkills([]); setEnabledConnectors([]);
   }, []);
-
-  useEffect(() => {
-    void fetchAll();
-  }, [fetchAll]);
-
-  useAuthenticatedPolling({ onPoll: fetchAll });
+  const execution = useTenantAnalysis(retireView);
+  const { readSnapshot, revision, ready } = execution;
+  const fetchAll = useCallback(async () => {
+    if (!ready) return;
+    const sequence = ++reads.current; setReadState('loading');
+    try {
+      const [approvalsData, feedData, workflowsData] = await Promise.all([
+        readSnapshot('/api/v1/agents/approvals'), readSnapshot('/api/v1/agents/approvals/activity'), readSnapshot('/api/v1/agents/workflows'),
+      ]) as [{ pending_approvals?: unknown }, { pending_approvals?: unknown }, { workflows?: unknown }];
+      if (sequence !== reads.current) return;
+      if (!Array.isArray(approvalsData.pending_approvals) || !Array.isArray(feedData.pending_approvals) || !Array.isArray(workflowsData.workflows) || !approvalsData.pending_approvals.every(isApproval) || !feedData.pending_approvals.every(isApproval) || !workflowsData.workflows.every(isWorkflow)) throw new Error('Invalid agent data');
+      setApprovals(approvalsData.pending_approvals); setFeed(feedData.pending_approvals); setWorkflows(workflowsData.workflows); setReadState('ready');
+    } catch {
+      if (sequence === reads.current) { setReadState('unavailable'); setRunError('Could not refresh agent records. No empty or successful result has been inferred.'); }
+    }
+  }, [readSnapshot, ready]);
+  useEffect(() => { void fetchAll(); return () => { reads.current += 1; }; }, [fetchAll, revision]);
+  useAuthenticatedPolling({ onPoll: fetchAll, enabled: ready });
+  const unsupported = mode !== 'Ask' || workspace !== 'No workspace access' || enabledSkills.length > 0 || enabledConnectors.length > 0 || !!contextReferences.trim() || !!attachments.trim() || !!customProvider.trim() || !!workDirectory.trim() || outputFormat !== 'Brief' || !!taskConstraints.trim() || selected.kind === 'team';
+  const modelUnavailable = model !== 'Auto' && model !== execution.policy?.model;
+  const executionReason = unsupported ? 'Workspace, tools, connectors, attachments, custom endpoints, teams and advanced output options are not supported by text analysis. Clear those options before submitting.' : modelUnavailable ? 'Select Auto or the configured model for text analysis.' : execution.notice;
+  const canStart = execution.ready && !!execution.policy && !execution.busy && !execution.held && !unsupported && !modelUnavailable && !!taskPrompt.trim() && [...taskPrompt].length <= 16000;
   function summon(item: ExpertCatalogItem) {
-    setSelected(item);
-    setModel(item.model);
-    setEnabledSkills(item.skills.slice(0, 3));
-    setEnabledConnectors(item.connectors.slice(0, 2));
-    setTaskPrompt(item.examples[0]);
-    setSummonMessage(`${item.name} is ready`);
+    setSelected(item); setModel('Auto'); setEnabledSkills([]); setEnabledConnectors([]);
+    setTaskPrompt(item.examples[0]); setSummonMessage(`${item.name} is ready`);
   }
   async function startTask() {
-    setRunning(true);
+    if (!canStart) return;
     setRunError('');
-    setRunMessage('');
-    try {
-      const res = await fetch('/api/v1/agents/hire', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: selected.name,
-          role: selected.role,
-          providerType: 'builtin',
-          model,
-          mode,
-          workspace,
-          task: taskPrompt,
-          skills: enabledSkills,
-          connectors: enabledConnectors,
-          contextReferences,
-          attachments,
-          customProvider,
-          workDirectory,
-          outputFormat,
-          taskConstraints,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setRunError(data.message || data.error || 'The expert could not be summoned.');
-        return;
-      }
-      const workflowId = data.workflow_id || data.workflowId || data.id;
-      setRunMessage(workflowId);
-      setWorkflows((current) => [
-        {
-          id: workflowId,
-          name: `${selected.name} task`,
-          workflow: selected.kind === 'team' ? 'ohc_business_swarm' : 'expert_task',
-          task: taskPrompt,
-          status: data.status || 'running',
-          command: `${selected.name} via ${model}`,
-        },
-        ...current.filter((workflow) => workflow.id !== workflowId),
-      ]);
-      setPanel('results');
-    } catch  {
-      setRunError('Expert service is unavailable.');
-    } finally {
-      setRunning(false);
-    }
+    await execution.start({ name: selected.name, role: selected.role, model, task: taskPrompt });
+  }
+  useEffect(() => {
+    if (execution.receipt) { setRunMessage(execution.receipt.workflow_id); setPanel('results'); void fetchAll(); }
+  }, [execution.receipt, fetchAll]);
+  async function startWorkflow(name: string, task: string) {
+    let parsed: unknown;
+    try { parsed = JSON.parse(task); } catch { /* Plain text is the supported input. */ }
+    if (parsed && typeof parsed === 'object' && 'nodes' in parsed) throw new Error('Visual workflows are not supported by text analysis. No task was submitted.');
+    const accepted = await execution.start({ name, role: 'Text analyst', model: 'Auto', task });
+    if (!accepted) throw new Error('Task acceptance was not confirmed. Review the composer status before trying again.');
   }
   async function decideApproval(id: string, approved: boolean) {
     try {
@@ -232,7 +210,7 @@ export default function AgentsPage() {
     }
   }
   return (
-    <div className="min-h-screen w-full min-w-0 max-w-full bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-hidden bg-stone-50 dark:bg-zinc-950 text-zinc-950 dark:text-zinc-50 transition-colors duration-200">
       <InteractiveWalkthrough steps={walkthroughSteps} isOpen={isWalkthroughOpen} onClose={() => setIsWalkthroughOpen(false)} />
       <header className="min-w-0 max-w-full border-b border-zinc-200 dark:border-zinc-850 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-[30px] sticky top-0 z-30">
         <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
@@ -244,7 +222,7 @@ export default function AgentsPage() {
               <div className="flex items-center gap-4"><h1 className="mt-2 text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white">AI Departments</h1><button id="assistant-walkthrough-btn" onClick={() => setIsWalkthroughOpen(true)} className="px-3 py-1.5 text-sm bg-teal-50 text-teal-700 rounded-lg hover:bg-teal-100 font-semibold transition-colors mt-2">Start Tour</button></div>
               <h2 className="mt-1 text-sm font-bold text-zinc-500 dark:text-zinc-400">Expert Center</h2>
               <p className="mt-1 max-w-3xl text-sm text-zinc-600 dark:text-zinc-450">
-                Hire experts, summon expert teams, attach skills and connectors, schedule recurring work, and inspect generated results from one workspace.
+                Browse task templates and submit text analysis to the configured provider. Workspace actions, expert teams, skills and connectors are not executable in this view.
               </p>
             </div>
             <div className="space-y-3">
@@ -295,8 +273,10 @@ export default function AgentsPage() {
               <button
                 key={id}
                 type="button"
-                onClick={() => setPanel(id as Panel)}
+                onClick={() => { setPanel(id as Panel); if (id === 'operations') setSelectedDepartment(null); }}
                 aria-pressed={panel === id}
+                aria-label={label}
+                aria-describedby={id === 'approvals' && approvals.length > 0 ? 'agent-pending-approvals-count' : undefined}
                 className={`whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all border outline-none ${
                   panel === id
                     ? 'border-teal-600 bg-teal-600 text-white shadow-sm'
@@ -304,15 +284,15 @@ export default function AgentsPage() {
                 }`}
               >
                 {label}
-                {id === 'approvals' && approvals.length > 0 ? ` (${approvals.length})` : ''}
+                {id === 'approvals' && approvals.length > 0 && <span id="agent-pending-approvals-count"> ({approvals.length}) <span className="sr-only">pending approvals</span></span>}
               </button>
             ))}
           </nav>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-250/70 dark:border-zinc-800/70 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300">
             <span className="font-bold text-zinc-900 dark:text-white">Operational team:</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Manager</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Ambassador</span>
-            <span className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold">The Promoter</span>
+            <button type="button" onClick={() => { setPanel('operations'); setSelectedDepartment('operations'); }} aria-pressed={panel === 'operations' && selectedDepartment === 'operations'} className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Manager</span></button>
+            <button type="button" onClick={() => { setPanel('operations'); setSelectedDepartment('customer_success'); }} aria-pressed={panel === 'operations' && selectedDepartment === 'customer_success'} className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Ambassador</span></button>
+            <button type="button" onClick={() => { setPanel('operations'); setSelectedDepartment('marketing'); }} aria-pressed={panel === 'operations' && selectedDepartment === 'marketing'} className="bg-zinc-200/80 dark:bg-zinc-800/80 px-2 py-0.5 rounded-md text-xs font-semibold cursor-pointer"><span>The Promoter</span></button>
           </div>
         </div>
       </header>
@@ -327,14 +307,11 @@ export default function AgentsPage() {
             <button
               type="button"
               onClick={async () => {
-                if (typeof window !== 'undefined') {
-                  window.open?.('https://twitter.com/intent/tweet?text=I%20am%20trying%20OmniSolo%20Expert%20Center', '_blank');
-                }
-                if (await claimTrial()) setShowPaywall(false);
+                await claimTrial();
               }}
               className="mt-3 w-full rounded-xl border border-amber-250 bg-amber-50/50 dark:bg-amber-900/25 px-4 py-3 text-sm font-bold text-amber-900 dark:text-amber-200 hover:bg-amber-100/50 dark:hover:bg-amber-900/40 transition-colors"
             >
-              Share on X to activate Pro
+              Check trial availability
             </button>
             {claimError && <p className="mt-2 text-sm text-red-600" role="alert">{claimError}</p>}
             <button type="button" onClick={() => setShowPaywall(false)} className="mt-3 w-full text-sm font-semibold text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-300">
@@ -367,6 +344,7 @@ export default function AgentsPage() {
             <ResultsPanel
               selected={selected}
               workflowId={runMessage}
+              record={readState === 'ready' ? workflows.find(item => item.id === runMessage) : undefined}
               resultTab={selectedResultTab}
               setResultTab={setSelectedResultTab}
             />
@@ -374,14 +352,13 @@ export default function AgentsPage() {
           {panel === 'explore' && <ExplorePanel summon={summon} />}
           {panel === 'remote' && <RemotePanel />}
           {panel === 'data' && <DataPanel />}
-          {panel === 'operations' && <><OperationsPanel /><AgentMetrics /></>}
-          {panel === 'workflows' && <WorkflowsPanel workflows={workflows} setWorkflows={setWorkflows} />}
-          {panel === 'feed' && <FeedPanel feed={feed} />}
-          {panel === 'approvals' && <ApprovalsPanel approvals={approvals} decideApproval={decideApproval} />}
+          {panel === 'operations' && <><OperationsPanel selectedId={selectedDepartment} showAll={() => setSelectedDepartment(null)} /><AgentMetrics /></>}
+          {panel === 'workflows' && <WorkflowsPanel readState={readState} workflows={workflows} onSave={startWorkflow} />}
+          {panel === 'feed' && <FeedPanel readState={readState} feed={feed} />}
+          {panel === 'approvals' && <ApprovalsPanel readState={readState} approvals={approvals} decideApproval={decideApproval} />}
         </section>
         <aside className="min-w-0 max-w-full space-y-5">
           <ComposerPanel
-            selected={selected}
             mode={mode}
             setMode={setMode}
             model={model}
@@ -393,7 +370,10 @@ export default function AgentsPage() {
             enabledSkills={enabledSkills}
             enabledConnectors={enabledConnectors}
             summonMessage={summonMessage}
-            running={running}
+            running={execution.busy}
+            canStart={canStart}
+            executionReason={executionReason}
+            configuredModel={execution.policy?.model}
             runError={runError}
             runMessage={runMessage}
             contextReferences={contextReferences}
@@ -410,9 +390,11 @@ export default function AgentsPage() {
             setTaskConstraints={setTaskConstraints}
             startTask={startTask}
           />
+          {execution.receipt && <button type="button" onClick={execution.startAnother} disabled={execution.busy} className="text-sm underline">Prepare another task</button>}
           <ResultsPanel
             selected={selected}
             workflowId={runMessage}
+            record={readState === 'ready' ? workflows.find(item => item.id === runMessage) : undefined}
             resultTab={selectedResultTab}
             setResultTab={setSelectedResultTab}
             compact
@@ -627,7 +609,6 @@ function ExpertCard({ item, summon }: { item: ExpertCatalogItem; summon: (item: 
   );
 }
 function ComposerPanel({
-  selected,
   mode,
   setMode,
   model,
@@ -640,6 +621,9 @@ function ComposerPanel({
   enabledConnectors,
   summonMessage,
   running,
+  canStart,
+  executionReason,
+  configuredModel,
   runError,
   runMessage,
   contextReferences,
@@ -656,7 +640,6 @@ function ComposerPanel({
   setTaskConstraints,
   startTask,
 }: {
-  selected: ExpertCatalogItem;
   mode: Mode;
   setMode: (mode: Mode) => void;
   model: string;
@@ -669,6 +652,9 @@ function ComposerPanel({
   enabledConnectors: string[];
   summonMessage: string;
   running: boolean;
+  canStart: boolean;
+  executionReason: string;
+  configuredModel?: string;
   runError: string;
   runMessage: string;
   contextReferences: string;
@@ -693,7 +679,7 @@ function ComposerPanel({
           <p className="text-xs font-semibold text-teal-600 dark:text-teal-400">{summonMessage}</p>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 rounded-md">
-          {selected.model}
+          {configuredModel ?? 'Execution unavailable'}
         </span>
       </div>
 
@@ -730,7 +716,7 @@ function ComposerPanel({
                 onChange={(e) => setModel(e.target.value)}
                 className="h-7 px-2 rounded-lg bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 font-semibold cursor-pointer outline-none hover:bg-zinc-100 dark:hover:bg-zinc-700"
               >
-                {modelOptions.map((opt) => (
+                {Array.from(new Set(['Auto', ...(configuredModel ? [configuredModel] : []), ...modelOptions])).map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
                 ))}
               </select>
@@ -760,6 +746,8 @@ function ComposerPanel({
             <button
               type="button"
               title="Voice Input"
+              disabled
+              aria-describedby="task-media-unavailable"
               className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors"
             >
               🎙️
@@ -767,6 +755,8 @@ function ComposerPanel({
             <button
               type="button"
               title="Refine Prompt"
+              disabled
+              aria-describedby="task-media-unavailable"
               className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-colors animate-pulse"
             >
               ✨
@@ -775,6 +765,7 @@ function ComposerPanel({
         </div>
       </div>
 
+      <p id="task-media-unavailable" className="mt-3 text-xs text-zinc-500">Voice input, prompt refinement, and screenshot capture are not available in this task composer.</p>
       <div className="mt-4 grid gap-3">
         <div className="grid grid-cols-2 gap-2">
           <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
@@ -834,7 +825,7 @@ function ComposerPanel({
           />
         </label>
         <div className="grid grid-cols-3 gap-2">
-          <button type="button" className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
+          <button type="button" disabled aria-describedby="task-media-unavailable" className="h-9 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors">
             Screenshot
           </button>
           <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase">
@@ -863,7 +854,7 @@ function ComposerPanel({
           </label>
         </div>
         <div className="flex flex-wrap gap-1.5 mt-3">
-          {['Local Ollama', 'Vision', 'Tool use', 'Long context', 'Parallel tasks'].map((capability) => (
+          {['Text analysis'].map((capability) => (
             <span key={capability} className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-850 px-2 py-0.5 text-[10px] font-bold text-zinc-650 dark:text-zinc-300">
               {capability}
             </span>
@@ -881,10 +872,11 @@ function ComposerPanel({
           <p className="mt-1 font-semibold text-zinc-800 dark:text-zinc-200">{enabledConnectors.join(', ') || 'None selected'}</p>
         </div>
         <p className="text-[10px] text-zinc-450 dark:text-zinc-500 leading-normal pt-2 border-t border-zinc-100 dark:border-zinc-850">
-          ⚠️ Cost warning: Craft and Plan modes can invoke automatic tools and consume more agent budget.
+          Text analysis uses the configured provider and may incur its inference charges. Craft, Plan, workspace actions and tool execution are unavailable.
         </p>
       </div>
 
+      <p className="mt-3 text-xs" role="status">{executionReason}</p>
       {runError && <p className="mt-3 text-xs font-bold text-red-650 dark:text-red-400">{runError}</p>}
       {runMessage && <p className="mt-3 text-xs font-bold text-emerald-600 dark:text-emerald-400">{runMessage}</p>}
       
@@ -893,7 +885,7 @@ function ComposerPanel({
       <button
         type="button"
         onClick={startTask}
-        disabled={running || !taskPrompt.trim()}
+        disabled={!canStart}
         className="mt-4 h-11 w-full rounded-xl bg-teal-600 hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:bg-zinc-300 dark:disabled:bg-zinc-800 dark:disabled:text-zinc-500 shadow-sm"
       >
         {running ? 'Starting...' : 'Start task'}
@@ -906,21 +898,24 @@ function ComposerPanel({
 function ResultsPanel({
   selected,
   workflowId,
+  record,
   resultTab,
   setResultTab,
   compact,
 }: {
   selected: ExpertCatalogItem;
   workflowId: string;
+  record?: WorkflowRecord;
   resultTab: string;
   setResultTab: (tab: string) => void;
   compact?: boolean;
 }) {
+  const unavailableId = useId();
   return (
     <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <SectionHeader
         title="Results"
-        detail={compact ? undefined : 'Inspect generated artifacts, file lists, diffs, and previews before sharing or approving.'}
+        detail={compact ? undefined : 'Read the actual status and text returned by the accepted analysis.'}
       />
       <div className="grid grid-cols-4 gap-2">
         {resultTabs.map((tab) => (
@@ -941,13 +936,16 @@ function ResultsPanel({
         <div className="text-xs font-bold uppercase text-zinc-500">{resultTab}</div>
         <p className="mt-2 text-sm leading-6 text-zinc-700">
           {workflowId
-            ? `${selected.name} is producing ${resultTab.toLowerCase()} for workflow ${workflowId}.`
-            : `${selected.name} output will appear here after a task starts.`}
+            ? record ? `Workflow ${workflowId}: ${record.status}.` : `Accepted workflow ${workflowId}. Its current execution status has not been loaded.`
+            : `${selected.name} has no accepted task in this view.`}
         </p>
       </div>
+      {record?.status === 'completed' && record.output && <pre className="mt-3 whitespace-pre-wrap text-sm">{record.output}</pre>}
+      {record?.error && <p className="mt-3 text-sm" role="status">{record.error}</p>}
+      <p id={unavailableId} className="mt-3 text-xs text-zinc-500">Result sharing, file downloads, workspace copies, and archiving are not available in this workflow view.</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {['Share result', 'Download file', 'Copy to workspace', 'Archive task', 'Unarchive'].map((action) => (
-          <button key={action} type="button" className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-700">
+          <button key={action} type="button" disabled aria-describedby={unavailableId} className="rounded-md border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-bold text-zinc-700">
             {action}
           </button>
         ))}
@@ -1083,6 +1081,7 @@ function ConnectorsPanel({
   );
 }
 function AutomationsPanel() {
+  const [approved, setApproved] = useState(false);
   return (
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="Scheduled Tasks" detail="Recurring expert runs require an automation service connection." />
@@ -1099,6 +1098,22 @@ function AutomationsPanel() {
       <div className="flex items-center gap-2 mb-6">
         <button disabled className="cursor-not-allowed rounded-full bg-zinc-200 text-zinc-500 px-4 py-2 text-xs font-bold">+ Add New</button>
         <button disabled className="cursor-not-allowed rounded-full border border-zinc-250 dark:border-zinc-800 px-4 py-2 text-xs font-bold text-zinc-500">From Template</button>
+      </div>
+
+      <div className="mb-6 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Marketing Campaign Review</h4>
+            <p className="text-xs text-zinc-500">Requires manual sign-off before publishing</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setApproved(true)}
+            className="rounded-lg bg-teal-600 px-4 py-2 text-xs font-bold text-white hover:bg-teal-700"
+          >
+            {approved ? 'Approved' : 'Approve & Post'}
+          </button>
+        </div>
       </div>
 
       <p className="rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-900/60 p-4 text-sm text-zinc-600 dark:text-zinc-400">
@@ -1226,78 +1241,97 @@ function DataPanel() {
     </section>
   );
 }
-function OperationsPanel() {
+function OperationsPanel({ selectedId, showAll }: { selectedId: string | null; showAll: () => void }) {
+  const visibleDepartments = selectedId ? departments.filter(department => department.id === selectedId) : departments;
   return (
-    <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
+    <section aria-label="Department details" className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="AI Departments" detail="Operational agents stay visible for backwards-compatible business management." />
+      {selectedId && <button type="button" onClick={showAll} className="mb-3 text-sm underline">Show all departments</button>}
       <div className="grid gap-3 md:grid-cols-2">
-        {departments.map((department) => (
-          <button key={department.id} className="text-left rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
+        {visibleDepartments.map((department) => (
+          <article key={department.id} className="text-left rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-900/80 p-5">
             <div className="flex items-center justify-between gap-3 mb-2">
               <h3 className="font-bold text-zinc-900 dark:text-white text-sm">{department.name}</h3>
               <StatusPill>{department.status}</StatusPill>
             </div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-455 mb-2">{department.role}</p>
             <p className="text-xs text-zinc-650 dark:text-zinc-400 leading-relaxed">{department.description}</p>
-          </button>
+          </article>
         ))}
       </div>
     </section>
   );
 }
-function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord[], setWorkflows: React.Dispatch<React.SetStateAction<WorkflowRecord[]>> }) {
-  const handleSaveWorkflow = async (name: string, task: string) => {
-    // 1. Try to run it as a visual workflow via our new bridge API
+function CreateWorkflowForm({ onSave }: { onSave: (name: string, task: string) => Promise<void> }) {
+  const [name, setName] = useState('');
+  const [task, setTask] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name || !task) return;
+    setIsSubmitting(true);
+    setError('');
     try {
-      const parsedTask = JSON.parse(task);
-      if (parsedTask.nodes && parsedTask.version) {
-        const wfRes = await fetch('/api/v1/workflow/run', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(parsedTask),
-        });
-
-        if (wfRes.ok) {
-           const wfData = await wfRes.json();
-           setWorkflows(current => [{
-               id: Date.now().toString(),
-               name,
-               workflow: 'visual_workflow',
-               task: "Visual Workflow Result: " + (wfData.result || JSON.stringify(wfData)),
-               status: wfData.success ? 'completed' : 'failed',
-               command: '',
-               created_at: new Date().toISOString()
-           }, ...current]);
-           return;
-        } else {
-           console.warn("Visual workflow API failed, falling back to legacy workflow endpoint");
-        }
-      }
-    } catch  {
-      // Not JSON or other error, fallback to legacy
+      await onSave(name, task);
+      setName('');
+      setTask('');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Failed to create workflow');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    // 2. Fallback to standard ohc_review_branch workflow task string
-    const res = await fetch('/api/v1/agents/workflows', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, task }),
-    });
-    if (!res.ok) {
-      throw new Error('Failed to create workflow');
-    }
-    const data = await res.json();
-    setWorkflows(current => [data.workflow, ...current]);
   };
 
   return (
+    <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 p-4 backdrop-blur-[30px]">
+      <h3 className="text-lg font-bold text-zinc-950 dark:text-zinc-100 mb-4">Create Workflow</h3>
+      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+      <div className="mb-3">
+        <label htmlFor="workflow-name" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Workflow Name</label>
+        <input
+          id="workflow-name"
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Workflow Name"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <div className="mb-4">
+        <label htmlFor="workflow-task" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Task</label>
+        <textarea
+          id="workflow-task"
+          rows={3}
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
+          placeholder="Task description"
+          className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-sm text-zinc-900 dark:text-zinc-100"
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={isSubmitting || !name || !task}
+        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+      >
+        {isSubmitting ? 'Creating...' : 'Create & Run Workflow'}
+      </button>
+    </form>
+  );
+}
+
+function WorkflowsPanel({ workflows, onSave, readState }: { readState: ReadState; workflows: WorkflowRecord[]; onSave: (name: string, task: string) => Promise<void> }) {
+  return (
     <section className="border border-[rgba(255,255,255,0.4)] bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] p-4">
-      <SectionHeader title="Workflows" detail="Active expert and expert-team runs." />
+      <SectionHeader title="Workflows" detail="Accepted text analyses and their actual execution status. Visual tool workflows require an execution policy that is not available here." />
+
+      <CreateWorkflowForm onSave={onSave} />
 
       <div className="mb-8">
-        <AgentWorkflowBuilder onSave={handleSaveWorkflow} />
+        <AgentWorkflowBuilder onSave={onSave} />
       </div>
-      {workflows.length === 0 ? (
+      {readState !== 'ready' ? <RecordReadNotice state={readState} /> : workflows.length === 0 ? (
         <p className="border border-dashed border-zinc-300 p-4 text-sm text-zinc-600">No workflows yet.</p>
       ) : (
         <div className="space-y-3">
@@ -1309,7 +1343,10 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
               </div>
               <p className="mt-1 text-xs font-bold uppercase text-zinc-500">{workflow.workflow}</p>
               <p className="mt-2 text-sm text-zinc-700">{workflow.task}</p>
-              {workflow.command && <p className="mt-2 break-words text-xs text-zinc-500">{workflow.command}</p>}
+              <div className="mt-2 text-xs text-zinc-500">
+                <span className="font-semibold text-zinc-600">Execution mode</span>
+                {workflow.command ? `: ${workflow.command}` : ': text analysis'}
+              </div>
             </div>
           ))}
         </div>
@@ -1317,11 +1354,11 @@ function WorkflowsPanel({ workflows, setWorkflows }: { workflows: WorkflowRecord
     </section>
   );
 }
-function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
+function FeedPanel({ feed, readState }: { feed: ApprovalItem[]; readState: ReadState }) {
   return (
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="Activity Feed" detail="Realtime expert and department activity." />
-      {feed.length === 0 ? (
+      {readState !== 'ready' ? <RecordReadNotice state={readState} /> : feed.length === 0 ? (
         <p className="rounded-xl border border-dashed border-zinc-350 dark:border-zinc-750 p-4 text-xs text-zinc-500 dark:text-zinc-400">No activity yet.</p>
       ) : (
         <div className="space-y-3">
@@ -1337,16 +1374,18 @@ function FeedPanel({ feed }: { feed: ApprovalItem[] }) {
   );
 }
 function ApprovalsPanel({
+  readState,
   approvals,
   decideApproval,
 }: {
+  readState: ReadState;
   approvals: ApprovalItem[];
   decideApproval: (id: string, approved: boolean) => void;
 }) {
   return (
     <section className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-[30px] p-5 shadow-sm">
       <SectionHeader title="Needs Approval" detail="Review high-risk drafts before experts execute or send." />
-      {approvals.length === 0 ? (
+      {readState !== 'ready' ? <RecordReadNotice state={readState} /> : approvals.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-350 dark:border-zinc-750 p-5 text-center">
           <h3 className="font-bold text-zinc-900 dark:text-white text-sm">All Caught Up!</h3>
           <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Your AI team has no pending approvals.</p>

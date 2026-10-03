@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
 import { useRouter } from 'next/navigation';
+import { cloudUrl } from '../../lib/branding';
+import { useClipboardFeedback } from '../../hooks/useClipboardFeedback';
 
 export default function ViralGoalTrackerPage() {
   useRouter();
@@ -10,7 +12,6 @@ export default function ViralGoalTrackerPage() {
   const [target, setTarget] = useState('10');
   const [reward, setReward] = useState('Free T-Shirt & 20% Off');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -32,14 +33,11 @@ export default function ViralGoalTrackerPage() {
   };
 
   const origin = typeof window !== 'undefined' && window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : (typeof window !== 'undefined' ? window.location.origin : '');
-  const embedUrl = `${origin}/api/v1/growth/viral-goal-tracker?tenant=${tenant}&theme=${theme}&target=${target}&reward=${encodeURIComponent(reward)}&hideBranding=${hasPro}`;
-  const embedCode = `<iframe src="${embedUrl}" width="100%" height="220" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Viral Goal Tracker"></iframe>`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const query = new URLSearchParams({ tenant, theme, target, reward, hideBranding: String(hasPro) });
+  const embedUrl = `${origin}/api/v1/growth/viral-goal-tracker?${query}`;
+  const escapedUrl = embedUrl.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll("'", '&#39;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  const embedCode = `<iframe src="${escapedUrl}" width="100%" height="220" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Viral Goal Tracker"></iframe>`;
+  const clipboard = useClipboardFeedback(embedCode);
 
   if (!isClient) return null;
 
@@ -49,21 +47,21 @@ export default function ViralGoalTrackerPage() {
         <div className="flex-1 min-w-0 p-8">
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Goal Tracker Builder</h1>
           <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-             Create a gamified progress bar to encourage referrals and engagement.
+             Configure a goal widget. Individual referral tracking and reward eligibility are unavailable.
           </p>
 
           <div className="space-y-4">
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Goal Target</label>
-                <input type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="goal-target">Goal Target</label>
+                <input id="goal-target" name="goal-target" placeholder="10" aria-label="Goal Target" type="number" min="1" value={target} onChange={(e) => setTarget(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reward Name</label>
-                <input type="text" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="reward-name">Reward Name</label>
+                <input id="reward-name" name="reward-name" placeholder="Reward Name" aria-label="Reward Name" type="text" value={reward} onChange={(e) => setReward(e.target.value)} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" />
              </div>
              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Theme</label>
-                <select value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="theme-select">Theme</label>
+                <select id="theme-select" name="theme-select" aria-label="Theme" value={theme} onChange={(e) => setTheme(e.target.value as Parameters<typeof setTheme>[0])} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
                   <option value="light">Light</option>
                   <option value="dark">Dark</option>
                 </select>
@@ -88,11 +86,13 @@ export default function ViralGoalTrackerPage() {
              <pre>{embedCode}</pre>
           </div>
           <button
-             onClick={handleCopy}
-             className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+             onClick={() => void clipboard.copy(embedCode)}
+             disabled={clipboard.state === 'pending'}
+             className={`w-full py-3 rounded-lg text-sm font-semibold transition-all ${clipboard.state === 'copied' ? 'bg-green-100 text-green-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
           >
-             {copied ? 'Copied to Clipboard!' : 'Copy Embed Code'}
+             {clipboard.state === 'pending' ? 'Copying…' : clipboard.state === 'copied' ? 'Copied to Clipboard!' : 'Copy Embed Code'}
           </button>
+          {clipboard.message && <p role="status" className="text-sm mt-2">{clipboard.message}</p>}
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col p-8 bg-gray-50 border-l border-gray-100 rounded-r-[24px]">
@@ -100,25 +100,20 @@ export default function ViralGoalTrackerPage() {
 
            <div className={`p-6 rounded-2xl shadow-sm border ${theme === 'dark' ? 'bg-[#1c1c1e] text-white border-[#333]' : 'bg-white text-gray-900 border-gray-200'}`}>
               <div className="text-center mb-4">
-                 <h3 className="font-bold text-lg">Unlock: {reward}</h3>
+                 <h3 className="font-bold text-lg">Configured reward: {reward}</h3>
                  <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Illustrative widget preview</p>
               </div>
 
-              <div className="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden dark:bg-gray-700">
-                  <div className="bg-indigo-600 h-3 rounded-full" style={{ width: '0%' }}></div>
-              </div>
-              <div className={`flex justify-between text-xs mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                  <span>0 referrals in preview</span>
-                  <span>{target} target</span>
-              </div>
+              <p className="text-sm mb-2">Referral progress is unavailable.</p>
+              <p className="text-xs mb-6">{target} target</p>
 
-              <button className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors mb-4">
+              <button disabled className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors mb-4">
                  Share to reach goal
               </button>
 
               {!hasPro && (
                  <div className="text-center">
-                    <a href="#" className={`text-xs font-medium hover:underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400 hover:text-gray-600'}`}>
+                    <a href={cloudUrl(`/api/v1/growth/referrals/click?target=/onboarding&ref=${encodeURIComponent(tenant)}`)} className={`text-xs font-medium hover:underline ${theme === 'dark' ? 'text-gray-400' : 'text-gray-400 hover:text-gray-600'}`}>
                        ⚡ Powered by OmniSolo
                     </a>
                  </div>

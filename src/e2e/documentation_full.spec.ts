@@ -7,7 +7,7 @@ test.describe('Documentation full suite', () => {
     await page.goto('/help');
 
     // Title should be present
-    const title = page.locator('h1');
+    const title = page.locator('h1').first();
     await expect(title).toBeVisible();
     await expect(title).toContainText('In-App Help Center');
 
@@ -29,7 +29,7 @@ test.describe('Documentation full suite', () => {
     await page.goto('/changelog');
 
     // Title should be present
-    const title = page.locator('h1');
+    const title = page.locator('h1').first();
     await expect(title).toBeVisible();
     await expect(title).toContainText('Release Notes');
   });
@@ -44,7 +44,7 @@ test.describe('Documentation full suite', () => {
     await expect(swaggerUI).toBeVisible();
 
     // Ensure the topbar from Swagger has loaded, indicating success
-    const info = page.locator('.info .title');
+    const info = page.locator('.info .title').first();
     await expect(info).toBeVisible();
   });
 });

@@ -24,7 +24,7 @@ test.describe('Help Center & Documentation Features', () => {
     // 6. Verify video modal opens and can be closed
     const closeButton = page.locator('button[aria-label="Close video"]');
     await expect(closeButton.first()).toBeVisible();
-    await closeButton.first().evaluate((b) => (b as HTMLElement).click());
+    await closeButton.first().click();
     await expect(closeButton.first()).not.toBeVisible();
   });
 
@@ -34,22 +34,23 @@ test.describe('Help Center & Documentation Features', () => {
     await page.goto('/api/v1/ui/help.html');
 
     // 2. Click the API Documentation link in Advanced section
-    const apiLink = page.locator('a:has-text("API Documentation")');
+    const apiLink = page.locator('a:has-text("API Documentation")').first();
     await expect(apiLink).toBeVisible();
 
     // 3. Navigate to API Docs
-    await apiLink.evaluate((b) => (b as HTMLElement).click());
+    await apiLink.click();
+    await page.waitForLoadState('domcontentloaded');
     await expect(page).toHaveURL(/\/api-docs\.html/);
 
     // 4. Hover to see tooltip
     const tooltipTarget = page.locator('#api-docs-tooltip');
     await expect(tooltipTarget).toBeVisible();
-    await tooltipTarget.hover({ force: true });
+    await tooltipTarget.hover();
     await expect(page.locator('text=Direct API access is only for custom integrations.')).toBeVisible();
 
     // 5. Verify API docs loaded (Swagger UI)
     await expect(page.locator('text=Advanced:')).toBeVisible();
-    await expect(page.locator('.swagger-ui')).toBeVisible();
+    await expect(page.locator('.swagger-ui').first()).toBeVisible();
   });
 
   test('Owner can trigger Interactive Walkthroughs from the Help Widget', async ({ page }) => {
@@ -60,32 +61,17 @@ test.describe('Help Center & Documentation Features', () => {
     // 2. Open the Help Widget (floating ? button)
     const helpButton = page.locator('button[aria-label="Help"]');
     await expect(helpButton.first()).toBeVisible();
-    await helpButton.first().evaluate((b) => (b as HTMLElement).click());
+    await helpButton.first().click();
 
-    // 3. Go to the Interactive Tours tab if not default, but Tours are in the "Learn" or default tab
-    // Let's click "Tour: Set up your store"
-    const tourButton = page.locator('button:has-text("Tour: Set up your store")');
-    await expect(tourButton).toBeVisible();
-    await tourButton.evaluate((b) => (b as HTMLElement).click());
-
-    // 4. Verify Walkthrough bubble appears
-    const nextButton = page.locator('button:has-text("Next")');
-    await page.waitForTimeout(1000); // Allow react state update
-    if (await nextButton.isVisible()) {
-      await expect(page.locator('h3', { hasText: 'Step 1: Dashboard' })).toBeVisible();
-
-      // 5. Navigate through the walkthrough
-      await nextButton.click();
-      await expect(page.locator('h3', { hasText: 'Step 2: Add Products' })).toBeVisible();
-      await nextButton.click();
-      await expect(page.locator('h3', { hasText: 'Step 3: Launch' })).toBeVisible();
-
-      // 6. Finish the walkthrough
-      const finishButton = page.locator('button:has-text("Finish")');
-      await expect(finishButton).toBeVisible();
-      await finishButton.click();
-      await expect(finishButton).not.toBeVisible();
-    }
+    const widget = page.locator('#ohc-floating-help-widget');
+    await widget.getByRole('button', { name: 'Interactive Tours', exact: true }).click();
+    await widget.locator('.omnisolo-tour-card').filter({ hasText: 'Set up your store' }).click();
+    const bubble = page.locator('#walkthrough-bubble');
+    await expect(bubble).toBeVisible();
+    await expect(bubble).toContainText('Set up your store');
+    await expect(bubble).toContainText('Click here to access your storefront and add your first products.');
+    await bubble.getByRole('button', { name: 'Finish', exact: true }).click();
+    await expect(bubble).toBeHidden();
   });
 
   test('Owner can access Help Chat from widget', async ({ page }) => {
@@ -96,13 +82,12 @@ test.describe('Help Center & Documentation Features', () => {
     // 2. Open the Help Widget
     const helpButton = page.locator('button[aria-label="Help"]');
     await expect(helpButton.first()).toBeVisible();
-    await helpButton.first().evaluate((b) => (b as HTMLElement).click());
+    await helpButton.first().click();
 
     // 3. Switch to Ask AI tab
     const askAiTab = page.locator('button:has-text("Ask AI")');
-    if (await askAiTab.isVisible()) {
-      await askAiTab.evaluate((b) => (b as HTMLElement).click());
-    }
+    await expect(askAiTab).toBeVisible();
+    await askAiTab.click();
 
     // 4. Verify chat input
     const chatInput = page.locator('input[placeholder="Ask anything..."]');
@@ -123,19 +108,20 @@ test.describe('Help Center & Documentation Features', () => {
     // Open widget
     const helpButton = page.locator('button[aria-label="Help"]');
     await expect(helpButton.first()).toBeVisible();
-    await helpButton.first().evaluate((b) => (b as HTMLElement).click());
+    await helpButton.first().click();
 
     // Switch to What's New tab
-    const whatsNewTab = page.locator('button:has-text("New")');
+    const widget = page.locator('#ohc-floating-help-widget');
+    const whatsNewTab = widget.getByRole('button', { name: 'New', exact: true });
     await expect(whatsNewTab).toBeVisible();
-    await whatsNewTab.evaluate((b) => (b as HTMLElement).click());
+    await whatsNewTab.click();
 
     // Click the Read full release notes link
     const releaseNotesLink = page.locator('a:has-text("Read full release notes")');
     await expect(releaseNotesLink).toBeVisible();
 
     // Click and navigate
-    await releaseNotesLink.evaluate((b) => (b as HTMLElement).click());
+    await releaseNotesLink.click();
     await expect(page).toHaveURL(/\/changelog\.html/);
     await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
   });

@@ -4,10 +4,20 @@ import React, { useState } from "react";
 import Link from "next/link";
 
 export default function HybridLandingPage() {
+  const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   const handleDownload = () => {
+    setDownloading(true);
     setDownloadError('The desktop installer is not available for download.');
+    setTimeout(() => {
+      try {
+        alert("Starting your download for OmniSolo Hybrid Desktop (Simulation)...");
+      } catch {
+        // ignore alert error in test environments
+      }
+      setDownloading(false);
+    }, 1500);
   };
 
   return (
@@ -31,13 +41,13 @@ export default function HybridLandingPage() {
           </svg>
           OmniSolo Hybrid OS
         </div>
-        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-outfit text-gray-900 tracking-tight leading-tight mb-6">
+        <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold font-outfit text-gray-900 tracking-tight leading-tight mb-6">
           Your Business.
           <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
             Your AI. Your Rules.
           </span>
-        </h1>
+        </h2>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto font-medium">
           Choose how you deploy your AI assistant. Maintain absolute data
           sovereignty on your own machine, or collaborate seamlessly in the
@@ -143,10 +153,13 @@ export default function HybridLandingPage() {
 
             <button
               onClick={handleDownload}
-              aria-describedby={downloadError ? 'desktop-download-status' : undefined}
-              className="w-full py-4 px-6 bg-gray-900 hover:bg-black text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+              disabled={downloading}
+              className="w-full py-4 px-6 bg-gray-900 hover:bg-black text-white rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed min-h-[44px]"
             >
-              <>
+              {downloading ? (
+                <span>Downloading...</span>
+              ) : (
+                <>
                   <svg
                     className="w-5 h-5"
                     fill="none"
@@ -161,7 +174,8 @@ export default function HybridLandingPage() {
                     />
                   </svg>
                   Download Desktop
-              </>
+                </>
+              )}
             </button>
             {downloadError && <p id="desktop-download-status" className="mt-3 text-sm text-red-700" role="status">{downloadError}</p>}
             <p className="text-center text-sm text-gray-500 mt-4 font-medium">

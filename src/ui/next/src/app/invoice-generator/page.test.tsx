@@ -48,7 +48,9 @@ describe('InvoiceGeneratorPage', () => {
         render(<InvoiceGeneratorPage />);
 
         fireEvent.click(screen.getByRole('button', { name: /Generate Shareable Invoice/i }));
-        expect(alertMock).toHaveBeenCalledWith('Please fill out all fields.');
+        expect(alertMock).not.toHaveBeenCalled();
+        expect(screen.getByRole('alert')).toHaveTextContent('Review the highlighted invoice details.');
+        expect(screen.getByLabelText(/Client Name/i)).toHaveAttribute('aria-invalid', 'true');
 
         alertMock.mockRestore();
     });

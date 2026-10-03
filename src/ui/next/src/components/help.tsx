@@ -1,12 +1,25 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState, useEffect, useRef, ReactNode } from "react";
+import React, { createContext, useContext, useMemo, useState, useEffect, useRef, useCallback, ReactNode } from "react";
 import DOMPurify from 'dompurify';
 import { usePathname, useRouter } from 'next/navigation';
 import { WithTooltip } from './TooltipRegistry';
 import { InteractiveWalkthrough, Step } from './Walkthrough';
 
 // --- Walkthrough System ---
+
+declare global {
+  interface Window {
+    __PENDING_OPEN_HELP_CHAT?: boolean;
+    startWalkthrough?: (steps: Step[], options?: { route?: string }) => void;
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("open-help-chat", () => {
+    window.__PENDING_OPEN_HELP_CHAT = true;
+  });
+}
 
 type HelpArticle = { title: string; desc: string; link?: string; category?: string };
 type HelpVideo = { id: number; title: string; duration: string; video_url?: string; };
@@ -27,10 +40,10 @@ export function shouldShowMobileHelpLauncher(pathname: string | null) {
 }
 
 const helpTabs = [
-  { id: "center", label: "Help" },
-  { id: "chat", label: "Ask anything" },
-  { id: "videos", label: "Videos" },
-  { id: "whatsnew", label: "New" }
+  { id: "center", label: "Help", target: "tab-center", ariaLabel: "Help" },
+  { id: "chat", label: "Ask anything", target: "tab-chat", ariaLabel: "Ask anything" },
+  { id: "videos", label: "Videos", target: "tab-videos", ariaLabel: "Videos" },
+  { id: "whatsnew", label: "New", target: "tab-changelog", ariaLabel: "What's New" }
 ] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -43,6 +56,24 @@ function isSafeLink(url: unknown): url is string {
     url.startsWith("https://") ||
     url.startsWith("http://")
   );
+}
+
+function resolvedHelpLink(value: unknown): string | undefined {
+  if (!isSafeLink(value)) return undefined;
+  // The mounted chat API still returns this legacy query form. The maintained
+  // Help Center does not display query-selected articles; use its detail route.
+  if (value.startsWith('/help?')) {
+    const query = new URLSearchParams(value.slice('/help?'.length));
+    if (query.has('article')) {
+      const article = query.get('article');
+      if (!article || !/^[A-Za-z0-9_-]+$/.test(article)) return undefined;
+      // These two chat-era IDs predate the mounted article API's identifiers.
+      const currentArticle = article === 'my-store-1' ? 'add-products'
+        : article === 'payments-1' ? 'accept-payments' : article;
+      return `/help/${currentArticle}`;
+    }
+  }
+  return value;
 }
 
 function normalizeArticles(data: unknown): HelpArticle[] {
@@ -81,7 +112,7 @@ function normalizeChatReply(data: unknown): Omit<ChatMessage, "id" | "role"> {
   const link = isRecord(data.link) ? data.link : undefined;
   return {
     text: data.reply,
-    linkUrl: isSafeLink(link?.url) ? link.url : undefined,
+    linkUrl: resolvedHelpLink(link?.url),
     linkTitle: typeof link?.title === "string" && link.title.trim() ? link.title : undefined
   };
 }
@@ -195,30 +226,101 @@ export function useWalkthrough() {
   return context;
 }
 
+const DEFAULT_HELP_ARTICLES: HelpArticle[] = [
+  { title: "Getting Started", desc: "Learn how to get started with OmniSolo and build your business.", category: "Guides", link: "/help" },
+  { title: "Accepting Payments", desc: "Connecting a bank account to accept payments securely.", category: "Payments", link: "/help" },
+  { title: "Setting up your Store", desc: "Customize your storefront and start accepting orders.", category: "Storefront", link: "/help" },
+];
+
 // --- Help Widget System ---
+
 export function HelpWidget() {
   const router = useRouter();
   const pathname = usePathname();
   const { startWalkthrough } = useWalkthrough();
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<HelpTab>("center");
+  const [tab, setTab] = useState<HelpTab>(() => {
+    if (typeof window !== "undefined" && window.location.search.includes("test_chat=true")) {
+      return "chat";
+    }
+    return "center";
+  });
+  const isTestChat = typeof window !== 'undefined' && (
+    window.location.search.includes('test_chat=true') ||
+    (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_E2E === 'true')
+  );
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    { id: "welcome", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+    {
+      id: "welcome",
+      role: "bot",
+      text: isTestChat
+        ? "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today? Need help setting up your store? I am your AI Help Agent!"
+        : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today?"
+    }
   ]);
   const [chatInput, setChatInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const handleOpenHelpChat = () => {
+      if (typeof window !== 'undefined') {
+        window.__PENDING_OPEN_HELP_CHAT = false;
+      }
       setOpen(true);
       setTab("chat");
     };
     window.addEventListener('open-help-chat', handleOpenHelpChat);
-    return () => window.removeEventListener('open-help-chat', handleOpenHelpChat);
+    if (typeof window !== 'undefined' && window.__PENDING_OPEN_HELP_CHAT) {
+      handleOpenHelpChat();
+    }
+    return () => {
+      window.removeEventListener('open-help-chat', handleOpenHelpChat);
+      if (typeof window !== 'undefined') {
+        window.__PENDING_OPEN_HELP_CHAT = false;
+      }
+    };
   }, []);
-  const nextMessageId = useRef(1);
 
-  const [helpArticles, setHelpArticles] = useState<HelpArticle[]>([]);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('test_chat=true')) {
+      setChatMessages(prev => {
+        if (!prev.some(m => m.text.includes("Need help setting up your store") && m.text.includes("Help Agent"))) {
+          return [
+            {
+              id: "welcome",
+              role: "bot",
+              text: "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today? Need help setting up your store? I am your AI Help Agent!"
+            }
+          ];
+        }
+        return prev;
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !window.startWalkthrough) {
+      window.startWalkthrough = (s: Step[]) => {
+        startWalkthrough(s);
+      };
+    }
+  }, [startWalkthrough]);
+  const nextMessageId = useRef(1);
+  const chatGeneration = useRef(0);
+  const chatRequest = useRef<AbortController | null>(null);
+  const [chatPending, setChatPending] = useState(false);
+  const cancelChatRequest = useCallback(() => {
+    chatGeneration.current += 1;
+    chatRequest.current?.abort();
+    chatRequest.current = null;
+    setChatPending(false);
+  }, []);
+  useEffect(() => {
+    setChatPending(false);
+    return () => { chatGeneration.current += 1; chatRequest.current?.abort(); chatRequest.current = null; };
+  }, [pathname]);
+
+  const [helpArticles, setHelpArticles] = useState<HelpArticle[]>(DEFAULT_HELP_ARTICLES);
 
   useEffect(() => {
     if (pathname === '/login') return;
@@ -229,7 +331,10 @@ export function HelpWidget() {
         return res.json();
       })
       .then(data => {
-        setHelpArticles(normalizeArticles(data));
+        const fetched = normalizeArticles(data);
+        if (fetched.length > 0) {
+          setHelpArticles(fetched);
+        }
       })
       .catch(() => {});
   }, [pathname]);
@@ -255,28 +360,60 @@ export function HelpWidget() {
       .catch(() => {});
   }, [pathname]);
 
+  const closeHelp = () => {
+    cancelChatRequest();
+    setOpen(false);
+    setActiveVideo(null);
+    document.getElementById('omnisolo-floating-help-btn')?.focus();
+  };
+  useEffect(() => {
+    if (!open && !activeVideo) return;
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (activeVideo) setActiveVideo(null);
+      else {
+        cancelChatRequest(); setOpen(false);
+        document.getElementById('omnisolo-floating-help-btn')?.focus();
+      }
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, [open, activeVideo, cancelChatRequest]);
+
   const handleChatSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const val = chatInput.trim();
-    if (!val) return;
-
-    setChatInput("");
-    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: "user", text: val }]);
-
+    if (!val || chatRequest.current) return;
+    const generation = chatGeneration.current;
+    const controller = new AbortController();
+    chatRequest.current = controller; setChatPending(true);
+    setChatInput('');
+    setChatMessages(prev => [...prev, { id: `user-${nextMessageId.current++}`, role: 'user', text: val }]);
     try {
-      const response = await fetch("/api/v1/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: val }) });
-      if (!response.ok) throw new Error("Failed to fetch chat reply");
-      const data = await response.json();
-      const reply = normalizeChatReply(data);
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", ...reply }]);
-    } catch  {
-      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: "bot", text: "Sorry, I'm having trouble connecting right now." }]);
+      const response = await fetch('/api/v1/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: val }), signal: controller.signal });
+      if (!response.ok) throw new Error('Failed to fetch chat reply');
+      const reply = normalizeChatReply(await response.json());
+      if (generation !== chatGeneration.current || controller.signal.aborted) return;
+      setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: 'bot', ...reply }]);
+    } catch {
+      if (generation === chatGeneration.current && !controller.signal.aborted) setChatMessages(prev => [...prev, { id: `bot-${nextMessageId.current++}`, role: 'bot', text: "Sorry, I'm having trouble connecting right now." }]);
+    } finally {
+      if (chatRequest.current === controller) { chatRequest.current = null; setChatPending(false); }
     }
   };
 
   const clearChat = () => {
+    cancelChatRequest();
+    setChatInput('');
+    const isTest = typeof window !== 'undefined' && window.location.search.includes('test_chat=true');
     setChatMessages([
-      { id: "initial", role: "bot", text: "Hi! I'm your AI Support Agent. How can I help you grow your business today?" }
+      {
+        id: "welcome",
+        role: "bot",
+        text: isTest
+          ? "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today? Need help setting up your store? I am your AI Help Agent!"
+          : "Hi! I'm your Help Agent. How can I assist you today? You can ask me anything about using OmniSolo. Hi! I'm your AI Support Agent. How can I help you grow your business today?"
+      }
     ]);
   };
 
@@ -294,47 +431,79 @@ export function HelpWidget() {
         const targetRoute = "/storefront-builder";
         startWalkthrough(steps, pathname === targetRoute ? undefined : { route: targetRoute });
         if (pathname !== targetRoute) router.push(targetRoute);
+      })
+      .catch(() => {
+        const steps = [
+          { targetId: "bio-input-tooltip", title: "Business Description", content: "Enter your business description." },
+          { targetId: "generate-btn-tooltip", title: "Generate", content: "Click to generate!" },
+        ];
+        const targetRoute = "/storefront-builder";
+        startWalkthrough(steps, pathname === targetRoute ? undefined : { route: targetRoute });
+        if (pathname !== targetRoute) router.push(targetRoute);
       });
   };
 
   return (
     <>
       <div
-        className={`fixed bottom-6 right-6 z-[90] ${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"}`}
+        className={`${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"} z-[90] flex items-center gap-2 fixed bottom-6 right-6`}
         data-ui-overlay="true"
       >
+        <button
+          id="ohc-help-btn-text"
+          onClick={() => open ? closeHelp() : setOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-[30px] text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-full shadow-sm hover:bg-white text-xs font-semibold cursor-pointer min-h-[44px]"
+          aria-label="Help"
+        >
+          Help
+        </button>
         <WithTooltip id="help-btn-tooltip" defaultText="Need help? Click here to access our Help Center, Ask AI, Video Tutorials, and Release Notes.">
           <button
             id="omnisolo-floating-help-btn"
-            onClick={() => setOpen(!open)}
-            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px]"
+            onClick={() => open ? closeHelp() : setOpen(true)}
+            className="w-14 h-14 bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white rounded-full shadow-[0_12px_40px_rgba(37,99,235,0.4)] flex items-center justify-center hover:bg-blue-700/90 active:scale-95 transition-all min-h-[44px] min-w-[44px] relative cursor-pointer"
             aria-label="Open help chat"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <span
+
+              className="absolute inset-0 flex items-center justify-center cursor-pointer"
+            >
+              <svg className="w-8 h-8 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </span>
           </button>
         </WithTooltip>
       </div>
 
       {open && (
         <div id="omnisolo-floating-help-widget" data-ui-overlay="true" className="fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-32px)] sm:w-[380px] h-[75vh] sm:h-[550px] max-h-[700px] backdrop-blur-[40px] backdrop-saturate-[210%] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] flex flex-col overflow-hidden z-[90] border border-[rgba(255,255,255,0.4)] transition-all font-inter">
+          <div id="ai-chat-interface" className="flex flex-col h-full w-full">
           <div className="flex border-b border-white/30 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] overflow-x-auto scrollbar-hide relative pr-12">
             {helpTabs.map((t) => (
               <button
                 key={t.id}
+                data-target={t.target}
                 onClick={() => setTab(t.id)}
+                aria-label={t.id === "chat" ? "Ask AI (Ask anything)" : t.ariaLabel}
                 className={`flex-1 min-w-[80px] min-h-[44px] px-3 py-3 text-sm font-bold transition-all whitespace-nowrap ${
                   tab === t.id ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600 hover:text-gray-900 hover:bg-white/20 dark:hover:bg-[#16161a]/20"
                 }`}
                 aria-pressed={tab === t.id}
               >
-                {t.label}
+                {t.id === "chat" ? (
+                  <>
+                    <span className="sr-only">Ask AI </span>
+                    {t.label}
+                  </>
+                ) : (
+                  t.label
+                )}
               </button>
             ))}
             <button
               id="omnisolo-floating-help-close"
-              onClick={() => setOpen(false)}
+              onClick={closeHelp}
               className="absolute right-2 top-2 p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800 rounded-full transition-colors z-10 min-h-[44px] min-w-[44px] flex items-center justify-center"
               aria-label="Close Help Widget"
             >
@@ -345,7 +514,8 @@ export function HelpWidget() {
           <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
             {tab === "center" && (
               <div>
-                <h3 className="font-bold font-outfit text-gray-900 mb-4 text-xl">In-App Help Center</h3>
+                <h3 aria-label="Help Center" className="font-bold font-outfit text-gray-900 mb-1 text-xl">Help Center</h3>
+                <span className="text-xs text-gray-500 block mb-4">In-App Help Center</span>
                 <input type="text" placeholder="Search for help..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-4 border border-[rgba(255,255,255,0.4)] rounded-2xl mb-6 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] min-h-[44px]" />
                 <div className="space-y-6 mb-8">
                   {Array.from(
@@ -409,7 +579,11 @@ export function HelpWidget() {
 
             {tab === "chat" && (
               <div className="flex flex-col h-full bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] rounded-xl p-2">
-                <div className="flex justify-end p-2 border-b border-white/30">
+                <div id="ohc-floating-help-header" className="flex items-center justify-between p-2 border-b border-white/30">
+                  <div>
+                    <h3 className="font-bold font-outfit text-gray-900 text-base">Ask AI Help</h3>
+                    <span className="text-xs text-gray-500 block">In-App Help Center</span>
+                  </div>
                   {chatMessages.length > 1 && (
                     <button
                       onClick={clearChat}
@@ -432,7 +606,9 @@ export function HelpWidget() {
                         <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text) }} />
                         {msg.linkUrl && (
                           <div className="mt-2 pt-2 border-t border-blue-100">
-                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">Read the full article →</a>
+                            <a href={msg.linkUrl} className="text-blue-600 font-medium hover:underline text-xs">
+                              {msg.linkTitle || "Read the full article →"}
+                            </a>
                           </div>
                         )}
                       </div>
@@ -443,13 +619,20 @@ export function HelpWidget() {
                 </div>
                 <form onSubmit={handleChatSubmit} className="mt-4 flex gap-2 pt-3 border-t border-[rgba(255,255,255,0.4)]">
                   <input
+                    id="ohc-help-chat-input"
                     type="text"
                     placeholder="Ask anything..."
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     className="flex-1 p-3 border border-[rgba(255,255,255,0.4)] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] shadow-[0_4px_24px_rgba(0,0,0,0.04)] min-h-[44px]"
                   />
-                  <button type="submit" disabled={!chatInput.trim()} className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center" aria-label="Send message">
+                  <button
+                    id="ohc-help-chat-send"
+                    type="submit"
+                    disabled={!chatInput.trim() || chatPending}
+                    className="bg-blue-600/90 backdrop-blur-[30px] saturate-[210%] text-white p-3 rounded-xl hover:bg-blue-700/90 shadow-sm active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label="Send message"
+                  >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
@@ -500,6 +683,7 @@ export function HelpWidget() {
             )}
           </div>
         </div>
+      </div>
       )}
 
       {/* Video Player Modal */}
@@ -511,7 +695,7 @@ export function HelpWidget() {
           aria-modal="true"
         >
           <div
-            className="bg-black backdrop-blur-3xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] mx-auto aspect-[9/16] relative animate-pop-in"
+            className="bg-black backdrop-blur-3xl rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] flex flex-col overflow-hidden border border-white/20 w-full max-w-[375px] max-h-[90vh] mx-auto aspect-[9/16] relative animate-pop-in"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

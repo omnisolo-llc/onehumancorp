@@ -1,116 +1,55 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { useProPlan } from './useProPlan';
-
+type Savings = { hours_saved: number; inquiries_handled?: number; appointments_scheduled?: number };
+function readSavings(value: unknown): Savings {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Savings unavailable');
+  const data = value as Record<string, unknown>;
+  if (data.error != null || ('success' in data && data.success !== true) || typeof data.hours_saved !== 'number' || !Number.isFinite(data.hours_saved) || data.hours_saved < 0) throw new Error('Savings unavailable');
+  for (const key of ['inquiries_handled', 'appointments_scheduled']) if (data[key] !== undefined && (!Number.isSafeInteger(data[key]) || Number(data[key]) < 0)) throw new Error('Savings unavailable');
+  return data as Savings;
+}
 export default function AiTimeSavingsWidget() {
-  const [hasClaimed, setHasClaimed] = useState(false);
-  const [isClaiming, setIsClaiming] = useState(false);
-  const { claimTrial } = useProPlan();
-  const [savingsData, setSavingsData] = useState<{ hours_saved: number; inquiries_handled?: number; appointments_scheduled?: number } | null>(null);
-  const [error, setError] = useState('');
-
+  const { claimTrial, claimError, verifiedOwner } = useProPlan();
+  const userId = verifiedOwner?.userId; const tenantId = verifiedOwner?.tenantId;
+  const [savings, setSavings] = useState<Savings | null>(null);
+  const [error, setError] = useState(''); const [checking, setChecking] = useState(false);
   useEffect(() => {
-    // Fetch real time savings data
-    fetch('/api/v1/growth/time-savings')
-      .then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Failed to fetch savings');
-      })
-      .then(data => {
-        if (data && typeof data.hours_saved === 'number') {
-          setSavingsData(data);
-        }
-      })
-      .catch(() => setError('Time-savings data is unavailable.'));
-  }, []);
-
-  const handleShareAndClaim = async () => {
-    setIsClaiming(true);
-
-    const message = `My AI agents on OmniSolo OneHumanCorp just saved me ${savingsData.hours_saved} hours this week! 🚀 #OmniSolo #SmallBiz #AI`;
-    const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-    // Open the share window
-    window.open(shareUrl, '_blank');
-
-    try {
-      if (await claimTrial()) {
-        setHasClaimed(true);
-      } else {
-        setError('Pro activation could not be confirmed.');
-      }
-    } catch {
-      setError('The Pro activation service is unavailable.');
-    } finally {
-      setIsClaiming(false);
-    }
+    setSavings(null); setError('');
+    if (!userId || !tenantId) return;
+    const request = new AbortController(); let active = true;
+    void (async () => {
+      try {
+        const headers = new Headers({ 'x-ohc-expected-user': userId, 'x-ohc-expected-tenant': tenantId });
+        const response = await fetch('/api/v1/growth/time-savings', { headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: request.signal });
+        if (!active) return;
+        if (response.status === 401 || response.status === 403) { notifyQueueIdentityChange(); return; }
+        const value: unknown = await response.json();
+        if (!active) return;
+        const reason = value && typeof value === 'object' && 'error' in value ? value.error : undefined;
+        if (response.status === 409 && (reason === 'session_identity_changed' || reason === 'queued owner does not match the current session')) { notifyQueueIdentityChange(); return; }
+        if (response.status !== 200) throw new Error('Savings unavailable');
+        setSavings(readSavings(value));
+      } catch { if (active) setError('Recorded time-savings data is unavailable.'); }
+    })();
+    return () => { active = false; request.abort(); };
+  }, [userId, tenantId]);
+  const checkTrial = async () => {
+    setChecking(true);
+    try { await claimTrial(); }
+    catch { setError('Trial activation is unavailable.'); }
+    finally { setChecking(false); }
   };
-
-  if (!savingsData) return error ? <p className="text-sm text-red-600" role="alert">{error}</p> : <p className="text-sm text-gray-500">Loading time-savings data…</p>;
-
-  if (hasClaimed) {
-    return (
-      <div className="rounded-[12px] bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border border-green-200 dark:border-green-800 shadow-sm p-6 mb-8 text-center animate-in fade-in zoom-in duration-300">
-        <div className="w-16 h-16 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 text-green-600 dark:text-green-400">
-          🎉
-        </div>
-        <h2 className="text-2xl font-bold font-outfit text-green-900 dark:text-green-100 mb-2">
-          Pro Access Activated
-        </h2>
-        <p className="text-green-700 dark:text-green-300">
-          The backend confirmed Pro access for this account.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm p-6 mb-8 relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
-
-      <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-start gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-2xl shrink-0">
-            ⏳
-          </div>
-          <div>
-            <h2 className="text-xl font-bold font-outfit text-gray-900 dark:text-white mb-1">
-              You saved {savingsData.hours_saved} hours this week
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Your AI agents handled {savingsData.inquiries_handled} customer inquiries and scheduled {savingsData.appointments_scheduled} appointments automatically.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleShareAndClaim}
-          disabled={isClaiming}
-          className={`shrink-0 px-6 py-3 rounded-xl font-semibold text-white shadow-md transition-all flex items-center gap-2 ${
-            isClaiming
-              ? 'bg-indigo-400 cursor-wait'
-              : 'bg-[#0066FF] hover:bg-blue-600 hover:-translate-y-0.5 hover:shadow-lg'
-          }`}
-        >
-          {isClaiming ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              Verifying Share...
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z" />
-              </svg>
-              Share to activate Pro
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
+  return <section className="rounded-xl border bg-white dark:bg-gray-900 p-6 mb-8" aria-label="Recorded time savings">
+    <h2 className="text-xl font-bold">Recorded time savings</h2>
+    {!verifiedOwner ? <p role="status">Verify your account to read time-savings data.</p> : error ? <p role="status">{error}</p> : !savings ? <p role="status">Loading recorded time-savings data…</p> : <>
+      <p>Recorded estimate: {savings.hours_saved} hours saved.</p>
+      <p>Customer inquiries handled: {savings.inquiries_handled ?? 'not reported'}. Appointments scheduled: {savings.appointments_scheduled ?? 'not reported'}.</p>
+    </>}
+    <p>Sharing does not verify a trial grant or its duration.</p>
+    <button type="button" disabled={checking} onClick={() => void checkTrial()} className="app-button">{checking ? 'Checking…' : 'Check trial availability'}</button>
+    {claimError && <p role="status">{claimError}</p>}
+  </section>;
 }

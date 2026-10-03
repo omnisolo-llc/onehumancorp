@@ -6,9 +6,9 @@ use crate::persistence::{
 use axum::http::StatusCode;
 use axum::{
     Router,
-    extract::{Extension, Json},
+    extract::{Extension, Json, Path},
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, post, put},
 };
 
 use crate::utils::cache::HybridCache;
@@ -16,6 +16,9 @@ use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use std::sync::Arc;
 use std::sync::OnceLock;
+
+#[path = "catalog_edit.rs"]
+mod catalog_edit;
 
 pub static CATALOG_CACHE: OnceLock<HybridCache<i64>> = OnceLock::new();
 
@@ -61,6 +64,7 @@ pub struct CreateProductRequest {
 #[derive(Serialize)]
 pub struct CreateProductResponse {
     pub success: bool,
+    pub product_id: String,
     pub message: Option<String>,
 }
 
@@ -300,10 +304,11 @@ async fn handle_create_product(
             })
             .await
         {
-            Ok(_) => (
+            Ok(product) => (
                 StatusCode::OK,
                 Json(CreateProductResponse {
                     success: true,
+                    product_id: product.id,
                     message: Some(format!("Created {}", payload.name)),
                 }),
             )
@@ -422,7 +427,7 @@ async fn handle_create_product(
     .bind(price_cents)
     .bind(payload.is_subscribable.unwrap_or(false))
     .bind(payload.subscription_frequency.clone())
-    .bind(payload.subscription_discount_percent)
+    .bind(payload.subscription_discount_percent.unwrap_or(0))
     .execute(&mut *tx)
     .await;
 
@@ -590,14 +595,14 @@ async fn handle_create_product(
         );
     }
 
-    let event_payload = serde_json::json!({
-        "product_id": product_id,
-        "name": payload.name,
-        "description": payload.description,
-        "item_type": payload.item_type,
-        "price": price,
-        "organization_id": tenant_id,
-    });
+    let event_payload = catalog_edit::product_event_payload(
+        &tenant_id,
+        &product_id,
+        &payload.name,
+        &payload.description,
+        &payload.item_type,
+        price_cents,
+    );
 
     let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
         agent_id: "system".to_string(),
@@ -615,8 +620,99 @@ async fn handle_create_product(
         StatusCode::OK,
         Json(CreateProductResponse {
             success: true,
+            product_id,
             message: Some(format!("Created {}", payload.name)),
         }),
+    )
+        .into_response()
+}
+
+async fn handle_update_product(
+    Extension(hub): Extension<Arc<Hub>>,
+    Extension(repository): Extension<Option<Arc<CatalogRepository>>>,
+    Extension(claims): Extension<::server_common::Claims>,
+    Path(id): Path<String>,
+    Json(payload): Json<catalog_edit::ProductEdit>,
+) -> axum::response::Response {
+    let tenant = match catalog_edit::authorized_tenant(&claims) {
+        Ok(tenant) => tenant,
+        Err(status) => return status.into_response(),
+    };
+    let Some(cents) = catalog_edit::price_cents(&payload) else {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({"success":false,"message":"Invalid product fields"})),
+        )
+            .into_response();
+    };
+    let Some(repository) = repository else {
+        return StatusCode::SERVICE_UNAVAILABLE.into_response();
+    };
+    if repository.backend() != DatabaseBackend::Postgres {
+        return match repository
+            .update_product(
+                tenant,
+                &id,
+                payload.name.trim(),
+                &payload.description,
+                cents,
+            )
+            .await
+        {
+            Ok(true) => (
+                StatusCode::OK,
+                Json(serde_json::json!({"success":true,"product_id":id})),
+            )
+                .into_response(),
+            Ok(false) => StatusCode::NOT_FOUND.into_response(),
+            Err(error) => {
+                tracing::error!(%error,"Catalog edit did not persist");
+                StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        };
+    }
+    let item_type =
+        match catalog_edit::update_postgres(&hub.pool, tenant, &id, &payload, cents).await {
+            Ok(Some(kind)) => kind,
+            Ok(None) => return StatusCode::NOT_FOUND.into_response(),
+            Err(error) => {
+                tracing::error!(%error,"Catalog edit did not persist");
+                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            }
+        };
+    let edge = crate::builder::edge::get_edge_cache();
+    let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+    for tag in [
+        format!("tenant-id:{tenant}"),
+        format!("entity:product:{id}"),
+    ] {
+        edge.invalidate_by_tag(&tag).await;
+        cdn.invalidate_by_tag(&tag).await;
+    }
+    let event_payload = catalog_edit::product_event_payload(
+        tenant,
+        &id,
+        payload.name.trim(),
+        &payload.description,
+        &item_type,
+        cents,
+    );
+    let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
+        agent_id: "system".into(),
+        action: "ProductUpdated".into(),
+        status: "success".into(),
+        payload: serde_json::to_vec(&event_payload).unwrap_or_default(),
+        msg_id: uuid::Uuid::new_v4().to_string(),
+    };
+    if let Err(error) = hub
+        .publish_teammate_event("products_inbox".into(), event)
+        .await
+    {
+        tracing::warn!(%error,"Product saved but SEO refresh could not be published");
+    }
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({"success":true,"product_id":id})),
     )
         .into_response()
 }
@@ -785,6 +881,7 @@ pub fn router<S: Clone + Send + Sync + 'static>(
             "/product",
             get(handle_get_products).post(handle_create_product),
         )
+        .route("/product/{id}", put(handle_update_product))
         .route("/generate", post(handle_generate_offering))
         .layer(Extension(repository))
         .layer(Extension(hub))

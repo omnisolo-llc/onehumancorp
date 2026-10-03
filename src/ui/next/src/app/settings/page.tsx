@@ -1,8 +1,9 @@
 "use client";
 
-import { useState,useEffect } from "react";
+import { useState,useEffect,useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import { AppShell } from "../components/AppShell";
 import { WithTooltip } from "../../components/TooltipRegistry";
 import {
@@ -10,6 +11,33 @@ AuthenticationSettingsPanel,
 type AdminOidcProvider,
 type RegistrationMode,
 } from "./AuthenticationSettingsPanel";
+
+type TelemetryState = {
+  product_telemetry_enabled: boolean;
+  effective_enabled: boolean;
+  operator_enforced: boolean;
+  can_change: boolean;
+  change_block_reason?: string | null;
+};
+function telemetryStateFromResponse(value: unknown): TelemetryState {
+  if (!value || typeof value !== 'object') throw new Error('Telemetry state unavailable');
+  const data = value as Record<string, unknown>;
+  if (typeof data.product_telemetry_enabled !== 'boolean' || typeof data.effective_enabled !== 'boolean' ||
+      typeof data.operator_enforced !== 'boolean' || typeof data.can_change !== 'boolean' ||
+      data.operator_enforced && (!data.effective_enabled || data.can_change)) throw new Error('Telemetry state unavailable');
+  return {
+    product_telemetry_enabled: data.product_telemetry_enabled, effective_enabled: data.effective_enabled,
+    operator_enforced: data.operator_enforced, can_change: data.can_change,
+    change_block_reason: typeof data.change_block_reason === 'string' ? data.change_block_reason : null,
+  };
+}
+function telemetryRestriction(state: TelemetryState): string {
+  if (state.operator_enforced) return 'Telemetry is enabled by server configuration and cannot be changed here.';
+  if (state.change_block_reason === 'hosted_global_control_unavailable') return 'Telemetry is controlled by the server operator in hosted mode.';
+  if (state.change_block_reason === 'admin_required') return 'Only an administrator can change telemetry in standalone mode.';
+  if (state.change_block_reason === 'persistent_storage_unavailable') return 'Telemetry settings cannot be saved on this server.';
+  return 'Telemetry changes are not available for this session.';
+}
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -38,13 +66,25 @@ export default function SettingsPage() {
     voice_receptionist_persona: "Friendly",
     voice_receptionist_instructions: "",
   });
+  const voiceEpoch = useRef(0);
+  const voiceProvisionBusy = useRef(false);
+  const [voiceProvisionState, setVoiceProvisionState] = useState<'idle' | 'pending' | 'unconfirmed'>('idle');
+  const [voiceProvisionMessage, setVoiceProvisionMessage] = useState('');
+  const [voiceSettingsReady, setVoiceSettingsReady] = useState(false);
+  const [voiceProvisionAllowed, setVoiceProvisionAllowed] = useState(false);
+  const [voiceAvailabilityMessage, setVoiceAvailabilityMessage] = useState('Verifying voice settings…');
+  const voiceSettingBusy = useRef(false);
+  const [voiceSettingSaving, setVoiceSettingSaving] = useState(false);
+  const [voiceSettingMessage, setVoiceSettingMessage] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [agentName, setAgentName] = useState("Agent One");
   const [seoReports, setSeoReports] = useState<{ plain_language_summary: string }[]>([]);
   const [hitRate, setHitRate] = useState<string>("");
   const [enableLazyToolLoading, setEnableLazyToolLoading] = useState(false);
-  const [productTelemetryEnabled, setProductTelemetryEnabled] = useState(false);
+  const [telemetryState, setTelemetryState] = useState<TelemetryState | null>(null);
+  const [telemetryStatus, setTelemetryStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'unavailable'>('idle');
+  const telemetrySaving = useRef(false);
   const [twilioAccountSid, setTwilioAccountSid] = useState("");
   const [twilioAuthToken, setTwilioAuthToken] = useState("");
   const [twilioPhoneNumber, setTwilioPhoneNumber] = useState("");
@@ -80,53 +120,98 @@ export default function SettingsPage() {
 
 
 
+  const isAbortError = (e: unknown) => {
+    if (!e) return false;
+    const msg = String((e as { message?: string })?.message || e);
+    return (e as { name?: string })?.name === "AbortError" || msg.includes("Failed to fetch") || msg.includes("aborted");
+  };
+
   useEffect(() => {
+    document.title = "Settings | OmniSolo OneHumanCorp";
+    const voiceGeneration = ++voiceEpoch.current;
+    const voiceActive = () => voiceEpoch.current === voiceGeneration;
+    const invalidateVoice = () => {
+      voiceEpoch.current += 1;
+      voiceProvisionBusy.current = true; voiceSettingBusy.current = true;
+      setVoiceSettings({ voice_receptionist_enabled: false, voice_receptionist_number: '', voice_receptionist_persona: 'Friendly', voice_receptionist_instructions: '' });
+      setVoiceSettingsReady(false); setVoiceProvisionAllowed(false);
+      setVoiceSettingSaving(false); setVoiceSettingMessage('');
+      setVoiceProvisionState('unconfirmed'); setVoiceProvisionMessage('');
+      setVoiceAvailabilityMessage('Your session changed. Reload to verify voice settings before continuing.');
+    };
+    const invalidateVoiceStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) invalidateVoice();
+    };
+    window.addEventListener('omnisolo_auth_changed', invalidateVoice);
+    window.addEventListener('storage', invalidateVoiceStorage);
     Promise.all([
       fetch("/api/v1/settings/delivery")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
+           if (!data) return;
            setDeliverySettings({
              delivery_enabled: data.delivery_enabled || false,
              delivery_radius: data.delivery_radius || 5.0,
              delivery_fee: data.delivery_fee || 8.50,
            });
         })
-        .catch(e => console.error("Failed to load delivery settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load delivery settings", e);
+        }),
 
       fetch("/api/v1/assistant/settings")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.settings?.agentName) {
             setAgentName(data.settings.agentName);
           }
         })
-        .catch(e => console.error("Failed to load assistant settings", e)),
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load assistant settings", e);
+        }),
 
       fetch("/api/v1/settings/voice")
-        .then(res => res.json())
-        .then(data => {
-          if (data) {
+        .then(async res => {
+          const data = await res.json();
+          if (!voiceActive()) return;
+          if (res.status === 200 && data?.success !== false && data.error == null && typeof data.voice_receptionist_enabled === 'boolean' && typeof data.provisioning_available === 'boolean') {
             setVoiceSettings({
-              voice_receptionist_enabled: data.voice_receptionist_enabled || false,
-              voice_receptionist_number: data.voice_receptionist_number || "",
-              voice_receptionist_persona: data.voice_receptionist_persona || "Friendly",
-              voice_receptionist_instructions: data.voice_receptionist_instructions || "",
+              voice_receptionist_enabled: data.voice_receptionist_enabled,
+              voice_receptionist_number: typeof data.voice_receptionist_number === 'string' ? data.voice_receptionist_number : "",
+              voice_receptionist_persona: typeof data.voice_receptionist_persona === 'string' ? data.voice_receptionist_persona : "Friendly",
+              voice_receptionist_instructions: typeof data.voice_receptionist_instructions === 'string' ? data.voice_receptionist_instructions : "",
             });
+            setVoiceSettingsReady(true);
+            setVoiceProvisionAllowed(data.provisioning_available);
+            setVoiceAvailabilityMessage(data.provisioning_available ? '' : data.provisioning_block_reason === 'provider_not_configured'
+              ? 'Voice number provisioning is unavailable because a provider is not configured.'
+              : 'Voice provisioning requires reconciliation. Review the provider before requesting another number.');
+          } else {
+            setVoiceSettingsReady(false); setVoiceProvisionAllowed(false);
+            setVoiceAvailabilityMessage(data?.error === 'hosted_global_provisioning_unavailable'
+              ? 'Voice settings are unavailable in this deployment. No provider action can be started.'
+              : 'Voice settings could not be verified. No provider action can be started.');
           }
         })
-        .catch(e => console.error("Failed to load voice settings", e)),
+        .catch(e => {
+          if (!voiceActive()) return;
+          setVoiceSettingsReady(false); setVoiceProvisionAllowed(false);
+          setVoiceAvailabilityMessage('Voice settings could not be verified. No provider action can be started.');
+          if (isAbortError(e)) return;
+          console.error("Failed to load voice settings", e);
+        }),
 
       fetch("/api/v1/settings/telemetry")
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.product_telemetry_enabled !== undefined) {
-            setProductTelemetryEnabled(data.product_telemetry_enabled);
-          }
+        .then(async res => {
+          if (!res.ok) throw new Error('Telemetry preference unavailable');
+          setTelemetryState(telemetryStateFromResponse(await res.json()));
         })
-        .catch(e => console.error("Failed to load telemetry settings", e)),
+        .catch(() => { setTelemetryState(null); setTelemetryStatus('unavailable'); }),
 
       fetch("/api/v1/local_seo/discovery_report")
-        .then(res => res.json())
+        .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (Array.isArray(data)) {
             setSeoReports(data);
@@ -137,7 +222,10 @@ export default function SettingsPage() {
             }
           }
         })
-        .catch(e => console.error("Failed to load seo reports", e))
+        .catch(e => {
+          if (isAbortError(e)) return;
+          console.error("Failed to load seo reports", e);
+        })
     ]).finally(() => {
       setIsLoading(false);
     });
@@ -155,7 +243,10 @@ export default function SettingsPage() {
           setUsageLogs(data);
         }
       })
-      .catch(e => console.error("Failed to load usage logs", e));
+      .catch(e => {
+        if (isAbortError(e)) return;
+        console.error("Failed to load usage logs", e);
+      });
 
     fetch("/api/v1/settings/authentication", { cache: "no-store" })
       .then(async res => {
@@ -179,6 +270,11 @@ export default function SettingsPage() {
         }
       })
       .catch(() => undefined);
+    return () => {
+      voiceEpoch.current += 1;
+      window.removeEventListener('omnisolo_auth_changed', invalidateVoice);
+      window.removeEventListener('storage', invalidateVoiceStorage);
+    };
   }, []);
 
   const handleRegistrationModeChange = async (mode: RegistrationMode) => {
@@ -228,16 +324,31 @@ export default function SettingsPage() {
   };
 
   const handleTelemetryChange = async (checked: boolean) => {
-    setProductTelemetryEnabled(checked);
+    if (!telemetryState?.can_change || telemetrySaving.current) return;
+    telemetrySaving.current = true;
+    setTelemetryStatus('saving');
     try {
-      await fetch("/api/v1/settings/telemetry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('/api/v1/settings/telemetry', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_telemetry_enabled: checked }),
       });
-    } catch (e) {
-      console.error("Failed to save telemetry settings", e);
-    }
+      if (!response.ok || (await response.json()).success !== true) throw new Error('Telemetry preference not saved');
+      const current = await fetch('/api/v1/settings/telemetry', { cache: 'no-store' });
+      if (!current.ok) throw new Error('Telemetry state unavailable');
+      const acknowledged = telemetryStateFromResponse(await current.json());
+      if (acknowledged.product_telemetry_enabled !== checked) throw new Error('Requested telemetry preference was not acknowledged');
+      setTelemetryState(acknowledged);
+      setTelemetryStatus('saved');
+    } catch {
+      // A lost response can follow a committed write. Re-read instead of claiming rollback.
+      try {
+        const current = await fetch('/api/v1/settings/telemetry', { cache: 'no-store' });
+        const data = current.ok ? await current.json() : null;
+        setTelemetryState(telemetryStateFromResponse(data)); setTelemetryStatus('error');
+      } catch {
+        setTelemetryState(null); setTelemetryStatus('unavailable');
+      }
+    } finally { telemetrySaving.current = false; }
   };
 
   const handleVerify = async () => {
@@ -295,17 +406,28 @@ export default function SettingsPage() {
   };
 
   const handleVoiceSettingChange = async (key: string, value: string | boolean) => {
-    const newSettings = { ...voiceSettings, [key]: value };
-    setVoiceSettings(newSettings);
+    if (!voiceSettingsReady || voiceSettingBusy.current) return;
+    const generation = voiceEpoch.current;
+    voiceSettingBusy.current = true; setVoiceSettingSaving(true); setVoiceSettingMessage('Saving voice preference…');
+    const change = { [key]: value };
 
     try {
-      await fetch("/api/v1/settings/voice", {
+      const response = await fetch("/api/v1/settings/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newSettings),
+        body: JSON.stringify(change),
       });
+      const result = await response.json();
+      if (generation !== voiceEpoch.current) return;
+      if (response.status !== 200 || result?.success !== true || result.error != null) throw new Error('Voice preference change could not be confirmed');
+      setVoiceSettings(previous => ({ ...previous, [key]: value }));
+      setVoiceSettingMessage('Voice preference saved.');
     } catch (e) {
+      if (generation !== voiceEpoch.current) return;
       console.error("Failed to save voice settings", e);
+      setVoiceSettingMessage('Voice preference change could not be confirmed. Reload to check the saved value.');
+    } finally {
+      if (generation === voiceEpoch.current) { voiceSettingBusy.current = false; setVoiceSettingSaving(false); }
     }
   };
 
@@ -323,22 +445,38 @@ export default function SettingsPage() {
   };
 
   const handleProvisionVoiceNumber = async () => {
+    if (!voiceProvisionAllowed || voiceProvisionBusy.current) return;
+    const generation = voiceEpoch.current;
+    voiceProvisionBusy.current = true;
+    setVoiceProvisionState('pending');
+    setVoiceProvisionMessage('Requesting a phone number…');
     try {
       const res = await fetch("/api/v1/settings/voice/provision", {
         method: "POST",
       });
-      if (res.ok) {
-        const data = await res.json();
-        handleVoiceSettingChange('voice_receptionist_number', data.number);
+      const data = await res.json();
+      if (generation !== voiceEpoch.current) return;
+      if (res.status === 200 && data?.success === true && data.error == null && typeof data.number === 'string' && /^\+[1-9]\d{1,14}$/.test(data.number)) {
+        // The provisioning endpoint already persists its acknowledged number.
+        setVoiceSettings(previous => ({ ...previous, voice_receptionist_number: data.number }));
+        setVoiceProvisionMessage('Phone number provisioning was acknowledged.');
+        voiceProvisionBusy.current = false;
+        setVoiceProvisionState('idle');
+      } else {
+        setVoiceProvisionMessage('The phone number could not be provisioned or confirmed. Check the provider before trying again.');
+        setVoiceProvisionState('unconfirmed');
       }
     } catch (e) {
+      if (generation !== voiceEpoch.current) return;
       console.error("Failed to provision voice number", e);
+      setVoiceProvisionMessage('The phone number could not be provisioned or confirmed. Check the provider before trying again.');
+      setVoiceProvisionState('unconfirmed');
     }
   };
 
   if (isLoading) {
     return (
-      <AppShell title="Settings">
+      <AppShell title="Workspace Settings">
         <div className="flex h-64 items-center justify-center">
           <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
         </div>
@@ -347,13 +485,38 @@ export default function SettingsPage() {
   }
 
   return (
-    <AppShell title="Settings">
-      <div className="mx-auto max-w-4xl space-y-8 font-inter">
+    <AppShell title="Workspace Settings">
+      <div id="settings-screen" className="mx-auto max-w-4xl space-y-8 font-inter">
         <header className="mb-8 p-6 glassmorphism border border-white/40 dark:border-white/10 shadow-sm">
-          <h1 className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Workspace Settings</h1>
+          <div className="text-3xl font-extrabold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Settings</div>
           <p className="mt-2 text-sm text-gray-650 dark:text-gray-400">Manage integrations, local routing, communication rules, and advanced system security.</p>
         </header>
 
+        {/* General Notifications Card */}
+        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
+          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
+            <h2 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">General Preferences</h2>
+          </div>
+          <div className="app-panel-body p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Timezone</span>
+                <select className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800" defaultValue="UTC">
+                  <option value="UTC">UTC</option>
+                  <option value="EST">EST</option>
+                  <option value="PST">PST</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Language</span>
+                <select className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800" defaultValue="en">
+                  <option value="en">English</option>
+                  <option value="es">Spanish</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </section>
 
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden mt-8">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
@@ -368,7 +531,7 @@ export default function SettingsPage() {
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">Automatically handle multi-currency payments and localize invoices.</h3>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" className="sr-only peer" defaultChecked />
+                <input type="checkbox" aria-label="Automatically handle multi-currency payments and localize invoices" className="sr-only peer" defaultChecked />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
               </label>
             </div>
@@ -380,7 +543,7 @@ export default function SettingsPage() {
         <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
           <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
             <div>
-              <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">SMS Notifications & Security</div>
+              <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Critical SMS Alerts</h3>
               <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Get texts for critical events. Verify your phone number to enable.</div>
             </div>
           </div>
@@ -391,7 +554,7 @@ export default function SettingsPage() {
                 <input
                   aria-label="Mobile Number"
                   type="tel"
-                  placeholder="+1 (555) 000-0000"
+                  placeholder="Mobile Phone Number (e.g. +1234567890)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isVerified}
@@ -457,7 +620,7 @@ export default function SettingsPage() {
                     onChange={(e) => handlePreferenceChange("email_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-800">Email Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Enable Email Notifications</span>
                 </label>
                 <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
@@ -467,7 +630,7 @@ export default function SettingsPage() {
                     onChange={(e) => handlePreferenceChange("push_notifications", e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer"
                   />
-                  <span className="text-sm font-medium text-gray-800">Push Notifications</span>
+                  <span className="text-sm font-medium text-gray-800">Enable Push Notifications</span>
                 </label>
               </div>
             </div>
@@ -480,7 +643,7 @@ export default function SettingsPage() {
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery Setup</div>
+                  <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Local Delivery (DoorDash Drive)</h3>
                   <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Configure delivery radius and rates.</div>
                 </div>
               </div>
@@ -500,8 +663,9 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Radius (miles)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Delivery Radius (miles)</span>
                     <input
+                      aria-label="Delivery Radius (miles)"
                       type="number"
                       step="0.1"
                       value={deliverySettings.delivery_radius}
@@ -511,8 +675,9 @@ export default function SettingsPage() {
                     />
                   </label>
                   <label className="block">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Fee ($)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Flat Delivery Fee ($)</span>
                     <input
+                      aria-label="Flat Delivery Fee ($)"
                       type="number"
                       step="0.01"
                       value={deliverySettings.delivery_fee}
@@ -530,15 +695,19 @@ export default function SettingsPage() {
             <div>
               <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
                 <div>
-                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">AI Voice Receptionist</div>
+                  <div className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Autonomous Voice Receptionist</div>
                   <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Let OmniSolo handle your business calls.</div>
                 </div>
               </div>
               <div className="app-panel-body p-6 space-y-4">
+                {voiceAvailabilityMessage && <p aria-live="polite">{voiceAvailabilityMessage}</p>}
+                {voiceSettingMessage && <p aria-live="polite">{voiceSettingMessage}</p>}
                 <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
                   <span>Enable AI Voice Receptionist</span>
                   <input
                     type="checkbox"
+                    aria-label="Enable AI Voice Receptionist"
+                    disabled={!voiceSettingsReady || voiceSettingSaving}
                     checked={voiceSettings.voice_receptionist_enabled}
                     onChange={(e) => handleVoiceSettingChange('voice_receptionist_enabled', e.target.checked)}
                     className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
@@ -551,6 +720,7 @@ export default function SettingsPage() {
                                             <label className="block">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Voice Persona</span>
                         <select
+                          disabled={!voiceSettingsReady || voiceSettingSaving}
                           value={voiceSettings.voice_receptionist_persona}
                           onChange={(e) => handleVoiceSettingChange('voice_receptionist_persona', e.target.value)}
                           className="mt-2 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
@@ -564,6 +734,7 @@ export default function SettingsPage() {
                       <label className="block">
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Custom Instructions</span>
                         <textarea
+                          disabled={!voiceSettingsReady || voiceSettingSaving}
                           value={voiceSettings.voice_receptionist_instructions || ""}
                           onChange={(e) => handleVoiceSettingChange('voice_receptionist_instructions', e.target.value)}
                           placeholder="e.g. Always mention today's special: Vegan Chocolate Cake"
@@ -573,21 +744,22 @@ export default function SettingsPage() {
                       </label>
 
                       <div className="block">
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Assigned Number</span>
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Phone number</span>
                         <div className="mt-2 flex gap-2">
                           <input
-                            aria-label="Assigned Phone Number"
+                            aria-label="Phone number"
                             type="text"
                             readOnly
                             value={voiceSettings.voice_receptionist_number || "Not assigned"}
                             className="w-full rounded-xl border border-gray-200 bg-gray-55 px-4 py-2.5 text-sm text-gray-500 outline-none"
                           />
                           {!voiceSettings.voice_receptionist_number && (
-                            <button onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
+                            <button disabled={!voiceProvisionAllowed || voiceProvisionState !== 'idle'} onClick={handleProvisionVoiceNumber} className="px-4 py-2.5 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
                               Get Number
                             </button>
                           )}
                         </div>
+                        {voiceProvisionMessage && <p role={voiceProvisionState === 'unconfirmed' ? 'alert' : 'status'}>{voiceProvisionMessage}</p>}
                       </div>
                     </div>
                   </div>
@@ -680,11 +852,17 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 aria-label="Enable Product Telemetry (Standalone Mode)"
-                checked={productTelemetryEnabled}
+                checked={telemetryState?.effective_enabled ?? false}
+                ref={node => { if (node) node.indeterminate = telemetryState === null; }}
+                disabled={!telemetryState?.can_change || telemetryStatus === 'saving'}
                 onChange={(e) => handleTelemetryChange(e.target.checked)}
                 className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-5 h-5 cursor-pointer"
               />
             </label>
+            {telemetryState && <p>Effective telemetry: {telemetryState.effective_enabled ? 'On' : 'Off'}</p>}
+            {telemetryState && !telemetryState.can_change && <p>{telemetryRestriction(telemetryState)}</p>}
+            {(telemetryStatus === 'error' || telemetryStatus === 'unavailable') && <p role="alert">{telemetryStatus === 'unavailable' ? 'Telemetry preference is unavailable. Reload to try again.' : 'Telemetry change could not be confirmed. The current setting was reloaded.'}</p>}
+            {(telemetryStatus === 'saving' || telemetryStatus === 'saved') && <p role="status">{telemetryStatus === 'saving' ? 'Saving telemetry preference…' : 'Telemetry preference saved.'}</p>}
           </div>
         </section>
 

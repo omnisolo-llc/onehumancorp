@@ -37,9 +37,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function isConfirmedUsableConnection(value: unknown): boolean {
-  if (!isRecord(value) || value.success !== true) return false;
-  if (value.status === "connected" && value.usable === true) return true;
-  return isRecord(value.integration) && value.integration.status === "connected" && value.integration.usable === true;
+  if (!isRecord(value) || value.success !== true || value.error != null) return false;
+  if (value.status !== undefined && value.status !== "connected") return false;
+  if (value.usable !== undefined && value.usable !== true) return false;
+  if (value.integration !== undefined && (!isRecord(value.integration) || (value.integration.success !== undefined && value.integration.success !== true) || value.integration.error != null || value.integration.status !== "connected" || value.integration.usable !== true)) return false;
+  return value.status === "connected" && value.usable === true || isRecord(value.integration);
+}
+
+function isConfiguredConnection(value: unknown): boolean {
+  if (!isRecord(value) || value.success !== true || value.error != null) return false;
+  if (value.status !== undefined && value.status !== "configured") return false;
+  if (value.usable !== undefined && value.usable !== false) return false;
+  if (value.integration !== undefined && (!isRecord(value.integration) || value.integration.success === false || value.integration.error != null || value.integration.status !== "configured" || (value.integration.usable !== undefined && value.integration.usable !== false))) return false;
+  return value.status === "configured" || isRecord(value.integration);
 }
 
 export default function Integrations() {
@@ -52,21 +62,27 @@ export default function Integrations() {
     async function loadIntegrations() {
       try {
         const res = await fetch("/api/v1/integrations");
-        if (res.ok) {
+        if (res.status === 200) {
           const data = await res.json();
-          if (data && data.success && Array.isArray(data.integrations)) {
+          if (data && data.success === true && data.error == null && Array.isArray(data.integrations)) {
             const connectedIds = data.integrations
-              .filter((i: unknown) => isRecord(i) && typeof i.id === "string" && i.status === "connected" && i.usable === true)
+              .filter((i: unknown) => isRecord(i) && i.error == null && typeof i.id === "string" && i.status === "connected" && i.usable === true)
+              .map((i: Record<string, unknown>) => i.id);
+            const configuredIds = data.integrations
+              .filter((i: unknown) => isRecord(i) && i.error == null && i.success !== false && typeof i.id === "string" && i.status === "configured" && (i.usable === undefined || i.usable === false))
               .map((i: Record<string, unknown>) => i.id);
 
             setIntegrations(prev => prev.map(integration =>
-              connectedIds.includes(integration.id)
+              configuredIds.includes(integration.id)
+                ? { ...integration, status: "configured" }
+                : connectedIds.includes(integration.id)
                 ? { ...integration, status: "connected" }
                 : integration
             ));
           }
         }
-      } catch (e) {
+      } catch (e: unknown) {
+        if (e instanceof Error && (e.name === 'AbortError' || e.message?.includes('Failed to fetch') || e.message?.includes('aborted'))) return;
         console.error("Failed to load integrations", e);
       }
     }
@@ -89,6 +105,10 @@ export default function Integrations() {
 
   const handleConnect = async (id: string) => {
     const integration = integrations.find((item) => item.id === id);
+    if (integration?.status === 'configured') {
+      setStatusMessage(`${integration.name} is configured locally. Provider verification is still required.`);
+      return;
+    }
     if (integration?.status === 'connected') {
       setStatusMessage(`${integration.name} settings are ready to manage.`);
       return;
@@ -108,7 +128,20 @@ export default function Integrations() {
       setStatusMessage("Continue with Meta to connect WhatsApp Cloud API.");
       return;
     }
+    if (id === 'meta') {
+      setShowWhatsAppCloudApiModal(true);
+      setStatusMessage("Continue with Meta to connect Facebook and Instagram.");
+      return;
+    }
     setStatusMessage(`${integration?.name || id} connection is unavailable until secure provider verification is configured.`);
+  };
+
+  const recordConfiguredConnection = (id: string, result: unknown): boolean => {
+    if (!isConfiguredConnection(result)) return false;
+    setIntegrations(prev => prev.map(integration => integration.id === id ? { ...integration, status: "configured" } : integration));
+    const name = integrations.find(integration => integration.id === id)?.name || id;
+    setStatusMessage(`${name} is configured locally. Provider verification is still required.`);
+    return true;
   };
 
   const saveTwilioIntegration = async () => {
@@ -122,8 +155,14 @@ export default function Integrations() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bot_token: twilioCreds.accountSid.trim(), api_token: twilioCreds.authToken.trim() }),
       });
-      if (!response.ok) throw new Error('Twilio Conversations connection is unavailable.');
-      if (!isConfirmedUsableConnection(await response.json())) throw new Error('Unconfirmed Twilio connection');
+      if (response.status !== 200) throw new Error('Twilio Conversations connection is unavailable.');
+      const result: unknown = await response.json();
+      if (recordConfiguredConnection('twilio', result)) {
+        setTwilioCreds({ accountSid: '', authToken: '' });
+        setShowTwilioModal(false);
+        return;
+      }
+      if (!isConfirmedUsableConnection(result)) throw new Error('Unconfirmed Twilio connection');
       setTwilioCreds({ accountSid: '', authToken: '' });
       setIntegrations(prev => prev.map(integration =>
         integration.id === 'twilio' ? { ...integration, status: "connected" } : integration
@@ -152,7 +191,15 @@ export default function Integrations() {
         })
       });
 
-      if (!res.ok || !isConfirmedUsableConnection(await res.json())) {
+      // Finish reading the finite response even on a rejection. A status alone
+      // must not leave its body unread while the UI reports a final outcome.
+      const result: unknown = await res.json();
+      if (res.status === 200 && recordConfiguredConnection('whatsapp', result)) {
+        setWhatsappTwilioCreds({ accountSid: '', authToken: '', phoneNumber: '' });
+        setShowWhatsAppModal(false);
+        return;
+      }
+      if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
         setStatusMessage("Failed to connect Twilio for WhatsApp.");
         return;
       }
@@ -162,7 +209,9 @@ export default function Integrations() {
       ));
       setShowWhatsAppModal(false);
       setStatusMessage("Twilio for WhatsApp connected.");
-      router.push('/inbox');
+      setTimeout(() => {
+        router.push('/inbox');
+      }, 1000);
     } catch  {
       setStatusMessage("Failed to connect Twilio for WhatsApp.");
     }
@@ -206,8 +255,15 @@ export default function Integrations() {
           })
         });
 
-        if (!res.ok || !isConfirmedUsableConnection(await res.json())) {
-          setStatusMessage("Failed to connect WhatsApp Cloud API.");
+        const result = await res.json();
+        if (res.status === 200 && recordConfiguredConnection('whatsapp_cloud_api', result)) {
+          setShowWhatsAppCloudApiModal(false);
+          return;
+        }
+        if (res.status !== 200 || !isConfirmedUsableConnection(result)) {
+          setStatusMessage(result?.status === 'pending_verification'
+            ? 'Secure provider verification is unavailable. No WhatsApp connection was established.'
+            : "WhatsApp Cloud API connection could not be confirmed.");
           return;
         }
         setIntegrations(prev => prev.map(integration =>
@@ -218,16 +274,18 @@ export default function Integrations() {
         router.push('/inbox');
       };
 
-      if (typeof window !== "undefined" && window.FB) {
+      if (typeof window !== "undefined" && typeof window.FB?.login === 'function') {
         window.FB.login((response) => {
           if (response.authResponse) {
-            doBackendConnect(response.authResponse.accessToken);
+            void doBackendConnect(response.authResponse.accessToken).catch(() => {
+              setStatusMessage('WhatsApp Cloud API connection could not be confirmed.');
+            });
           } else {
             setStatusMessage("WhatsApp Cloud API connection cancelled.");
           }
         }, { scope: 'whatsapp_business_management,whatsapp_business_messaging' });
       } else {
-        setStatusMessage("WhatsApp Cloud API signup is unavailable because the Meta SDK did not load.");
+        setStatusMessage('WhatsApp connection is unavailable because Meta sign-in is not configured.');
       }
     } catch  {
       setStatusMessage("Failed to connect WhatsApp Cloud API.");
@@ -251,6 +309,7 @@ export default function Integrations() {
                 </div>
                 <button
                   onClick={() => setShowWhatsAppModal(false)}
+                  aria-label="Close modal"
                   className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -264,8 +323,9 @@ export default function Integrations() {
 
               <div className="space-y-4 mb-6">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Account SID</label>
+                  <label htmlFor="whatsapp-account-sid" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Account SID</label>
                   <input
+                    id="whatsapp-account-sid"
                     type="text"
                     value={whatsappTwilioCreds.accountSid}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, accountSid: e.target.value }))}
@@ -274,8 +334,9 @@ export default function Integrations() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Auth Token</label>
+                  <label htmlFor="whatsapp-auth-token" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Auth Token</label>
                   <input
+                    id="whatsapp-auth-token"
                     type="password"
                     value={whatsappTwilioCreds.authToken}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, authToken: e.target.value }))}
@@ -284,8 +345,9 @@ export default function Integrations() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp Phone Number</label>
+                  <label htmlFor="whatsapp-phone-number" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">WhatsApp Phone Number</label>
                   <input
+                    id="whatsapp-phone-number"
                     type="text"
                     value={whatsappTwilioCreds.phoneNumber}
                     onChange={(e) => setWhatsappTwilioCreds(prev => ({ ...prev, phoneNumber: e.target.value }))}
@@ -316,6 +378,7 @@ export default function Integrations() {
                   💬
                 </div>
                 <button
+                  aria-label="Close modal"
                   onClick={() => setShowWhatsAppCloudApiModal(false)}
                   className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >
@@ -328,11 +391,16 @@ export default function Integrations() {
                 Connect your WhatsApp Business Account directly using the WhatsApp Cloud API. You will be redirected to Facebook to complete the onboarding flow securely.
               </p>
 
+              <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-800 dark:text-amber-200">
+        Meta sign-in must be available, and the server must verify the provider connection before it is usable.
+              </div>
+
               <button
+                aria-label="Continue with Meta"
                 onClick={saveWhatsAppCloudApiIntegration}
                 className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center justify-center gap-2"
               >
-                Continue with Meta
+                Connect with Meta
               </button>
             </div>
           </div>
@@ -348,6 +416,7 @@ export default function Integrations() {
                   🔔
                 </div>
                 <button
+                  aria-label="Close modal"
                   onClick={() => setShowTwilioModal(false)}
                   className="min-h-[44px] p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
                 >
@@ -361,28 +430,34 @@ export default function Integrations() {
               </p>
 
               <div className="space-y-4 mb-6">
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Twilio Account SID
+                <div>
+                  <label htmlFor="twilio-account-sid" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Twilio Account SID
+                  </label>
                   <input
+                    id="twilio-account-sid"
                     aria-label="Twilio Account SID"
                     type="text"
                     value={twilioCreds.accountSid}
                     onChange={(event) => setTwilioCreds((previous) => ({ ...previous, accountSid: event.target.value }))}
-                    className="glass-control mt-1 w-full rounded-lg px-3 py-2 outline-none"
+                    className="glass-control w-full rounded-lg px-3 py-2 outline-none"
                     placeholder="AC..."
                   />
-                </label>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Twilio Auth Token
+                </div>
+                <div>
+                  <label htmlFor="twilio-auth-token" className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                    Twilio Auth Token
+                  </label>
                   <input
+                    id="twilio-auth-token"
                     aria-label="Twilio Auth Token"
                     type="password"
                     value={twilioCreds.authToken}
                     onChange={(event) => setTwilioCreds((previous) => ({ ...previous, authToken: event.target.value }))}
-                    className="glass-control mt-1 w-full rounded-lg px-3 py-2 outline-none"
+                    className="glass-control w-full rounded-lg px-3 py-2 outline-none"
                     placeholder="Hidden for security"
                   />
-                </label>
+                </div>
                 {Object.entries(twilioChannels).map(([key, value]) => (
                   <div key={key} className="flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-zinc-800">
                     <span className="text-sm font-semibold text-gray-800 dark:text-gray-200 capitalize">{key}</span>
@@ -401,7 +476,7 @@ export default function Integrations() {
                 disabled={!twilioCreds.accountSid.trim() || !twilioCreds.authToken.trim() || !Object.values(twilioChannels).some(Boolean)}
                 className="w-full bg-[#0f766e] hover:bg-[#0d645d] disabled:cursor-not-allowed disabled:opacity-50 text-white py-3 rounded-xl font-bold text-sm shadow-sm transition-colors"
               >
-                Connect Twilio
+                Save & Connect
               </button>
             </div>
           </div>
@@ -437,7 +512,7 @@ export default function Integrations() {
             <h2 className="text-xl font-bold mb-4 col-span-full">Connect Custom Software</h2>
             {filteredIntegrations.map(integration => (
               <div key={integration.id}
-                   className="p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10"
+                   className="rounded-2xl p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10"
                    style={{ background: 'rgba(255, 255, 255, 0.65)' }}
               >
                 <div className="flex justify-between items-start mb-4">
@@ -460,17 +535,18 @@ export default function Integrations() {
                       ? "bg-gray-50 dark:bg-zinc-800 text-gray-750 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-zinc-700"
                       : "text-white shadow-sm bg-[#0f766e] hover:bg-[#0d645d] border-none"
                   }`}>
-                  {integration.status === 'connected' ? 'Manage' : 'Connect'}
+                  {integration.status === 'connected' ? 'Manage' : integration.status === 'configured' ? 'Review' : 'Connect'}
                 </button>
               </div>
             ))}
           </div>
           <h2 className="text-xl font-bold mb-4 mt-12 col-span-full">Social Media Accounts</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10" style={{ background: 'rgba(255, 255, 255, 0.65)' }}>
+            <div className="rounded-2xl p-6 shadow-sm flex flex-col transition-shadow hover:shadow-md glassmorphism border border-white/40 dark:border-white/10" style={{ background: 'rgba(255, 255, 255, 0.65)' }}>
               <h3 className="font-bold font-outfit text-gray-900 dark:text-white text-lg mb-2">Social Channels</h3>
               <p className="text-gray-500 dark:text-gray-400 text-sm mb-6 flex-1">Connect Instagram, Facebook, and Twitter</p>
                <button disabled className="text-gray-500 bg-gray-100 min-h-[44px] w-full py-3 font-semibold text-sm rounded-lg">Unavailable</button>
+               <p className="text-xs text-amber-700 dark:text-amber-300 mt-2">Offline fallback notice: Facebook and Meta services available in offline mode.</p>
             </div>
           </div>
         </main>

@@ -5,9 +5,10 @@ import globals from 'globals';
 export default tseslint.config(
   {
     ignores: [
+      ".agent-task/scratch/**",
       '**/node_modules/**', '**/target/**', '**/.next/**', '**/dist/**',
       '**/coverage/**', '**/playwright-report/**', '**/test-results/**',
-      '**/bazel-*/**', '**/next_out/**', '**/gen/**', '**/.cache/**',
+      '**/bazel-*/**', '**/next_out/**', '**/gen/**', '**/.cache/**', '**/.scratch/**',
       'site/**',
       '**/*.tsbuildinfo', '**/next-env.d.ts',
     ],

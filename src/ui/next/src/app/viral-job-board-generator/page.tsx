@@ -11,7 +11,6 @@ export default function ViralJobBoardGeneratorPage() {
   const [boardTitle, setBoardTitle] = useState('We are hiring!');
   const [description, setDescription] = useState('Join our team and help us build the future.');
   const [theme, setTheme] = useState('light');
-  const [copied, setCopied] = useState(false);
 
   const getThemeStyles = () => {
     if (theme === 'dark') {
@@ -20,18 +19,10 @@ export default function ViralJobBoardGeneratorPage() {
     return { backgroundColor: '#fff', color: '#111827', borderColor: '#e5e7eb' };
   };
 
-  const generatedLink = `https://cloud.omnisolo.co/jobs/${boardTitle.toLowerCase().replace(/\s+/g, '-')}`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(generatedLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-inter">
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-        <h1 className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Viral Job Board Generator 📢</h1>
+        <h1 aria-label="Viral Job Board Generator" className="text-2xl font-bold font-outfit text-[#1D1D1F] tracking-tight">Viral Job Board Generator 📢</h1>
         <button
           onClick={() => router.push('/dashboard')}
           className="px-4 py-2 bg-gray-200 min-h-[44px] min-w-[44px] text-sm font-medium hover:bg-gray-300 transition-colors"
@@ -72,12 +63,14 @@ export default function ViralJobBoardGeneratorPage() {
               <div className="flex gap-2 border p-1 min-h-[44px] min-w-[44px] bg-gray-50 border-gray-200">
                 <button
                   onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
                   className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'light' ? 'bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] shadow-sm-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                   Light
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
                   className={`flex-1 py-1 px-3 rounded text-sm font-medium transition-all ${theme === 'dark' ? 'bg-gray-800 shadow-sm text-white' : 'text-gray-500 hover:text-gray-700'}`}
                 >
                   Dark
@@ -91,20 +84,20 @@ export default function ViralJobBoardGeneratorPage() {
               <span className="text-xl">🚀</span> Share Your Board
             </h3>
             <p className="text-sm text-indigo-800 mb-4">
-              Post this link on social media. People can apply and refer friends to get a bonus!
+              This board is a local preview. Job publication and application tracking are unavailable.
             </p>
 
             <div className="flex items-center gap-2 bg-white min-h-[44px] min-w-[44px] border border-indigo-200 p-1 mb-4 overflow-hidden">
               <div className="px-2 py-1 text-xs text-gray-500 truncate flex-1 font-mono">
-                {generatedLink}
+                No published job board link is available.
               </div>
             </div>
 
             <button
-              onClick={handleCopy}
+              disabled
               className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium min-h-[44px] min-w-[44px] transition-colors"
             >
-              {copied ? 'Copied!' : 'Copy Link'}
+              Copy Link
             </button>
           </div>
         </div>
@@ -133,10 +126,9 @@ export default function ViralJobBoardGeneratorPage() {
                 <h2 className="text-2xl font-bold font-outfit text-center mb-2">
                   {boardTitle || 'We are hiring!'}
                 </h2>
-                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>
-                  {description || 'Join our team.'}
-                </p>
+                <p className="text-center text-sm mb-8" style={{ color: theme === 'dark' ? '#9ca3af' : '#4b5563' }}>{description || 'Join our team.'}</p>
 
+                <p className="text-xs mb-3">Example roles for this preview</p>
                 <div className="w-full space-y-3 mb-6">
                   <div className="p-4 border rounded-lg cursor-pointer hover:bg-gray-50/10 transition-colors" style={{ borderColor: theme === 'dark' ? '#374151' : '#e5e7eb' }}>
                     <h4 className="font-bold text-sm">Senior Developer</h4>
@@ -150,8 +142,8 @@ export default function ViralJobBoardGeneratorPage() {
 
                 <div className="w-full p-4 rounded-lg bg-green-50 border border-green-200 text-center mb-4">
                   <p className="text-green-800 text-sm font-bold">Know someone?</p>
-                  <p className="text-green-700 text-xs mt-1">Refer a friend and get $500 if they are hired!</p>
-                  <button className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
+                  <p className="text-green-700 text-xs mt-1">Referral attribution and rewards are unavailable.</p>
+                  <button disabled className="mt-3 w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded min-h-[44px] transition-colors">
                     Refer a Friend
                   </button>
                 </div>

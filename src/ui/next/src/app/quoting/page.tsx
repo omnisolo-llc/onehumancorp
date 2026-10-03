@@ -1,10 +1,9 @@
 "use client";
 import { Suspense } from "react";
-import { useState,useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { SyncManager } from '../../lib/sync/SyncManager';
 import type { QuotePayload, BusinessLineItem } from '@/lib/business-records';
-type EditableLineItem = BusinessLineItem & { is_optional?: boolean };
+type EditableLineItem = BusinessLineItem & { is_optional?: boolean; service_item_id?: string | null };
 
 function QuotingContent() {
   const searchParams = useSearchParams();
@@ -14,39 +13,42 @@ function QuotingContent() {
   const [lineItems, setLineItems] = useState<EditableLineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [accepted, setAccepted] = useState(false);
+  const [outcome, setOutcome] = useState<'idle' | 'saving' | 'approved' | 'held'>('idle');
+  const [notice, setNotice] = useState('');
+  const [mutationError, setMutationError] = useState('');
+  const epoch = useRef(0);
+  const busy = useRef(false);
+  const accepted = quoteData?.quote.status?.toUpperCase() === 'ACCEPTED';
+  const readOnly = accepted || outcome !== 'idle';
 
   useEffect(() => {
+    const current = ++epoch.current;
+    const controller = new AbortController();
+    busy.current = false;
+    setQuoteData(null); setLineItems([]); setLoading(true); setError('');
+    setOutcome('idle'); setNotice(''); setMutationError('');
     if (!quoteId) {
-      setError('Quote ID is missing');
-      setLoading(false);
-      return;
+      setError('Quote ID is missing'); setLoading(false);
+      return () => { epoch.current += 1; controller.abort(); };
     }
-
-    const fetchQuote = async () => {
+    void (async () => {
       try {
-        const res = await fetch(`/api/v1/quotes?id=${quoteId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setQuoteData(data);
-          setLineItems(data.line_items || []);
-          if (data.quote.status === 'ACCEPTED') {
-            setAccepted(true);
-          }
-        } else {
-          setError('Failed to fetch quote');
-        }
-      } catch  {
-        setError('Error connecting to server');
+        const response = await fetch(`/api/v1/quotes?id=${encodeURIComponent(quoteId)}`, { signal: controller.signal });
+        const data = await response.json();
+        if (epoch.current !== current) return;
+        if (!response.ok || data?.quote?.id !== quoteId || !Array.isArray(data.line_items)) throw new Error('Invalid quote response');
+        setQuoteData(data); setLineItems(data.line_items);
+      } catch {
+        if (epoch.current === current) setError('Could not load the current quote. No changes were confirmed.');
       } finally {
-        setLoading(false);
+        if (epoch.current === current) setLoading(false);
       }
-    };
-
-    fetchQuote();
+    })();
+    return () => { epoch.current += 1; controller.abort(); busy.current = false; };
   }, [quoteId]);
 
   const handleItemChange = <K extends keyof EditableLineItem,>(id: string, field: K, value: EditableLineItem[K]) => {
+    if (readOnly || busy.current) return;
     setLineItems(prev => prev.map(item => {
       if (item.id === id) {
         return { ...item, [field]: value };
@@ -56,51 +58,49 @@ function QuotingContent() {
   };
 
   const handleApproveAndSend = async () => {
-    if (!quoteData || !quoteId) return;
-
-    const totalAmountCents = lineItems.reduce((sum, item) => sum + (item.unit_price_cents * item.quantity), 0);
-
+    if (!quoteData || !quoteId || quoteData.quote.id !== quoteId || readOnly || busy.current) return;
+    const totalAmountCents = lineItems.reduce((sum, item) => sum + item.unit_price_cents * item.quantity, 0);
+    if (!Number.isSafeInteger(totalAmountCents) || lineItems.some(item => !Number.isSafeInteger(item.unit_price_cents)
+        || !Number.isSafeInteger(item.quantity) || item.quantity < 1)) {
+      setMutationError('Review the line-item amounts and quantities before approving.'); return;
+    }
+    if (!navigator.onLine) {
+      setMutationError('A connection is required for this approval. No changes were saved or queued; your edits remain on this page.');
+      return;
+    }
+    const id = quoteId;
+    const current = epoch.current;
+    const active = () => epoch.current === current;
     const updatePayload = {
       total_amount_cents: totalAmountCents,
-      line_items: lineItems.map(item => ({
-        description: item.description,
-        unit_price_cents: item.unit_price_cents,
-        quantity: item.quantity,
-        is_optional: item.is_optional || false
-      }))
+      line_items: lineItems.map(item => ({ description: item.description, unit_price_cents: item.unit_price_cents,
+        quantity: item.quantity, is_optional: item.is_optional || false, service_item_id: item.service_item_id ?? null })),
     };
-
-    // Optimistic UI updates
-    setQuoteData({ ...quoteData, quote: { ...quoteData.quote, status: 'ACCEPTED' } });
-    setAccepted(true);
-
+    busy.current = true; setOutcome('saving'); setMutationError(''); setNotice('');
+    let changesSaved = false;
     try {
-      if (navigator.onLine) {
-        const updateRes = await fetch(`/api/v1/quotes?id=${quoteId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updatePayload)
-        });
-        if (!updateRes.ok) throw new Error('Update failed');
-
-        const approveRes = await fetch(`/api/v1/quotes/${quoteId}/approve`, {
-          method: 'PATCH'
-        });
-        if (!approveRes.ok) throw new Error('Approve failed');
-      } else {
-        await SyncManager.getInstance().enqueue({
-          type: 'update_quote',
-          quoteId: quoteId,
-          payload: updatePayload
-        });
-        await SyncManager.getInstance().enqueue({
-          type: 'approve_quote',
-          quoteId: quoteId
-        });
-      }
-    } catch (err) {
-      console.error('Failed to accept quote:', err);
-      alert('Your changes have been saved offline and will sync when reconnected.');
+      const update = await fetch(`/api/v1/quotes?id=${encodeURIComponent(id)}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(updatePayload),
+      });
+      const updated = await update.json();
+      if (!active()) return;
+      if (!update.ok || updated?.success !== true || updated.error != null) throw new Error('Unconfirmed changes');
+      changesSaved = true;
+      const approval = await fetch(`/api/v1/quotes/${encodeURIComponent(id)}/approve`, { method: 'PATCH' });
+      const approved = await approval.json();
+      if (!active()) return;
+      if (!approval.ok || approved?.success === false || approved?.error != null
+          || approved?.quote?.id !== id || approved.quote.status !== 'SENT') throw new Error('Unconfirmed approval');
+      setQuoteData(previous => previous ? { ...previous, quote: { ...previous.quote, ...approved.quote } } : previous);
+      setOutcome('approved');
+      setNotice('Approval saved. Quote is marked SENT; customer delivery and acceptance are not confirmed.');
+    } catch {
+      if (!active()) return;
+      setOutcome('held');
+      setMutationError(changesSaved ? 'Quote changes were saved, but approval could not be confirmed. Reload the quote to reconcile before retrying.'
+          : 'Could not confirm saved or queued changes. Keep your edits and reconcile before retrying.');
+    } finally {
+      if (active()) busy.current = false;
     }
   };
 
@@ -121,7 +121,7 @@ function QuotingContent() {
       <header className="px-6 py-4 bg-white/65 backdrop-blur-3xl saturate-200 border-b border-white/40 sticky top-0 z-10 flex items-center justify-between shadow-sm">
         <h1 className="text-xl font-bold font-outfit text-[#1D1D1F]">Project Proposal</h1>
         <div className="text-sm px-3 py-1 bg-[#0066FF]/10 text-[#0066FF] rounded-full font-medium">
-          {accepted ? 'Accepted' : quote.status}
+          {quote.status}
         </div>
       </header>
 
@@ -149,7 +149,7 @@ function QuotingContent() {
                         value={item.quantity}
                         onChange={(e) => handleItemChange(item.id, 'quantity', parseInt(e.target.value) || 1)}
                         className="w-16 px-2 py-1.5 text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-center text-[#1D1D1F]"
-                        disabled={accepted}
+                        disabled={readOnly}
                         data-testid={`quote-item-quantity-${item.id}`}
                       />
                     </div>
@@ -162,7 +162,7 @@ function QuotingContent() {
                         value={(item.unit_price_cents / 100).toFixed(2)}
                         onChange={(e) => handleItemChange(item.id, 'unit_price_cents', Math.round(parseFloat(e.target.value || '0') * 100))}
                         className="w-24 px-2 py-1.5 text-sm bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#0066FF] text-right text-[#1D1D1F]"
-                        disabled={accepted}
+                        disabled={readOnly}
                         data-testid={`quote-item-price-${item.id}`}
                       />
                     </div>
@@ -179,22 +179,25 @@ function QuotingContent() {
             </div>
           </div>
 
+          {mutationError && <p role="alert" className="p-6 text-red-700">{mutationError}</p>}
+          {notice && <p role="status" className="p-6 text-gray-700">{notice}</p>}
           {!accepted && (
             <div className="p-6 bg-gray-50 border-t border-gray-100 flex flex-col sm:flex-row gap-4">
               <button
                 onClick={handleApproveAndSend}
+                disabled={readOnly}
                 className="w-full min-h-[44px] py-4 bg-[#0066FF] hover:bg-[#0052CC] text-white font-bold shadow-sm transition-all text-lg flex items-center justify-center active:scale-[0.98]"
                 data-testid="quote-approve-btn"
               >
-                Approve & Send
+                {outcome === 'saving' ? 'Saving approval...' : 'Approve quote'}
               </button>
             </div>
           )}
           {accepted && (
             <div className="p-6 bg-[#34C759]/10 border-t border-[#34C759]/20 text-center">
               <div className="text-[#34C759] text-4xl mb-2">✅</div>
-              <h3 className="text-lg font-bold text-[#1D1D1F]">Proposal Accepted</h3>
-              <p className="text-gray-600 text-sm mt-1">Thank you! This quote has been approved.</p>
+              <h3 className="text-lg font-bold text-[#1D1D1F]">Recorded quote status: ACCEPTED</h3>
+              <p className="text-gray-600 text-sm mt-1">Customer acceptance is recorded. Payment and delivery are not established by this page.</p>
             </div>
           )}
         </div>

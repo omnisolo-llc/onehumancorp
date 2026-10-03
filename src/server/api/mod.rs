@@ -39,13 +39,16 @@ pub mod invoice;
 pub mod local_seo;
 pub mod mcp_webhook;
 pub mod meta_webhook;
+pub mod perplexity;
 pub mod recovery;
+pub mod search;
 pub mod settings;
 pub mod shipping;
 pub mod subscription;
 
 pub mod assistant;
 pub mod inbox;
+pub mod inquiries;
 pub mod integrations_settings;
 pub mod payment_ledger;
 pub mod quotes;
@@ -55,7 +58,9 @@ pub mod agent_metrics;
 pub mod agent_orchestrate;
 pub mod agent_stream;
 pub mod checkout_api;
+pub mod crm;
 pub mod field_ops;
+pub mod field_service_routing;
 pub mod omnisolo_job_queue;
 pub mod proposals;
 pub mod realtime;
@@ -67,3 +72,15 @@ pub(crate) mod walkup;
 pub mod work_triage;
 mod ws_batch;
 pub(crate) mod ws_compression;
+
+pub(crate) mod sync_transaction;
+pub mod telemetry_settings;
+
+pub mod stripe_webhook_security;
+
+pub mod voice_provisioning;
+pub mod widget;
+
+pub mod production_readiness;
+
+pub(crate) mod fixture_boundary;

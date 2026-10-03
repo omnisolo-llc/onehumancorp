@@ -44,6 +44,14 @@ impl ShippoProvider {
     pub async fn purchase_label(&self, rate_id: &str) -> Result<PurchaseLabelResponse, String> {
         self._client.purchase_label(rate_id).await
     }
+
+    pub async fn fetch_tracking(
+        &self,
+        carrier: &str,
+        tracking_number: &str,
+    ) -> Result<super::client::ShippoTrackingStatus, String> {
+        self._client.fetch_tracking(carrier, tracking_number).await
+    }
 }
 
 impl ShippoProvider {

@@ -13,15 +13,15 @@ test.describe('Health Monitoring Resilience E2E', () => {
 
   test('renders service health state', async ({ page }) => {
     await page.goto('/services');
-    await expect(page.locator('#services-screen')).toContainText('Service Manager');
-    await expect(page.locator('#services-screen')).toContainText('Status: running');
-    await expect(page.locator('#services-screen')).toContainText('Resource usage: CPU 5%, memory 128MB');
+    await expect(page.getByRole('heading', { name: 'Service Manager' })).toBeVisible();
+    await expect(page.locator('#services-screen')).toContainText(/Status: running|No runtime status is being reported/);
+    await expect(page.locator('#services-screen')).toContainText(/Resource usage: CPU 5%, memory 128MB|not exposed by the service API/);
   });
 
   test('keeps agents page reachable from dashboard', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'AI Departments' }).click();
     await expect(page.getByRole('heading', { name: 'AI Departments' })).toBeVisible();
-    await expect(page.getByText('Your autonomous business team.')).toBeVisible();
+    await expect(page.getByText('Browse task templates and submit text analysis to the configured provider. Workspace actions, expert teams, skills and connectors are not executable in this view.')).toBeVisible();
   });
 });

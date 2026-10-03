@@ -15,7 +15,9 @@ const SAFE_RESPONSE_HEADERS = new Set([
   "etag",
   "last-modified",
   "retry-after",
+  "surrogate-key",
   "www-authenticate",
+  "x-cache",
 ]);
 const SAFE_IDENTITY_VALUE = /^[\x21-\x7e]{1,2048}$/;
 const SAFE_FORWARD_VALUE = /^[\x20-\x7e]{1,256}$/;
@@ -53,6 +55,8 @@ export type BackendTransportDependencies = ServerSessionDependencies &
   }>;
 
 export type BackendRequestOptions = Readonly<{
+  /** An audited route may opt into a bounded envelope larger than its payload. */
+  requestLimitBytes?: number;
   streamResponse?: true;
   backendMethod?: "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
   forwardQuery?: boolean;
@@ -267,6 +271,8 @@ export async function proxyAuthenticatedRequest(
     return error(503, "backend unavailable");
   }
   const method = request.method.toUpperCase();
+  const requestLimitBytes = options.requestLimitBytes ?? dependencies.requestLimitBytes;
+  if (!boundedPositiveInteger(requestLimitBytes) || options.requestLimitBytes !== undefined && requestLimitBytes > 2_097_152) return error(503, "backend unavailable");
   if (!ALLOWED_METHODS.has(method)) return error(405, "method not allowed");
   const backendMethod = options.backendMethod ?? method;
   if (!ALLOWED_METHODS.has(backendMethod)) return error(405, "method not allowed");
@@ -279,12 +285,19 @@ export async function proxyAuthenticatedRequest(
   }
 
   const session = await readServerSession(request, dependencies);
+  // A queue owner is only a precondition, never browser-supplied authority.
+  const expectedUser = request.headers.get("x-ohc-expected-user");
+  const expectedTenant = request.headers.get("x-ohc-expected-tenant");
+  if (session !== null && (expectedUser !== null || expectedTenant !== null) &&
+      (expectedUser !== session.user.id || expectedTenant !== session.user.organizationId)) {
+    return error(409, "queued owner does not match the current session");
+  }
   const headers = requestHeaders(request, session);
   if (headers === null) return error(401, "authentication required");
   if (options.requestContentType !== undefined) {
     headers.set("content-type", options.requestContentType);
   }
-  if (!declaredLengthWithinLimit(request.headers, dependencies.requestLimitBytes)) {
+  if (!declaredLengthWithinLimit(request.headers, requestLimitBytes)) {
     return error(413, "request too large");
   }
 
@@ -297,7 +310,7 @@ export async function proxyAuthenticatedRequest(
     try {
       encodedRequest = await readBoundedBody(
         request.body,
-        dependencies.requestLimitBytes,
+        requestLimitBytes,
         timeout.signal,
       );
     } catch (cause) {
@@ -323,7 +336,7 @@ export async function proxyAuthenticatedRequest(
       } catch {
         return error(400, "invalid request");
       }
-      if (encodedRequest.byteLength > dependencies.requestLimitBytes) {
+      if (encodedRequest.byteLength > requestLimitBytes) {
         return error(413, "request too large");
       }
     }

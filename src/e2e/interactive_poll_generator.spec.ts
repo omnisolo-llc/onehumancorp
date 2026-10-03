@@ -12,11 +12,11 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
         await page.goto('/interactive-poll-generator');
 
         // Verify the page loaded correctly
-        await expect(page.locator('h1')).toContainText('Interactive Poll Generator');
+        await expect(page.locator('h1').first()).toContainText('Interactive Poll Generator');
 
         // 2. Configure the poll
         // Fill in the question
-        await page.fill('input[placeholder="e.g. What flavor should we make next?"]', 'Which new feature should we build?');
+        await page.fill('input[placeholder="E.g., What should we build next?"]', 'Which new feature should we build?');
 
         // Wait for the preview to update
         await expect(page.locator('h3:has-text("Which new feature should we build?")')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
             await page.goto(embedUrl);
 
             // Verify the poll rendered correctly
-            await expect(page.locator('h3')).toContainText('Which new feature should we build?');
+            await expect(page.locator('h3').first()).toContainText('Which new feature should we build?');
             await expect(page.locator('button:has-text("AI Analytics")')).toBeVisible();
             await expect(page.locator('button:has-text("Mobile App")')).toBeVisible();
             await expect(page.locator('button:has-text("Dark Mode")')).toBeVisible();
@@ -79,7 +79,7 @@ test.describe('Interactive Poll Generator Growth Loop', () => {
             await voteBtn.click();
 
             // Verify success state
-            await expect(page.locator('h3')).toContainText('Thanks for voting!');
+            await expect(page.locator('h3:has-text("Thanks for voting!")')).toBeVisible();
         }
     });
 });

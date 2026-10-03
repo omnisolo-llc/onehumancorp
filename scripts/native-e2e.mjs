@@ -3,13 +3,16 @@ import { createRequire } from 'node:module';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:net';
 import { createWriteStream, existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
 import { validateWebArtifact } from './package-web.mjs';
 import { runNativeCommand } from './native-process.mjs';
+import clickCoverage from './ui-click-audit.cjs';
+import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
+import { verifyProductionFixtureBoundary } from './verify-production-fixture-boundary.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -76,6 +79,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const ciSelection = inputArgs.includes('--ci');
   const args = inputArgs.filter((arg) => arg !== '--ci');
   if (args.some((arg) => arg === '--pass-with-no-tests')) throw new Error('Zero-test success is not allowed');
+  const completeSelection = clickCoverage.completeSelection(args);
+  if (ciSelection && !completeSelection) throw new Error('Required CI cannot narrow or override the complete browser selection');
   const env = testEnvironment();
   env.PLAYWRIGHT_TEST_DIR = './src';
   env.PLAYWRIGHT_LIST_REPORTER = '1';
@@ -119,7 +124,7 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   try {
     await execute('docker', ['info'], { env, quiet: true });
     for (const image of [postgresImage, valkeyImage]) await execute('docker', ['pull', image], { env });
-    await execute('docker', ['run', '-d', '--name', pg, '-p', '127.0.0.1:0:5432',
+    await execute('docker', ['run', '-d', '--name', pg, '--label', `com.onehumancorp.e2e-run=${suffix}`, '-p', '127.0.0.1:0:5432',
       '-e', 'POSTGRES_USER=ohc', '-e', 'POSTGRES_PASSWORD=ohc', '-e', 'POSTGRES_DB=ohc', postgresImage], { env });
     await execute('docker', ['run', '-d', '--name', cache, '-p', '127.0.0.1:0:6379', valkeyImage], { env });
     const mapped = async (name, port) => Number((await execute('docker', ['port', name, port], { env, quiet: true })).trim().split(':').at(-1));
@@ -127,12 +132,16 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     let ready = false;
     for (let attempt = 0; attempt < 60; attempt++) {
       execution.signal.throwIfAborted();
-      try { await execute('docker', ['exec', pg, 'pg_isready', '-U', 'ohc'], { env, quiet: true, timeoutMs: 5000 }); ready = true; break; }
+      try {
+        await execute('docker', ['exec', pg, 'pg_isready', '-U', 'ohc', '-d', 'ohc'], { env, quiet: true, timeoutMs: 5000 });
+        await execute('docker', ['exec', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc', '-c',
+          "DO $$ BEGIN IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ohc_bypassrls') THEN CREATE ROLE ohc_bypassrls NOLOGIN; END IF; END $$; GRANT ohc_bypassrls TO ohc;"], { env, quiet: true, timeoutMs: 5000 });
+        ready = true;
+        break;
+      }
       catch { await delay(1000, undefined, { signal: execution.signal }); }
     }
     if (!ready) throw new Error('PostgreSQL test container did not become ready; no SQLite fallback is permitted');
-    await execute('docker', ['exec', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc', '-c',
-      "CREATE ROLE ohc_bypassrls NOLOGIN; GRANT ohc_bypassrls TO ohc;"], { env });
     await execute('bash', ['deploy/tests/support/generate_test_tls.sh', temp], { env });
     const apiPort = await freePort(), grpcPort = await freePort(), webPort = await freePort();
     const apiOrigin = `http://127.0.0.1:${apiPort}`, webOrigin = `http://127.0.0.1:${webPort}`;
@@ -146,8 +155,10 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       OMNISOLO_GRPC_TLS_CERT_PATH: path.join(temp, 'server.crt'),
       OMNISOLO_GRPC_TLS_KEY_PATH: path.join(temp, 'server.key'),
       OMNISOLO_GRPC_CLIENT_CA_PATH: path.join(temp, 'ca.crt'),
-      E2E_POSTGRES_CONTAINER: pg, API_BASE_URL: apiOrigin, BACKEND_URL: apiOrigin,
+      E2E_POSTGRES_CONTAINER: pg, OMNISOLO_E2E_FIXTURE_PROOF: path.join(temp, 'fixture-database.json'),
+      API_BASE_URL: apiOrigin, BACKEND_URL: apiOrigin,
       OMNISOLO_BACKEND_URL: apiOrigin, OMNISOLO_API_URL: apiOrigin, BASE_URL: webOrigin,
+      PLAYWRIGHT_BASE_URL: webOrigin,
       OMNISOLO_WEB_CANONICAL_ORIGIN: webOrigin, OMNISOLO_WEB_LOCAL_DEV: 'true',
       OMNISOLO_WEB_SESSION_KEY_ID: 'e2e-v1', OMNISOLO_WEB_SESSION_SECRET: randomBytes(32).toString('base64url'),
       PLAYWRIGHT_STORAGE_STATE: path.join(temp, 'browser-state.json'),
@@ -157,17 +168,42 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       PLAYWRIGHT_OUTPUT_DIR: path.join(root, 'test-results/native'),
       PLAYWRIGHT_HTML_REPORT: path.join(root, 'playwright-report'), NEXT_TELEMETRY_DISABLED: '1',
     });
+    const container = JSON.parse(await execute('docker', ['inspect', pg], { env, quiet: true }))[0];
+    await writeFile(env.OMNISOLO_E2E_FIXTURE_PROOF, JSON.stringify({
+      runId: suffix, containerName: pg, containerId: container.Id, port: pgPort,
+    }), { mode: 0o600, flag: 'wx' });
+    verifiedFixtureDatabaseUrl(env);
     const backend = start(server, [], 'server.log', env);
     await waitHttp(`${apiOrigin}/readyz`, backend, 120, execution.signal);
     await execute('docker', ['exec', '-i', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc'], {
       env, input: await readFile(path.join(root, 'src/e2e/e2e-seed.sql')), quiet: true,
     });
+    // Authenticate the SQL-seeded owner through the actual production login.
+    const login = await fetch(`${apiOrigin}/api/v1/auth/login`, {
+      method: 'POST', redirect: 'manual', signal: execution.signal,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'test@example.com', password: 'password123', organization_id: 'e2e-tenant' }),
+    });
+    if (!login.ok) throw new Error(`Fixture owner login failed: HTTP ${login.status}`);
+    const identity = await login.json();
+    if (!identity.token || identity.user?.organization_id !== 'e2e-tenant'
+        || !identity.user.roles?.includes('ADMIN')) throw new Error('Fixture owner identity was not verified');
+    await verifyProductionFixtureBoundary(apiOrigin, identity.token, execution.signal);
     const frontend = start(process.execPath, [web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitHttp(`${webOrigin}/login`, frontend, 120, execution.signal);
     // Execute exactly the complete/sharded selection checked by preflight.
+    const coverage = completeSelection ? clickCoverage.makeRunContext(root, process.env) : undefined;
+    const receiptDirectory = path.join(root, 'test-results/click-receipts', coverage ? `${coverage.runId}-${coverage.attempt}` : 'partial');
+    const browserEnv = coverage ? { ...env, OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(coverage), OHC_CLICK_AUDIT_DIRECTORY: receiptDirectory } : env;
     await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
-      env, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
+      env: browserEnv, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
     });
+    if (coverage) {
+      clickCoverage.assertSource(root, coverage);
+      if (!args.some(arg => arg === '--shard' || arg.startsWith('--shard='))) {
+        console.log('Complete click coverage:', clickCoverage.validateReceipts(clickCoverage.readReceipts(receiptDirectory), coverage, 1));
+      }
+    }
   } catch (error) {
     // The database contains only this run's synthetic seed. Its bounded error
     // tail makes migration/type failures diagnosable instead of a bare HTTP 503.

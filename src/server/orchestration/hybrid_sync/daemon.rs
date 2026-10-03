@@ -546,7 +546,7 @@ impl HybridSyncDaemon {
             SQLITE_RUNNING_WHERE
         );
         let sqlite_queued_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_failed', 'ohc_job_queue', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}",
+            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT lower(hex(randomblob(16))), tenant_id, 'job_stuck', 'ohc_job_queue', json_insert(COALESCE(payload, '{{}}'), '$.original_id', id), '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}",
             SQLITE_QUEUED_WHERE
         );
         let sqlite_queued_update = format!(
@@ -563,7 +563,7 @@ impl HybridSyncDaemon {
             PG_RUNNING_WHERE
         );
         let pg_queued_insert = format!(
-            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_failed', 'ohc_job_queue', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}",
+            "INSERT INTO department_dead_letters (id, tenant_id, event_type, department, payload, error_message) SELECT gen_random_uuid()::text, tenant_id, 'job_stuck', 'ohc_job_queue', jsonb_set(COALESCE(payload, '{{}}'::jsonb), '{{original_id}}', to_jsonb(id::text))::text, '[cleanup] Stagnant backlog item stuck in QUEUED for > 24 hours' FROM ohc_job_queue WHERE {}",
             PG_QUEUED_WHERE
         );
         let pg_queued_update = format!(

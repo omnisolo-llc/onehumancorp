@@ -1,4 +1,5 @@
 import { expect, test } from './fixtures';
+import { seedFeedItem } from './feed-fixtures';
 
 test.describe('Operations Agent Task Automation', () => {
 
@@ -7,12 +8,24 @@ test.describe('Operations Agent Task Automation', () => {
     await page.goto('/dashboard');
     await expect(page.locator('h1', { hasText: 'Dashboard' }).first()).toBeVisible({ timeout: 25000 });
 
-    // 2. Check the Agent Feed for the Operations Agent task
-    const operationsTaskCard = page.locator('text=Review Daily Prep Checklist').locator('..');
+    const id = await seedFeedItem(page, {
+      event_source: 'operations',
+      context_payload: { description: 'Review Daily Prep Checklist', feature_type: 'daily_prep_checklist' },
+      proposed_action: { action_type: 'Daily Prep Checklist', feature_type: 'daily_prep_checklist' },
+    });
+    await page.reload();
+
+    const group = page.getByTestId('grouped-triage-card-daily_prep_checklist-Daily Prep Checklist');
+    const operationsTaskCard = page.getByTestId(`triage-card-${id}`);
+    await expect.poll(async () => await group.isVisible() || await operationsTaskCard.isVisible(),
+      { timeout: 10000, message: 'Wait for the newly created task or its group before expanding' }).toBe(true);
+    if (await group.isVisible()) await group.getByRole('button', { name: 'Review Individually' }).click();
+
+    // 2. Check the individual task after any group has loaded and been expanded.
     await expect(operationsTaskCard).toBeVisible({ timeout: 10000 });
 
     // Ensure buttons are visible
-    const markCompleteBtn = operationsTaskCard.getByTestId('feed-approve-btn');
+    const markCompleteBtn = operationsTaskCard.getByRole('button', { name: 'Mark Complete', exact: true });
     const assignBtn = operationsTaskCard.getByTestId('feed-assign-btn');
     const dismissBtn = operationsTaskCard.getByTestId('feed-dismiss-btn');
 
@@ -21,10 +34,11 @@ test.describe('Operations Agent Task Automation', () => {
     await expect(dismissBtn).toBeVisible();
 
     // 3. Mark the task complete
+    const decision = page.waitForResponse(response => response.url().endsWith(`/api/v1/agent-feed/${id}`) && response.request().method() === 'PUT');
     await markCompleteBtn.click();
 
     // Check that we hit the API successfully to approve it
-    await page.waitForResponse(response => response.url().includes('/api/v1/agent-feed/e2e-feed-ops-daily-routine/state') && response.status() === 200, { timeout: 15000 }).catch(() => {});
+    expect((await decision).status()).toBe(200);
 
     // 4. Verify the task disappears from the feed
     // Depending on optimistic update or fast refresh, it should hide

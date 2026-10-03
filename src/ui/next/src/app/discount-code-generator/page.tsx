@@ -33,10 +33,7 @@ export default function DiscountCodeGeneratorPage() {
   };
 
   const claimTrialExtension = async () => {
-    const referralUrl = `${window.location.origin}/onboarding?ref=${encodeURIComponent(tenant)}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
-    setShowSoftPaywall(false);
+    await claimTrial();
   };
 
   const encodedTenant = encodeURIComponent(tenant);
@@ -96,7 +93,7 @@ export default function DiscountCodeGeneratorPage() {
                             <p className="text-xs text-gray-500">Requires Pro subscription</p>
                         </div>
                         <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" className="sr-only peer" checked={hasPro} onChange={handleToggleBranding} />
+                            <input type="checkbox" aria-label="Remove OmniSolo Branding" className="sr-only peer" checked={hasPro} onChange={handleToggleBranding} />
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#0071E3]"></div>
                         </label>
                     </div>
@@ -187,6 +184,7 @@ export default function DiscountCodeGeneratorPage() {
 
             <div className="flex justify-end mb-2">
               <button
+                aria-label="Close modal"
                 onClick={() => setShowSoftPaywall(false)}
                 className="text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors w-8 h-8 flex items-center justify-center"
               >
@@ -214,7 +212,7 @@ export default function DiscountCodeGeneratorPage() {
               onClick={claimTrialExtension}
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
-              Share on X to activate Pro
+              Check trial availability
             </button>
           </div>
         </div>

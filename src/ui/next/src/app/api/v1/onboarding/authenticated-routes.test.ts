@@ -217,10 +217,10 @@ describe("authenticated onboarding backend routes", () => {
     });
   });
 
-  test("launch forwards neither attacker queries nor a body", async () => {
+  test("launch forwards a validated preparation ID without attacker authority", async () => {
     const request = new Request("http://localhost/route?tenant_id=attacker", {
       method: "POST",
-      body: '{"tenant_id":"attacker"}',
+      body: '{"tenant_id":"attacker","preparation_id":"prep-1"}',
     });
 
     await launch(request);
@@ -228,8 +228,12 @@ describe("authenticated onboarding backend routes", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/v1/onboarding/launch",
-      { forwardQuery: false, suppressRequestBody: true },
+      { forwardQuery: false, requestContentType: "application/json", transformRequestBody: expect.any(Function) },
     );
+    const options = vi.mocked(proxyBackendRequest).mock.calls.at(-1)![2]!;
+    const transformed = options.transformRequestBody!(new TextEncoder().encode('{"tenant_id":"attacker","preparation_id":"prep-1"}'));
+    expect(JSON.parse(new TextDecoder().decode(transformed))).toEqual({ preparation_id: 'prep-1' });
+    expect(() => options.transformRequestBody!(new TextEncoder().encode('{}'))).toThrow();
   });
 
   test("v1 chat retains its messages-array validation", async () => {

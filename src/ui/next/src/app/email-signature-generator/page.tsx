@@ -1,5 +1,6 @@
 'use client';
 
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -12,14 +13,14 @@ export default function EmailSignatureGeneratorPage() {
   const [company, setCompany] = useState("Jane's Bakery");
   const [phone, setPhone] = useState('+1 (555) 123-4567');
   const [email, setEmail] = useState('jane@example.com');
-  const [website, setWebsite] = useState('www.example.com');
+  const [website, setWebsite] = useState('omnisolo.co');
 
   // Settings State
   const [themeColor, setThemeColor] = useState('#0066FF');
   const [removeBranding, setRemoveBranding] = useState(false);
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [tenant, setTenant] = useState('demo');
+  const clipboard = useClipboardFeedback(JSON.stringify({ name, title, company, phone, email, website, themeColor, removeBranding, tenant }));
 
   React.useEffect(() => {
     const tid = localStorage.getItem('business_display_name');
@@ -27,19 +28,8 @@ export default function EmailSignatureGeneratorPage() {
   }, []);
 
   const handleCopy = () => {
-    const signatureHtml = document.getElementById('signature-preview')?.innerHTML;
-    if (signatureHtml) {
-      const blob = new Blob([signatureHtml], { type: 'text/html' });
-      const data = [new ClipboardItem({ 'text/html': blob })];
-      navigator.clipboard.write(data).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch(err => {
-        console.error('Failed to copy: ', err);
-        // Fallback for some browsers
-        navigator.clipboard.writeText(signatureHtml);
-      });
-    }
+    const signatureHtml = document.getElementById('signature-preview')?.innerHTML || '';
+    void clipboard.copy(signatureHtml, { html: true });
   };
 
   return (
@@ -130,6 +120,7 @@ export default function EmailSignatureGeneratorPage() {
                             <button
                                 key={color}
                                 onClick={() => setThemeColor(color)}
+                                aria-pressed={themeColor === color}
                                 className={`w-8 h-8 rounded-full border-2 transition-transform ${themeColor === color ? 'border-gray-400 scale-110' : 'border-transparent hover:scale-105'}`}
                                 style={{ backgroundColor: color }}
                                 aria-label={`Select color ${color}`}
@@ -142,6 +133,7 @@ export default function EmailSignatureGeneratorPage() {
                     <label className="flex items-start gap-3 cursor-pointer group">
                         <input
                             type="checkbox"
+                            aria-label='Remove "OmniSolo" branding'
                             checked={removeBranding}
                             onChange={(e) => {
                                 if (e.target.checked) {
@@ -154,7 +146,7 @@ export default function EmailSignatureGeneratorPage() {
                             className="mt-1 w-4 h-4 text-[#0071E3] rounded focus:ring-[#0066FF]"
                         />
                         <div>
-                            <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "Powered by OmniSolo" branding</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-gray-200">Remove "OmniSolo" branding</span>
                             <p className="text-xs text-gray-500 mt-1">Requires Pro plan or higher.</p>
                         </div>
                     </label>
@@ -206,7 +198,7 @@ export default function EmailSignatureGeneratorPage() {
                                                 {website && (
                                                     <tr>
                                                         <td style={{ paddingBottom: '0px', fontSize: '13px', color: '#4b5563' }}>
-                                                            <strong style={{ color: themeColor, marginRight: '4px' }}>W:</strong> <a href={`https://${website}`} target="_blank" rel="noreferrer" style={{ color: '#4b5563', textDecoration: 'none' }}>{website}</a>
+                                                            <strong style={{ color: themeColor, marginRight: '4px' }}>W:</strong> <a href={`https://${website}`} target="_blank" rel="noopener noreferrer" style={{ color: '#4b5563', textDecoration: 'none' }}>{website}</a>
                                                         </td>
                                                     </tr>
                                                 )}
@@ -218,7 +210,7 @@ export default function EmailSignatureGeneratorPage() {
                                     <tr>
                                         <td colSpan={2} style={{ paddingTop: '16px' }}>
                                             <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: '12px', fontSize: '11px', color: '#9ca3af' }}>
-                                                Create your own free signature with <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#0066FF', textDecoration: 'none', fontWeight: 600 }}>OmniSolo</a>.
+                                                Create your own free signature with <a href={`https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066FF', textDecoration: 'none', fontWeight: 600 }}>OmniSolo</a>.
                                             </div>
                                         </td>
                                     </tr>
@@ -231,9 +223,10 @@ export default function EmailSignatureGeneratorPage() {
                  <div className="mt-8 flex justify-center">
                     <button
                         onClick={handleCopy}
+                    disabled={clipboard.state === 'pending'}
                         className="px-8 py-4 bg-[#0066FF] hover:bg-blue-700 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 text-lg w-full max-w-md"
                     >
-                        {copied ? (
+                        {clipboard.state === 'copied' ? (
                             <>
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                                 Copied to Clipboard!
@@ -245,6 +238,7 @@ export default function EmailSignatureGeneratorPage() {
                             </>
                         )}
                     </button>
+                  {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                  </div>
                  <p className="text-center text-sm text-gray-500 mt-4">
                      Paste directly into Gmail, Outlook, Apple Mail, or your favorite email client.

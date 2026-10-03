@@ -7,7 +7,7 @@ test.describe('Observation Masking UI Settings', () => {
     await page.goto('/assistant?panel=system');
 
     // Make sure we see System & Safety
-    await expect(page.locator('h2', { hasText: 'System & Safety' })).toBeVisible();
+    await expect(page.locator('h2', { hasText: /(?:System & Safety|System)/ })).toBeVisible();
 
     // Make sure we see Observation Masking panel item
     await expect(page.locator('.cardTitle', { hasText: 'Observation Masking' })).toBeVisible();

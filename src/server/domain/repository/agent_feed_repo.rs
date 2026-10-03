@@ -25,10 +25,42 @@ impl AgentFeedRepository {
     }
 
     pub async fn create(&self, item: AgentFeedItem) -> Result<AgentFeedItem, sqlx::Error> {
+        let is_pg = match &self.db.store {
+            crate::db::DbStore::Postgres => true,
+            crate::db::DbStore::Sqlite(_) => false,
+        };
+        if is_pg {
+            let mut tx = self.db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, &item.tenant_id).await?;
+            let rec = sqlx::query_as::<_, AgentFeedItem>(
+                r#"
+                INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                RETURNING *
+                "#
+            )
+            .bind(&item.id)
+            .bind(&item.tenant_id)
+            .bind(&item.event_source)
+            .bind(&item.context_payload)
+            .bind(&item.proposed_action)
+            .bind(&item.lifecycle_state)
+            .bind(item.created_at)
+            .bind(item.updated_at)
+            .fetch_one(&mut *tx)
+            .await?;
+            tx.commit().await?;
+            return Ok(rec);
+        }
+
+        let crate::db::DbStore::Sqlite(pool) = &self.db.store else {
+            unreachable!("PostgreSQL handled above")
+        };
+
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
             INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             RETURNING *
             "#
         )
@@ -40,7 +72,7 @@ impl AgentFeedRepository {
         .bind(item.lifecycle_state)
         .bind(item.created_at)
         .bind(item.updated_at)
-        .fetch_one(&self.db.pool)
+        .fetch_one(pool)
         .await?;
 
         Ok(rec)
@@ -51,8 +83,11 @@ impl AgentFeedRepository {
         tenant_id: &str,
         id: &str,
     ) -> Result<Option<AgentFeedItem>, sqlx::Error> {
-        let rec = sqlx::query_as::<_, AgentFeedItem>(
-            r#"
+        let is_pg = match &self.db.store {
+            crate::db::DbStore::Postgres => true,
+            crate::db::DbStore::Sqlite(_) => false,
+        };
+        let query_pg = r#"
             SELECT
                 id,
                 tenant_id,
@@ -88,24 +123,99 @@ impl AgentFeedRepository {
             SELECT
                 id,
                 tenant_id,
-                COALESCE(agent_type, 'operations') as event_source,
-                jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload,
+                COALESCE(agent_type, department_type, 'operations') as event_source,
+                jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload,
                 payload as proposed_action,
                 CASE
-                    WHEN status = 'Pending' THEN 'PENDING_APPROVAL'
-                    WHEN status = 'Rejected' THEN 'DISMISSED'
-                    ELSE status
+                    WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL'
+                    WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED'
+                    WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED'
+                    WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED'
+                    ELSE UPPER(status)
                 END as lifecycle_state,
                 created_at,
                 updated_at
             FROM agent_action_requests
-            WHERE tenant_id = $1 AND id = $2
-            "#
-        )
-        .bind(tenant_id)
-        .bind(id)
-        .fetch_optional(&self.db.pool)
-        .await?;
+            WHERE tenant_id = $1 AND id = $2 AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
+            "#;
+
+        let query_sqlite = r#"
+            SELECT
+                id,
+                tenant_id,
+                event_source,
+                context_payload,
+                proposed_action,
+                lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_feed_items
+            WHERE tenant_id = ? AND id = ?
+
+            UNION ALL
+
+            SELECT
+                id,
+                tenant_id,
+                department as event_source,
+                json_object('description', description) as context_payload,
+                payload as proposed_action,
+                CASE
+                    WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL'
+                    WHEN status = 'REJECTED' THEN 'DISMISSED'
+                    ELSE status
+                END as lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_approvals
+            WHERE tenant_id = ? AND id = ?
+
+            UNION ALL
+
+            SELECT
+                id,
+                tenant_id,
+                COALESCE(agent_type, department_type, 'operations') as event_source,
+                json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload,
+                payload as proposed_action,
+                CASE
+                    WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL'
+                    WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED'
+                    WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED'
+                    WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED'
+                    ELSE UPPER(status)
+                END as lifecycle_state,
+                created_at,
+                updated_at
+            FROM agent_action_requests
+            WHERE tenant_id = ? AND id = ? AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
+            "#;
+
+        if is_pg {
+            let mut tx = self.db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+            let rec = sqlx::query_as::<_, AgentFeedItem>(query_pg)
+                .bind(tenant_id)
+                .bind(id)
+                .fetch_optional(&mut *tx)
+                .await?;
+            tx.commit().await?;
+            return Ok(rec);
+        }
+
+        let crate::db::DbStore::Sqlite(pool) = &self.db.store else {
+            unreachable!("PostgreSQL handled above")
+        };
+
+        let rec = sqlx::query_as::<_, AgentFeedItem>(query_sqlite)
+            .bind(tenant_id)
+            .bind(id)
+            .bind(tenant_id)
+            .bind(id)
+            .bind(tenant_id)
+            .bind(id)
+            .fetch_optional(pool)
+            .await?;
 
         Ok(rec)
     }
@@ -115,59 +225,42 @@ impl AgentFeedRepository {
         tenant_id: &str,
         limit: i64,
         offset: i64,
-        mobile_optimized: bool,
+        _mobile_optimized: bool,
     ) -> Result<Vec<AgentFeedItem>, sqlx::Error> {
         let is_pg = match &self.db.store {
             crate::db::DbStore::Postgres => true,
             crate::db::DbStore::Sqlite(_) => false,
         };
-        let query = if mobile_optimized {
+        let query = if is_pg {
             r#"
-                SELECT id, tenant_id, event_source, NULL as context_payload, NULL as proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
-                UNION ALL
-                SELECT id, tenant_id, department as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, NULL as context_payload, NULL as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
-                UNION ALL
-                SELECT id, tenant_id, 'orders' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
-                UNION ALL
-                SELECT id, tenant_id, 'invoices' as event_source, NULL as context_payload, NULL as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
-                ORDER BY created_at DESC LIMIT $2 OFFSET $3
-                "#
+            SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
+            UNION ALL
+            SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+            UNION ALL
+            SELECT id, tenant_id, 'orders' as event_source, jsonb_build_object('description', 'Pending Order') as context_payload, jsonb_build_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+            UNION ALL
+            SELECT id, tenant_id, 'invoices' as event_source, jsonb_build_object('description', 'Action Required: Overdue Invoice') as context_payload, jsonb_build_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+            ORDER BY created_at DESC LIMIT $2 OFFSET $3
+            "#
         } else {
-            if is_pg {
-                r#"
-                SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
-                UNION ALL
-                SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, jsonb_build_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
-                UNION ALL
-                SELECT id, tenant_id, 'orders' as event_source, jsonb_build_object('description', 'Pending Order') as context_payload, jsonb_build_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
-                UNION ALL
-                SELECT id, tenant_id, 'invoices' as event_source, jsonb_build_object('description', 'Action Required: Overdue Invoice') as context_payload, jsonb_build_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
-                ORDER BY created_at DESC LIMIT $2 OFFSET $3
-                "#
-            } else {
-                r#"
-                SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
-                UNION ALL
-                SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(agent_type, 'operations') as event_source, json_object('description', 'Action Request: ' || action_type) as context_payload, payload as proposed_action, CASE WHEN status = 'Pending' THEN 'PENDING_APPROVAL' WHEN status = 'Rejected' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND status IN ('Pending', 'Approved', 'Rejected')
-                UNION ALL
-                SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
-                UNION ALL
-                SELECT id, tenant_id, 'orders' as event_source, json_object('description', 'Pending Order') as context_payload, json_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
-                UNION ALL
-                SELECT id, tenant_id, 'invoices' as event_source, json_object('description', 'Action Required: Overdue Invoice') as context_payload, json_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
-                ORDER BY created_at DESC LIMIT $2 OFFSET $3
-                "#
-            }
+            r#"
+            SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ?
+            UNION ALL
+            SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
+            UNION ALL
+            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+            UNION ALL
+            SELECT id, tenant_id, 'orders' as event_source, json_object('description', 'Pending Order') as context_payload, json_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = ? AND status = 'pending'
+            UNION ALL
+            SELECT id, tenant_id, 'invoices' as event_source, json_object('description', 'Action Required: Overdue Invoice') as context_payload, json_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = ? AND status IN ('draft', 'overdue')
+            ORDER BY created_at DESC LIMIT ? OFFSET ?
+            "#
         };
 
         let items = match &self.db.store {
@@ -186,6 +279,11 @@ impl AgentFeedRepository {
             crate::db::DbStore::Sqlite(pool) => {
                 sqlx::query_as::<_, AgentFeedItem>(query)
                     .bind(tenant_id)
+                    .bind(tenant_id)
+                    .bind(tenant_id)
+                    .bind(tenant_id)
+                    .bind(tenant_id)
+                    .bind(tenant_id)
                     .bind(limit)
                     .bind(offset)
                     .fetch_all(pool)
@@ -202,18 +300,135 @@ impl AgentFeedRepository {
         id: &str,
         new_state: &str,
     ) -> Result<AgentFeedItem, sqlx::Error> {
+        let is_pg = match &self.db.store {
+            crate::db::DbStore::Postgres => true,
+            crate::db::DbStore::Sqlite(_) => false,
+        };
+
+        if is_pg {
+            let mut tx = self.db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+
+            let rec = sqlx::query_as::<_, AgentFeedItem>(
+                r#"
+                UPDATE agent_feed_items
+                SET lifecycle_state = $1, updated_at = NOW()
+                WHERE tenant_id = $2 AND id = $3
+                RETURNING *
+                "#,
+            )
+            .bind(new_state)
+            .bind(tenant_id)
+            .bind(id)
+            .fetch_optional(&mut *tx)
+            .await?;
+
+            if let Some(r) = rec {
+                tx.commit().await?;
+                return Ok(r);
+            }
+
+            let legacy_status = if new_state == "APPROVED" {
+                "APPROVED"
+            } else if new_state == "DISMISSED" {
+                "REJECTED"
+            } else {
+                "DRAFT"
+            };
+            let rows_affected = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                .bind(legacy_status)
+                .bind(tenant_id)
+                .bind(id)
+                .execute(&mut *tx)
+                .await?
+                .rows_affected();
+
+            if rows_affected == 0 {
+                let request_status = if new_state == "APPROVED" {
+                    "Approved"
+                } else if new_state == "DISMISSED" {
+                    "Rejected"
+                } else {
+                    "Pending"
+                };
+                let request_rows_affected = sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                     .bind(request_status)
+                     .bind(tenant_id)
+                     .bind(id)
+                     .execute(&mut *tx)
+                     .await?.rows_affected();
+
+                if request_rows_affected == 0 {
+                    let inbox_status = if new_state == "APPROVED" {
+                        "sent"
+                    } else if new_state == "DISMISSED" {
+                        "dismissed"
+                    } else {
+                        "unread"
+                    };
+                    let inbox_rows_affected = sqlx::query("UPDATE omni_inbox_messages SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                         .bind(inbox_status)
+                         .bind(tenant_id)
+                         .bind(id)
+                         .execute(&mut *tx)
+                         .await?.rows_affected();
+
+                    if inbox_rows_affected == 0 {
+                        let order_status = if new_state == "APPROVED" {
+                            "processing"
+                        } else {
+                            "cancelled"
+                        };
+                        let order_rows_affected = sqlx::query("UPDATE orders SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                             .bind(order_status)
+                             .bind(tenant_id)
+                             .bind(id)
+                             .execute(&mut *tx)
+                             .await?.rows_affected();
+
+                        if order_rows_affected == 0 {
+                            let invoice_status = if new_state == "APPROVED" {
+                                "sent"
+                            } else {
+                                "cancelled"
+                            };
+                            sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                                 .bind(invoice_status)
+                                 .bind(tenant_id)
+                                 .bind(id)
+                                 .execute(&mut *tx)
+                                 .await?;
+                        }
+                    }
+                }
+            }
+
+            tx.commit().await?;
+
+            let fetched = self.get(tenant_id, id).await?;
+            if let Some(f) = fetched {
+                return Ok(f);
+            }
+
+            return Err(sqlx::Error::RowNotFound);
+        }
+
+        let crate::db::DbStore::Sqlite(pool) = &self.db.store else {
+            unreachable!("PostgreSQL handled above")
+        };
+
         let rec = sqlx::query_as::<_, AgentFeedItem>(
             r#"
             UPDATE agent_feed_items
-            SET lifecycle_state = $1, updated_at = NOW()
-            WHERE tenant_id = $2 AND id = $3
+            SET lifecycle_state = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE tenant_id = ? AND id = ?
             RETURNING *
             "#,
         )
         .bind(new_state)
         .bind(tenant_id)
         .bind(id)
-        .fetch_optional(&self.db.pool)
+        .fetch_optional(pool)
         .await?;
 
         if let Some(r) = rec {
@@ -228,11 +443,11 @@ impl AgentFeedRepository {
         } else {
             "DRAFT"
         };
-        let rows_affected = sqlx::query("UPDATE agent_approvals SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+        let rows_affected = sqlx::query("UPDATE agent_approvals SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
             .bind(legacy_status)
             .bind(tenant_id)
             .bind(id)
-            .execute(&self.db.pool)
+            .execute(pool)
             .await?
             .rows_affected();
 
@@ -245,18 +460,14 @@ impl AgentFeedRepository {
             } else {
                 "Pending"
             };
-            let request_rows_affected = sqlx::query("UPDATE agent_action_requests SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+            let request_rows_affected = sqlx::query("UPDATE agent_action_requests SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                  .bind(request_status)
                  .bind(tenant_id)
                  .bind(id)
-                 .execute(&self.db.pool)
+                 .execute(pool)
                  .await?.rows_affected();
 
             if request_rows_affected == 0 {
-                let is_pg = match &self.db.store {
-                    crate::db::DbStore::Postgres => true,
-                    crate::db::DbStore::Sqlite(_) => false,
-                };
                 // Fallback to omni_inbox_messages
                 let inbox_status = if new_state == "APPROVED" {
                     "sent"
@@ -265,11 +476,11 @@ impl AgentFeedRepository {
                 } else {
                     "unread"
                 };
-                let inbox_rows_affected = sqlx::query("UPDATE omni_inbox_messages SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
+                let inbox_rows_affected = sqlx::query("UPDATE omni_inbox_messages SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                      .bind(inbox_status)
                      .bind(tenant_id)
                      .bind(id)
-                     .execute(&self.db.pool)
+                     .execute(pool)
                      .await?.rows_affected();
 
                 if inbox_rows_affected == 0 {
@@ -278,21 +489,12 @@ impl AgentFeedRepository {
                     } else {
                         "cancelled"
                     };
-                    let order_rows_affected = if is_pg {
-                        sqlx::query("UPDATE orders SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
-                             .bind(order_status)
-                             .bind(tenant_id)
-                             .bind(id)
-                             .execute(&self.db.pool)
-                             .await?.rows_affected()
-                    } else {
-                        sqlx::query("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
-                             .bind(order_status)
-                             .bind(tenant_id)
-                             .bind(id)
-                             .execute(&self.db.pool)
-                             .await?.rows_affected()
-                    };
+                    let order_rows_affected = sqlx::query("UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                         .bind(order_status)
+                         .bind(tenant_id)
+                         .bind(id)
+                         .execute(pool)
+                         .await?.rows_affected();
 
                     if order_rows_affected == 0 {
                         let invoice_status = if new_state == "APPROVED" {
@@ -300,21 +502,12 @@ impl AgentFeedRepository {
                         } else {
                             "cancelled"
                         };
-                        if is_pg {
-                            sqlx::query("UPDATE invoices SET status = $1, updated_at = NOW() WHERE tenant_id = $2 AND id = $3")
-                                 .bind(invoice_status)
-                                 .bind(tenant_id)
-                                 .bind(id)
-                                 .execute(&self.db.pool)
-                                 .await?;
-                        } else {
-                            sqlx::query("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
-                                 .bind(invoice_status)
-                                 .bind(tenant_id)
-                                 .bind(id)
-                                 .execute(&self.db.pool)
-                                 .await?;
-                        }
+                        sqlx::query("UPDATE invoices SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                             .bind(invoice_status)
+                             .bind(tenant_id)
+                             .bind(id)
+                             .execute(pool)
+                             .await?;
                     }
                 }
             }
@@ -335,18 +528,87 @@ impl AgentFeedRepository {
         context_payload: Option<sqlx::types::Json<serde_json::Value>>,
         proposed_action: Option<sqlx::types::Json<serde_json::Value>>,
     ) -> Result<(), sqlx::Error> {
+        let is_pg = match &self.db.store {
+            crate::db::DbStore::Postgres => true,
+            crate::db::DbStore::Sqlite(_) => false,
+        };
+
+        if is_pg {
+            let mut tx = self.db.pool.begin().await?;
+            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+
+            let res = sqlx::query(
+                r#"
+                UPDATE agent_feed_items
+                SET context_payload = $1, proposed_action = $2, updated_at = NOW()
+                WHERE tenant_id = $3 AND id = $4
+                "#,
+            )
+            .bind(&context_payload)
+            .bind(&proposed_action)
+            .bind(tenant_id)
+            .bind(id)
+            .execute(&mut *tx)
+            .await?;
+
+            if res.rows_affected() > 0 {
+                tx.commit().await?;
+                return Ok(());
+            }
+
+            // Fallback for agent_approvals
+            if let Some(action) = &proposed_action {
+                let rows_affected = sqlx::query(
+                    r#"
+                    UPDATE agent_approvals
+                    SET payload = $1, updated_at = NOW()
+                    WHERE tenant_id = $2 AND id = $3
+                    "#,
+                )
+                .bind(action)
+                .bind(tenant_id)
+                .bind(id)
+                .execute(&mut *tx)
+                .await?
+                .rows_affected();
+
+                if rows_affected == 0 {
+                    // Fallback for agent_action_requests
+                    sqlx::query(
+                        r#"
+                        UPDATE agent_action_requests
+                        SET payload = $1, updated_at = NOW()
+                        WHERE tenant_id = $2 AND id = $3
+                        "#,
+                    )
+                    .bind(action)
+                    .bind(tenant_id)
+                    .bind(id)
+                    .execute(&mut *tx)
+                    .await?;
+                }
+            }
+
+            tx.commit().await?;
+            return Ok(());
+        }
+
+        let crate::db::DbStore::Sqlite(pool) = &self.db.store else {
+            unreachable!("PostgreSQL handled above")
+        };
+
         let res = sqlx::query(
             r#"
             UPDATE agent_feed_items
-            SET context_payload = $1, proposed_action = $2, updated_at = NOW()
-            WHERE tenant_id = $3 AND id = $4
+            SET context_payload = ?, proposed_action = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE tenant_id = ? AND id = ?
             "#,
         )
         .bind(&context_payload)
         .bind(&proposed_action)
         .bind(tenant_id)
         .bind(id)
-        .execute(&self.db.pool)
+        .execute(pool)
         .await?;
 
         if res.rows_affected() > 0 {
@@ -358,14 +620,14 @@ impl AgentFeedRepository {
             let rows_affected = sqlx::query(
                 r#"
                 UPDATE agent_approvals
-                SET payload = $1, updated_at = NOW()
-                WHERE tenant_id = $2 AND id = $3
+                SET payload = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE tenant_id = ? AND id = ?
                 "#,
             )
             .bind(action)
             .bind(tenant_id)
             .bind(id)
-            .execute(&self.db.pool)
+            .execute(pool)
             .await?
             .rows_affected();
 
@@ -374,14 +636,14 @@ impl AgentFeedRepository {
                 sqlx::query(
                     r#"
                     UPDATE agent_action_requests
-                    SET payload = $1, updated_at = NOW()
-                    WHERE tenant_id = $2 AND id = $3
+                    SET payload = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE tenant_id = ? AND id = ?
                     "#,
                 )
                 .bind(action)
                 .bind(tenant_id)
                 .bind(id)
-                .execute(&self.db.pool)
+                .execute(pool)
                 .await?;
             }
         }
@@ -412,6 +674,160 @@ mod tests {
         ] {
             assert!(migration.contains(column), "migration is missing {column}");
         }
+    }
+
+    async fn standalone_repository() -> AgentFeedRepository {
+        let sqlite = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        sqlx::raw_sql(include_str!("agent_feed_repo_fixtures.sql"))
+            .execute(&sqlite)
+            .await
+            .unwrap();
+        // A closed placeholder pool makes any accidental PostgreSQL use fail
+        // immediately without depending on a network endpoint or timeout.
+        let postgres = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://unused:unused@127.0.0.1:1/unused")
+            .unwrap();
+        postgres.close().await;
+        AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
+            pool: postgres,
+            store: crate::db::DbStore::Sqlite(sqlite),
+        }))
+    }
+
+    #[tokio::test]
+    async fn standalone_list_reads_each_owned_action_once_before_pagination() {
+        let repo = standalone_repository().await;
+        let rows = repo.list("owner", 2, 0, false).await.unwrap();
+        assert_eq!(
+            rows.iter().map(|row| row.id.as_str()).collect::<Vec<_>>(),
+            vec!["mirrored", "standalone"]
+        );
+        assert_eq!(rows[0].lifecycle_state, "APPROVED");
+        assert_eq!(
+            repo.list("owner", 1, 1, false).await.unwrap()[0].id,
+            "standalone"
+        );
+        assert!(repo.list("unknown", 50, 0, false).await.unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn standalone_get_uses_the_selected_store_and_tenant() {
+        let repo = standalone_repository().await;
+        let row = repo.get("owner", "mirrored").await.unwrap().unwrap();
+        assert_eq!(row.event_source, "canonical");
+        assert_eq!(row.lifecycle_state, "APPROVED");
+        assert_eq!(
+            repo.get("owner", "cross-tenant-id")
+                .await
+                .unwrap()
+                .unwrap()
+                .event_source,
+            "legacy"
+        );
+        assert!(
+            repo.get("owner", "private-request")
+                .await
+                .unwrap()
+                .is_none()
+        );
+        assert!(repo.get("unknown", "mirrored").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn standalone_create_persists_in_the_selected_store() {
+        let repo = standalone_repository().await;
+        let item = AgentFeedItem {
+            id: "new-action".into(),
+            tenant_id: "owner".into(),
+            event_source: "test".into(),
+            context_payload: Some(sqlx::types::Json(serde_json::json!({"message": "persist"}))),
+            proposed_action: Some(sqlx::types::Json(serde_json::json!({"draft": "original"}))),
+            lifecycle_state: "PENDING_APPROVAL".into(),
+            created_at: Some(Utc::now()),
+            updated_at: Some(Utc::now()),
+        };
+        let saved = repo.create(item).await.unwrap();
+        assert_eq!(saved.id, "new-action");
+        assert_eq!(
+            repo.get("owner", "new-action")
+                .await
+                .unwrap()
+                .unwrap()
+                .proposed_action
+                .unwrap()
+                .0["draft"],
+            "original"
+        );
+        assert!(repo.get("other", "new-action").await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn standalone_decisions_persist_without_mutating_another_tenant() {
+        let repo = standalone_repository().await;
+        for id in ["mirrored", "standalone", "cross-tenant-id"] {
+            let row = repo.update_state("owner", id, "DISMISSED").await.unwrap();
+            assert_eq!(row.lifecycle_state, "DISMISSED");
+            assert_eq!(
+                repo.get("owner", id)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .lifecycle_state,
+                "DISMISSED"
+            );
+        }
+        assert_eq!(
+            repo.get("other", "cross-tenant-id")
+                .await
+                .unwrap()
+                .unwrap()
+                .lifecycle_state,
+            "PENDING_APPROVAL"
+        );
+        assert!(matches!(
+            repo.update_state("owner", "private-request", "DISMISSED")
+                .await,
+            Err(sqlx::Error::RowNotFound)
+        ));
+    }
+
+    #[tokio::test]
+    async fn standalone_payload_edits_persist_to_canonical_and_legacy_rows() {
+        let repo = standalone_repository().await;
+        for id in ["mirrored", "standalone", "cross-tenant-id"] {
+            repo.update_payloads(
+                "owner",
+                id,
+                None,
+                Some(sqlx::types::Json(serde_json::json!({"draft": "edited"}))),
+            )
+            .await
+            .unwrap();
+            assert_eq!(
+                repo.get("owner", id)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .proposed_action
+                    .unwrap()
+                    .0["draft"],
+                "edited"
+            );
+        }
+        assert_eq!(
+            repo.get("other", "cross-tenant-id")
+                .await
+                .unwrap()
+                .unwrap()
+                .proposed_action
+                .unwrap()
+                .0,
+            serde_json::json!({})
+        );
     }
 
     #[tokio::test]

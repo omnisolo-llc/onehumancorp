@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "scope": "Seven legacy endpoints formerly returning constant E2E data. This does not assess similarly named real UI/API surfaces.",
+  "readiness": "legacy_contract_scope_not_established",
+  "ci_interpretation": "Green negative containment/infrastructure probes prove refusal only. They neither establish supported feature scope nor positive capability acceptance.",
+  "capabilities": [
+    {
+      "id": "organization_dashboard",
+      "method": "GET",
+      "path": "/api/v1/dashboard",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Read authenticated tenant organization and actual agent/metric records",
+        "Distinguish empty records from storage errors",
+        "Verify tenant isolation and persisted reload"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    },
+    {
+      "id": "cost_summary",
+      "method": "GET",
+      "path": "/api/v1/costs",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Read durable tenant usage/cost records",
+        "Distinguish zero measured cost from unavailable or stale data",
+        "Reconcile payer attribution and verify tenant isolation"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    },
+    {
+      "id": "approval_request",
+      "method": "POST",
+      "path": "/api/v1/approvals/request",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Authenticate owner authority and validate exact requested action",
+        "Persist an idempotent pending approval with immutable reviewed input",
+        "Verify restart and foreign-tenant rejection"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    },
+    {
+      "id": "approval_decision",
+      "method": "PUT",
+      "path": "/api/v1/approvals/decide",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Authorize decision against current owner and immutable pending request",
+        "Persist an atomic replay-safe decision and reject stale or revoked requests",
+        "Verify restart, duplicate submission and foreign-tenant rejection"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    },
+    {
+      "id": "handoff_creation",
+      "method": "POST",
+      "path": "/api/v1/handoffs",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Authenticate actor, tenant and intended recipient",
+        "Persist durable handoff with actual acknowledgement state",
+        "Verify restart/replay and never equate queue admission with delivery"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    },
+    {
+      "id": "skill_import",
+      "method": "POST",
+      "path": "/api/v1/skills/import",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Validate actual owned artifact, source and permitted import scope",
+        "Persist version, digest and verified import result",
+        "Verify reload, invalid artifact and tenant isolation"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    },
+    {
+      "id": "snapshot_creation",
+      "method": "POST",
+      "path": "/api/v1/snapshots/create",
+      "status": "unimplemented",
+      "positive_acceptance": "outstanding",
+      "temporary_contract": {
+        "http_status": 501,
+        "code": "capability_unavailable",
+        "side_effects": "none"
+      },
+      "required_checks": [
+        "Authorize tenant data boundary and snapshot destination",
+        "Persist actual snapshot bytes and integrity manifest",
+        "Verify reload, restore/readback and failure with no invented receipt"
+      ],
+      "completion_rule": "First establish a supported contract or real caller. Retire unused demo-only routes and their probes; if a supported flow exists, preserve it and replace501 only after genuine tenant-scoped persistence and positive receipt acceptance.",
+      "supported_contract": "not_established"
+    }
+  ],
+  "caller_audit": {
+    "as_of_utc": "2026-10-02T19:29:00Z",
+    "sources": [
+      "maintained src/ui",
+      "src/cli",
+      "docs"
+    ],
+    "finding": "No supported callers found for these exact legacy routes; actual dashboard/metrics uses a different real endpoint. External consumers are not established."
+  }
+}

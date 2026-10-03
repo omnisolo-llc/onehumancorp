@@ -147,17 +147,22 @@ mod additional_network_chaos {
 
     #[tokio::test]
     async fn test_sentry_chaos_network_partition_thin_client_sim() {
-        // Condition: SQLite fallback mode encounters invalid remote sync endpoints.
-        // Verification: Missions correctly persist as PENDING rather than erroring out and dropping data.
-        let sync_endpoint = "http://invalid-endpoint.local";
-        let res = reqwest::get(sync_endpoint).await;
-        assert!(res.is_err(), "Network partition simulated successfully");
-
-        // Simulating data persistence in local standalone state
-        let local_status = "PENDING";
-        assert_eq!(
-            local_status, "PENDING",
-            "Missions correctly persist as PENDING"
-        );
+        // Keep a local port reserved without listening: no DNS/proxy dependence
+        // and no race with another test reusing a released ephemeral port.
+        let socket = tokio::net::TcpSocket::new_v4().unwrap();
+        socket.bind("127.0.0.1:0".parse().unwrap()).unwrap();
+        let address = socket.local_addr().unwrap();
+        let client = reqwest::Client::builder()
+            .no_proxy()
+            .timeout(Duration::from_secs(2))
+            .build()
+            .unwrap();
+        let error = client
+            .get(format!("http://{address}"))
+            .send()
+            .await
+            .expect_err("a disconnected sync endpoint must fail transport");
+        drop(socket);
+        assert!(error.is_connect(), "expected a connection failure: {error}");
     }
 }

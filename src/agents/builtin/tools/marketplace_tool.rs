@@ -12,6 +12,7 @@ use super::marketplace::MarketplaceAgent;
 
 // Pydantic-first tool schema validation: MarketplaceArgs
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MarketplaceArgs {
     action: String,
     query: Option<String>,
@@ -46,7 +47,7 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
 
             match self.client.fetch_agent(agent_id).await {
                 Ok(agent) => Ok(format!(
-                    "Successfully fetched agent definition:\n{}",
+                    "Fetched marketplace descriptor:\n{}",
                     serde_json::to_string_pretty(&agent).unwrap_or_default()
                 )),
                 Err(e) => Err(ToolError::Transient(e)),
@@ -57,16 +58,19 @@ impl PydanticToolExecutor<MarketplaceArgs> for MarketplaceToolExecutor {
                 name: args.agent_name.unwrap_or_default(),
                 description: args.agent_description.unwrap_or_default(),
                 author: args.agent_author.unwrap_or_default(),
-                version: args.agent_version.unwrap_or_else(|| "1.0.0".to_string()),
+                version: args.agent_version.unwrap_or_default(),
                 endpoint: args.agent_endpoint.unwrap_or_default(),
             };
 
+            agent
+                .validate_publication()
+                .map_err(ToolError::LlmRecoverable)?;
             match self.client.publish_agent(agent).await {
                 Ok(published) => Ok(format!(
                     "Successfully published agent to marketplace:\n{}",
                     serde_json::to_string_pretty(&published).unwrap_or_default()
                 )),
-                Err(e) => Err(ToolError::Transient(e)),
+                Err(e) => Err(ToolError::UserFixable(e)),
             }
         } else {
             Err(ToolError::LlmRecoverable(format!(
@@ -156,7 +160,7 @@ mod tests {
         });
 
         let result = tool.execute.execute(args).await.unwrap();
-        assert!(result.contains("Successfully fetched"));
+        assert!(result.contains("Fetched marketplace descriptor"));
         assert!(result.contains("Data Analyst"));
     }
 
@@ -169,7 +173,9 @@ mod tests {
             "action": "publish",
             "agent_name": "Writer",
             "agent_description": "Writes essays",
-            "agent_author": "Tester"
+            "agent_author": "Tester",
+            "agent_version": "1.0.0",
+            "agent_endpoint": "https://registry.example.test/definitions/writer"
         });
 
         let result = tool.execute.execute(args).await.unwrap();
@@ -194,5 +200,36 @@ mod tests {
         } else {
             panic!("Expected Pydantic-first validation error");
         }
+    }
+    #[tokio::test]
+    async fn publication_failure_requires_reconciliation_instead_of_automatic_retry() {
+        let client = Arc::new(MarketplaceClient::new(Box::new(MockMarketplaceProvider)));
+        let tool = marketplace_tool(client);
+        let result = tool.execute.execute(json!({
+            "action": "publish", "agent_name": "error", "agent_description": "Reviewed", "agent_author": "Owner", "agent_version": "1.0.0", "agent_endpoint": "https://registry.example.test/definition"
+        })).await;
+        assert!(
+            matches!(result, Err(ToolError::UserFixable(ref message)) if message.contains("reconcile"))
+        );
+    }
+    #[tokio::test]
+    async fn publication_rejects_unsupported_private_prompt_fields() {
+        let tool = marketplace_tool(Arc::new(MarketplaceClient::new(Box::new(
+            MockMarketplaceProvider,
+        ))));
+        let result = tool.execute.execute(json!({
+            "action": "publish", "agent_name": "Writer", "agent_description": "Reviewed", "agent_author": "Owner", "agent_version": "1.0.0", "agent_endpoint": "https://registry.example.test/definition", "system_prompt": "Unpersistable private instructions"
+        })).await;
+        assert!(
+            matches!(result, Err(ToolError::LlmRecoverable(ref message)) if message.contains("unknown field"))
+        );
+    }
+    #[tokio::test]
+    async fn publication_requires_reviewed_version_and_definition_endpoint() {
+        let tool = marketplace_tool(Arc::new(MarketplaceClient::new(Box::new(
+            MockMarketplaceProvider,
+        ))));
+        let result = tool.execute.execute(json!({ "action": "publish", "agent_name": "Writer", "agent_description": "Reviewed", "agent_author": "Owner" })).await;
+        assert!(matches!(result, Err(ToolError::LlmRecoverable(_))));
     }
 }

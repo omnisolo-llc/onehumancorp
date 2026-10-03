@@ -1,25 +1,23 @@
+use chrono::Utc;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
-use chrono::Utc;
 use uuid::Uuid;
 
+use super::activation_routing::CampaignChannel;
 use crate::domain::repository::campaign_repo::CampaignRepository;
 use crate::domain::repository::models::{Campaign, CampaignAsset};
 use crate::integrations::registry::IntegrationsRegistry;
-use super::activation_routing::CampaignChannel;
 
 use ::server_omnisolo::campaign::campaign_service_server::CampaignService;
 use ::server_omnisolo::campaign::{
-    AddAssetRequest, AddAssetResponse, CreateDraftRequest, CreateDraftResponse,
-    LaunchCampaignRequest, LaunchCampaignResponse,
-    ListSocialPostProposalsRequest, ListSocialPostProposalsResponse,
+    AddAssetRequest, AddAssetResponse, Campaign as ProtoCampaign,
+    CampaignAsset as ProtoCampaignAsset, CreateDraftRequest, CreateDraftResponse,
+    LaunchCampaignRequest, LaunchCampaignResponse, ListSocialPostProposalsRequest,
+    ListSocialPostProposalsResponse, SocialPostProposal as ProtoSocialPostProposal,
     UpdateSocialPostProposalRequest, UpdateSocialPostProposalResponse,
-    Campaign as ProtoCampaign, CampaignAsset as ProtoCampaignAsset,
-    SocialPostProposal as ProtoSocialPostProposal,
 };
 
 use crate::domain::repository::SocialPostProposalRepository;
-use crate::domain::repository::models::SocialPostProposal;
 
 pub struct MyCampaignService {
     repo: Arc<CampaignRepository>,
@@ -28,7 +26,10 @@ pub struct MyCampaignService {
 }
 
 impl MyCampaignService {
-    pub fn new(repo: Arc<CampaignRepository>, social_repo: Arc<SocialPostProposalRepository>) -> Self {
+    pub fn new(
+        repo: Arc<CampaignRepository>,
+        social_repo: Arc<SocialPostProposalRepository>,
+    ) -> Self {
         Self::with_integrations_registry(repo, social_repo, Arc::new(IntegrationsRegistry::new()))
     }
 
@@ -255,17 +256,28 @@ impl CampaignService for MyCampaignService {
         &self,
         request: Request<CreateDraftRequest>,
     ) -> Result<Response<CreateDraftResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let mut req = request.into_inner();
@@ -312,24 +324,37 @@ impl CampaignService for MyCampaignService {
         &self,
         request: Request<AddAssetRequest>,
     ) -> Result<Response<AddAssetResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
 
         if req.campaign_id.is_empty() || req.r#type.is_empty() || req.content_url.is_empty() {
-            return Err(Status::invalid_argument("Missing required fields for asset"));
+            return Err(Status::invalid_argument(
+                "Missing required fields for asset",
+            ));
         }
 
         let asset = CampaignAsset {
@@ -363,37 +388,53 @@ impl CampaignService for MyCampaignService {
         &self,
         request: Request<LaunchCampaignRequest>,
     ) -> Result<Response<LaunchCampaignResponse>, Status> {
-        let auth_info = request.extensions().get::<::server_auth::orchestration::AuthInfo>().cloned();
+        let auth_info = request
+            .extensions()
+            .get::<::server_auth::orchestration::AuthInfo>()
+            .cloned();
         let tenant_id = match auth_info {
             Some(info) => info.org_id,
             None => {
-                let spiffe_id_str = request.metadata().get("x-spiffe-id").and_then(|v| v.to_str().ok()).unwrap_or("");
-                ::server_auth::parse_spiffe_id(spiffe_id_str).map_err(|_| Status::unauthenticated("invalid spiffe id"))?.0
+                let spiffe_id_str = request
+                    .metadata()
+                    .get("x-spiffe-id")
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("");
+                ::server_auth::parse_spiffe_id(spiffe_id_str)
+                    .map_err(|_| Status::unauthenticated("invalid spiffe id"))?
+                    .0
             }
         };
 
         if tenant_id.is_empty() {
-            return Err(Status::unauthenticated("missing tenant identity in session"));
+            return Err(Status::unauthenticated(
+                "missing tenant identity in session",
+            ));
         }
 
         let mut req = request.into_inner();
         req.tenant_id = tenant_id.clone();
 
-        let campaign = self.repo
+        let campaign = self
+            .repo
             .get_campaign(&req.tenant_id, &req.campaign_id)
             .await
             .map_err(|e| Status::not_found(format!("Campaign not found: {}", e)))?;
 
-        let assets = self.repo
+        let assets = self
+            .repo
             .get_assets(&req.tenant_id, &req.campaign_id)
             .await
             .map_err(|e| Status::internal(format!("Failed to fetch assets: {}", e)))?;
 
         if assets.is_empty() {
-            return Err(Status::failed_precondition("Cannot launch campaign without assets"));
+            return Err(Status::failed_precondition(
+                "Cannot launch campaign without assets",
+            ));
         }
 
-        let dispatches = self.activation_dispatcher
+        let dispatches = self
+            .activation_dispatcher
             .dispatch_active_campaign(campaign, assets)
             .await
             .map_err(Status::failed_precondition)?;
@@ -407,7 +448,12 @@ impl CampaignService for MyCampaignService {
                     dispatch.metrics_sent,
                 )
                 .await
-                .map_err(|e| Status::internal(format!("Failed to record campaign channel execution: {}", e)))?;
+                .map_err(|e| {
+                    Status::internal(format!(
+                        "Failed to record campaign channel execution: {}",
+                        e
+                    ))
+                })?;
         }
 
         self.repo
@@ -415,7 +461,8 @@ impl CampaignService for MyCampaignService {
             .await
             .map_err(|e| Status::internal(format!("Failed to update campaign status: {}", e)))?;
 
-        let updated_campaign = self.repo
+        let updated_campaign = self
+            .repo
             .get_campaign(&req.tenant_id, &req.campaign_id)
             .await
             .map_err(|e| Status::internal(format!("Failed to refetch campaign: {}", e)))?;
@@ -438,23 +485,27 @@ impl CampaignService for MyCampaignService {
         request: Request<ListSocialPostProposalsRequest>,
     ) -> Result<Response<ListSocialPostProposalsResponse>, Status> {
         let req = request.into_inner();
-        let proposals = self.social_repo
+        let proposals = self
+            .social_repo
             .list_proposals(&req.tenant_id, &req.status)
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let proto_proposals = proposals.into_iter().map(|p| ProtoSocialPostProposal {
-            id: p.id,
-            tenant_id: p.tenant_id,
-            product_id: p.product_id,
-            content: p.content,
-            image_url: p.image_url.unwrap_or_default(),
-            seo_alt_text: p.seo_alt_text.unwrap_or_default(),
-            seo_meta_description: p.seo_meta_description.unwrap_or_default(),
-            status: p.status,
-            created_at_unix: p.created_at_unix,
-            updated_at_unix: p.updated_at_unix,
-        }).collect();
+        let proto_proposals = proposals
+            .into_iter()
+            .map(|p| ProtoSocialPostProposal {
+                id: p.id,
+                tenant_id: p.tenant_id,
+                product_id: p.product_id,
+                content: p.content,
+                image_url: p.image_url.unwrap_or_default(),
+                seo_alt_text: p.seo_alt_text.unwrap_or_default(),
+                seo_meta_description: p.seo_meta_description.unwrap_or_default(),
+                status: p.status,
+                created_at_unix: p.created_at_unix,
+                updated_at_unix: p.updated_at_unix,
+            })
+            .collect();
 
         Ok(Response::new(ListSocialPostProposalsResponse {
             proposals: proto_proposals,
@@ -468,11 +519,17 @@ impl CampaignService for MyCampaignService {
         let req = request.into_inner();
         let updated_at_unix = Utc::now().timestamp();
         self.social_repo
-            .update_status(&req.tenant_id, &req.proposal_id, &req.status, updated_at_unix)
+            .update_status(
+                &req.tenant_id,
+                &req.proposal_id,
+                &req.status,
+                updated_at_unix,
+            )
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let proposal = self.social_repo
+        let proposal = self
+            .social_repo
             .get_proposal(&req.tenant_id, &req.proposal_id)
             .await
             .map_err(|e| Status::internal(e.to_string()))?
@@ -493,22 +550,22 @@ impl CampaignService for MyCampaignService {
             }),
         }))
     }
-
 }
 
 #[cfg(test)]
 mod tests {
+    use super::super::test_database::TestDatabase;
     use super::*;
-    use crate::domain::repository::models::Tenant;
     use crate::domain::repository::campaign_repo::CampaignRepository;
-    use sqlx::PgPool;
-    use tonic::Request;
     use std::sync::{Arc, Mutex};
+    use tonic::Request;
     use uuid::Uuid;
+
+    type RecordedDispatches = Arc<Mutex<Vec<(String, Vec<String>)>>>;
 
     #[derive(Clone)]
     struct RecordingActivationDispatcher {
-        calls: Arc<Mutex<Vec<(String, Vec<String>)>>>,
+        calls: RecordedDispatches,
         result: Result<Vec<CampaignActivationDispatch>, String>,
     }
 
@@ -520,10 +577,7 @@ mod tests {
             assets: Vec<CampaignAsset>,
         ) -> Result<Vec<CampaignActivationDispatch>, String> {
             let asset_types = assets.into_iter().map(|asset| asset.r#type).collect();
-            self.calls
-                .lock()
-                .unwrap()
-                .push((campaign.id, asset_types));
+            self.calls.lock().unwrap().push((campaign.id, asset_types));
             self.result.clone()
         }
     }
@@ -554,12 +608,30 @@ mod tests {
 
     #[test]
     fn test_campaign_activation_routes_third_party_asset_types() {
-        assert_eq!(CampaignChannel::from_asset_type("Email"), Some(CampaignChannel::SendGrid));
-        assert_eq!(CampaignChannel::from_asset_type("sendgrid"), Some(CampaignChannel::SendGrid));
-        assert_eq!(CampaignChannel::from_asset_type("SMS"), Some(CampaignChannel::Twilio));
-        assert_eq!(CampaignChannel::from_asset_type("twilio"), Some(CampaignChannel::Twilio));
-        assert_eq!(CampaignChannel::from_asset_type("Social"), Some(CampaignChannel::Meta));
-        assert_eq!(CampaignChannel::from_asset_type("instagram"), Some(CampaignChannel::Meta));
+        assert_eq!(
+            CampaignChannel::from_asset_type("Email"),
+            Some(CampaignChannel::SendGrid)
+        );
+        assert_eq!(
+            CampaignChannel::from_asset_type("sendgrid"),
+            Some(CampaignChannel::SendGrid)
+        );
+        assert_eq!(
+            CampaignChannel::from_asset_type("SMS"),
+            Some(CampaignChannel::Twilio)
+        );
+        assert_eq!(
+            CampaignChannel::from_asset_type("twilio"),
+            Some(CampaignChannel::Twilio)
+        );
+        assert_eq!(
+            CampaignChannel::from_asset_type("Social"),
+            Some(CampaignChannel::Meta)
+        );
+        assert_eq!(
+            CampaignChannel::from_asset_type("instagram"),
+            Some(CampaignChannel::Meta)
+        );
         assert_eq!(CampaignChannel::from_asset_type("Image"), None);
     }
 
@@ -617,45 +689,28 @@ mod tests {
         );
     }
 
-    // Helper to setup an isolated database for tests
-    async fn setup_db() -> (PgPool, String) {
-        let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test".to_string());
-        let pool = PgPool::connect(&db_url).await.unwrap();
-
-        let tenant_id = Uuid::new_v4().to_string();
-
-        sqlx::query("INSERT INTO tenants (id, name, type) VALUES ($1, $2, 'test') ON CONFLICT DO NOTHING")
-            .bind(&tenant_id)
-            .bind(format!("Test Tenant {}", tenant_id))
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        // Set the current tenant for RLS to pass in testing
-        sqlx::query(&format!("SET app.current_tenant = '{}'", tenant_id))
-            .execute(&pool)
-            .await
-            .unwrap();
-
-        (pool, tenant_id)
-    }
-
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+    #[ignore = "requires OHC_CAMPAIGN_TEST_DATABASE_URL disposable PostgreSQL"]
     async fn test_create_draft_campaign() {
-        let (pool, tenant_id) = setup_db().await;
+        let fixture = TestDatabase::new().await;
+        let pool = fixture.pool.clone();
+        let tenant_id = fixture.tenant_id.clone();
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::new(
+            repo,
+            Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())),
+        );
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Flash Sale".to_string(),
         });
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign = res.campaign.unwrap();
@@ -664,24 +719,31 @@ mod tests {
         assert_eq!(campaign.status, "Draft");
         assert_eq!(campaign.tenant_id, tenant_id);
         assert!(!campaign.id.is_empty());
+        fixture.cleanup().await;
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+    #[ignore = "requires OHC_CAMPAIGN_TEST_DATABASE_URL disposable PostgreSQL"]
     async fn test_add_asset_to_campaign() {
-        let (pool, tenant_id) = setup_db().await;
+        let fixture = TestDatabase::new().await;
+        let pool = fixture.pool.clone();
+        let tenant_id = fixture.tenant_id.clone();
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::new(
+            repo,
+            Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())),
+        );
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Summer Promo".to_string(),
         });
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
@@ -692,11 +754,13 @@ mod tests {
             r#type: "Image".to_string(),
             content_url: "https://example.com/asset.jpg".to_string(),
         });
-        asset_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        asset_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
         let asset_res = service.add_asset(asset_req).await.unwrap().into_inner();
         let asset = asset_res.asset.unwrap();
@@ -704,24 +768,31 @@ mod tests {
         assert_eq!(asset.campaign_id, campaign_id);
         assert_eq!(asset.content_url, "https://example.com/asset.jpg");
         assert_eq!(asset.r#type, "Image");
+        fixture.cleanup().await;
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+    #[ignore = "requires OHC_CAMPAIGN_TEST_DATABASE_URL disposable PostgreSQL"]
     async fn test_launch_campaign_requires_asset() {
-        let (pool, tenant_id) = setup_db().await;
+        let fixture = TestDatabase::new().await;
+        let pool = fixture.pool.clone();
+        let tenant_id = fixture.tenant_id.clone();
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::new(
+            repo,
+            Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())),
+        );
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Empty Campaign".to_string(),
         });
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
@@ -730,21 +801,26 @@ mod tests {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
         });
-        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        launch_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
         let err = service.launch_campaign(launch_req).await.unwrap_err();
         assert_eq!(err.code(), tonic::Code::FailedPrecondition);
         assert_eq!(err.message(), "Cannot launch campaign without assets");
+        fixture.cleanup().await;
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+    #[ignore = "requires OHC_CAMPAIGN_TEST_DATABASE_URL disposable PostgreSQL"]
     async fn test_complete_campaign_flow() {
-        let (pool, tenant_id) = setup_db().await;
+        let fixture = TestDatabase::new().await;
+        let pool = fixture.pool.clone();
+        let tenant_id = fixture.tenant_id.clone();
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
         let dispatch_calls = Arc::new(Mutex::new(Vec::new()));
         let dispatcher = RecordingActivationDispatcher {
@@ -755,18 +831,23 @@ mod tests {
                 metrics_sent: 1,
             }]),
         };
-        let service = MyCampaignService::with_activation_dispatcher(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())), Arc::new(dispatcher));
+        let service = MyCampaignService::with_activation_dispatcher(
+            repo,
+            Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())),
+            Arc::new(dispatcher),
+        );
 
         // 1. Create Draft
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Complete Flow".to_string(),
         });
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
 
@@ -777,11 +858,13 @@ mod tests {
             r#type: "Email".to_string(),
             content_url: "Test Copy Content".to_string(),
         });
-        asset_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        asset_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
         service.add_asset(asset_req).await.unwrap();
 
         // 3. Launch
@@ -789,13 +872,19 @@ mod tests {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
         });
-        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        launch_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
-        let launch_res = service.launch_campaign(launch_req).await.unwrap().into_inner();
+        let launch_res = service
+            .launch_campaign(launch_req)
+            .await
+            .unwrap()
+            .into_inner();
         let final_campaign = launch_res.campaign.unwrap();
 
         assert_eq!(final_campaign.status, "Active");
@@ -804,31 +893,53 @@ mod tests {
             &[(campaign_id.clone(), vec!["Email".to_string()])]
         );
 
-        let channel: String = sqlx::query_scalar("SELECT channel FROM channel_executions WHERE tenant_id = $1 AND campaign_id = $2")
-            .bind(&tenant_id)
-            .bind(&campaign_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let channel: String = sqlx::query_scalar(
+            "SELECT channel FROM channel_executions WHERE tenant_id = $1 AND campaign_id = $2",
+        )
+        .bind(&tenant_id)
+        .bind(&campaign_id)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
         assert_eq!(channel, "sendgrid");
+        fixture.cleanup().await;
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+    #[ignore = "requires OHC_CAMPAIGN_TEST_DATABASE_URL disposable PostgreSQL"]
     async fn test_launch_campaign_requires_third_party_activation_dispatch() {
-        let (pool, tenant_id) = setup_db().await;
+        let fixture = TestDatabase::new().await;
+        let pool = fixture.pool.clone();
+        let tenant_id = fixture.tenant_id.clone();
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::with_activation_dispatcher(
+            repo,
+            Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())),
+            Arc::new(RegistryCampaignActivationDispatcher {
+                registry: Arc::new(IntegrationsRegistry::new()),
+                config: CampaignActivationConfig {
+                    sendgrid_integration_id: "sendgrid".to_string(),
+                    sendgrid_to_email: None,
+                    twilio_integration_id: "twilio".to_string(),
+                    twilio_to_phone: None,
+                    twilio_from_phone: None,
+                    meta_integration_id: "meta".to_string(),
+                    meta_platform: "facebook".to_string(),
+                    meta_recipient_id: None,
+                },
+            }),
+        );
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_id.clone(),
             goal: "Launch through SendGrid".to_string(),
         });
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
 
@@ -838,54 +949,67 @@ mod tests {
             r#type: "Email".to_string(),
             content_url: "Real launch body".to_string(),
         });
-        asset_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        asset_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
         service.add_asset(asset_req).await.unwrap();
 
         let mut launch_req = Request::new(LaunchCampaignRequest {
             tenant_id: tenant_id.clone(),
             campaign_id: campaign_id.clone(),
         });
-        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_id.clone(),
-            agent_id: "test".to_string(),
-        });
+        launch_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_id.clone(),
+                agent_id: "test".to_string(),
+            });
 
         let err = service.launch_campaign(launch_req).await.unwrap_err();
         assert_eq!(err.code(), tonic::Code::FailedPrecondition);
         assert!(err.message().contains("Campaign activation requires"));
 
-        let status: String = sqlx::query_scalar("SELECT status FROM campaigns WHERE tenant_id = $1 AND id = $2")
-            .bind(&tenant_id)
-            .bind(&campaign_id)
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let status: String =
+            sqlx::query_scalar("SELECT status FROM campaigns WHERE tenant_id = $1 AND id = $2")
+                .bind(&tenant_id)
+                .bind(&campaign_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(status, "Draft");
+        fixture.cleanup().await;
     }
 
     #[tokio::test]
-    #[ignore = "requires local Postgres"]
+    #[ignore = "requires OHC_CAMPAIGN_TEST_DATABASE_URL disposable PostgreSQL"]
     async fn test_tenant_isolation() {
-        let (pool, tenant_1) = setup_db().await;
-        let (_, tenant_2) = setup_db().await; // Setup second tenant, using same DB structure
+        let fixture = TestDatabase::new().await;
+        let pool = fixture.pool.clone();
+        let tenant_1 = fixture.tenant_id.clone();
+        let tenant_2 = Uuid::new_v4().to_string();
+        fixture.insert_tenant(&tenant_2).await;
 
         let repo = Arc::new(CampaignRepository::new(pool.clone()));
-        let service = MyCampaignService::new(repo, Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())));
+        let service = MyCampaignService::new(
+            repo,
+            Arc::new(crate::domain::repository::SocialPostProposalRepository::new(pool.clone())),
+        );
 
         let mut req = Request::new(CreateDraftRequest {
             tenant_id: tenant_1.clone(),
             goal: "Tenant 1 Promo".to_string(),
         });
-        req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_1.clone(),
-            agent_id: "test".to_string(),
-        });
+        req.extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_1.clone(),
+                agent_id: "test".to_string(),
+            });
         let res = service.create_draft(req).await.unwrap().into_inner();
         let campaign_id = res.campaign.unwrap().id;
 
@@ -899,14 +1023,40 @@ mod tests {
             tenant_id: tenant_2.clone(), // tenant 2 trying to launch tenant 1's campaign
             campaign_id: campaign_id.clone(),
         });
-        launch_req.extensions_mut().insert(::server_auth::orchestration::AuthInfo {
-            spiffe_id: "test".to_string(),
-            org_id: tenant_2.clone(),
-            agent_id: "test".to_string(),
-        });
+        launch_req
+            .extensions_mut()
+            .insert(::server_auth::orchestration::AuthInfo {
+                spiffe_id: "test".to_string(),
+                org_id: tenant_2.clone(),
+                agent_id: "test".to_string(),
+            });
 
-        // The query should not find the campaign due to RLS
+        // Both the tenant predicate and forced RLS must hide the foreign campaign
         let err = service.launch_campaign(launch_req).await.unwrap_err();
         assert_eq!(err.code(), tonic::Code::NotFound);
+        let visible: i64 = sqlx::query_scalar("SELECT count(*) FROM campaigns WHERE id = $1")
+            .bind(&campaign_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            visible, 0,
+            "forced RLS must hide the row without a tenant predicate"
+        );
+        sqlx::query("SELECT set_config('app.current_tenant', $1, false)")
+            .bind(&tenant_1)
+            .execute(&pool)
+            .await
+            .unwrap();
+        let status: String = sqlx::query_scalar("SELECT status FROM campaigns WHERE id = $1")
+            .bind(&campaign_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            status, "Draft",
+            "foreign launch must leave the original campaign untouched"
+        );
+        fixture.cleanup().await;
     }
 }

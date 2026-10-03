@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise action-owned setup and bounded dependency caches without installing tools."""
 import json
+from itertools import combinations
 import os
 from pathlib import Path
 import re
@@ -35,7 +36,7 @@ class NativeCacheTests(unittest.TestCase):
 
     def test_all_application_and_security_gates_remain_required(self):
         expected = {'check-changes', 'dependency-audit', 'native-build', 'native-test',
-            'native-node', 'native-web', 'native-desktop', 'native-e2e', 'native-images',
+            'native-node', 'native-web', 'native-desktop', 'native-e2e', 'native-click-coverage', 'native-images',
             'postgres-security', 'kind-e2e', 'docker-e2e'}
         gate = self.ci['jobs']['ci-required']
         self.assertEqual(set(gate['needs']), expected)
@@ -50,6 +51,46 @@ class NativeCacheTests(unittest.TestCase):
                     completed = subprocess.run(['bash', '--noprofile', '--norc', '-c', step['run']],
                         env=env, capture_output=True, text=True, timeout=10)
                     self.assertNotEqual(completed.returncode, 0)
+
+    def test_complete_ci_graph_uses_at_most_eight_concurrent_runners(self):
+        jobs = self.ci['jobs']
+
+        def ancestors(name):
+            needs = jobs[name].get('needs', [])
+            if isinstance(needs, str):
+                needs = [needs]
+            return set(needs).union(*(ancestors(need) for need in needs))
+
+        predecessors = {name: ancestors(name) for name in jobs}
+        weights = {}
+        for name, job in jobs.items():
+            strategy = job.get('strategy', {})
+            matrix = strategy.get('matrix', {})
+            self.assertLessEqual(len(matrix), 1, 'extend runner accounting for multidimensional matrices')
+            copies = len(next(iter(matrix.values()))) if matrix else 1
+            weights[name] = min(copies, strategy.get('max-parallel', copies))
+
+        peak = 0
+        for size in range(1, len(jobs) + 1):
+            for concurrent in combinations(jobs, size):
+                if any(a in predecessors[b] or b in predecessors[a]
+                       for a, b in combinations(concurrent, 2)):
+                    continue
+                peak = max(peak, sum(weights[name] for name in concurrent))
+        self.assertLessEqual(peak, 8, f'CI can occupy {peak} runners concurrently')
+
+    def test_browser_shards_keep_running_after_independent_quality_failure(self):
+        job = self.ci['jobs']['native-e2e']
+        self.assertEqual(job['strategy']['matrix']['shard'], list(range(1, 13)))
+        self.assertIn('!cancelled()', job['if'])
+        self.assertIn("needs.native-build.result == 'success'", job['if'])
+        self.assertIn("needs.native-web.result == 'success'", job['if'])
+        for name in ('dependency-audit', 'native-node', 'native-desktop'):
+            self.assertIn(name, job['needs'])
+            self.assertNotIn(f'needs.{name}.result', job['if'])
+        self.assertNotIn('postgres-security', job['needs'])
+        self.assertNotIn('needs.postgres-security.result', job['if'])
+        self.assertIn('postgres-security', self.ci['jobs']['ci-required']['needs'])
 
     def test_action_pins_and_cargo_dependency_boundary(self):
         rust = next(step for step in self.steps if step.get('uses', '').startswith('dtolnay/rust-toolchain@'))
@@ -159,6 +200,80 @@ class NativeCacheTests(unittest.TestCase):
             self.assertIn('env.ImageOS', restore['with'][key])
         build = next(s for s in steps if s.get('run') == 'make build-web')
         self.assertNotIn('if', build, 'cache hits must never skip source compilation')
+
+
+    def test_rust_tests_run_after_lint_failure_and_pg_feed_queries_are_real(self):
+        steps = self.ci['jobs']['native-test']['steps']
+        setup = next(step for step in steps if step.get('uses') == './.github/actions/setup-native')
+        self.assertEqual(setup.get('id'), 'rust-setup')
+        test = next(step for step in steps if step.get('run') == 'make test-backend')
+        self.assertEqual(test.get('if'), "${{ !cancelled() && steps.rust-setup.outcome == 'success' }}")
+        self.assertFalse(test.get('continue-on-error', False))
+        postgres = self.ci['jobs']['postgres-security']['steps']
+        feed = next((step for step in postgres if 'agent_feed_query_regression.py --postgres' in step.get('run', '')), None)
+        self.assertIsNotNone(feed, 'mirrored approvals need production PostgreSQL query coverage')
+        self.assertIn('ohc_feed_query_test', feed['run'])
+        self.assertIn('FEED_QUERY_TEST_DATABASE_URL', feed.get('env', {}))
+        self.assertFalse(feed.get('continue-on-error', False))
+
+    def test_rust_lint_diagnostics_are_uploaded_before_tests_without_masking_failure(self):
+        steps = self.ci['jobs']['native-test']['steps']
+        lint = next(step for step in steps if 'make lint-backend' in step.get('run', ''))
+        upload = next((step for step in steps if step.get('with', {}).get('path') == 'target/ci-logs/lint-backend.log'), None)
+        tests = next(step for step in steps if step.get('run') == 'make test-backend')
+        self.assertIsNotNone(upload, 'the exact lint log must be available before a long test job finishes')
+        self.assertLess(steps.index(lint), steps.index(upload))
+        self.assertLess(steps.index(upload), steps.index(tests))
+        self.assertEqual(upload.get('if'), '${{ always() }}')
+        self.assertEqual(upload['uses'], 'actions/upload-artifact@v6')
+        self.assertEqual(upload['with'].get('if-no-files-found'), 'error')
+        self.assertFalse(lint.get('continue-on-error', False))
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            executable = root / 'make'
+            executable.write_text('#!/usr/bin/env bash\necho "fixture stdout"\necho "fixture stderr" >&2\nexit 23\n')
+            executable.chmod(0o700)
+            result = subprocess.run(['bash', '-c', lint['run']], cwd=root,
+                env={**os.environ, 'PATH': str(root) + os.pathsep + os.environ['PATH']},
+                capture_output=True, text=True, timeout=10)
+            self.assertEqual(result.returncode, 23, result.stdout + result.stderr)
+            recorded = (root / 'target/ci-logs/lint-backend.log').read_text()
+            self.assertIn('fixture stdout', recorded)
+            self.assertIn('fixture stderr', recorded)
+
+
+    def test_postgres_runs_product_seo_snapshot_regression(self):
+        steps = self.ci['jobs']['postgres-security']['steps']
+        seo = next((step for step in steps if 'product_seo_snapshot_regression.py' in step.get('run', '')), None)
+        self.assertIsNotNone(seo, 'asynchronous SEO snapshots need a real PostgreSQL stale-write check')
+        self.assertIn('ohc_seo_snapshot_test', seo['run'])
+        self.assertIn('SEO_SNAPSHOT_TEST_DATABASE_URL', seo.get('env', {}))
+        self.assertFalse(seo.get('continue-on-error', False))
+
+
+    def test_postgres_runs_optional_quote_configuration_regression(self):
+        steps = self.ci['jobs']['postgres-security']['steps']
+        quote = next((step for step in steps if 'scripts/quote-taxjar/Cargo.toml' in step.get('run', '')), None)
+        self.assertIsNotNone(quote, 'missing tax schema and hosted credential isolation need PostgreSQL coverage')
+        self.assertIn('--locked', quote['run'])
+        self.assertIn('--include-ignored', quote['run'])
+        self.assertIn('OHC_QUOTE_TEST_DATABASE_URL', quote.get('env', {}))
+        self.assertEqual(quote['env']['TAXJAR_API_KEY'], 'local-regression-taxjar-key')
+        self.assertFalse(quote.get('continue-on-error', False))
+
+
+    def test_postgres_runs_durable_sync_and_catalog_regressions(self):
+        steps = self.ci['jobs']['postgres-security']['steps']
+        sync = next((step for step in steps if 'scripts/sync-durability/run.sh' in step.get('run', '')), None)
+        self.assertIsNotNone(sync, 'durable receipt and business mutation checks must run against PostgreSQL')
+        self.assertIn('OHC_SYNC_TEST_DATABASE_URL', sync.get('env', {}))
+        self.assertFalse(sync.get('continue-on-error', False))
+        catalog = next((step for step in steps if 'scripts/catalog-edit/Cargo.toml' in step.get('run', '')), None)
+        self.assertIsNotNone(catalog, 'real catalog edits need PostgreSQL and SQLite coverage')
+        self.assertIn('--locked', catalog['run'])
+        self.assertIn('--include-ignored', catalog['run'])
+        self.assertIn('OHC_CATALOG_TEST_DATABASE_URL', catalog.get('env', {}))
+        self.assertFalse(catalog.get('continue-on-error', False))
 
 
 if __name__ == '__main__':

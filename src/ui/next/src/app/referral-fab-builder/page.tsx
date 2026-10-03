@@ -8,10 +8,11 @@ export default function ReferralFabBuilder() {
   const [reward, setReward] = useState("$10");
   const [themeColor, setThemeColor] = useState("#2563eb");
   const [tenantId, setTenantId] = useState("my-business");
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -76,8 +77,11 @@ export default function ReferralFabBuilder() {
 
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Reward (e.g. "$10", "20% Off")</label>
+                <label htmlFor="reward-input" className="block text-sm font-medium text-gray-700 mb-1">Reward (e.g. "$10", "20% Off")</label>
                 <input
+                  id="reward-input"
+                  aria-label="Reward amount"
+                  placeholder="$10"
                   type="text"
                   value={reward}
                   onChange={(e) => setReward(e.target.value)}
@@ -92,6 +96,7 @@ export default function ReferralFabBuilder() {
                     <button
                       key={c}
                       onClick={() => setThemeColor(c)}
+                      aria-pressed={themeColor === c}
                       className={`w-10 h-10 rounded-full border-2 ${themeColor === c ? 'border-gray-900' : 'border-transparent'}`}
                       style={{ backgroundColor: c }}
                       aria-label={`Select color ${c}`}
@@ -114,6 +119,7 @@ export default function ReferralFabBuilder() {
                 </div>
                 <button
                   role="switch"
+                  aria-label="Remove Branding"
                   aria-checked={removeBranding}
                   onClick={handleBrandingToggle}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${removeBranding ? 'bg-indigo-600' : 'bg-gray-200'}`}
@@ -169,7 +175,7 @@ export default function ReferralFabBuilder() {
            </div>
 
            {/* Live Preview of the FAB */}
-           <div className="absolute bottom-6 right-6 flex flex-col items-end group">
+           <div aria-hidden="true" className="absolute bottom-6 right-6 flex flex-col items-end group">
              {/* The FAB itself */}
              <div
                className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-transform hover:scale-105 text-white"
@@ -179,11 +185,11 @@ export default function ReferralFabBuilder() {
              </div>
 
              {/* Popover Preview (simulated hover state) */}
-             <div className="absolute bottom-16 right-0 mb-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 p-5 transform origin-bottom-right transition-all opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100">
+             <div aria-hidden="true" className="absolute bottom-16 right-0 mb-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 p-5 transform origin-bottom-right transition-all opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100">
                <h3 className="font-bold text-gray-900 mb-1">Get {reward}</h3>
                <p className="text-sm text-gray-600 mb-4">Give a friend {reward} off their first order, and get {reward} when they buy!</p>
-               <input type="email" placeholder="Enter your email" className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg mb-3 bg-gray-50 pointer-events-none" />
-               <button className="w-full py-2 text-white text-sm font-semibold rounded-lg pointer-events-none" style={{ backgroundColor: themeColor }}>
+               <input disabled aria-label="Enter your email" type="email" placeholder="Enter your email" className="w-full text-sm px-3 py-2 border border-gray-200 rounded-lg mb-3 bg-gray-50 pointer-events-none" />
+               <button disabled aria-label="Get Share Link" className="w-full py-2 text-white text-sm font-semibold rounded-lg pointer-events-none" style={{ backgroundColor: themeColor }}>
                  Get Share Link
                </button>
                {!removeBranding && (
@@ -201,6 +207,7 @@ export default function ReferralFabBuilder() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl relative">
             <button
+              aria-label="Close modal"
               onClick={() => setShowPaywall(false)}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
             >

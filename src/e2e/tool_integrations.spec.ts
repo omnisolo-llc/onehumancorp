@@ -7,7 +7,8 @@ function integrationCard(page: import('@playwright/test').Page, name: string) {
 }
 
 test.describe('Tool Integrations UI', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
   });
@@ -48,42 +49,37 @@ test.describe('Tool Integrations UI', () => {
     await expect(integrationCard(page, 'Front')).toContainText('Central omnichannel inbox aggregating messages across all channels.');
   });
 
-  test('can connect Ayrshare', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
-    await integrationCard(page, 'Ayrshare').getByRole('button', { name: 'Connect' }).click();
-    await expect(page).toHaveURL(/\/inbox$/);
-  });
+  for (const name of ['Ayrshare', 'Cal.com', 'Resend', 'Mercado Pago', 'Whereby', 'Front']) {
+    test(`${name} stays disconnected when secure verification is unavailable`, async ({ page }) => {
+      const writes: string[] = [];
+      const dialogs: string[] = [];
+      page.on('request', request => {
+        if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/api/v1/integrations/')) writes.push(request.url());
+      });
+      page.on('dialog', dialog => { dialogs.push(dialog.type()); void dialog.dismiss(); });
+      const card = integrationCard(page, name);
+      await card.getByRole('button', { name: 'Connect', exact: true }).click();
+      await expect(page.getByText(`${name} connection is unavailable until secure provider verification is configured.`, { exact: true })).toBeVisible();
+      await expect(card.getByText('disconnected', { exact: true })).toBeVisible();
+      await expect(card.getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+      await expect(page).toHaveURL(/\/integrations$/);
+      expect(writes).toEqual([]);
+      expect(dialogs).toEqual([]);
+    });
+  }
 
-  test('can connect Cal.com', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
-    await integrationCard(page, 'Cal.com').getByRole('button', { name: 'Connect' }).click();
-    await expect(integrationCard(page, 'Cal.com').getByText('connected')).toBeVisible();
-  });
-
-  test('can connect Resend and Mercado Pago', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
-    await integrationCard(page, 'Resend').getByRole('button', { name: 'Connect' }).click();
-    await expect(integrationCard(page, 'Resend').getByText('connected')).toBeVisible();
-
-    await integrationCard(page, 'Mercado Pago').getByRole('button', { name: 'Connect' }).click();
-    await expect(integrationCard(page, 'Mercado Pago').getByText('connected')).toBeVisible();
-  });
-
-  test('can connect Twilio Conversations and Whereby', async ({ page }) => {
-    await integrationCard(page, 'Twilio Conversations').getByRole('button', { name: 'Connect' }).click();
-    await expect(page.getByRole('heading', { name: 'Connect Twilio Conversations' })).toBeVisible();
-    await page.getByRole('button', { name: 'Save & Connect' }).click();
-    await expect(page).toHaveURL(/\/inbox$/);
-
-    await page.goto('/integrations');
-    page.on('dialog', dialog => dialog.accept());
-    await integrationCard(page, 'Whereby').getByRole('button', { name: 'Connect' }).click();
-    await expect(integrationCard(page, 'Whereby').getByText('connected')).toBeVisible();
-  });
-
-  test('can connect Front', async ({ page }) => {
-    page.on('dialog', dialog => dialog.accept());
-    await integrationCard(page, 'Front').getByRole('button', { name: 'Connect' }).click();
-    await expect(integrationCard(page, 'Front').getByText('connected')).toBeVisible();
+  test('blank Twilio credentials cannot claim a connection or navigate to an inbox', async ({ page }) => {
+    const writes: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/integrations/twilio/connect') writes.push(request.url());
+    });
+    await integrationCard(page, 'Twilio Conversations').getByRole('button', { name: 'Connect', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Connect Twilio Conversations', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Twilio Account SID')).toBeEmpty();
+    await expect(page.getByLabel('Twilio Auth Token')).toBeEmpty();
+    await expect(page.getByRole('button', { name: 'Save & Connect', exact: true })).toBeDisabled();
+    await expect(page.getByText('Twilio Conversations connected.', { exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/integrations$/);
+    expect(writes).toEqual([]);
   });
 });
