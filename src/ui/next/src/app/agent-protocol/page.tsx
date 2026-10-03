@@ -14,11 +14,10 @@ export default function AgentProtocolPage() {
   const [scope, setScope] = useState(0);
   const retire = useCallback(() => setScope(value => value + 1), []);
   const execution = useTenantAnalysis(retire);
-  return <main className="max-w-6xl mx-auto p-8 font-sans">
-    <h1 className="text-3xl font-bold mb-4">Agent Protocol UI</h1>
+  return <div className="max-w-6xl mx-auto p-8 font-sans">
     <RecordedTextAnalysis key={`analysis-${scope}`} execution={execution} />
     <WorkspaceRuntime key={`runtime-${scope}`} />
-  </main>;
+  </div>;
 }
 
 function WorkspaceRuntime() {

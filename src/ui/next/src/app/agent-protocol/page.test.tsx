@@ -2,8 +2,15 @@ import React from 'react';
 import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import AgentProtocolPage from './page';
+import { AppShell } from '../components/AppShell';
+import { resolveShellRoute } from '../components/shellRoutes';
 import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 import { installOnboardingLocks } from '../onboarding/testLocks';
+
+vi.mock('@/components/VoiceAssistant', () => ({ VoiceAssistant: () => null }));
+vi.mock('../components/Omnibox', () => ({ Omnibox: () => null }));
+vi.mock('../components/LogoutButton', () => ({ LogoutButton: () => null }));
+vi.mock('@/components/TooltipRegistry', () => ({ WithTooltip: ({ children }: { children: React.ReactNode }) => children }));
 
 const mockRuntime = vi.fn();
 const task = { task_id: 'task-1', input: 'Write a poem' };
@@ -36,9 +43,19 @@ describe('Agent Protocol UI', () => {
     }));
   });
   afterEach(() => { cleanup(); notifyQueueIdentityChange(); vi.unstubAllGlobals(); });
+  it('uses the application shell as the only page heading and main landmark', async () => {
+    const route = resolveShellRoute('/agent-protocol');
+    expect(route.owner).toBe('guard');
+    render(<AppShell title={route.title}><AgentProtocolPage /></AppShell>);
+    expect(screen.getAllByRole('heading', { name: /^Agent Protocol UI$/ })).toHaveLength(1);
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getAllByRole('main')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Workspace runtime', level: 2 })).toBeVisible();
+    await screen.findByText('Text analysis is not configured. No task can be submitted.');
+  });
   it('keeps runtime reads explicit and does not mistake an unloaded list for an empty one', async () => {
     render(<AgentProtocolPage />);
-    expect(screen.getByText('Agent Protocol UI')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Workspace runtime' })).toBeInTheDocument();
     expect(screen.getByText('Tasks')).toBeInTheDocument();
     expect(mockRuntime).not.toHaveBeenCalled(); expect(screen.queryByText('No tasks found.')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Load workspace runtime tasks' }));
