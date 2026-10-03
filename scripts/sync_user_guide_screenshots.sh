@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-# In order to generate the visual truth screenshots for docs/app/ we need to run Playwright.
+# Generate user-guide review captures as isolated Playwright test artifacts.
 # However, generating them against the full backend is flaky in some standalone environments.
 # We will start the Next.js UI in dev mode and run a specialized raw Playwright script
-# to capture the UI states and sync them to docs/app/.
+# to capture the UI states without overwriting tracked documentation.
 
 export BASE_URL="http://localhost:3000"
 
@@ -26,4 +26,4 @@ sleep 15
 echo "Running playwright to generate screenshots for User Guide..."
 npx playwright test src/e2e/docs_visual_audit.spec.ts
 
-echo "Visual audits synchronized to docs/app/."
+echo "Visual audit captures are in Playwright per-test output directories under test-results/."

@@ -22,13 +22,14 @@ test.describe('Viral SaaS Upgrade Soft Paywall Growth Loop', () => {
     await expect(page.getByText(/\d+ more to unlock/)).toBeVisible();
 
     // 3. Verify the share/copy button is present
-    const copyButton = page.getByRole('button', { name: /Copy Link/i });
+    const widget = page.locator('div.group').filter({ has: widgetHeading });
+    const copyButton = widget.getByRole('button', { name: /Copy Link/i });
     await expect(copyButton).toBeVisible();
     await expect(copyButton).toBeEnabled();
 
     // 4. Test the copy link interaction
     await copyButton.click();
-    await expect(page.getByRole('button', { name: /Copied!/i })).toBeVisible();
+    await expect(widget.getByRole('button', { name: /Copied!/i })).toBeVisible();
 
     // Check if clipboard has correct format
     // Playwright cannot easily check the clipboard in all headless browsers without permissions setup,

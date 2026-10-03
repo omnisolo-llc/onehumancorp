@@ -1,5 +1,8 @@
 import { test, expect } from './fixtures';
 
+// Preserve the finite501 body stall on its first failure, with CI retries off.
+test.use({ trace: 'retain-on-failure' });
+
 function integrationCard(page: import('@playwright/test').Page, name: string) {
   return page
     .getByRole('heading', { name })
@@ -7,7 +10,8 @@ function integrationCard(page: import('@playwright/test').Page, name: string) {
 }
 
 test.describe('WhatsApp Integration UI', () => {
-  test.beforeEach(async ({ page }) => {
+  test.beforeEach(async ({ page, loginAs, adminUser }) => {
+    await loginAs(page, adminUser);
     await page.goto('/integrations');
     await expect(page.getByRole('heading', { name: 'Tool Integrations' })).toBeVisible();
   });
@@ -49,7 +53,7 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp' })).toBeHidden();
   });
 
-  test('can connect Twilio for WhatsApp successfully', async ({ page }) => {
+  test('keeps Twilio for WhatsApp unconnected when verification is unavailable', async ({ page }) => {
     await integrationCard(page, 'Twilio for WhatsApp').getByRole('button', { name: 'Connect' }).click();
 
     const sidInput = page.getByLabel('Account SID');
@@ -61,10 +65,18 @@ test.describe('WhatsApp Integration UI', () => {
     const phoneInput = page.getByLabel('WhatsApp Phone Number');
     await phoneInput.fill('+1234567890');
 
+    // These are synthetic fixture values. The actual route returns 501 before
+    // provider execution; this test must never claim a verified connection.
+    const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/integrations/whatsapp/connect' && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Save & Connect' }).click();
-
-    // Check for success status updates
-    await expect(page.locator('[role="status"]', { hasText: 'Twilio for WhatsApp connected.' })).toBeVisible();
+    const response = await pending;
+    expect(response.status()).toBe(501);
+    expect(await response.json()).toMatchObject({ success: false, status: 'pending_verification', usable: false });
+    await expect(page.getByText('Failed to connect Twilio for WhatsApp.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp API', exact: true })).toBeVisible();
+    await expect(page.getByText('Twilio for WhatsApp connected.', { exact: true })).toHaveCount(0);
+    await expect(integrationCard(page, 'Twilio for WhatsApp').getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/integrations$/);
   });
 
   test('can open WhatsApp Cloud API modal', async ({ page }) => {
@@ -79,12 +91,20 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(page.getByRole('heading', { name: 'Connect WhatsApp Cloud API' })).toBeHidden();
   });
 
-  test('can connect WhatsApp Cloud API successfully', async ({ page }) => {
+  test('shows unavailable Meta sign-in without inventing a connected state', async ({ page }) => {
     await integrationCard(page, 'WhatsApp Cloud API').getByRole('button', { name: 'Connect' }).click();
 
+    const configured = await page.evaluate(() => typeof (window as Window & { FB?: { login?: unknown } }).FB?.login === 'function');
+    expect(configured, 'This unavailable fixture must not start real Meta sign-in').toBe(false);
+    const requests: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/integrations/whatsapp_cloud_api/connect') requests.push(request.url());
+    });
     await page.getByRole('button', { name: 'Continue with Meta' }).click();
-
-    // Check for success status updates
-    await expect(page.locator('[role="status"]', { hasText: 'WhatsApp Cloud API connected.' })).toBeVisible();
+    await expect(page.getByText('WhatsApp connection is unavailable because Meta sign-in is not configured.', { exact: true })).toBeVisible();
+    expect(requests).toEqual([]);
+    await expect(page.getByText('WhatsApp Cloud API connected.', { exact: true })).toHaveCount(0);
+    await expect(integrationCard(page, 'WhatsApp Cloud API').getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/integrations$/);
   });
 });

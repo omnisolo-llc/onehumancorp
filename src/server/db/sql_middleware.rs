@@ -273,7 +273,7 @@ async fn run_locked_mysql_migration(
 
     if applied_legacy.is_none() {
         for statement in split_sql_statements(SqlDialect::MySql.harness_middleware_schema()) {
-            sqlx::query(&statement).execute(&mut **connection).await?;
+            sqlx::raw_sql(&statement).execute(&mut **connection).await?;
         }
         sqlx::query(
             "INSERT INTO harness_middleware_schema_migrations (version, migration_name) \
@@ -286,7 +286,9 @@ async fn run_locked_mysql_migration(
     }
 
     for statement in split_sql_statements(SqlDialect::MySql.harness_middleware_record_extension()) {
-        sqlx::query(&statement).execute(&mut **connection).await?;
+        // Trusted migration SQL includes its own PREPARE/EXECUTE statements.
+        // MySQL rejects preparing those statements through COM_STMT_PREPARE.
+        sqlx::raw_sql(&statement).execute(&mut **connection).await?;
     }
 
     sqlx::query(

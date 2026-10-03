@@ -18,9 +18,12 @@ export default function ViralTierListGeneratorPage() {
 
   const [title, setTitle] = useState('My Favorite Coffees');
   const [description, setDescription] = useState('Here are the best coffees I had this year.');
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
-  const [generatedLink, setGeneratedLink] = useState('');
+  const [generated, setGenerated] = useState<{ url: string; requiresPro: boolean } | null>(null);
+  const generatedLink = generated && (!generated.requiresPro || hasPro) ? generated.url : '';
+  useEffect(() => { if (generated?.requiresPro && !hasPro) setGenerated(null); }, [generated, hasPro]);
 
   const handleBrandingToggle = () => {
     if (!hasPro) {
@@ -36,7 +39,7 @@ export default function ViralTierListGeneratorPage() {
 
   const generateLink = () => {
     const url = `${window.location.origin}/tier-list?tenant=${tenant}&title=${encodeURIComponent(title)}&desc=${encodeURIComponent(description)}&branding=${!removeBranding}`;
-    setGeneratedLink(url);
+    setGenerated({ url, requiresPro: removeBranding });
   };
 
   return (

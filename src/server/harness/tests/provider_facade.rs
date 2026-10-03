@@ -10,6 +10,33 @@ use tokio::task::JoinHandle;
 
 const UPSTREAM_SECRET: &str = "upstream-secret-canary";
 
+fn isolated_case_passed(output: &std::process::Output, case: &str) -> bool {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    output.status.success()
+        && stdout
+            .lines()
+            .any(|line| line == format!("test {case} ... ok"))
+        && stdout
+            .lines()
+            .any(|line| line.starts_with("test result: ok. 1 passed; 0 failed; 0 ignored;"))
+}
+
+#[test]
+fn isolated_vault_case_receipt_rejects_zero_discovery() {
+    let output = std::process::Command::new(std::env::current_exe().unwrap())
+        .args(["--exact", "__missing_provider_facade_case__"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "The zero-discovery control must exit successfully"
+    );
+    assert!(!isolated_case_passed(
+        &output,
+        "facade_rejects_byok_api_if_tenant_key_absent_or_revoked"
+    ));
+}
+
 fn selection(model_id: &str) -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
@@ -62,7 +89,7 @@ impl UpstreamFixture {
                             let model = body
                                 .get("model")
                                 .and_then(Value::as_str)
-                                .unwrap_or("gpt-5.6-luna");
+                                .unwrap_or("gpt-6-luna");
                             json!({
                                 "id":"resp_facade_1",
                                 "object":"response",
@@ -167,14 +194,14 @@ fn parse_request(request: &[u8]) -> (String, String, Value) {
 #[tokio::test]
 async fn facade_forwards_model_and_upstream_authorization_without_exposing_the_key() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     let response = reqwest::Client::new()
         .post(format!("{}/responses", facade.route().base_url()))
         .bearer_auth(facade.route().token())
         .json(&json!({
-            "model":"gpt-5.6-luna",
+            "model":"gpt-6-luna",
             "input":"hello",
             "stream":false
         }))
@@ -197,14 +224,14 @@ async fn facade_forwards_model_and_upstream_authorization_without_exposing_the_k
 #[tokio::test]
 async fn facade_rejects_wrong_token_model_method_and_unallowlisted_route() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     let client = reqwest::Client::new();
     let wrong_token = client
         .post(format!("{}/responses", facade.route().base_url()))
         .bearer_auth("wrong-token")
-        .json(&json!({"model":"gpt-5.6-luna","input":"hello"}))
+        .json(&json!({"model":"gpt-6-luna","input":"hello"}))
         .send()
         .await
         .unwrap();
@@ -249,7 +276,7 @@ fn config_debug_does_not_expose_unvalidated_url_credentials() {
     let config = ProviderFacadeConfig::new(
         "https://username:password-canary@example.com/v1?token=query-canary",
         UPSTREAM_SECRET,
-        selection("gpt-5.6-luna"),
+        selection("gpt-6-luna"),
     );
     let debug = format!("{config:?}");
     assert!(!debug.contains("password-canary"));
@@ -259,26 +286,26 @@ fn config_debug_does_not_expose_unvalidated_url_credentials() {
 #[tokio::test]
 async fn facade_rejects_reasoning_override_for_both_request_dialects() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     let client = reqwest::Client::new();
     for (path, body) in [
         (
             "responses",
-            json!({"model":"gpt-5.6-luna", "reasoning":{"effort":"low"}}),
+            json!({"model":"gpt-6-luna", "reasoning":{"effort":"low"}}),
         ),
         (
             "chat/completions",
-            json!({"model":"gpt-5.6-luna", "reasoning_effort":"low"}),
+            json!({"model":"gpt-6-luna", "reasoning_effort":"low"}),
         ),
         (
             "responses",
-            json!({"model":"gpt-5.6-luna", "reasoning_effort":"low"}),
+            json!({"model":"gpt-6-luna", "reasoning_effort":"low"}),
         ),
         (
             "chat/completions",
-            json!({"model":"gpt-5.6-luna", "reasoning":{"effort":"low"}}),
+            json!({"model":"gpt-6-luna", "reasoning":{"effort":"low"}}),
         ),
     ] {
         let response = client
@@ -309,7 +336,7 @@ async fn facade_does_not_follow_upstream_redirects() {
     let facade = ProviderFacade::start(
         format!("http://{address}/v1"),
         UPSTREAM_SECRET,
-        selection("gpt-5.6-luna"),
+        selection("gpt-6-luna"),
     )
     .await
     .unwrap();
@@ -344,7 +371,7 @@ async fn assert_revocation_aborts_upstream(streaming: bool, drop_facade: bool) {
     let facade = ProviderFacade::start(
         format!("http://{address}/v1"),
         UPSTREAM_SECRET,
-        selection("gpt-5.6-luna"),
+        selection("gpt-6-luna"),
     )
     .await
     .unwrap();
@@ -353,7 +380,7 @@ async fn assert_revocation_aborts_upstream(streaming: bool, drop_facade: bool) {
         if let Ok(response) = reqwest::Client::new()
             .post(format!("{}/responses", route.base_url()))
             .bearer_auth(route.token())
-            .json(&json!({"model":"gpt-5.6-luna"}))
+            .json(&json!({"model":"gpt-6-luna"}))
             .send()
             .await
         {
@@ -402,14 +429,14 @@ async fn drop_aborts_upstream_stream() {
 #[tokio::test]
 async fn facade_injects_bound_reasoning_when_child_omits_it() {
     let upstream = UpstreamFixture::start().await;
-    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-5.6-luna"))
+    let facade = ProviderFacade::start(upstream.url(), UPSTREAM_SECRET, selection("gpt-6-luna"))
         .await
         .unwrap();
     for path in ["responses", "chat/completions"] {
         let response = reqwest::Client::new()
             .post(format!("{}/{path}", facade.route().base_url()))
             .bearer_auth(facade.route().token())
-            .json(&json!({"model":"gpt-5.6-luna"}))
+            .json(&json!({"model":"gpt-6-luna"}))
             .send()
             .await
             .unwrap();
@@ -552,4 +579,224 @@ async fn timeout_returns_a_structured_provider_error() {
     assert!(!error.to_string().contains(UPSTREAM_SECRET));
     facade.shutdown().await.unwrap();
     server.await.unwrap();
+}
+
+#[tokio::test]
+async fn facade_rejects_byok_api_if_tenant_key_absent_or_revoked() {
+    // Environment belongs to this disposable child, not concurrent test tasks.
+    // Production still reads its configured vault and must deny an absent key.
+    const CHILD: &str = "OHC_PROVIDER_FACADE_ABSENT_KEY_CHILD";
+    if std::env::var(CHILD).as_deref() != Ok("1") {
+        let result = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "facade_rejects_byok_api_if_tenant_key_absent_or_revoked",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .env(
+                "OMNISOLO_CONNECTION_KEYS",
+                r#"{"v1":"1111111111111111111111111111111111111111111111111111111111111111"}"#,
+            )
+            .env("OMNISOLO_CONNECTION_ACTIVE_KEY", "v1")
+            .env_remove("OMNISOLO_CONNECTION_DATABASE_URL")
+            .output()
+            .unwrap();
+        assert!(
+            isolated_case_passed(
+                &result,
+                "facade_rejects_byok_api_if_tenant_key_absent_or_revoked"
+            ),
+            "isolated vault test failed: {}{}",
+            String::from_utf8_lossy(&result.stdout),
+            String::from_utf8_lossy(&result.stderr)
+        );
+        return;
+    }
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
+    use server_harness::middleware::usage_meter::UsageMeterSettings;
+
+    let upstream = UpstreamFixture::start().await;
+    let db_path = format!(
+        "sqlite:file:facade_byok_{}?mode=memory&cache=shared",
+        uuid::Uuid::new_v4()
+    );
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_path)
+        .await
+        .unwrap();
+    let ledger = UsageLedger::Sqlite(pool);
+    ledger.initialize().await.unwrap();
+    ledger.set_limit("tenant-a", 1_000_000).await.unwrap();
+    server_harness::middleware::connection_vault::ConnectionVault::initialize_schema(&ledger)
+        .await
+        .unwrap();
+
+    let mut config = ProviderFacadeConfig::new(
+        "https://api.openai.com",
+        UPSTREAM_SECRET,
+        selection("model-a"),
+    );
+    config.metering = Some(UsageMeterSettings {
+        database_url: db_path.clone(), // This uses the same shared in-memory db
+        scope: UsageScope {
+            tenant_id: "tenant-a".into(),
+            task_id: "task".into(),
+            attempt_id: "attempt".into(),
+            provider: "openai_api".into(),
+            model: "model-a".into(),
+            payer: PayerMode::ByokApi,
+            rate_card: None,
+        },
+        max_request_micros: 1000000,
+    });
+
+    let facade = ProviderFacade::start_with_config(config).await.unwrap();
+
+    let response = reqwest::Client::new()
+        .post(format!("{}/responses", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model":"model-a"}))
+        .send()
+        .await
+        .unwrap();
+
+    let status = response.status();
+    let error: Value = response.json().await.unwrap();
+    assert_eq!(
+        status,
+        reqwest::StatusCode::FORBIDDEN,
+        "Error was: {:?}",
+        error
+    );
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("Tenant API connection is absent or revoked")
+    );
+
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[tokio::test]
+async fn facade_rejects_byok_api_if_origin_is_unsupported() {
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
+    use server_harness::middleware::usage_meter::UsageMeterSettings;
+
+    let upstream = UpstreamFixture::start().await; // Note: uses 127.0.0.1, not api.openai.com
+
+    let db_path = format!(
+        "sqlite:file:facade_byok_{}?mode=memory&cache=shared",
+        uuid::Uuid::new_v4()
+    );
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_path)
+        .await
+        .unwrap();
+    let ledger = UsageLedger::Sqlite(pool);
+    ledger.initialize().await.unwrap();
+    ledger.set_limit("tenant-a", 1_000_000).await.unwrap();
+    server_harness::middleware::connection_vault::ConnectionVault::initialize_schema(&ledger)
+        .await
+        .unwrap();
+
+    let mut config =
+        ProviderFacadeConfig::new(upstream.url(), UPSTREAM_SECRET, selection("model-a"));
+    config.metering = Some(UsageMeterSettings {
+        database_url: db_path.clone(), // This uses the same shared in-memory db
+        scope: UsageScope {
+            tenant_id: "tenant-a".into(),
+            task_id: "task".into(),
+            attempt_id: "attempt".into(),
+            provider: "openai_api".into(),
+            model: "model-a".into(),
+            payer: PayerMode::ByokApi,
+            rate_card: None,
+        },
+        max_request_micros: 1000000,
+    });
+
+    let facade = ProviderFacade::start_with_config(config).await.unwrap();
+
+    let response = reqwest::Client::new()
+        .post(format!("{}/responses", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model":"model-a"}))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    let error: Value = response.json().await.unwrap();
+    assert!(
+        error["error"]["message"]
+            .as_str()
+            .unwrap()
+            .contains("The BYOK credential is bound to its verified provider origin")
+    );
+
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
+}
+
+#[tokio::test]
+async fn facade_rejects_native_subscription_proxying() {
+    use server_harness::middleware::provider_facade::ProviderFacadeConfig;
+    use server_harness::middleware::usage_ledger::{PayerMode, UsageLedger, UsageScope};
+    use server_harness::middleware::usage_meter::UsageMeterSettings;
+
+    let upstream = UpstreamFixture::start().await;
+
+    let db_path = format!(
+        "sqlite:file:facade_subscription_{}?mode=memory&cache=shared",
+        uuid::Uuid::new_v4()
+    );
+    let pool = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_path)
+        .await
+        .unwrap();
+    let ledger = UsageLedger::Sqlite(pool);
+    ledger.initialize().await.unwrap();
+    ledger.set_limit("tenant-a", 1_000_000).await.unwrap();
+
+    let mut config =
+        ProviderFacadeConfig::new(upstream.url(), UPSTREAM_SECRET, selection("model-a"));
+    config.metering = Some(UsageMeterSettings {
+        database_url: db_path.clone(),
+        max_request_micros: 50_000,
+        scope: UsageScope {
+            tenant_id: "tenant-a".into(),
+            task_id: "task".into(),
+            attempt_id: "attempt".into(),
+            provider: "openai_api".into(),
+            model: "model-a".into(),
+            payer: PayerMode::NativeSubscription,
+            rate_card: None,
+        },
+    });
+
+    let facade = ProviderFacade::start_with_config(config).await.unwrap();
+    let response = reqwest::Client::new()
+        .post(format!("{}/chat/completions", facade.route().base_url()))
+        .bearer_auth(facade.route().token())
+        .json(&json!({"model": "model-a"}))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    let text = response.text().await.unwrap();
+    assert!(text.contains(
+        "Provider-permitted native-client subscription hosting is not supported for proxying"
+    ));
+
+    facade.shutdown().await.unwrap();
+    upstream.shutdown().await;
 }

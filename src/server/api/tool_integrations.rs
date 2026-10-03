@@ -195,12 +195,36 @@ pub async fn connect_integration_handler(
             return connection_response(
                 StatusCode::BAD_REQUEST,
                 false,
-                "An API key is required; subscription tokens are not accepted",
+                "An API key or valid OAuth token is required; subscription tokens are not accepted",
                 "unavailable",
                 false,
             )
             .into_response();
         };
+
+        // For Google Workspace, perform live credential verification.
+        if validated.integration_id == "google_workspace" {
+            let client = ::server_integrations_google_workspace::client::GoogleWorkspaceClient::new(
+                secret.to_string(),
+            );
+            // Attempt to list files as a simple read-only verification
+            match client.list_files("root", 1).await {
+                Ok(_) => {
+                    tracing::info!(tenant_id = %tenant_id, "Google Workspace credentials verified successfully");
+                }
+                Err(e) => {
+                    tracing::warn!(tenant_id = %tenant_id, error = %e, "Google Workspace credential verification failed");
+                    return connection_response(
+                        StatusCode::UNAUTHORIZED,
+                        false,
+                        "Google Workspace OAuth token verification failed. Ensure the token is valid and not expired.",
+                        "unavailable",
+                        false,
+                    )
+                    .into_response();
+                }
+            }
+        }
         let vault = match connection_vault(&state.db) {
             Ok(vault) => vault,
             Err(_) => {
@@ -515,6 +539,23 @@ mod tests {
             "twilio",
             validated.bot_token.as_deref(),
             validated.api_token.as_deref(),
+        ));
+    }
+
+    #[test]
+    fn connection_validation_accepts_google_workspace() {
+        let req = ConnectIntegrationRequest {
+            bot_token: None,
+            api_token: Some("oauth-token".to_string()),
+            from_phone: None,
+            integration_id: None,
+            base_url: None,
+        };
+        assert!(validate_connect_request("google_workspace", req).is_ok());
+        assert!(provider_credentials_present(
+            "google_workspace",
+            None,
+            Some("oauth-token")
         ));
     }
 

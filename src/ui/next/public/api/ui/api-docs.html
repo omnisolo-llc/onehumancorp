@@ -200,7 +200,7 @@
 
       <div id="api-docs-content" style="display: block;">
         <div class="header">
-            <h1 data-testid="api-docs-title"><span  data-tooltip="Direct API access is only for custom integrations." id="api-docs-tooltip" class="badge cursor-help inline-block relative" style="cursor: help;">Advanced:</span> OmniSolo Advanced API Reference</h1>
+            <h1 data-testid="api-docs-title"><span  data-tooltip="Direct API access is only for custom integrations." id="api-docs-tooltip" tabindex="0" class="badge cursor-help inline-block relative" style="cursor: help;">Advanced:</span> OmniSolo Advanced API Reference</h1>
             <p class="subtitle">Integrate your custom checkout or external tools directly with OmniSolo.</p>
             <p>This section is for developers directly integrating with our APIs.</p>
         </div>
@@ -233,6 +233,9 @@
     </script>
     <script>
 function initOmniSoloTooltips() {
+    // Static compatibility pages may initialize twice; own one real controller.
+    if (window.__OMNISOLO_LEGACY_TOOLTIPS_INITIALIZED) return;
+    window.__OMNISOLO_LEGACY_TOOLTIPS_INITIALIZED = true;
     // Inject tooltip CSS
     const style = document.createElement('style');
     style.textContent = `
@@ -286,6 +289,24 @@ function initOmniSoloTooltips() {
     }
     const tooltipEl = document.createElement('div');
     tooltipEl.className = 'omnisolo-tooltip';
+    tooltipEl.id = 'omnisolo-legacy-tooltip';
+    tooltipEl.setAttribute('role', 'tooltip');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+    let tooltipTarget = null;
+    const clearTooltipDescription = () => {
+        if (!tooltipTarget) return;
+        const ids = (tooltipTarget.getAttribute('aria-describedby') || '').split(/\s+/).filter(id => id && id !== tooltipEl.id);
+        if (ids.length) tooltipTarget.setAttribute('aria-describedby', ids.join(' '));
+        else tooltipTarget.removeAttribute('aria-describedby');
+        tooltipTarget = null;
+    };
+    const describeTooltipTarget = target => {
+        if (tooltipTarget !== target) clearTooltipDescription();
+        tooltipTarget = target;
+        const ids = new Set((target.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
+        ids.add(tooltipEl.id);
+        target.setAttribute('aria-describedby', [...ids].join(' '));
+    };
     document.body.appendChild(tooltipEl);
 
     let hideTimeout;
@@ -313,14 +334,34 @@ function initOmniSoloTooltips() {
 
         tooltipEl.style.top = `${top}px`;
         tooltipEl.style.left = `${left}px`;
+        describeTooltipTarget(e.target.closest?.('[data-tooltip], [data-tooltip-id]') || e.target);
+        tooltipEl.setAttribute('aria-hidden', 'false');
         tooltipEl.classList.add('visible');
     }
 
-    function hideTooltip() {
-        hideTimeout = setTimeout(() => {
+    function hideTooltip(immediate = false) {
+        clearTimeout(hideTimeout);
+        const dismiss = () => {
             tooltipEl.classList.remove('visible');
-        }, 100); // slight delay to prevent flicker
+            tooltipEl.setAttribute('aria-hidden', 'true');
+            clearTooltipDescription();
+        };
+        if (immediate) dismiss();
+        else hideTimeout = setTimeout(dismiss, 100);
     }
+
+    document.addEventListener('focusin', e => {
+        const target = e.target.closest?.('[data-tooltip], [data-tooltip-id]');
+        if (!target) return;
+        const id = target.getAttribute('data-tooltip-id') || target.id;
+        showTooltip(e, window.OMNISOLO_TOOLTIPS?.[id] || target.getAttribute('data-tooltip'));
+    });
+    document.addEventListener('focusout', e => {
+        if (e.target.closest?.('[data-tooltip], [data-tooltip-id]')) hideTooltip(true);
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') hideTooltip(true);
+    });
 
     // Desktop hover
     document.addEventListener('mouseover', (e) => {
@@ -422,90 +463,7 @@ if (document.readyState === 'loading') {
     opacity: 1;
 }
 </style>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    if (!window.OMNISOLO_TOOLTIPS) {
-        window.OMNISOLO_TOOLTIPS = {};
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(e => {
-            //
-            //
-            //
-            //
-            //
-            //
-            //
-            console.error(e);
-        });
-    }
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'omnisolo-tooltip';
-    document.body.appendChild(tooltipEl);
 
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const targetRect = e.target.closest('[id]') ? e.target.closest('[id]').getBoundingClientRect() : e.target.getBoundingClientRect();
-
-        let left = targetRect.left + (targetRect.width / 2) - (tooltipEl.offsetWidth / 2);
-        let top = targetRect.bottom + 10;
-
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        } else if (left < 10) {
-            left = 10;
-        }
-
-        if (top + tooltipEl.offsetHeight > window.innerHeight - 10) {
-            top = targetRect.top - tooltipEl.offsetHeight - 10;
-        }
-
-        tooltipEl.style.top = `${top}px`;
-        tooltipEl.style.left = `${left}px`;
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
-            showTooltip(e, window.OMNISOLO_TOOLTIPS[target.id]);
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target.closest('[id]');
-        if (target && target.id && window.OMNISOLO_TOOLTIPS[target.id]) {
-            hideTooltip();
-        }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-});
-</script>
 
 
 <script>
@@ -608,143 +566,8 @@ function initWalkthrough() {
 initWalkthrough();
 </script>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Inject tooltip CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        .omnisolo-tooltip {
-            position: absolute;
-            background: rgba(22, 22, 26, 0.7);
-            color: #f5f5f7;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-family: "Outfit", sans-serif;
-            pointer-events: none;
-            z-index: 10000;
-            opacity: 0;
-            transition: opacity 0.2s, transform 0.2s;
-            transform: translateY(5px);
-            white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            border: 1px solid rgba(255, 255, 255, 0.4);
-        }
-        .omnisolo-tooltip.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        @media (prefers-color-scheme: light) {
-            .omnisolo-tooltip {
-                background: rgba(255, 255, 255, 0.2);
-                color: #1d1d1f;
-                border: 1px solid rgba(0,0,0,0.1);
-            }
-        }
-    `;
-    document.head.appendChild(style);
 
-    // Fetch tooltips registry from API
-    if (window.__TAURI__ && window.__TAURI__.core) {
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(console.error);
-    } else {
-        fetch("/api/v1/tooltips").then(r => r.json()).then(data => { window.OMNISOLO_TOOLTIPS = data; }).catch(console.error);
-    }
-
-    const tooltipEl = document.createElement('div');
-    tooltipEl.className = 'omnisolo-tooltip';
-    document.body.appendChild(tooltipEl);
-
-    function showTooltip(e, text) {
-        if (!text) return;
-        tooltipEl.textContent = text;
-        const target = e.target.closest('[data-tooltip]');
-        if(!target) return;
-        const rect = target.getBoundingClientRect();
-
-        let top = rect.top - tooltipEl.offsetHeight - 10;
-        let left = rect.left + (rect.width / 2) - (tooltipEl.offsetWidth / 2);
-
-        if (top < 10) {
-            top = rect.bottom + 10; // show below
-        }
-        if (left < 10) {
-            left = 10;
-        }
-        if (left + tooltipEl.offsetWidth > window.innerWidth - 10) {
-            left = window.innerWidth - tooltipEl.offsetWidth - 10;
-        }
-
-        tooltipEl.style.top = top + 'px';
-        tooltipEl.style.left = left + 'px';
-        tooltipEl.classList.add('visible');
-    }
-
-    function hideTooltip() {
-        tooltipEl.classList.remove('visible');
-    }
-
-    document.addEventListener('mouseover', (e) => {
-        const target = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-tooltip]') : null;
-        if (target) {
-            const text = (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            showTooltip({target: target}, text);
-        }
-    });
-
-    document.addEventListener('mouseout', (e) => {
-        const target = e.target; if (target && typeof target.closest === 'function' && target.closest('[data-tooltip]')) {
-            hideTooltip();
-        }
-    });
-
-
-    document.addEventListener('touchstart', (e) => {
-        const target = e.target.closest('[id], [data-tooltip]');
-        if (target) {
-            const text = (window.OMNISOLO_TOOLTIPS && target.id && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip');
-            if (text) {
-                window.touchTimer = setTimeout(() => {
-                    showTooltip(e.touches ? e.touches[0] : e, text);
-                }, 500); // 500ms long press
-            }
-        }
-    });
-
-    document.addEventListener('touchend', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchcancel', (e) => {
-        clearTimeout(window.touchTimer);
-        hideTooltip();
-    });
-
-    // Mobile long press (contextmenu) or touchstart
-    let touchTimeout;
-    document.addEventListener('touchstart', (e) => {
-        const t = e.target;
-        const target = t && typeof t.closest === 'function' ? t.closest('[data-tooltip]') : null;
-        if (target) {
-            touchTimeout = setTimeout(() => {
-                showTooltip(e, (window.OMNISOLO_TOOLTIPS && window.OMNISOLO_TOOLTIPS[target.id]) || target.getAttribute('data-tooltip'));
-            }, 500); // 500ms long press
-        }
-    });
-
-    document.addEventListener('touchend', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-
-    document.addEventListener('touchmove', () => {
-        clearTimeout(touchTimeout);
-        hideTooltip();
-    });
-});
-</script>
-  <script src="help-widget.mjs" type="module"></script>
+  <script src="/help-widget.mjs" type="module"></script>
 </body>
 </html>
 

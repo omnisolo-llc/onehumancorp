@@ -27,7 +27,7 @@ use uuid::Uuid;
 fn resolved_model_selection() -> ResolvedModelSelection {
     ResolvedModelSelection {
         provider_route: "openai-compatible".to_owned(),
-        model_id: "gpt-5.6-luna".to_owned(),
+        model_id: "gpt-6-luna".to_owned(),
         reasoning_effort: Some(ReasoningEffort::Max),
         api_dialect: ModelApiDialect::OpenAiResponses,
         context_window: Some(400_000),
@@ -510,7 +510,7 @@ def session():
         "title": "portable import",
         "version": "1.18.15",
         "time": {"created": 1, "updated": 1},
-        "model": {"providerID": "omnisolo-openai-compatible", "id": "gpt-5.6-luna", "variant": "max"},
+        "model": {"providerID": "omnisolo-openai-compatible", "id": "gpt-6-luna", "variant": "max"},
     }
 
 class Handler(BaseHTTPRequestHandler):
@@ -736,7 +736,7 @@ class Handler(BaseHTTPRequestHandler):
         record("POST", self.path, body)
         if self.path == "/api/conversations":
             llm = body["agent"]["llm"]
-            assert llm["model"] == "openai/gpt-5.6-luna"
+            assert llm["model"] == "openai/gpt-6-luna"
             assert llm["base_url"] == "https://llmapi.omnisolo.co/v1"
             assert llm["api_mode"] == "responses"
             assert llm["reasoning_effort"] == "max"
@@ -951,7 +951,7 @@ for line in sys.stdin:
         prompt_count += 1
         resolved = command["resolved_model"]
         assert resolved["provider"] == "openai"
-        assert resolved["model_id"] == "gpt-5.6-luna"
+        assert resolved["model_id"] == "gpt-6-luna"
         assert resolved["base_url"] == "https://llmapi.omnisolo.co/v1"
         assert resolved["reasoning_effort"] == "max"
         assert resolved["api_dialect"] == "openai_responses"
@@ -1209,14 +1209,14 @@ printf '{"jsonrpc":"2.0","id":%s,"result":{"protocolVersion":1,"agentCapabilitie
 read create
 create_id=$(printf '%s' "$create" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
 if ! printf '%s' "$create" | grep -q '"jsonrpc":"2.0"'; then exit 41; fi
-printf '{"jsonrpc":"2.0","id":%s,"result":{"sessionId":"kimi-session-configured","configOptions":[{"id":"model","category":"model","type":"select","options":[{"value":"gpt-5.6-luna"}]},{"id":"thinking","category":"thought_level","type":"select","options":[{"value":"high"}]}]}}\n' "$create_id"
+printf '{"jsonrpc":"2.0","id":%s,"result":{"sessionId":"kimi-session-configured","configOptions":[{"id":"model","category":"model","type":"select","options":[{"value":"gpt-6-luna"}]},{"id":"thinking","category":"thought_level","type":"select","options":[{"value":"high"}]}]}}\n' "$create_id"
 
 read model_config
 model_id=$(printf '%s' "$model_config" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\1/p')
 if ! printf '%s' "$model_config" | grep -q '"jsonrpc":"2.0"' \
   || ! printf '%s' "$model_config" | grep -q '"method":"session/set_config_option"' \
   || ! printf '%s' "$model_config" | grep -q '"configId":"model"' \
-  || ! printf '%s' "$model_config" | grep -q '"value":"gpt-5.6-luna"'; then exit 42; fi
+  || ! printf '%s' "$model_config" | grep -q '"value":"gpt-6-luna"'; then exit 42; fi
 printf '{"jsonrpc":"2.0","id":%s,"result":{}}\n' "$model_id"
 
 read thought_config
@@ -1282,7 +1282,7 @@ initialize_id=$(printf '%s' "$initialize" | sed -n 's/.*"id":\([0-9][0-9]*\).*/\
 if ! printf '%s' "$initialize" | grep -q '"method":"initialize"' \
   || ! printf '%s' "$initialize" | grep -q '"cwd":"/workspace"' \
   || ! printf '%s' "$initialize" | grep -q '"provider":"openai-compatible"' \
-  || ! printf '%s' "$initialize" | grep -q '"model":"gpt-5.6-luna"'; then
+  || ! printf '%s' "$initialize" | grep -q '"model":"gpt-6-luna"'; then
   exit 41
 fi
 printf '{{"jsonrpc":"2.0","id":%s,"result":{{"serverInfo":{{"name":"deepseek-harness-sdk-runtime","version":"test"}}}}}}\n' "$initialize_id"
@@ -1333,7 +1333,7 @@ while IFS= read -r line; do
   case "$type" in
     set_model)
       if ! printf '%s' "$line" | grep -q '"provider":"omnisolo-openai-compatible"' \
-        || ! printf '%s' "$line" | grep -q '"modelId":"gpt-5.6-luna"'; then exit 51; fi
+        || ! printf '%s' "$line" | grep -q '"modelId":"gpt-6-luna"'; then exit 51; fi
       printf '%s\n' "{\"id\":\"$id\",\"type\":\"response\",\"command\":\"set_model\",\"success\":true}" ;;
     set_thinking_level)
       if ! printf '%s' "$line" | grep -q '"level":"xhigh"'; then exit 52; fi
@@ -1383,7 +1383,7 @@ done
     assert!(binding.durable);
     assert_eq!(binding.payload["harness_id"], "pi");
     assert_eq!(binding.payload["provider_route"], "openai-compatible");
-    assert_eq!(binding.payload["model_id"], "gpt-5.6-luna");
+    assert_eq!(binding.payload["model_id"], "gpt-6-luna");
     assert_eq!(binding.payload["reasoning_effort"], "max");
     assert_eq!(binding.payload["api_dialect"], "open_ai_responses");
     assert_eq!(binding.payload["binding_revision"], "binding-v1");
@@ -1718,7 +1718,7 @@ while IFS= read -r line; do
     && printf '%s' "$line" | grep -q '"artifact_ids":\["{artifact_id}"\]' \
     && printf '%s' "$line" | grep -q '"resolved_model":{{' \
     && printf '%s' "$line" | grep -q '"provider_route":"openai-compatible"' \
-    && printf '%s' "$line" | grep -q '"model_id":"gpt-5.6-luna"' \
+    && printf '%s' "$line" | grep -q '"model_id":"gpt-6-luna"' \
     && printf '%s' "$line" | grep -q '"reasoning_effort":"max"' \
     && printf '%s' "$line" | grep -q '"api_dialect":"open_ai_responses"' \
     && printf '%s' "$line" | grep -q '"capabilities":\["reasoning","tools"\]' \
@@ -1764,7 +1764,7 @@ done
     let request_json = serde_json::to_value(&request).unwrap();
     assert_eq!(
         request_json["resolved_model"]["model_id"],
-        json!("gpt-5.6-luna")
+        json!("gpt-6-luna")
     );
     assert!(!contains_credential_key(&request_json));
 
@@ -1932,7 +1932,7 @@ fn portable_capsule_retains_resolved_model_without_credentials() {
             _ => None,
         })
         .expect("portable resolved model selection");
-    assert_eq!(portable_selection.model_id, "gpt-5.6-luna");
+    assert_eq!(portable_selection.model_id, "gpt-6-luna");
     assert_eq!(
         portable_selection.reasoning_effort,
         Some(ReasoningEffort::Max)

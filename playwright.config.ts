@@ -1,4 +1,4 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig, devices, type ReporterDescription } from '@playwright/test';
 
 const retries = process.env.PLAYWRIGHT_RETRIES
   ? Number.parseInt(process.env.PLAYWRIGHT_RETRIES, 10)
@@ -6,9 +6,10 @@ const retries = process.env.PLAYWRIGHT_RETRIES
     ? 2
     : 0;
 
-const reporter = process.env.PLAYWRIGHT_LIST_REPORTER
-  ? [['list'], ['html']] as const
-  : 'html';
+const reporter: ReporterDescription[] = process.env.PLAYWRIGHT_LIST_REPORTER
+  ? [['list'], ['html']]
+  : [['html']];
+if (process.env.OHC_CLICK_AUDIT_CONTEXT) reporter.push(['./scripts/ui-click-audit-reporter.cjs']);
 
 const timeout = process.env.PLAYWRIGHT_TEST_TIMEOUT
   ? Number.parseInt(process.env.PLAYWRIGHT_TEST_TIMEOUT, 10)

@@ -12,7 +12,7 @@ test.describe('Unified Action Feed e2e', () => {
   test('Unified Feed - Tap to approve user journey', async ({ adminUser, loginAs, page, request }) => {
     // Setup test data directly using the API
     const feedItemPayload = {
-      tenant_id: adminUser.tenantId,
+      tenant_id: adminUser.organizationId,
       event_source: "Instagram DM",
       context_payload: {
         msg: "Can I get a custom cake next Tuesday?",
@@ -58,7 +58,7 @@ test.describe('Unified Action Feed e2e', () => {
   test('Unified Feed - Tap to reject user journey', async ({ adminUser, loginAs, page, request }) => {
     // Setup test data directly using the API
     const feedItemPayload = {
-      tenant_id: adminUser.tenantId,
+      tenant_id: adminUser.organizationId,
       event_source: "Operations",
       context_payload: {
         msg: "Staffing alert: Only 1 person scheduled for closing shift.",

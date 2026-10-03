@@ -13,7 +13,8 @@ export default function ViralROICalculatorPage() {
   const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
+  const removeBranding = requestedBrandingRemoval && hasPro;
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {

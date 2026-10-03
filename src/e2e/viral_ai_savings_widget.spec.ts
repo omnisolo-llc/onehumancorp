@@ -1,40 +1,27 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from './support/entitlement_fixture';
 
 test('viral_ai_savings_widget', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
   await currentAppSmoke(page, request, 'viral_ai_savings_widget');
 });
 
-test.describe('Viral AI Time Savings Widget Growth Loop', () => {
-  test('should display the widget on dashboard and handle the trial extension loop', async ({ page }) => {
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    // 1. Verify the widget is visible
-    const widgetHeading = page.getByRole('heading', { name: /You saved .* hours this week/i });
-    await expect(widgetHeading).toBeVisible();
-
-    // 2. Verify the share button is present
-    const shareButton = page.getByRole('button', { name: /Share to get 7 Days Pro/i });
-    await expect(shareButton).toBeVisible();
-    await expect(shareButton).toBeEnabled();
-
-    // 3. Mock window.open to prevent opening a new tab
-    await page.evaluate(() => {
-        window.open = function() { return window; };
-    });
-
-    // 4. Click the share button to trigger the API call
-    await shareButton.click();
-
-    // 5. Verify the loading state
-    await expect(page.getByText(/Verifying Share.../i)).toBeVisible();
-
-    // 6. Verify the success state
-    const successHeading = page.getByRole('heading', { name: 'Trial Extended!' });
-    await expect(successHeading).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText(/Your Pro trial has been successfully extended by 7 days/i)).toBeVisible();
-  });
+test('dashboard reports missing measured savings without sample metrics or trial activation', async ({ page, baseURL }) => {
+  const fixture = await createEntitlementOwner(page, baseURL);
+  const claims = trackTrialClaims(page);
+  const savingsRead = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/growth/time-savings');
+  await page.goto('/dashboard');
+  const response = await savingsRead;
+  expect(response.status()).toBe(501);
+  expect(await response.json()).toMatchObject({ success: false, code: 'capability_unavailable', capability: 'measured_time_savings' });
+  const widget = page.getByRole('region', { name: 'Recorded time savings' });
+  await expect(widget.getByRole('heading', { name: 'Recorded time savings' })).toBeVisible();
+  await expect(widget.getByText('Recorded time-savings data is unavailable.')).toBeVisible();
+  await expect(widget.getByText(/hours saved|inquiries handled|appointments scheduled/i)).not.toBeVisible();
+  await widget.getByRole('button', { name: 'Check trial availability' }).click();
+  await expect(widget.getByText(/durable grant is not verified/)).toBeVisible();
+  await expect(widget.getByText(/Trial Extended!|Pro Access Activated/)).not.toBeVisible();
+  expect(claims).toEqual([]);
+  await expectEntitlementUnchanged(page, fixture);
 });

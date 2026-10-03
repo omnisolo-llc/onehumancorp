@@ -113,8 +113,8 @@ async fn handle_create_service(
 
             let res = sqlx::query(
                 r#"
-                INSERT INTO services (id, tenant_id, title, description, price_cents, created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+                INSERT INTO services (id, tenant_id, name, description, price, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, $5::BIGINT::NUMERIC / 100, NOW(), NOW())
                 "#,
             )
             .bind(&service_id)

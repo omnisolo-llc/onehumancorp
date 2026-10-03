@@ -14,7 +14,8 @@ export default function ViralProductWidgetPage() {
     const [copied, setCopied] = useState(false);
     const { hasPro } = useProPlan();
     const [showPaywall, setShowPaywall] = useState(false);
-    const [hideBranding, setHideBranding] = useState(false);
+    const [requestedBrandingRemoval, setHideBranding] = useState(false);
+  const hideBranding = requestedBrandingRemoval && hasPro;
     const [isClient, setIsClient] = useState(false);
 
     useEffect(() => {

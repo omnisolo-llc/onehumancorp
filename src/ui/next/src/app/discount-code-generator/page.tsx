@@ -33,10 +33,7 @@ export default function DiscountCodeGeneratorPage() {
   };
 
   const claimTrialExtension = async () => {
-    const referralUrl = `${window.location.origin}/onboarding?ref=${encodeURIComponent(tenant)}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent('I just unlocked powerful AI tools for my business on OmniSolo OneHumanCorp! Start your own business today: ' + referralUrl)}`, '_blank');
-    if (!await claimTrial()) return;
-    setShowSoftPaywall(false);
+    await claimTrial();
   };
 
   const encodedTenant = encodeURIComponent(tenant);
@@ -215,7 +212,7 @@ export default function DiscountCodeGeneratorPage() {
               onClick={claimTrialExtension}
               className="w-full py-3.5 rounded-xl font-bold transition-all shadow-sm bg-black text-white border-2 border-black hover:bg-gray-800 flex items-center justify-center gap-2"
             >
-              Share on X to activate Pro
+              Check trial availability
             </button>
           </div>
         </div>

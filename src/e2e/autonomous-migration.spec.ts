@@ -1,38 +1,25 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Autonomous Competitor Migration', () => {
-    test('Maya migrates her Shopify store to OmniSolo', async ({ page }) => {
-        // Business Persona: Maya (Home Baker)
-        // She wants to import her 42 cakes from her old Shopify store via URL.
-
-        // 1. Navigate to dashboard/onboarding
-        await page.goto('/dashboard');
-
-        // Ensure logged in (assuming auto-login via fixture or session)
-
-        // 2. Locate migration section in onboarding
-        await page.click('text=Migrate Existing Store');
-
-        // 3. Enter URL
-        await page.fill('input[name="migration_url"]', 'mayas-cakes.myshopify.com');
-
-        // 4. Submit
-        await page.click('button:has-text("Start Migration")');
-
-        // 5. Assert loading state (Glassmorphism loader)
-        await expect(page.locator('text=Our AI is carefully moving your')).toBeVisible();
-
-        // 6. Wait for migration to complete
-        // In E2E, we might mock this or use a test fixture where the backend quickly resolves the job.
-        await expect(page.locator('text=Migration Complete')).toBeVisible({ timeout: 15000 });
-
-        // 7. Review imported products
-        await page.click('button:has-text("Review & Publish")');
-
-        // Should navigate to products catalog
-        await expect(page).toHaveURL(/.*\/products/);
-
-        // And we should see at least one imported cake in the list (mocked by Minimax locally or by the E2E seed script)
-        await expect(page.getByText('Chocolate Cake')).toBeVisible();
+test.describe('Store migration capability boundary', () => {
+  test('shows unavailable migration without requesting or inventing an import', async ({ page }) => {
+    const migrationRequests: string[] = [];
+    page.on('request', request => {
+      if (/migration|myshopify|\/import(?:[/?]|$)/i.test(request.url())) migrationRequests.push(request.url());
     });
+
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Migrate Existing Store' }).click();
+    await expect(page.getByText('Automatic store migration is not available yet. No import has been started.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Start Migration' })).toHaveCount(0);
+    await expect(page.getByText('Migration Complete!')).toHaveCount(0);
+    await expect(page.locator('input[name="migration_url"]')).toHaveCount(0);
+
+    const catalog = page.getByRole('link', { name: 'Open product catalog' });
+    await expect(catalog).toHaveAttribute('href', '/products');
+    await catalog.click();
+    await expect(page).toHaveURL(/\/products$/);
+    expect(migrationRequests).toEqual([]);
+    // A real external-store importer remains unimplemented. No product fixture
+    // or timer may turn that missing capability into claimed migration success.
+  });
 });

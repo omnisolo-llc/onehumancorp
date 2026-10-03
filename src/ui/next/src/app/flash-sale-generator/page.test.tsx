@@ -15,6 +15,16 @@ describe('FlashSaleGeneratorPage', () => {
     localStorage.clear();
   });
 
+  it('marks unconfigured editor-preview actions unavailable with a visible reason', () => {
+    render(<FlashSaleGeneratorPage />);
+    for(const name of ['Shop Now']) {
+      const button=screen.getByRole('button',{name});
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription('No checkout destination is configured in this preview.');
+    }
+    expect(screen.getByText('No checkout destination is configured in this preview.')).toBeVisible();
+  });
+
   it('renders the Flash Sale Generator page correctly', () => {
     render(<FlashSaleGeneratorPage />);
     expect(screen.getByText('Flash Sale Generator ⚡')).toBeDefined();

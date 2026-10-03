@@ -632,6 +632,7 @@
         <a href="viral-service-menu-generator.html" id="viral-service-menu-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Service Menu Generator 📋</a>
         <a href="viral-case-study-generator.html" id="viral-case-study-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Case Study Generator 📈</a>
         <a href="viral-post-generator.html" id="viral-post-generator-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">Promoter Post Generator 🚀</a>
+        <a href="ai-lead-magnet-builder.html" id="ai-lead-magnet-link" style="display: inline-block; background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border: 1px solid rgba(0, 102, 255, 0.2); color: #0066FF; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; transition: transform 0.1s; margin-bottom: 10px;">AI Lead Magnet Builder</a>
       </div>
 
 
@@ -1354,69 +1355,6 @@
           }
         } catch(e) { console.error('Failed to fetch milestones', e); }
 
-        const generateBtn = document.getElementById('generate-link-btn');
-        const linkContainer = document.getElementById('link-container');
-        const copyBtn = document.getElementById('copy-btn');
-        const referralLink = document.getElementById('referral-link');
-
-        if (generateBtn && linkContainer && copyBtn && referralLink) {
-          generateBtn.addEventListener('click', async () => {
-            generateBtn.innerText = "Generating...";
-            if (window.__TAURI__ && window.__TAURI__.core) {
-              try {
-                const link = await window.__TAURI__.core.invoke("generate_cloud_invite");
-                referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "https://cloud.omnisolo.co/invite/fallback";
-              } catch(err) {
-                referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
-              }
-            } else {
-              try {
-                const res = await fetch('/api/v1/growth/cloud-bridge/invite', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ invitee_id: "pending" })
-                });
-                const data = await res.json();
-                referralLink.value = (data.invite_link || "https://cloud.omnisolo.co/invite/fallback").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
-              } catch(e) {
-                referralLink.value = "https://cloud.omnisolo.co/invite/fallback";
-              }
-            }
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          });
-
-          copyBtn.addEventListener('click', () => {
-            const link = referralLink.value;
-            const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
-            navigator.clipboard.writeText(text).then(() => {
-              copyBtn.innerText = "Copied!";
-              setTimeout(() => { copyBtn.innerText = "Copy"; }, 2000);
-            }).catch(() => {
-              copyBtn.innerText = "Copied!";
-              setTimeout(() => { copyBtn.innerText = "Copy"; }, 2000);
-            });
-          });
-
-          const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
-          if (shareWhatsAppBtn) {
-            shareWhatsAppBtn.addEventListener('click', () => {
-              const link = referralLink.value;
-              const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
-              window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-            });
-          }
-
-          const shareTwitterBtn = document.getElementById('share-twitter-btn');
-          if (shareTwitterBtn) {
-            shareTwitterBtn.addEventListener('click', () => {
-              const link = referralLink.value;
-              const text = `Join my team on OmniSolo! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
-              window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-            });
-          }
-        }
-
         const shareSavingsBtn = document.getElementById('share-savings-btn');
         const savingsStatus = document.getElementById('savings-status');
         const aiSavingsWidget = document.getElementById('ai-savings-widget');
@@ -1927,7 +1865,6 @@
       }
       checkWrapped();
 
-      const generateBtn = document.getElementById('generate-link-btn');
 
       const chatEmbedBtn = document.getElementById('dashboard-embed-chat-btn');
       if (chatEmbedBtn) {
@@ -1944,96 +1881,6 @@
         });
       }
 
-      const linkContainer = document.getElementById('link-container');
-      const copyBtn = document.getElementById('copy-btn');
-      const referralLink = document.getElementById('referral-link');
-
-      if (generateBtn) { generateBtn.addEventListener('click', async () => {
-        generateBtn.innerText = "Generating...";
-        // Call the real Tauri backend
-        if (window.__TAURI__ && window.__TAURI__.core) {
-          window.__TAURI__.core.invoke("generate_cloud_bridge_invite").then((link) => {
-            referralLink.value = link ? String(link).replace("https://omnisolo.co/", "https://cloud.omnisolo.co/") : "";
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          }).catch((err) => {
-            console.error(err);
-            referralLink.value = "";
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          });
-        } else {
-          try {
-            const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-            const res = await fetch('/api/v1/growth/team-invites', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ team_id: tenantId, inviter_id: "owner", invitee_id: "pending" })
-            });
-            const data = await res.json();
-          const approvals = data.pending_approvals || []; const feed = data.agent_feed || []; agentFeedItems = [...approvals, ...feed];
-            referralLink.value = (data.invite_link || "").replace("https://omnisolo.co/", "https://cloud.omnisolo.co/");
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          } catch(e) {
-            console.error(e);
-            referralLink.value = "";
-            generateBtn.style.display = 'none';
-            linkContainer.style.display = 'block';
-          }
-        }
-      });
-
-      }
-      if (copyBtn) { copyBtn.addEventListener('click', () => {
-        const link = referralLink.value;
-        const text = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
-
-        navigator.clipboard.writeText(text).then(() => {
-          copyBtn.innerText = "Copied!";
-          setTimeout(() => {
-            copyBtn.innerText = "Copy";
-          }, 2000);
-        }).catch(err => {
-          console.error('Failed to copy: ', err);
-          // Fallback to older execCommand method if clipboard API fails
-          // For legacy compatibility, write text to a temporary element to copy it
-          const tempInput = document.createElement("textarea");
-          tempInput.value = text;
-          document.body.appendChild(tempInput);
-          tempInput.select();
-          document.execCommand("copy");
-          document.body.removeChild(tempInput);
-                localStorage.setItem(dismissedKey, 'true');
-
-          copyBtn.innerText = "Copied!";
-          setTimeout(() => {
-            copyBtn.innerText = "Copy";
-          }, 2000);
-        });
-      });
-
-      }
-      const shareWhatsAppBtn = document.getElementById('share-whatsapp-btn');
-      if (shareWhatsAppBtn) { shareWhatsAppBtn.addEventListener('click', () => {
-        const link = referralLink.value;
-        const text = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
-        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-      });
-
-      }
-      const shareXBtn = document.getElementById('share-x-btn');
-      if (shareXBtn) { shareXBtn.addEventListener('click', () => {
-        const link = referralLink.value;
-        const text = `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
-                localStorage.setItem(dismissedKey, 'true');
-                document.getElementById('milestone-container').style.display = 'none';
-      });
-
-
-
-      }
       const triageSection = document.getElementById('triage-section');
       const triageQueue = document.getElementById('triage-queue');
       let currentTriageTab = 'proposals';
@@ -4519,5 +4366,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script type="module" src="invite-bridge.mjs"></script>
 </body>
 </html>

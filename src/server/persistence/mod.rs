@@ -1,3 +1,4 @@
+pub mod agent_definitions;
 mod capabilities;
 pub mod catalog;
 pub mod commands;

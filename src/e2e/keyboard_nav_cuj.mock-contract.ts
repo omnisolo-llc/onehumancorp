@@ -16,13 +16,13 @@ test.describe('Keyboard Navigation CUJ', () => {
     });
 
     await page.addInitScript(() => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async () => {
             return null;
           }
         }
-      };
+      } });
     });
 
     await page.goto('http://mock/setup.html');

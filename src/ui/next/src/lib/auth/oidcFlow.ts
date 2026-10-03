@@ -409,8 +409,12 @@ export async function finishOidc(request: Request): Promise<Response> {
       sessionCodecContext(dependencies.config),
       { now: dependencies.now(), backendExpiresAt: backend.expires_at },
     );
+    const completion = new URL(safeReturnPath(state.returnTo), dependencies.config.canonicalOrigin);
+    // Only a successfully sealed session marks the client handoff. The marker
+    // invalidates other views; every subsequent identity still comes from auth.
+    completion.searchParams.set('ohc_auth_complete', '1');
     return privateRedirect(
-      new URL(safeReturnPath(state.returnTo), dependencies.config.canonicalOrigin),
+      completion,
       [
         serializeSessionCookie(cookieForSession(dependencies.config, sealed, dependencies.now(), expiresAt)),
         deleteStateCookie(cookieName, dependencies.config.secureCookie),

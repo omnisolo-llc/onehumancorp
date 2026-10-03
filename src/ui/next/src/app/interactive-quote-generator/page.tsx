@@ -1,34 +1,79 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { hasVerifiedOfflineQueueOwner, sameOwner, subscribeQueueIdentityReadiness } from '@/lib/sync/queueIdentity';
+import { onboardingOwner, onboardingSessionEpoch, openOnboardingSession, subscribeOnboardingInvalidation, type DraftOwner } from '../onboarding/draftSession';
+
+const escapeAttribute = (text: string) => text.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
+function currentOwner(expected: DraftOwner | null, epoch: number) {
+  const current = onboardingOwner();
+  return !!expected && !!current && sameOwner(expected, current) && epoch === onboardingSessionEpoch() && hasVerifiedOfflineQueueOwner(expected);
+}
 
 export default function InteractiveQuoteGeneratorPage() {
   const router = useRouter();
-  const [tenant, setTenant] = useState('my-store');
+  const [owner, setOwner] = useState<DraftOwner | null>(null);
+  const capturedOwner = useRef<DraftOwner | null>(null);
+  const [ownerEpoch, setOwnerEpoch] = useState(0);
+  const [identityReady, setIdentityReady] = useState(false);
+  const [identityMessage, setIdentityMessage] = useState('Verifying the account for this embed…');
+  const [verification, setVerification] = useState(0);
   const [serviceName, setServiceName] = useState('Custom Cake Design');
   const [basePrice, setBasePrice] = useState(50);
   const [unitName, setUnitName] = useState('Guests');
   const [pricePerUnit, setPricePerUnit] = useState(5);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const [copied, setCopied] = useState(false);
+
 
   useEffect(() => {
-    if (typeof localStorage !== 'undefined') {
-      const savedTenant = localStorage.getItem('business_display_name');
-      if (savedTenant) setTenant(savedTenant);
-    }
-  }, []);
+    let active = true, sequence = 0;
+    const verify = async () => {
+      const token = ++sequence, epoch = onboardingSessionEpoch();
+      capturedOwner.current = null; setOwner(null); setIdentityMessage('Verifying the account for this embed…');
+      try {
+        const verified = await openOnboardingSession();
+        if (!active || token !== sequence || epoch !== onboardingSessionEpoch()) return;
+        capturedOwner.current = verified; setOwner(verified); setOwnerEpoch(epoch); setIdentityMessage('');
+      } catch {
+        if (active && token === sequence && epoch === onboardingSessionEpoch()) setIdentityMessage('Could not verify the account. Embed export is unavailable.');
+      }
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(restart => {
+      sequence += 1; capturedOwner.current = null; setOwner(null); setIdentityReady(false);
+      setServiceName('Custom Cake Design'); setBasePrice(50); setUnitName('Guests'); setPricePerUnit(5); setTheme('light');
+      setIdentityMessage('Your session changed. Verify the account before exporting an embed.');
+      if (restart) void verify();
+    });
+    const readiness = subscribeQueueIdentityReadiness(() => {
+      if (!active) return;
+      const ready = hasVerifiedOfflineQueueOwner();
+      if (ready && capturedOwner.current && !hasVerifiedOfflineQueueOwner(capturedOwner.current)) {
+        // A successful different-owner verification is distinct from a pending
+        // refresh. Retire only the proved mismatch, preserving same-owner edits.
+        sequence += 1; capturedOwner.current = null; setOwner(null); setIdentityReady(false);
+        setServiceName('Custom Cake Design'); setBasePrice(50); setUnitName('Guests'); setPricePerUnit(5); setTheme('light');
+        setIdentityMessage('The verified account changed. Verify the account before exporting.');
+        return;
+      }
+      setIdentityReady(ready);
+    });
+    void verify();
+    return () => { active = false; sequence += 1; capturedOwner.current = null; unsubscribe(); readiness(); };
+  }, [verification]);
 
-  const generatedLink = `${typeof window !== 'undefined' ? window.location.origin : ''}/quote-calculator?tenant=${tenant}&service=${encodeURIComponent(serviceName)}&basePrice=${encodeURIComponent(basePrice.toString())}&unitName=${encodeURIComponent(unitName)}&pricePerUnit=${encodeURIComponent(pricePerUnit.toString())}&theme=${theme}`;
-  const iframeCode = `<iframe src="${generatedLink}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
-<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color:#6b7280;text-decoration:none;font-weight:600;font-family:sans-serif;">⚡ Powered by OmniSolo</a></div>`;
+  const canExport = identityReady && currentOwner(owner, ownerEpoch);
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const parameters = new URLSearchParams({ tenant: owner?.tenantId ?? '', service: serviceName, basePrice: String(basePrice), unitName, pricePerUnit: String(pricePerUnit), theme });
+  const generatedLink = `${origin}/quote-calculator?${parameters}`;
+  const referral = new URL('https://cloud.omnisolo.co/api/v1/growth/referrals/click');
+  referral.search = new URLSearchParams({ target: '/onboarding', ref: owner?.tenantId ?? '' }).toString();
+  const iframeCode = canExport ? `<iframe src="${escapeAttribute(generatedLink)}" width="100%" height="400" frameborder="0" style="border-radius: 12px; border: 1px solid ${theme === 'dark' ? '#374151' : '#e5e7eb'}; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);"></iframe>
+<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="${escapeAttribute(referral.toString())}" target="_blank" rel="noopener noreferrer" style="color:#6b7280;text-decoration:none;font-weight:600;font-family:sans-serif;">⚡ Powered by OmniSolo</a></div>` : '';
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(iframeCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const clipboard = useClipboardFeedback(iframeCode);
+  const handleCopy = () => { if (canExport && currentOwner(owner, ownerEpoch)) void clipboard.copy(iframeCode); };
 
   const getThemeStyles = () => {
     return theme === 'light'
@@ -105,13 +150,13 @@ export default function InteractiveQuoteGeneratorPage() {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
                             <div className="flex gap-4">
                                 <button
-                                    onClick={() => setTheme('light')}
+                                    onClick={() => setTheme('light')} aria-pressed={theme === 'light'}
                                     className={`flex-1 py-2 px-4 rounded-xl border ${theme === 'light' ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-semibold' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'} transition-all`}
                                 >
                                     Light
                                 </button>
                                 <button
-                                    onClick={() => setTheme('dark')}
+                                    onClick={() => setTheme('dark')} aria-pressed={theme === 'dark'}
                                     className={`flex-1 py-2 px-4 rounded-xl border ${theme === 'dark' ? 'border-gray-800 bg-gray-900 text-white font-semibold' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'} transition-all`}
                                 >
                                     Dark
@@ -124,8 +169,12 @@ export default function InteractiveQuoteGeneratorPage() {
                 <div className="glassmorphism p-6 rounded-[24px] border border-white/40 shadow-sm bg-white/60 backdrop-blur-[30px] saturate-[210%]">
                     <h2 className="text-xl font-bold font-outfit text-gray-900 mb-4">Embed Code</h2>
                     <p className="text-sm text-gray-600 mb-4">Copy this HTML snippet to embed the interactive calculator on your website or blog.</p>
+                    {!canExport && <p role="status">{identityMessage || 'Verify the account before exporting.'}</p>}
+                    {!canExport && !identityMessage.startsWith('Verifying') && <button type="button" onClick={() => setVerification(value => value + 1)}>Verify account</button>}
                     <div className="relative">
                         <textarea
+                            aria-label="Verified quote embed code"
+                            aria-busy={!canExport && identityMessage.startsWith('Verifying')}
                             readOnly
                             value={iframeCode}
                             className="w-full h-32 px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-sm font-mono text-gray-800 outline-none resize-none"
@@ -133,10 +182,12 @@ export default function InteractiveQuoteGeneratorPage() {
                     </div>
                     <button
                         onClick={handleCopy}
+                disabled={!canExport || clipboard.state === 'pending'}
                         className="mt-4 w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold min-h-[44px] min-w-[44px] transition-colors flex items-center justify-center gap-2 shadow-md"
                     >
-                        {copied ? 'Code Copied!' : 'Copy Embed Code'}
+                        {clipboard.state === 'copied' ? 'Code Copied!' : 'Copy Embed Code'}
                     </button>
+              {clipboard.message && <p role={clipboard.state === 'error' ? 'alert' : 'status'}>{clipboard.message}</p>}
                 </div>
             </div>
 

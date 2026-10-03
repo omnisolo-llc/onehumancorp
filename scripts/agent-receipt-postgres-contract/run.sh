@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/../.."
+: "${OHC_AGENT_RECEIPT_TEST_DATABASE_URL:?explicit owned PostgreSQL database required}"
+OHC_AGENT_DEFINITION_TEST_DATABASE_URL="$OHC_AGENT_RECEIPT_TEST_DATABASE_URL" python3 scripts/agent-definition-contract/database_guard.py
+unset JWT_SECRET_FILE OMNISOLO_DATABASE_URL_FILE DATABASE_URL_FILE REDIS_URL REDIS_URL_FILE
+export JWT_SECRET=public-local-receipt-postgres-fixture-signing-key-only
+export OMNISOLO_STANDALONE_MODE=false OMNISOLO_MULTITENANT=false OMNISOLO_DATABASE_URL=sqlite::memory:
+export CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
+cargo metadata --locked --offline --manifest-path scripts/agent-receipt-postgres-contract/Cargo.toml --format-version 1 >/dev/null
+python3 scripts/agent-receipt-postgres-contract/verify_lock.py
+python3 scripts/agent-receipt-postgres-contract/prepare.py
+before=$(sha256sum scripts/agent-receipt-postgres-contract/source-manifest.json)
+status=0
+cargo test --locked --offline --manifest-path scripts/agent-receipt-postgres-contract/Cargo.toml -- --test-threads=1 || status=$?
+python3 scripts/agent-receipt-postgres-contract/prepare.py
+test "$before" = "$(sha256sum scripts/agent-receipt-postgres-contract/source-manifest.json)"
+exit "$status"

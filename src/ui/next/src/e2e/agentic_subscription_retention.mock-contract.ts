@@ -1,11 +1,19 @@
-import { test, expect } from '../../../../e2e/fixtures';
-import { setupAuthAndDatabase } from './test_setup';
+import { test, expect, E2E_ADMIN_USER } from '../../../../e2e/fixtures';
+import { authenticateRequest } from '../../../../e2e/authenticate';
 
 test.describe('Agentic Subscription Retention CUJ', () => {
   let tenantId: string;
 
-  test.beforeAll(async ({ request }) => {
-    tenantId = await setupAuthAndDatabase(request);
+  test.beforeAll(async ({ request, baseURL }) => {
+    expect(baseURL).toBeTruthy();
+    const origin = new URL(baseURL!);
+    expect(['localhost', '127.0.0.1', '[::1]']).toContain(origin.hostname);
+    await authenticateRequest(request, {
+      username: E2E_ADMIN_USER.email,
+      password: E2E_ADMIN_USER.password,
+      organizationId: E2E_ADMIN_USER.organizationId,
+    }, origin.origin);
+    tenantId = E2E_ADMIN_USER.organizationId;
 
     // Mock a subscription with low health score (no recent activity)
     const seedRes = await request.post('/api/v1/test-db/seed-query', {

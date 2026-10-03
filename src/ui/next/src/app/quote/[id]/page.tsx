@@ -42,9 +42,10 @@ function formatMoney(cents: number | null) {
     .format((cents ?? 0) / 100);
 }
 
+
+
 export default function InteractiveQuotePage() {
-  const params = useParams();
-  const rawId = params.id;
+  const { id: rawId } = useParams<{ id: string }>();
   const quoteId = typeof rawId === "string" && QUOTE_ID.test(rawId) ? rawId : null;
   const [quote, setQuote] = useState<QuoteResponse | null>(null);
   const [loading, setLoading] = useState(true);

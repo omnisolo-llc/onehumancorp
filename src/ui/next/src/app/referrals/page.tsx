@@ -1,8 +1,9 @@
 'use client';
 
-import { useState,useEffect } from 'react';
+import { useState,useEffect,useCallback } from 'react';
 import { PoweredByOmniSolo } from '../components/PoweredByOmniSolo';
 import GrowthReferralWidget from '../components/GrowthReferralWidget';
+import { useCloudInvitation } from './useCloudInvitation';
 
 export default function ReferralsPage() {
   const [copied, setCopied] = useState(false);
@@ -11,7 +12,8 @@ export default function ReferralsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [dataAction, setDataAction] = useState('');
   const [cloudEmail, setCloudEmail] = useState('');
-  const [cloudInviteStatus, setCloudInviteStatus] = useState('');
+  const clearCloudEmail = useCallback(() => setCloudEmail(''), []);
+  const invitation = useCloudInvitation(clearCloudEmail);
 
   useEffect(() => {
     const fallbackReferralLink = () => {
@@ -175,23 +177,20 @@ export default function ReferralsPage() {
               placeholder="team-member@example.com"
               value={cloudEmail}
               onChange={(e) => setCloudEmail(e.target.value)}
+              disabled={invitation.phase !== 'ready'}
               className="flex-1 px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-indigo-500"
             />
             <button
-              onClick={() => {
-                const invite = `https://omnisolo.co/invite/${encodeURIComponent(cloudEmail || 'user')}`;
-                setCloudInviteStatus(`Cloud Invite generated: ${invite}`);
-              }}
+              onClick={() => void invitation.create(cloudEmail)}
+              disabled={invitation.phase !== 'ready'}
               className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl transition-colors"
             >
               Generate Cloud Invite
             </button>
           </div>
-          {cloudInviteStatus && (
-            <p role="status" className="mt-4 text-sm text-green-700 font-medium">
-              {cloudInviteStatus}
-            </p>
-          )}
+          <p role="status" aria-label="Cloud invitation status" className="mt-4 text-sm font-medium">
+            {invitation.message}
+          </p>
         </div>
 
         <GrowthReferralWidget />

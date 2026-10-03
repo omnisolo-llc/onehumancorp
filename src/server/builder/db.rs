@@ -102,14 +102,13 @@ pub async fn get_site_structure_rows(
 }
 
 pub async fn create_brand_toolbox(
-    pool: &PgPool,
+    tx: &mut Transaction<'_, Postgres>,
     tenant_id: Uuid,
     name: String,
     source_description: String,
     toolbox: Value,
 ) -> Result<BrandToolbox, sqlx::Error> {
-    let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
-    let result = sqlx::query_as::<_, BrandToolbox>(
+    sqlx::query_as::<_, BrandToolbox>(
         r#"
         INSERT INTO builder_brand_toolboxes (tenant_id, name, source_description, toolbox)
         VALUES ($1, $2, $3, $4)
@@ -120,15 +119,14 @@ pub async fn create_brand_toolbox(
     .bind(name)
     .bind(source_description)
     .bind(toolbox)
-    .fetch_one(&mut *tx)
-    .await?;
-    tx.commit().await?;
-    Ok(result)
+    .fetch_one(&mut **tx)
+    .await
 }
 
 pub async fn get_brand_toolbox(
     pool: &PgPool,
     tenant_id: Uuid,
+    raw_tenant: &str,
     toolbox_id: Uuid,
 ) -> Result<BrandToolbox, sqlx::Error> {
     let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
@@ -136,11 +134,12 @@ pub async fn get_brand_toolbox(
         r#"
         SELECT id, tenant_id, name, source_description, toolbox
         FROM builder_brand_toolboxes
-        WHERE tenant_id = $1 AND id = $2
+        WHERE tenant_id = $1 AND id = $2 AND toolbox #>> '{generation,tenant_id}' = $3
         "#,
     )
     .bind(tenant_id)
     .bind(toolbox_id)
+    .bind(raw_tenant)
     .fetch_one(&mut *tx)
     .await
 }
@@ -148,17 +147,19 @@ pub async fn get_brand_toolbox(
 pub async fn list_brand_toolboxes(
     pool: &PgPool,
     tenant_id: Uuid,
+    raw_tenant: &str,
 ) -> Result<Vec<BrandToolbox>, sqlx::Error> {
     let mut tx = acquire_tenant_conn(pool, tenant_id).await?;
     sqlx::query_as::<_, BrandToolbox>(
         r#"
         SELECT id, tenant_id, name, source_description, toolbox
         FROM builder_brand_toolboxes
-        WHERE tenant_id = $1
+        WHERE tenant_id = $1 AND toolbox #>> '{generation,tenant_id}' = $2
         ORDER BY updated_at DESC, created_at DESC
         "#,
     )
     .bind(tenant_id)
+    .bind(raw_tenant)
     .fetch_all(&mut *tx)
     .await
 }

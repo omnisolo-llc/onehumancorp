@@ -18,7 +18,7 @@ test.describe('Multilingual Order Interceptor CUJ', () => {
         await expect(page.locator('text=Order')).toBeVisible({ timeout: 15000 });
 
         // Match the translated intent depending on LLM output (usually "chicken tacos" or "Chicken Tacos")
-        await expect(page.locator('text=chicken')).toBeVisible({ ignoreCase: true });
+        await expect(page.getByText(/chicken/i)).toBeVisible();
         await expect(page.locator('text=x3')).toBeVisible();
 
         // Confirm the order to send it to the agent feed

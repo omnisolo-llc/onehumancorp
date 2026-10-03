@@ -1,4 +1,6 @@
 "use client";
+import { SyncManager } from "../../lib/sync/SyncManager";
+import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import type { AgentFeedData, AgentFeedItem, ActivityItem, TriageItem } from '@/lib/agent-feed-types';
 import type { Step } from '@/components/Walkthrough';
 import type { ApprovalRequest } from '../team/page';
@@ -132,11 +134,10 @@ export default function Dashboard() {
   const [initialTriage, setInitialTriage] = useState<TriageItem[]>([]);
   const [userName, setUserName] = useState("Human");
   const [showMigration, setShowMigration] = useState(false);
-  const [migrationUrl, setMigrationUrl] = useState("");
-  const [migrationStatus, setMigrationStatus] = useState<"idle" | "running" | "complete">("idle");
   const [actionMessage] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncErrorCount, setSyncErrorCount] = useState(0);
+  const [queueReadError, setQueueReadError] = useState("");
   const [activeDepartments, setActiveDepartments] = useState<string[]>([]);
   const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
   const [showReferralModal, setShowReferralModal] = useState(false);
@@ -145,6 +146,7 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    let queueActive = true; let queueVersion = 0; let syncVersion = 0;
     fetch("/api/v1/walkthrough/dashboard")
       .then((res) => (res.ok ? res.json() : []))
       .then((data) => {
@@ -167,51 +169,41 @@ export default function Dashboard() {
     }
 
     const updateOfflineStatus = async () => {
+      const version = ++queueVersion;
       setIsOffline(!navigator.onLine);
       try {
-        const { getActions } = await import("../utils/offlineQueue");
-        const actions = await getActions();
-        setOfflineQueueCount(actions.length);
+        const summary = await SyncManager.getInstance().getQueueSummary();
+        if (!queueActive || version !== queueVersion) return;
+        setOfflineQueueCount(summary.pending);
+        setSyncErrorCount(summary.needsAttention + summary.reconciliation);
+        setQueueReadError(summary.storageUnavailable ? 'Queue status is unavailable for one local adapter. Saved actions remain held.' : '');
       } catch {
-        setOfflineQueueCount(0);
+        if (queueActive && version === queueVersion) setQueueReadError('Queue status is unavailable. Saved actions remain held until your session and local storage can be verified.');
       }
     };
 
     const handleSync = async () => {
       if (!navigator.onLine) return;
+      const version = ++syncVersion;
+      setIsSyncing(true);
       try {
-        const { getActions, removeAction } = await import("../utils/offlineQueue");
-        const queue = await getActions();
-        if (!Array.isArray(queue) || queue.length === 0) return;
-
-        setIsSyncing(true);
-        setSyncErrorCount(0);
-
-        const res = await fetch("/api/v1/sync/offline", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mutations: queue }),
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.failed_count && data.failed_count > 0) {
-            setSyncErrorCount(data.failed_count);
-          }
-
-          // Remove exactly the items we just synced
-          for (const item of queue) {
-             await removeAction(item.id);
-          }
-
-          const currentQueue = await getActions();
-          setOfflineQueueCount(currentQueue.length);
-        }
-      } catch (e) {
-        console.error("Sync failed", e);
+        await SyncManager.getInstance().sync();
+        if (queueActive && version === syncVersion) await updateOfflineStatus();
+      } catch {
+        if (queueActive && version === syncVersion) setQueueReadError('Queue status is unavailable. Saved actions remain held until their result can be verified.');
       } finally {
-        setIsSyncing(false);
+        if (queueActive && version === syncVersion) setIsSyncing(false);
       }
+    };
+    const handleIdentityChanged = () => {
+      syncVersion += 1; setIsSyncing(false); setOfflineQueueCount(0); setSyncErrorCount(0);
+      setQueueReadError('Queue status is unavailable while your session is being verified.');
+      void updateOfflineStatus();
+    };
+
+    const handleQueueStorage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) handleIdentityChanged();
+      else void updateOfflineStatus();
     };
 
     async function loadDashboard() {
@@ -289,16 +281,21 @@ export default function Dashboard() {
     window.addEventListener("online", updateOfflineStatus);
     window.addEventListener("online", handleSync);
     window.addEventListener("offline", updateOfflineStatus);
-    window.addEventListener("storage", updateOfflineStatus);
+    window.addEventListener("storage", handleQueueStorage);
+    window.addEventListener("omnisolo_queue_updated", updateOfflineStatus);
+    window.addEventListener("omnisolo_auth_changed", handleIdentityChanged);
 
 
 
 
   return () => {
+      queueActive = false; queueVersion += 1; syncVersion += 1;
+      window.removeEventListener("omnisolo_queue_updated", updateOfflineStatus);
+      window.removeEventListener("omnisolo_auth_changed", handleIdentityChanged);
       window.removeEventListener("online", updateOfflineStatus);
       window.removeEventListener("online", handleSync);
       window.removeEventListener("offline", updateOfflineStatus);
-      window.removeEventListener("storage", updateOfflineStatus);
+      window.removeEventListener("storage", handleQueueStorage);
     };
   }, []);
 
@@ -403,7 +400,8 @@ export default function Dashboard() {
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-sm text-gray-500 dark:text-gray-400">Total Balance</span>
-          <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">$1,500.00 USD</span>
+          <span className="text-2xl font-bold font-outfit text-gray-900 dark:text-gray-100">Balance unavailable</span>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Recorded activity does not establish an available balance across accounts or currencies.</p>
         </div>
       </div>
       <AIFeaturePaywallWidget />
@@ -437,10 +435,10 @@ export default function Dashboard() {
           Migrate Existing Store
         </button>
         <div id="queue-dashboard" className={offlineQueueCount > 0 ? "app-badge warn block" : "hidden"}>
-          {offlineQueueCount} Payments Pending Sync
+          {offlineQueueCount} Actions Pending Sync
         </div>
         <div id="network-status-indicator" className={isOffline ? "app-badge warn block" : "hidden"} style={{ display: isOffline ? 'block' : 'none' }}>
-          Offline - changes saved locally
+          Offline - queued actions still need a verified result
         </div>
         {isSyncing && (
           <div className="fixed bottom-4 right-4 bg-[#0f766e] text-white px-4 py-3 rounded-xl shadow-lg font-medium animate-in slide-in-from-bottom-5 z-50 flex items-center gap-2">
@@ -448,12 +446,13 @@ export default function Dashboard() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            Syncing {offlineQueueCount} offline payments...
+            Checking {offlineQueueCount} pending actions...
           </div>
         )}
+        {queueReadError && <p role="status" className="app-badge warn">{queueReadError}</p>}
         {syncErrorCount > 0 && (
           <div className="app-badge bad" role="alert">
-            {syncErrorCount} payment{syncErrorCount > 1 ? 's' : ''} failed to sync. Tap to resolve.
+            {syncErrorCount} action{syncErrorCount > 1 ? 's need' : ' needs'} attention or reconciliation. Their saved copies are retained.
           </div>
         )}
         {error && <div className="app-badge bad">{error}</div>}
@@ -508,62 +507,16 @@ export default function Dashboard() {
       </section>
 
       {showMigration && (
-        <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6">
+        <section className="app-panel rounded-[12px] bg-white/65 backdrop-blur-[30px] backdrop-saturate-[2.1] border border-white/40 dark:bg-[#16161a]/70 dark:backdrop-blur-[30px] dark:backdrop-saturate-[2.1] dark:border-white/10 shadow-sm border border-white/40 dark:border-white/10 mb-6" aria-labelledby="store-migration-title">
           <div className="app-panel-header">
-            <div>
-              <div className="app-panel-title">Store Migration</div>
-              <div className="app-list-subtitle">Import products and storefront details from an existing shop URL.</div>
-            </div>
+            <h2 id="store-migration-title" className="app-panel-title">Store Migration</h2>
           </div>
           <div className="app-panel-body">
-            <div className="flex flex-col gap-3 md:flex-row md:items-end">
-              <label className="flex-1 text-sm font-semibold text-gray-700 dark:text-gray-200">
-                Existing store URL
-                <input
-                  name="migration_url"
-                  value={migrationUrl}
-                  onChange={(event) => setMigrationUrl(event.target.value)}
-                  className="mt-2 w-full border border-gray-200 bg-white px-3 py-2 text-sm text-[#1D1D1F] shadow-sm dark:border-white/10 dark:bg-black/30 dark:text-[#F5F5F7]"
-                  placeholder="mayas-cakes.myshopify.com"
-                />
-              </label>
-              {migrationStatus === "idle" && (
-                <button
-                  type="button"
-                  className="app-button primary min-h-[44px]"
-                  onClick={() => {
-                    setMigrationStatus("running");
-                    setTimeout(() => setMigrationStatus("complete"), 800);
-                  }}
-                >
-                  Start Migration
-                </button>
-              )}
-              {migrationStatus === "running" && (
-                <div className="flex items-center gap-2 p-3 bg-white/80 dark:bg-black/40 rounded-lg border border-white/50 backdrop-blur-[30px]">
-                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                    Our AI is carefully moving your products and storefront data...
-                  </span>
-                </div>
-              )}
-              {migrationStatus === "complete" && (
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-semibold text-green-600 dark:text-green-400">
-                    Migration Complete!
-                  </span>
-                  <button
-                    type="button"
-                    className="app-button primary min-h-[44px]"
-                    onClick={() => router.push("/products")}
-                  >
-                    Review & Publish
-                  </button>
-                </div>
-              )}
-            </div>
-            {migrationStatus === "idle" && (
-              <p className="mt-4 app-list-subtitle">Import catalog items, images, and pricing seamlessly into your OmniSolo workspace.</p>
-            )}
+            <p role="status" className="app-list-subtitle mb-3">
+              Automatic store migration is not available yet. No import has been started.
+            </p>
+            <p className="app-list-subtitle mb-3">You can add and edit products in your catalog.</p>
+            <Link href="/products" className="app-button primary min-h-[44px]">Open product catalog</Link>
           </div>
         </section>
       )}

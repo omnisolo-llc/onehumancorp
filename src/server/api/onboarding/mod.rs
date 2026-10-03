@@ -1,5 +1,5 @@
 use crate::services::onboarding::onboarding_agent::OnboardingAgent;
-use ::server_omnisolo::orchestration::{StartOnboardingRequest, StartOnboardingResponse};
+use ::server_omnisolo::orchestration::StartOnboardingRequest;
 use axum::{
     Router,
     extract::{Extension, Json, State},
@@ -72,6 +72,35 @@ async fn require_onboarding_admin(
         .get::<::server_common::Claims>()
         .is_some_and(is_onboarding_admin)
     {
+        let claims = req
+            .extensions()
+            .get::<::server_common::Claims>()
+            .expect("checked claims");
+        let expected_user = req.headers().get_all("x-ohc-expected-user");
+        let expected_tenant = req.headers().get_all("x-ohc-expected-tenant");
+        if expected_user.iter().next().is_some() || expected_tenant.iter().next().is_some() {
+            let exact = |values: axum::http::header::GetAll<'_, axum::http::HeaderValue>,
+                         actual: &str| {
+                let mut values = values.iter();
+                values.next().and_then(|value| value.to_str().ok()) == Some(actual)
+                    && values.next().is_none()
+                    && !actual.is_empty()
+            };
+            if !exact(expected_user, &claims.sub)
+                || !exact(
+                    expected_tenant,
+                    claims.organization_id.as_deref().unwrap_or_default(),
+                )
+            {
+                return (
+                    axum::http::StatusCode::CONFLICT,
+                    Json(serde_json::json!({
+                        "success": false, "error": "session_identity_changed"
+                    })),
+                )
+                    .into_response();
+            }
+        }
         next.run(req).await
     } else {
         axum::http::StatusCode::FORBIDDEN.into_response()
@@ -163,6 +192,27 @@ fn validate_chat_request(request: &ChatRequest) -> bool {
 
 #[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+struct ReviewedInputVariant {
+    #[serde(default)]
+    variant_id: Option<String>,
+    name: String,
+    price_modifier: String,
+}
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReviewedInputProduct {
+    #[serde(default)]
+    product_id: Option<String>,
+    name: String,
+    price: String,
+    #[serde(default)]
+    description: String,
+    #[serde(default)]
+    variants: Vec<ReviewedInputVariant>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct AuthenticatedStartOnboardingRequest {
     business_type: String,
     company_name: String,
@@ -177,7 +227,9 @@ struct AuthenticatedStartOnboardingRequest {
     location: String,
     target_audience: String,
     #[serde(default)]
-    initial_products: Vec<::server_omnisolo::orchestration::IntakeProductProto>,
+    initial_products: Vec<ReviewedInputProduct>,
+    #[serde(default)]
+    replaces_preparation_id: Option<String>,
     #[serde(default)]
     ai_agents: Vec<String>,
     #[serde(default)]
@@ -201,7 +253,25 @@ impl From<AuthenticatedStartOnboardingRequest> for StartOnboardingRequest {
             price_type: request.price_type,
             location: request.location,
             target_audience: request.target_audience,
-            initial_products: request.initial_products,
+            initial_products: request
+                .initial_products
+                .into_iter()
+                .map(|p| ::server_omnisolo::orchestration::IntakeProductProto {
+                    name: p.name,
+                    price: p.price,
+                    description: p.description,
+                    variants: p
+                        .variants
+                        .into_iter()
+                        .map(
+                            |v| ::server_omnisolo::orchestration::IntakeProductVariantProto {
+                                name: v.name,
+                                price_modifier: v.price_modifier,
+                            },
+                        )
+                        .collect(),
+                })
+                .collect(),
             ai_agents: request.ai_agents,
             ai_auto_respond: request.ai_auto_respond,
             deposit_percentage: request.deposit_percentage,
@@ -257,15 +327,31 @@ fn validate_start_request(request: &AuthenticatedStartOnboardingRequest) -> bool
         })
 }
 
+fn onboarding_ai_failure(error: &str) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    if error == "onboarding_ai_unconfigured" {
+        return (
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": "onboarding_ai_unconfigured",
+                "message": "AI-assisted setup is unavailable because no model provider is configured. Review and enter your business details manually."
+            })),
+        ).into_response();
+    }
+    axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+}
+
 async fn process_intake_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<IntakeRequest>,
-) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::http::StatusCode>
+) -> Result<Json<crate::services::onboarding::onboarding_agent::IntakeData>, axum::response::Response>
 {
     if !valid_required_text(&payload.description, MAX_ONBOARDING_INPUT_CHARS)
         || !valid_optional_url(payload.image_url.as_deref())
     {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
+        return Err(axum::response::IntoResponse::into_response(
+            axum::http::StatusCode::BAD_REQUEST,
+        ));
     }
     let mut combined_input = payload.description.clone();
     if let Some(image_url) = &payload.image_url {
@@ -275,7 +361,7 @@ async fn process_intake_handler(
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding intake agent error: {}", error);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            Err(onboarding_ai_failure(&error))
         }
     }
 }
@@ -283,16 +369,20 @@ async fn process_intake_handler(
 async fn process_chat_handler(
     State(agent): State<Arc<OnboardingAgent>>,
     Json(payload): Json<ChatRequest>,
-) -> Result<Json<crate::services::onboarding::onboarding_agent::ChatResponse>, axum::http::StatusCode>
-{
+) -> Result<
+    Json<crate::services::onboarding::onboarding_agent::ChatResponse>,
+    axum::response::Response,
+> {
     if !validate_chat_request(&payload) {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
+        return Err(axum::response::IntoResponse::into_response(
+            axum::http::StatusCode::BAD_REQUEST,
+        ));
     }
     match agent.process_chat(payload.messages).await {
         Ok(data) => Ok(Json(data)),
         Err(error) => {
             tracing::error!("onboarding chat agent error: {}", error);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
+            Err(onboarding_ai_failure(&error))
         }
     }
 }
@@ -319,6 +409,9 @@ async fn save_draft(
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     let (tenant_id, user_id) = onboarding_identity(&auth_info)?;
 
+    if !crate::services::onboarding::onboarding_agent::valid_draft_state(&payload) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
     let step = payload.get("step").and_then(|s| s.as_i64()).unwrap_or(0) as i32;
 
     match agent
@@ -337,21 +430,36 @@ async fn start_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
     Json(payload): Json<AuthenticatedStartOnboardingRequest>,
-) -> Result<Json<StartOnboardingResponse>, axum::http::StatusCode> {
+) -> Result<Json<serde_json::Value>, axum::response::Response> {
+    use axum::response::IntoResponse;
     if !validate_start_request(&payload) {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
+        return Err(axum::http::StatusCode::BAD_REQUEST.into_response());
     }
-    let (organization_id, user_id) = onboarding_identity(&auth_info)?;
-    match agent
-        .start_onboarding_for_identity(payload.into(), &organization_id, &user_id)
+    let (organization_id, user_id) =
+        onboarding_identity(&auth_info).map_err(IntoResponse::into_response)?;
+    let identities = payload
+        .initial_products
+        .iter()
+        .map(
+            |p| crate::services::onboarding::preparation::ProductIdentity {
+                product_id: p.product_id.clone(),
+                variant_ids: p.variants.iter().map(|v| v.variant_id.clone()).collect(),
+            },
+        )
+        .collect::<Vec<_>>();
+    let previous = payload.replaces_preparation_id.clone();
+    let prepared = agent
+        .prepare_onboarding_for_identity(
+            payload.into(),
+            &organization_id,
+            &user_id,
+            &identities,
+            previous.as_deref(),
+            None,
+        )
         .await
-    {
-        Ok(res) => Ok(Json(res)),
-        Err(e) => {
-            tracing::error!("Failed to start onboarding: {}", e);
-            Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
+        .map_err(|e| e.response())?;
+    Ok(Json(prepared.response()))
 }
 #[derive(serde::Deserialize)]
 pub struct ZeroClickGenerateRequest {
@@ -365,17 +473,46 @@ pub struct ZeroClickGenerateResponse {
     pub organization_id: String,
     pub user_id: String,
     pub message: String,
+    pub business_name: String,
+    pub success: bool,
+    pub status: String,
+    pub preparation_id: String,
+    pub preparation: serde_json::Value,
 }
 
 async fn start_zero_click(
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
     Json(req): Json<ZeroClickGenerateRequest>,
-) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+) -> Result<Json<ZeroClickGenerateResponse>, axum::response::Response> {
+    use axum::response::IntoResponse;
+    use sha2::{Digest, Sha256};
     if !valid_required_text(&req.prompt, MAX_ONBOARDING_INPUT_CHARS)
         || !valid_optional_url(req.image_url.as_deref())
     {
-        return Err(axum::http::StatusCode::BAD_REQUEST);
+        return Err(axum::http::StatusCode::BAD_REQUEST.into_response());
+    }
+    let (organization_id, user_id) =
+        onboarding_identity(&auth_info).map_err(IntoResponse::into_response)?;
+    let source_identity = format!(
+        "{:x}",
+        Sha256::digest(
+            serde_json::to_vec(&serde_json::json!({"prompt":req.prompt,"image_url":req.image_url}))
+                .map_err(|_| axum::http::StatusCode::BAD_REQUEST.into_response())?
+        )
+    );
+    if let Some(existing) = agent
+        .prepared_state(&organization_id, &user_id)
+        .await
+        .map_err(|e| e.response())?
+    {
+        if existing.source_identity.as_deref() != Some(source_identity.as_str()) {
+            return Err(crate::services::onboarding::preparation::Error::Conflict(
+                "preparation_revision_required",
+            )
+            .response());
+        }
+        return Ok(Json(zero_click_response(existing)));
     }
     let mut combined_prompt = req.prompt.clone();
     if let Some(image_url) = &req.image_url {
@@ -384,7 +521,7 @@ async fn start_zero_click(
 
     let intake_data = agent.process_intake(&combined_prompt).await.map_err(|e| {
         tracing::error!("Intake error: {}", e);
-        axum::http::StatusCode::INTERNAL_SERVER_ERROR
+        onboarding_ai_failure(&e)
     })?;
 
     let first_product = intake_data.initial_products.first();
@@ -448,47 +585,67 @@ async fn start_zero_click(
         lead_time_days: intake_data.lead_time_days,
     };
 
-    let (organization_id, user_id) = onboarding_identity(&auth_info)?;
-    let start_res = agent
-        .start_onboarding_for_identity(start_req, &organization_id, &user_id)
+    let prepared = agent
+        .prepare_onboarding_for_identity(
+            start_req,
+            &organization_id,
+            &user_id,
+            &[],
+            None,
+            Some(&source_identity),
+        )
         .await
-        .map_err(|e| {
-            tracing::error!("Start onboarding error: {}", e);
-            axum::http::StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        .map_err(|e| e.response())?;
+    Ok(Json(zero_click_response(prepared)))
+}
 
-    Ok(Json(ZeroClickGenerateResponse {
-        organization_id: start_res.organization_id,
-        user_id: start_res.user_id,
-        message: "Storefront generated successfully".to_string(),
-    }))
+fn zero_click_response(
+    prepared: crate::services::onboarding::preparation::Preparation,
+) -> ZeroClickGenerateResponse {
+    ZeroClickGenerateResponse {
+        organization_id: prepared.organization_id.clone(),
+        user_id: prepared.user_id.clone(),
+        message: "Local business setup prepared; review before launch.".into(),
+        business_name: prepared.reviewed_request["company_name"]
+            .as_str()
+            .unwrap_or_default()
+            .into(),
+        success: true,
+        status: prepared.status.clone(),
+        preparation_id: prepared.preparation_id.clone(),
+        preparation: prepared.public(),
+    }
 }
 
 pub async fn gateway_run_handler(
     state: State<Arc<OnboardingAgent>>,
     extension: Extension<::server_auth::orchestration::AuthInfo>,
     json: Json<ZeroClickGenerateRequest>,
-) -> Result<Json<ZeroClickGenerateResponse>, axum::http::StatusCode> {
+) -> Result<Json<ZeroClickGenerateResponse>, axum::response::Response> {
     start_zero_click(state, extension, json).await
 }
 
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LaunchRequest {
+    preparation_id: String,
+}
 async fn launch_onboarding(
     State(agent): State<Arc<OnboardingAgent>>,
     Extension(auth_info): Extension<::server_auth::orchestration::AuthInfo>,
-) -> Result<Json<serde_json::Value>, axum::http::StatusCode> {
-    let (tenant_id, user_id) = onboarding_identity(&auth_info)?;
-    let current_step = 5; // Launch step
-
-    let state = serde_json::json!({
-        "status": "launched"
-    });
-    match agent
-        .save_onboarding_system_state(&tenant_id, &user_id, current_step, &state)
-        .await
-    {
-        Ok(_) => Ok(Json(state)),
-        Err(_) => Err(axum::http::StatusCode::INTERNAL_SERVER_ERROR),
+    Json(payload): Json<LaunchRequest>,
+) -> Result<Json<serde_json::Value>, axum::response::Response> {
+    use axum::response::IntoResponse;
+    let (tenant_id, user_id) =
+        onboarding_identity(&auth_info).map_err(IntoResponse::into_response)?;
+    if payload.preparation_id.trim().is_empty() {
+        return Err(axum::http::StatusCode::BAD_REQUEST.into_response());
     }
+    let prepared = agent
+        .launch_preparation(&tenant_id, &user_id, &payload.preparation_id)
+        .await
+        .map_err(|e| e.response())?;
+    Ok(Json(prepared.response()))
 }
 
 async fn get_state(
@@ -513,6 +670,9 @@ async fn save_state(
 ) -> Result<axum::http::StatusCode, axum::http::StatusCode> {
     let (tenant_id, user_id) = onboarding_identity(&auth_info)?;
 
+    if !crate::services::onboarding::onboarding_agent::valid_draft_state(&payload) {
+        return Err(axum::http::StatusCode::BAD_REQUEST);
+    }
     let step = payload.get("step").and_then(|s| s.as_i64()).unwrap_or(0) as i32;
 
     match agent
@@ -799,10 +959,16 @@ mod additional_tests {
             organization_id: "org_123".to_string(),
             user_id: "user_456".to_string(),
             message: "Success".to_string(),
+            business_name: "Test Business".to_string(),
+            success: true,
+            status: "prepared".into(),
+            preparation_id: "prep-test".into(),
+            preparation: serde_json::json!({}),
         };
         let json = serde_json::to_string(&resp).unwrap();
         assert!(json.contains("org_123"));
         assert!(json.contains("user_456"));
         assert!(json.contains("Success"));
+        assert!(json.contains("Test Business"));
     }
 }

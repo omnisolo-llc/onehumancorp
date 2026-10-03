@@ -40,15 +40,20 @@ impl AppDatabase {
                 });
         }
         let connection = Database::connect(options).await?;
+        Ok(Self::from_connection(connection))
+    }
+
+    /// Adopt the configured connection, preserving its pool, hooks and SQLite identity.
+    pub fn from_connection(connection: DatabaseConnection) -> Self {
         let backend = match connection.get_database_backend() {
             sea_orm::DatabaseBackend::MySql => DatabaseBackend::MySql,
             sea_orm::DatabaseBackend::Postgres => DatabaseBackend::Postgres,
             sea_orm::DatabaseBackend::Sqlite => DatabaseBackend::Sqlite,
         };
-        Ok(Self {
+        Self {
             connection,
             backend,
-        })
+        }
     }
 
     pub fn connection(&self) -> &DatabaseConnection {

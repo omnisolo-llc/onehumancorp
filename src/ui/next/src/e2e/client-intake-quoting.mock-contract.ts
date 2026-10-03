@@ -30,7 +30,7 @@ test.describe('Autonomous Client Intake & Dynamic Quoting', () => {
     await expect(page.locator('text=x1')).toBeVisible({ timeout: 15000 });
 
     // Expect the price to be visible
-    await expect(page.locator('text=$')).first().toBeVisible();
+    await expect(page.locator('text=$').first()).toBeVisible();
 
     // Find and click the Approve & Send Quote button
     const approveBtn = page.getByRole('button', { name: 'Approve & Send Quote' });

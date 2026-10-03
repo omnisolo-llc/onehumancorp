@@ -2,6 +2,9 @@
  * these declarations do not replace server-side validation or payment evidence.
  */
 export interface SaleProduct {
+  version?: number;
+  base_version?: number;
+  updated_at?: string;
   available_quantity?: number;
   name_en?: string;
   name_ar?: string;
@@ -82,6 +85,8 @@ export interface InvoiceRecord extends QuotePayload {
 }
 
 export interface OrderRecord {
+  version?: number;
+  base_version?: number;
   translated_notes?: string;
   id: string;
   status?: string;

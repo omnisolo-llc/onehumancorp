@@ -2,6 +2,7 @@ import {
   proxyBackendRequest,
   stripBrowserIdentityJsonRequestBody,
 } from "@/lib/auth/backendTransport";
+import { isPublicationOwnerPath, proxyPublicationOwnerRequest } from "@/lib/auth/publicationRequest";
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
@@ -25,6 +26,7 @@ async function proxy(request: Request, context: RouteContext): Promise<Response>
   if (path === null) {
     return Response.json({ error: "invalid API path" }, { status: 400 });
   }
+  if (isPublicationOwnerPath(path)) return proxyPublicationOwnerRequest(request, path);
   const isJson = request.headers
     .get("content-type")
     ?.toLowerCase()

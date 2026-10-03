@@ -39,9 +39,9 @@ describe('ShareCardsPage', () => {
   });
 
   it('allows removing branding when the plan API reports Pro', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'pro' }) });
+    global.fetch = vi.fn(async url => Response.json(url === '/api/v1/auth/session-identity' ? { userId: 'owner', tenantId: 'tenant', expiresAt: Date.now() + 60000 } : { current_plan: 'Pro' }));
     render(<ShareCardsPage />);
-    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan'));
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith('/api/v1/billing/my-plan', expect.objectContaining({ credentials: 'same-origin' })));
     const toggle = screen.getByRole('checkbox');
     act(() => {
         toggle.click();

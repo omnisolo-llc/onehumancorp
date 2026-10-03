@@ -11,6 +11,21 @@ vi.mock('next/navigation', () => ({
 
 
 describe('PreOrderWidgetPage', () => {
+  it('exposes real selected theme state and preserves repeat selection', () => {
+    render(<PreOrderWidgetPage />);
+    const light=screen.getByRole('button',{name:'Light'});
+    const dark=screen.getByRole('button',{name:'Dark'});
+    expect(light).toHaveAttribute('aria-pressed','true');
+    expect(dark).toHaveAttribute('aria-pressed','false');
+    fireEvent.click(dark);
+    expect(light).toHaveAttribute('aria-pressed','false');
+    expect(dark).toHaveAttribute('aria-pressed','true');
+    fireEvent.click(dark);
+    expect(dark).toHaveAttribute('aria-pressed','true');
+    fireEvent.click(screen.getByText('Get Widget Embed Code'));
+    expect(screen.getByText(/data-theme="dark"/)).toBeInTheDocument();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -26,7 +41,7 @@ describe('PreOrderWidgetPage', () => {
     expect(screen.getAllByText('Upgrade to Pro')).toBeDefined();
 
     // Check if viral loop option is present
-    expect(screen.getByText('Share on X to Unlock')).toBeDefined();
+    expect(screen.getByText('Check trial availability')).toBeDefined();
 
     // Checkbox should be un-checked
     expect((checkbox as HTMLInputElement).checked).toBe(false);
