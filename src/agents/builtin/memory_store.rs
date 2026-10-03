@@ -112,11 +112,7 @@ impl VectorRepository {
         has_vec_extension
     }
 
-    pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
-        let emb_str = serde_json::to_string(&record.embedding)
-            .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {}", e))?;
-
-        const UPSERT_ON_CONFLICT_CLAUSE: &str = "ON CONFLICT(id) DO UPDATE SET \
+    const UPSERT_ON_CONFLICT_CLAUSE: &str = "ON CONFLICT(id) DO UPDATE SET \
             content=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.content WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.content ELSE consolidated_memory.content END, \
             embedding=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.embedding WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.embedding ELSE consolidated_memory.embedding END, \
             created_at=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.created_at WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.created_at ELSE consolidated_memory.created_at END, \
@@ -124,59 +120,117 @@ impl VectorRepository {
             reference_count=excluded.reference_count, \
             reliability_score=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.reliability_score WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.reliability_score ELSE consolidated_memory.reliability_score END, \
             owner_override=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.owner_override WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.owner_override ELSE consolidated_memory.owner_override END, \
-            metadata=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.metadata WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.metadata ELSE consolidated_memory.metadata END";
+            metadata=CASE WHEN consolidated_memory.owner_override = TRUE THEN consolidated_memory.metadata WHEN excluded.owner_override = TRUE OR excluded.reliability_score > consolidated_memory.reliability_score OR (excluded.reliability_score = consolidated_memory.reliability_score AND excluded.created_at >= consolidated_memory.created_at) THEN excluded.metadata ELSE consolidated_memory.metadata END \
+            WHERE consolidated_memory.tenant_id = excluded.tenant_id";
 
+    pub async fn upsert(&self, record: &EmbeddingRecord) -> Result<(), String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let query_str = format!(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
-                     VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
-                     {}",
-                    UPSERT_ON_CONFLICT_CLAUSE
-                );
-                sqlx::query(&query_str)
-                    .bind(&record.id)
-                    .bind(&record.tenant_id)
-                    .bind(&record.agent_id)
-                    .bind(&record.content)
-                    .bind(&emb_str)
-                    .bind(&record.source_type)
-                    .bind(record.created_at)
-                    .bind(record.last_referenced_at)
-                    .bind(record.reference_count)
-                    .bind(record.reliability_score)
-                    .bind(record.owner_override)
-                    .bind(&record.metadata)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                Self::upsert_postgres(&mut tx, record).await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
             VectorMemoryStore::Sqlite(pool) => {
-                let query_str = format!(
-                    "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
-                     {}",
-                    UPSERT_ON_CONFLICT_CLAUSE
-                );
-                sqlx::query(&query_str)
-                    .bind(&record.id)
-                    .bind(&record.tenant_id)
-                    .bind(&record.agent_id)
-                    .bind(&record.content)
-                    .bind(&emb_str)
-                    .bind(&record.source_type)
-                    .bind(record.created_at)
-                    .bind(record.last_referenced_at)
-                    .bind(record.reference_count)
-                    .bind(record.reliability_score)
-                    .bind(record.owner_override)
-                    .bind(&record.metadata)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                Self::upsert_sqlite(&mut tx, record).await?;
+                tx.commit().await.map_err(|e| e.to_string())?;
             }
         }
+        Ok(())
+    }
 
+    async fn upsert_postgres(
+        connection: &mut sqlx::PgConnection,
+        record: &EmbeddingRecord,
+    ) -> Result<(), String> {
+        let emb_str = serde_json::to_string(&record.embedding)
+            .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {e}"))?;
+        // Resolve the actual table through this transaction's search_path, even
+        // when it has no rows. The read lock also prevents a concurrent ALTER
+        // from changing its type before this transaction's write.
+        let metadata_type: String = sqlx::query_scalar(
+            "SELECT pg_typeof((SELECT metadata FROM consolidated_memory LIMIT 1))::text",
+        )
+        .fetch_one(&mut *connection)
+        .await
+        .map_err(|e| e.to_string())?;
+        let query_str = format!(
+            "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
+             VALUES ($1, $2, $3, $4, $5::vector, $6, $7, $8, $9, $10, $11, $12) \
+             {}",
+            Self::UPSERT_ON_CONFLICT_CLAUSE
+        );
+        let query = sqlx::query(&query_str)
+            .bind(&record.id)
+            .bind(&record.tenant_id)
+            .bind(&record.agent_id)
+            .bind(&record.content)
+            .bind(&emb_str)
+            .bind(&record.source_type)
+            .bind(record.created_at)
+            .bind(record.last_referenced_at)
+            .bind(record.reference_count)
+            .bind(record.reliability_score)
+            .bind(record.owner_override);
+        let result = match metadata_type.as_str() {
+            "jsonb" => {
+                // RawValue validates JSON without rounding exact numbers.
+                let metadata = record
+                    .metadata
+                    .as_deref()
+                    .map(serde_json::from_str::<&serde_json::value::RawValue>)
+                    .transpose()
+                    .map_err(|e| format!("VectorRepository metadata JSON error: {e}"))?
+                    .map(sqlx::types::Json);
+                query.bind(metadata).execute(connection).await
+            }
+            // Historical tables accept arbitrary text. Preserve its bytes and
+            // semantics, including whitespace and text that is not valid JSON.
+            "text" => query.bind(&record.metadata).execute(connection).await,
+            _ => {
+                return Err(format!(
+                    "Unsupported memory metadata column type: {metadata_type}"
+                ));
+            }
+        }
+        .map_err(|e| e.to_string())?;
+        if result.rows_affected() != 1 {
+            return Err("VectorRepository memory ID belongs to another tenant".to_owned());
+        }
+        Ok(())
+    }
+
+    async fn upsert_sqlite(
+        connection: &mut sqlx::SqliteConnection,
+        record: &EmbeddingRecord,
+    ) -> Result<(), String> {
+        let emb_str = serde_json::to_string(&record.embedding)
+            .map_err(|e| format!("VectorRepository Upsert JSON Serialization Error: {e}"))?;
+        let query_str = format!(
+            "INSERT INTO consolidated_memory (id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata) \
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) \
+             {}",
+            Self::UPSERT_ON_CONFLICT_CLAUSE
+        );
+        let result = sqlx::query(&query_str)
+            .bind(&record.id)
+            .bind(&record.tenant_id)
+            .bind(&record.agent_id)
+            .bind(&record.content)
+            .bind(&emb_str)
+            .bind(&record.source_type)
+            .bind(record.created_at)
+            .bind(record.last_referenced_at)
+            .bind(record.reference_count)
+            .bind(record.reliability_score)
+            .bind(record.owner_override)
+            .bind(&record.metadata)
+            .execute(connection)
+            .await
+            .map_err(|e| e.to_string())?;
+        if result.rows_affected() != 1 {
+            return Err("VectorRepository memory ID belongs to another tenant".to_owned());
+        }
         Ok(())
     }
 
@@ -305,7 +359,7 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata::text AS metadata \
                      FROM consolidated_memory \
                      WHERE tenant_id = $1 \
                      ORDER BY created_at DESC \
@@ -318,9 +372,7 @@ impl VectorRepository {
                 .map_err(|e| e.to_string())?;
 
                 for row in rows {
-                    if let Ok(record) = Self::parse_record_row(&row) {
-                        results.push(record);
-                    }
+                    results.push(Self::parse_record_row(&row)?);
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {
@@ -338,9 +390,7 @@ impl VectorRepository {
                 .map_err(|e| e.to_string())?;
 
                 for row in rows {
-                    if let Ok(record) = Self::parse_record_row(&row) {
-                        results.push(record);
-                    }
+                    results.push(Self::parse_record_row(&row)?);
                 }
             }
         }
@@ -365,7 +415,7 @@ impl VectorRepository {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
                 let rows = sqlx::query(
-                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata \
+                    "SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata::text AS metadata \
                      FROM consolidated_memory \
                      WHERE tenant_id = $1 \
                      ORDER BY embedding <=> $2::vector \
@@ -381,37 +431,9 @@ impl VectorRepository {
                 let mut ids_to_update = Vec::new();
 
                 for row in rows {
-                    let id: String = row.get("id");
-                    ids_to_update.push(id.clone());
-                    let tenant_id: String = row.get("tenant_id");
-                    let agent_id: String = row.get("agent_id");
-                    let content: String = row.get("content");
-                    let emb_str_res: String = row.get("embedding");
-                    let source_type: String = row.get("source_type");
-                    let created_at: DateTime<Utc> = row.get("created_at");
-                    let last_referenced_at: DateTime<Utc> = row.get("last_referenced_at");
-                    let reference_count: i32 = row.get("reference_count");
-                    let reliability_score: i32 = row.get("reliability_score");
-                    let owner_override: bool = row.get("owner_override");
-                    let metadata: Option<String> = row.get("metadata");
-
-                    let embedding: Vec<f32> =
-                        serde_json::from_str(&emb_str_res).unwrap_or_default();
-
-                    results.push(EmbeddingRecord {
-                        id,
-                        tenant_id,
-                        agent_id,
-                        content,
-                        embedding,
-                        source_type,
-                        created_at,
-                        last_referenced_at,
-                        reference_count,
-                        reliability_score,
-                        owner_override,
-                        metadata,
-                    });
+                    let record = Self::parse_record_row(&row)?;
+                    ids_to_update.push(record.id.clone());
+                    results.push(record);
                 }
 
                 if !ids_to_update.is_empty() {
@@ -670,12 +692,12 @@ impl VectorRepository {
     pub async fn get_by_id(&self, id: &str) -> Result<Option<EmbeddingRecord>, String> {
         match &self.store {
             VectorMemoryStore::Postgres(pool) => {
-                let row = sqlx::query("SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text as embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata FROM consolidated_memory WHERE id = $1")
+                let row = sqlx::query("SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding::text as embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata::text AS metadata FROM consolidated_memory WHERE id = $1")
                     .bind(id)
                     .fetch_optional(pool)
                     .await
                     .map_err(|e| e.to_string())?;
-                Ok(row.and_then(|r| Self::parse_record_row(&r).ok()))
+                row.map(|r| Self::parse_record_row(&r)).transpose()
             }
             VectorMemoryStore::Sqlite(pool) => {
                 let row = sqlx::query("SELECT id, tenant_id, COALESCE(agent_id, '') as agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata FROM consolidated_memory WHERE id = ?")
@@ -683,7 +705,7 @@ impl VectorRepository {
                     .fetch_optional(pool)
                     .await
                     .map_err(|e| e.to_string())?;
-                Ok(row.and_then(|r| Self::parse_record_row(&r).ok()))
+                row.map(|r| Self::parse_record_row(&r)).transpose()
             }
         }
     }
@@ -698,9 +720,14 @@ impl VectorRepository {
         for<'c> bool: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
         for<'c> DateTime<Utc>: sqlx::Decode<'c, R::Database> + sqlx::Type<R::Database>,
     {
-        let emb_str: String = row.try_get("embedding").unwrap_or_else(|_| {
-            String::from_utf8(row.get::<Vec<u8>, _>("embedding")).unwrap_or_default()
-        });
+        let emb_str = match row.try_get::<String, _>("embedding") {
+            Ok(value) => value,
+            Err(_) => String::from_utf8(
+                row.try_get::<Vec<u8>, _>("embedding")
+                    .map_err(|e| e.to_string())?,
+            )
+            .map_err(|e| e.to_string())?,
+        };
         let embedding: Vec<f32> = serde_json::from_str(&emb_str).unwrap_or_default();
 
         Ok(EmbeddingRecord {
@@ -722,7 +749,7 @@ impl VectorRepository {
                 .try_get("reliability_score")
                 .map_err(|e| e.to_string())?,
             owner_override: row.try_get("owner_override").unwrap_or(false),
-            metadata: row.try_get("metadata").unwrap_or(None),
+            metadata: row.try_get("metadata").map_err(|e| e.to_string())?,
         })
     }
 
@@ -751,7 +778,9 @@ impl VectorRepository {
         winner: &EmbeddingRecord,
         loser: &EmbeddingRecord,
     ) -> Result<(), String> {
-        self.delete(&loser.id).await?;
+        if winner.tenant_id != loser.tenant_id || winner.id == loser.id {
+            return Err("Memory conflict must contain distinct records from one tenant".to_owned());
+        }
         let mut updated_winner = winner.clone();
         updated_winner.reference_count += loser.reference_count;
         updated_winner.last_referenced_at = chrono::Utc::now();
@@ -787,7 +816,40 @@ impl VectorRepository {
         };
         updated_winner.metadata = merged_metadata;
 
-        self.upsert(&updated_winner).await?;
+        // Both changes share one transaction: a validation/write/delete failure
+        // must not destroy either source memory or leave a partially merged row.
+        match &self.store {
+            VectorMemoryStore::Postgres(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                Self::upsert_postgres(&mut tx, &updated_winner).await?;
+                let deleted =
+                    sqlx::query("DELETE FROM consolidated_memory WHERE id = $1 AND tenant_id = $2")
+                        .bind(&loser.id)
+                        .bind(&winner.tenant_id)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                if deleted.rows_affected() != 1 {
+                    return Err("Memory conflict loser was not found in this tenant".to_owned());
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+            VectorMemoryStore::Sqlite(pool) => {
+                let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+                Self::upsert_sqlite(&mut tx, &updated_winner).await?;
+                let deleted =
+                    sqlx::query("DELETE FROM consolidated_memory WHERE id = ? AND tenant_id = ?")
+                        .bind(&loser.id)
+                        .bind(&winner.tenant_id)
+                        .execute(&mut *tx)
+                        .await
+                        .map_err(|e| e.to_string())?;
+                if deleted.rows_affected() != 1 {
+                    return Err("Memory conflict loser was not found in this tenant".to_owned());
+                }
+                tx.commit().await.map_err(|e| e.to_string())?;
+            }
+        }
         Ok(())
     }
 
@@ -932,8 +994,8 @@ impl VectorRepository {
                 // It prevents an O(N^2) cartesian product over the whole table.
                 let query = "
                     SELECT
-                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata AS a_metadata,
-                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata AS b_metadata
+                        a.id AS a_id, a.tenant_id AS a_tenant_id, a.agent_id AS a_agent_id, a.content AS a_content, a.embedding::text AS a_embedding, a.source_type AS a_source_type, a.created_at AS a_created_at, a.last_referenced_at AS a_last_referenced_at, a.reference_count AS a_reference_count, a.reliability_score AS a_reliability_score, a.owner_override AS a_owner_override, a.metadata::text AS a_metadata,
+                        b.id AS b_id, b.tenant_id AS b_tenant_id, b.agent_id AS b_agent_id, b.content AS b_content, b.embedding::text AS b_embedding, b.source_type AS b_source_type, b.created_at AS b_created_at, b.last_referenced_at AS b_last_referenced_at, b.reference_count AS b_reference_count, b.reliability_score AS b_reliability_score, b.owner_override AS b_owner_override, b.metadata::text AS b_metadata
                     FROM consolidated_memory a
                     JOIN LATERAL (
                         SELECT id, tenant_id, agent_id, content, embedding, source_type, created_at, last_referenced_at, reference_count, reliability_score, owner_override, metadata
@@ -952,9 +1014,7 @@ impl VectorRepository {
                     .map_err(|e| e.to_string())?;
 
                 for row in rows {
-                    if let Ok(pair) = Self::parse_conflict_row(&row) {
-                        conflicts.push(pair);
-                    }
+                    conflicts.push(Self::parse_conflict_row(&row)?);
                 }
             }
             VectorMemoryStore::Sqlite(pool) => {

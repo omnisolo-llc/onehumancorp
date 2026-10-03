@@ -12,6 +12,22 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_memory_jsonb_requires_actual_repository_and_pgvector_schema(self):
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        minimum, database = gate.GATES['memory-jsonb-contract']
+        self.assertGreaterEqual(minimum, 27)
+        self.assertEqual(database, 'OHC_MEMORY_TEST_DATABASE_URL')
+        folder = root/'scripts/memory-jsonb-contract'
+        runpy.run_path(str(folder/'prepare.py'))
+        source = (root/'src/agents/builtin/memory_store.rs').read_text()
+        repository = source[:source.index('#[async_trait]\npub trait OmniSoloMemory')]
+        self.assertIn(repository.removeprefix('use async_trait::async_trait;\n'), (folder/'generated.rs').read_text())
+        self.assertIn('metadata JSONB', (folder/'active.sql').read_text())
+        self.assertIn('metadata TEXT', (folder/'legacy.sql').read_text())
+        self.assertIn('python3 scripts/focused_ci_gate.py memory-jsonb-contract', (root/'.github/workflows/ci.yml').read_text())
+        self.assertIn('--locked --offline', (folder/'run.sh').read_text())
+
     def test_approval_runner_isolates_config_and_cleans_only_its_home_on_failure(self):
         import os
         import shutil

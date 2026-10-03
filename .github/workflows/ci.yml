@@ -969,6 +969,15 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_chat_tenant_test
           python3 scripts/focused_ci_gate.py chat-tenant-isolation
 
+      - name: Verify native memory JSONB persistence and tenant authority
+        if: ${{ !cancelled() }}
+        env:
+          OHC_MEMORY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_memory_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_memory_test
+          python3 scripts/focused_ci_gate.py memory-jsonb-contract
+
       - name: Verify authenticated widget chat and canonical tenant storage
         if: ${{ !cancelled() }}
         env:
