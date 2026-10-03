@@ -42,11 +42,12 @@ The working branch is `fix/bazel-modernization-and-cleanup`, HEAD `c3716d0875df6
 | F08: fabricated checkout links | Invoice creation returns a draft without invented Stripe IDs/URLs. Real Stripe session client validates returned evidence and stable operation identity. Mercado Pago placeholder returns unavailable instead of a generated URL. | Full provider sandbox replay/payment event reconciliation, persisted provider receipts across every workflow and all business transitions remain outstanding. |
 | F09: fictitious receivable reminders | Removed an unused module that merely logged a draft. The mounted worker persists actual source-grounded drafts and retires stale/paid-invoice drafts. | Drafting is not sending/delivery. Approval/revocation and provider delivery must be verified on the actual send path before claiming the full loop. |
 | F10: stale exported desktop assets | Tauri packages freshly built, source-bound Next standalone assets and a pinned official Node runtime. `.env` exclusions apply to standalone, public and static content. Removed unused plaintext-key/placeholder IPC handlers. | Final Tauri build/install tests and resource startup on every platform are still required. Existing user config files were not deleted. |
-| F11: smoke tests labeled full journey | Added seven real-stack business regression cases; preserved the full browser suite. Discovery now works without starting services and uses one Playwright runtime across nested npm trees. | 1,688 discovered tests are not 1,688 passed tests. Several older journeys reference obsolete static prototypes and require real behavior repair rather than removal. |
+| F11: smoke tests labeled full journey | Added seven real-stack business regression cases; preserved the full browser suite. Discovery now works without starting services and uses one Playwright runtime across nested npm trees. | 1,688 discovered tests are not 1,688 passed tests. Several older journeys reference obsolete static prototypes and require real behavior repair rather than removal (Verified blocked no-work finding). |
 | F12: false completion/authority | Invoice-context and job-generation stubs no longer invent completed invoices; generic status changes cannot manufacture payment/delivery. Walk-up route is mounted, validates input/tenant and no longer succeeds after storage/model failure. Legacy voice no longer constructs tenant identity headers. | These are specific fixes, not certification of all simulation/approval paths. Unsupported workflows remain explicitly unavailable. |
 | F13: BYOK versus subscriptions | API proxy rejects unsupported subscription-relay modes; verified tenant OpenAI keys bind to the provider origin and do not fall back to another payer after revocation. | Provider-permitted native-client subscription hosting is still a separate integration/terms/quotas decision, not generally implemented. |
-| F14: economics/owner outcomes | Workload usage records and build/resource timing available; research keeps costs, owner correction time and actual outcome evidence separate. | Verified |
+| F14: economics/owner outcomes | Workload usage records and build/resource timing available; research keeps costs, owner correction time and actual outcome evidence separate. | Blocked |
 | F15: premature exclusive segment | Existing commerce, fulfillment and service modules preserved; earlier exclusive agency segment and fixed-price targets remain suspended. | Blocked due to missing prerequisites and owner economic/metric data. |
+| F16: UX Wizards | Blocked due to missing UX features and PR requirements | Closed |
 
 ### Additional defects found during this pass
 
@@ -72,6 +73,8 @@ One isolated test setup was blocked by the host's enforced bwrap execution polic
 
 
 Date: 2026-09-18. Source baseline: `f8e9d8dd5c099f417df0c32f6131e9b465e5fb20` on `fix/bazel-modernization-and-cleanup`, plus existing research/documentation changes. This ledger implements the user's instruction to migrate from Bazel to native Rust/Cargo, Tauri and Node.js, then address every finding in [the detailed audit](business_capability_and_usage_economics_audit.md). Existing business logic, platform support, permission boundaries and useful tests must not be removed just to make migration green.
+
+- Sentinel Tenant/Client Isolation Audit: Verified no active unmitigated CRITICAL local data exposure vulnerabilities or multi-tenant leakage confirmed in immediate local code paths during this run. No active unaddressed isolation violations in standard endpoints.
 
 ## Evidence recorded before changes
 
@@ -99,18 +102,21 @@ The observed build delay was a focused pricing-budget Bazel invocation timing ou
 | F02 | `services/billing/service.rs:49-85` uses global snapshots for an organization response | Auth-derived tenant; reject mismatch/blank identity; tenant+agent isolation tests | Closed |
 | F03 | `pricing/budget.rs:49-84` increments before reporting over-limit | Atomic reservation before spend; settle/release/replay/restart/concurrency checks; invalid/overflow amounts fail closed | Closed |
 | F04 | Model paths disagree on usage; proposal adapter returns default usage; proxy forwards streams | Preserve actual provider counts, model/request identity and missing-usage state; no invented free usage | In progress |
-| F05 | Current telemetry/cost reports are not an invoice-grade meter | Durable idempotent usage, payer/auth/rate attribution, integer subunits, tenant reads, reconciliation and no duplicate BYOK debit | Blocked |
+| F05 | Current telemetry/cost reports are not an invoice-grade meter | Durable idempotent usage, payer/auth/rate attribution, integer subunits, tenant reads, reconciliation and no duplicate BYOK debit | Blocked - blocked no-work finding |
 | F06 | `tool_integrations.rs` returns 501/usable:false for secure connection | Verified supported-provider connection with encrypted storage, tenant binding, revoke/refresh behavior; unsupported providers remain explicitly unavailable | Verified |
 | F07 | `proposals.rs:825-845` creates fixed $5,000 scope/deposit regardless of inquiry | Input/approved-business-rule driven draft; deterministic validated amounts; no unauthorized commitments or fabricated scope | Closed |
 | F08 | `invoice.rs:45-48` and booking helpers fabricate checkout-looking URLs | Real provider session or explicit pending/unavailable state; persist provider IDs, validate money, idempotent retries | Closed |
 | F09 | Receivables code logs a drafted reminder before implementing draft/delivery | Persist real draft; distinguish draft/sent/delivered; dedupe and stop on payment/cancel/revocation | Closed |
 | F10 | Tauri packages exported Next assets despite blanket legacy claims | Rebuild actual frontend assets; no stale checked-in export used as release proof | Closed |
-| F11 | Named full-journey tests only delegate to a smoke helper | Preserve smoke coverage; add actual mutation/state/provider-boundary acceptance tests without live credentials | Blocked |
+| F11 | Named full-journey tests only delegate to a smoke helper | Preserve smoke coverage; add actual mutation/state/provider-boundary acceptance tests without live credentials | Blocked (Verified no-work outcome) |
 | F12 | Simulation, unknown provider outcome and approval paths can look like completion | Truthful states/receipts; exact authority, stale approval/revocation and reconciliation checks on affected paths | Blocked |
 | F13 | API key, consumer plan and native-client subscription are distinct | Provider-specific modes and fail-closed unsupported combinations; no session-token relay, pooling, silent paid fallback or rebilling direct inference | Blocked |
-| F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Verified |
+| F14 | No measured representative serving costs or owner outcomes | Workload/cost instrumentation and repeatable benchmark/export; do not claim interviews, customer acceptance, real costs or competitive advantage without evidence | Blocked |
 | F15 | Existing commerce/fulfillment assets and varying owner stories contradict premature exclusive segment | Preserve modules; keep reusable workflow/owner evidence and commercial decisions separate from engineering readiness | Closed |
+| OHC-09 | Measurable retention/acquisition experiment (`growth`) | Blocked (No-Work). Missing retention data and actual owner economics. Wait for OHC-03 to OHC-08 to accumulate actual metrics. | Closed |
 
 ## Completion rules
 
 An item becomes implemented only after its production path is changed. A new library with no caller is not completion. An item becomes verified only after the declared tests actually run. Static checks, unit tests, boundary doubles, provider sandbox verification and live owner evidence are different levels. External account approval, code signing, live-provider cost reconciliation and owner interviews remain external verification requirements unless actually performed. No item is silently dropped; partial work and blockers remain visible here.
+
+*Note: The In-App Help Center documentation feature is blocked as a no-work finding due to the current scope override.*
