@@ -1,0 +1,52 @@
+{
+  "prepared_at": "2026-10-03T06:42:00Z",
+  "base_head": "74232fbb2619b53de27e09df4ebad5b024fd51dd",
+  "integrated_source_head_before_this_record": "4408499eb1ceaf396ea935541e0ca8cd5a5cbd3d",
+  "prior_exact_ci": {
+    "run_id": 37098638033,
+    "browser_passed": 1751,
+    "browser_failed": 22,
+    "configured_acceptance_skipped": 7,
+    "non_browser_jobs": "all passed",
+    "root_node_passed": 944,
+    "next_passed": 3289,
+    "next_files": 489
+  },
+  "reviewed_components": [
+    {"source": "14daa2635ba2ebd4be37cd872e932b1f86f8f044", "scope": "Current owner and tenant checks before private storefront caches; private and cookie responses excluded from shared response caching", "proof": "93 actual Rust/PostgreSQL/HTTP/publication/cache tests, strict Clippy, zero non-loopback HTTP attempts; original 81 publication cases retained"},
+    {"source": "e99d95b644f9b186bad8759b132e2b0b29055c88", "scope": "Canonical feed rows take precedence over duplicate triage projections; explicit empty refreshes replace old collections", "proof": "Three reproduced failures repaired; distinct triage actions and omitted collections preserved"},
+    {"source": "eaebab2", "scope": "Copied readonly identity lease and pending-verification evidence", "proof": "Exact shared helper and tests from reviewed 3f5f74a; no authority policy change"},
+    {"source": "e263ba8", "scope": "Owner-bound durable local clock acknowledgement, duplicate prevention, receipt recovery, private view expiry, sealed inventory reads and stale-response rejection", "proof": "11 rendered clock/privacy cases, including deferred/rejected persistence and real identity state"},
+    {"source": "f75caff", "scope": "Verify identity before accepting a private unsent draft; original expiry and owner/session retirement", "proof": "14 memory/identity cases; no fabricated recall, provider output or saved-memory receipt"},
+    {"source": "76e3ed99721e0f7e762eb88dbfe9748c489677f0", "scope": "Canonical same-pool SQLite owner-write capability", "proof": "10 actual SQLite capability cases plus five actual authentication cleanup/expiry cases"},
+    {"source": "e2ffa7f40150e59fbc166956ac195a9994131ffb", "scope": "Reuse the configured SQLite pool at startup and validate requested encryption with the real engine", "proof": "Combined builder 89 and strict Clippy; separate plain startup five cases and actual cipher write/reopen/wrong-key checks"},
+    {"source": "892660b47c22e48ed7c41519cf4dac190a2d998e", "scope": "Persist the actual winning standalone encryption key; retain existing data on failure", "proof": "11 actual-source Linux filesystem/selector cases and strict Clippy; whole DB startup and Windows remain separate acceptance"},
+    {"source": "5d0e6dd", "scope": "Select and refresh an actual owner-approved published storefront before embedding; verified entitlement and expiry for exit-intent templates", "proof": "3320 Next and 944 Node tests on the component snapshot; actual iframe and revocation browser journeys prepared for hosted execution"}
+  ],
+  "preservation": {
+    "rust_behavior_conflicts": 0,
+    "builder_inventory": "74 existing generation/clone cases +10 SQLite capability cases +5 startup cases =89",
+    "publication_inventory": 93,
+    "agent_definition_inventory": 63,
+    "workflow_inventory": 101,
+    "receipt_postgres_inventory": 56,
+    "documentation_resolution": "Preserved both clone lifecycle and SQLite capability/startup/cipher descriptions; removed only the superseded duplicate paragraph that still said startup was unavailable",
+    "feature_removal": "No legitimate feature or test removed; fabricated behavior and stale duplicate projections are explicitly repaired"
+  },
+  "local_readiness_aggregate": {
+    "next_passed": 3309,
+    "next_files": 491,
+    "seconds": 603.55,
+    "unchanged_inputs": 5771,
+    "post_aggregate_delta": "Two-line test-only reset of module-level onboarding identity before each memory fixture; 16 affected tests and both typechecks/lint passed afterward"
+  },
+  "acceptance_limits": [
+    "Component counts belong to their reviewed source snapshots. The final combined head still needs exact-head full server and real browser CI.",
+    "Seven configured provider/runtime browser gates remain explicitly open; credential-free CI does not certify them.",
+    "Genuine durable memory, repository/runtime operations and composite proposal/visual execution remain open; readonly readiness is not their implementation.",
+    "Storefront cold rendering under restricted RLS, inventory error truthfulness, legacy SEO escaping, authority-fenced invalidation and durable purge acknowledgement remain open.",
+    "Field049 awaits its integration gate; unmounted composite foundations/UI and shipping assembly remain isolated.",
+    "The existing inventory_toggle fake quantity mapping remains a separate required repair.",
+    "No live provider charge, customer mutation, deployment or release is authorized or claimed by these checks."
+  ]
+}
