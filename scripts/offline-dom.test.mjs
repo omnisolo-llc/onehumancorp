@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import net from 'node:net';
 import { readdir, readFile } from 'node:fs/promises';
 import { test } from 'node:test';
+import { createRequire } from 'node:module';
 import { getGlobalDispatcher } from 'undici';
 import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 
@@ -84,4 +85,16 @@ test('all root DOM fixtures import the offline constructor', async () => {
     const source = await readFile(new URL(file, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /from\s+['"]jsdom['"]|require\(['"]jsdom['"]\)/, `${file} must use the offline fixture helper`);
   }
+});
+
+test('offline dispatcher is a direct locked dependency shared with jsdom', async () => {
+  const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'));
+  assert.equal(manifest.devDependencies.undici, '7.29.1');
+  assert.equal(lock.packages[''].devDependencies.undici, manifest.devDependencies.undici);
+  assert.equal(lock.packages['node_modules/undici'].version, manifest.devDependencies.undici);
+  const require = createRequire(import.meta.url);
+  const jsdomRequire = createRequire(require.resolve('jsdom'));
+  assert.equal(jsdomRequire.resolve('undici'), require.resolve('undici'));
+  assert.equal(jsdomRequire('undici').getGlobalDispatcher, getGlobalDispatcher);
 });
