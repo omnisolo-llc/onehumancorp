@@ -60,7 +60,7 @@ pub async fn omni_inbox_post_handler(
     }
     let customer_id = customer_id_result.as_ref().ok().map(|s| s.as_str());
 
-    // Insert into chat_messages for Native Omnichannel (Chatwoot Replacement)
+    // Insert into chat_messages for Native Omnichannel
     let mut stable_msg_id = String::new();
 
     // We cannot use sqlx::query! because we need dynamic matching for SQLite/Postgres. We must use sqlx::query
