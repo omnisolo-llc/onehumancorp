@@ -81,7 +81,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
             customer_id: 'cust_demo1',
             total_amount_cents: 15000,
             required_deposit_cents: 7500,
-            stripe_payment_link: 'unavailable',
+            stripe_payment_link: null,
             line_items: []
         }
     });
@@ -93,7 +93,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
     expect(getRes.ok()).toBeTruthy();
     const fetchedData = await getRes.json();
     expect(fetchedData.quote.status).toBe('DRAFT');
-    expect(fetchedData.quote.stripe_payment_link).toBe('unavailable');
+    expect(fetchedData.quote.stripe_payment_link).toBeNull();
   });
 
   test('Accepting a quote transitions the status to ACCEPTED', async ({ browser }) => {
@@ -106,7 +106,7 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
             customer_id: 'cust_demo1',
             total_amount_cents: 10000,
             required_deposit_cents: 5000,
-            stripe_payment_link: 'unavailable',
+            stripe_payment_link: null,
             line_items: []
         }
     });
@@ -116,6 +116,6 @@ test.describe('Autonomous Quote & Deposit Link Generation Pipeline', () => {
     expect(acceptRes.ok()).toBeTruthy();
     const acceptData = await acceptRes.json();
     expect(acceptData.success).toBeTruthy();
-    expect(acceptData.stripe_payment_link).toBe('unavailable');
+    expect(acceptData.stripe_payment_link).toBeNull();
   });
 });
