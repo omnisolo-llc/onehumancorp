@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Implement Native Rust Omnichannel Inbox & Chat System"
+issue_description: "The issue requests completely retiring the external Chatwoot dependency and implementing a native Rust omnichannel inbox. However, according to RESEARCH.md and the repository operating contract, we must prioritize integrating existing tools over rebuilding them. Requests to build native replacements for external services (like Chatwoot) or new channels require explicit authorization, evidence, and an expansion gate in RESEARCH.md. Since there is no such expansion gate authorizing a native replacement for Chatwoot, this task is blocked and no work can be performed."
