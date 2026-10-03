@@ -1395,6 +1395,35 @@ impl workflow_execution::TextInference for ConfiguredWorkflowInference {
     }
 }
 
+async fn canonical_builder_pool(
+    database: &crate::persistence::AppDatabase,
+    configured_data: Option<&sqlx::PgPool>,
+) -> Option<sqlx::PgPool> {
+    let configured_data = configured_data?;
+    match server_auth::commit_authority::canonical_pg_data_pool(
+        database.connection(),
+        configured_data,
+        &[
+            "builder_brand_toolboxes",
+            "builder_sites",
+            "builder_pages",
+            "builder_blocks",
+            "builder_publications",
+            "builder_publication_work",
+            "products",
+        ],
+    )
+    .await
+    {
+        Ok(pool) => Some(pool),
+        Err(error) => {
+            tracing::warn!(error=%error, database_failure=std::error::Error::source(&error).is_some(),
+                "builder private storage has no confirmed canonical binding; configured data retained");
+            None
+        }
+    }
+}
+
 fn configured_workflow_execution(
     store: std::sync::Arc<::server_auth::Store>,
     database: crate::persistence::AppDatabase,
@@ -9192,7 +9221,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
         .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
-        .nest("/api/v1/builder", crate::builder::api::router(db.pool.clone()).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
+        .nest("/api/v1/builder", crate::builder::api::router(canonical_builder_pool(auth_database, db.postgres_pool()).await).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .route("/api/v1/agents/workflows/{id}",axum::routing::get(workflow_receipt_handler).layer(axum::Extension(workflow_execution.clone())))
         .route("/api/v1/agents/workflows/by-request/{id}",axum::routing::get(workflow_request_receipt_handler).layer(axum::Extension(workflow_execution.clone())))

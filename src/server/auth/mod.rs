@@ -3,6 +3,7 @@ pub use ::server_common as common;
 pub use ::server_oidc as oidc;
 pub use ::server_omnisolo as ohc;
 
+pub mod commit_authority;
 pub mod email;
 pub mod grpc;
 pub mod http;

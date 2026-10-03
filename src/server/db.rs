@@ -295,6 +295,14 @@ pub struct MemoryContent<'a> {
 }
 
 impl DB {
+    /// Actual configured PostgreSQL storage; SQLite/MySQL dummy handles are not data stores.
+    pub fn postgres_pool(&self) -> Option<&PgPool> {
+        match &self.store {
+            DbStore::Postgres if GLOBAL_MYSQL_POOL.get().is_none() => Some(&self.pool),
+            _ => None,
+        }
+    }
+
     pub async fn query_available_slots(
         &self,
         tenant_id: &str,

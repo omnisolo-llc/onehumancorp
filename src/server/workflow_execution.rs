@@ -168,6 +168,15 @@ pub enum AnalysisOutcome {
     OutcomeUnknown,
 }
 
+fn authority_admission_error(
+    error: server_auth::commit_authority::AuthorityError,
+) -> AdmissionError {
+    match error {
+        server_auth::commit_authority::AuthorityError::Forbidden => AdmissionError::Forbidden,
+        _ => AdmissionError::Unavailable,
+    }
+}
+
 impl WorkflowExecution {
     pub fn unavailable(store: Arc<server_auth::Store>) -> Self {
         Self {
@@ -240,94 +249,41 @@ impl WorkflowExecution {
     }
 
     async fn current_authority(&self, authority: &Authority) -> Result<(), AdmissionError> {
-        if authority.expires_at <= chrono::Utc::now().timestamp() {
-            return Err(AdmissionError::Forbidden);
-        }
-        // Bound unavailable storage as well as provider execution. No private
-        // identity, token, or database error is returned through the HTTP API.
-        tokio::time::timeout(Duration::from_secs(3), async {
-            if self
-                .store
-                .is_revoked(&authority.token_id, &authority.tenant_id)
-                .await
-                .map_err(|_| AdmissionError::Unavailable)?
-            {
-                return Err(AdmissionError::Forbidden);
-            }
-            let user = self
-                .store
-                .get_user(&authority.actor_id, &authority.tenant_id)
-                .await
-                .ok_or(AdmissionError::Forbidden)?;
-            if !user.active
-                || user.organization_id.as_deref() != Some(authority.tenant_id.as_str())
-                || !user.roles.iter().any(|role| {
-                    role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin")
-                })
-            {
-                return Err(AdmissionError::Forbidden);
-            }
-            Ok(())
-        })
+        server_auth::commit_authority::require_current_owner(
+            &self.store,
+            &authority.tenant_id,
+            &authority.actor_id,
+            &authority.token_id,
+            authority.expires_at,
+        )
         .await
-        .map_err(|_| AdmissionError::Unavailable)?
+        .map_err(authority_admission_error)
     }
 
-    // Receipt reconciliation requires current identity even when the provider is
-    // unavailable. This private snapshot grants no inference or workspace effect.
+    pub(crate) fn canonical_pg_authority(
+        &self,
+        pool: &sqlx::PgPool,
+    ) -> Result<server_auth::commit_authority::CanonicalPgAuthority, AdmissionError> {
+        server_auth::commit_authority::CanonicalPgAuthority::bind(self.store.clone(), pool)
+            .map_err(authority_admission_error)
+    }
+
+    // Receipt reconciliation needs current identity even when no provider is available.
     pub(crate) async fn authorize(
         &self,
         claims: &Claims,
         headers: &axum::http::HeaderMap,
     ) -> Result<Authority, AdmissionError> {
-        // Revalidate the exact bearer against the Store as well as requiring
-        // the middleware's current claims. A fabricated internal Claims value
-        // or caller-supplied tenant/actor is not a dispatch capability.
-        let mut values = headers.get_all(axum::http::header::AUTHORIZATION).iter();
-        let token = values
-            .next()
-            .filter(|_| values.next().is_none())
-            .and_then(|value| value.to_str().ok())
-            .and_then(|value| value.strip_prefix("Bearer "))
-            .filter(|value| {
-                !value.is_empty()
-                    && value.len() <= 16_384
-                    && !value.chars().any(char::is_whitespace)
-            })
-            .ok_or(AdmissionError::Forbidden)?;
-        let signed = tokio::time::timeout(Duration::from_secs(3), self.store.validate_token(token))
+        let owner = server_auth::commit_authority::verify_owner(&self.store, claims, headers)
             .await
-            .map_err(|_| AdmissionError::Unavailable)?
-            .map_err(|_| AdmissionError::Forbidden)?;
-        if signed.sub != claims.sub
-            || signed.organization_id != claims.organization_id
-            || signed.jti != claims.jti
-            || signed.exp != claims.exp
-            || signed.session_id != claims.session_id
-        {
-            return Err(AdmissionError::Forbidden);
-        }
-        let tenant_id = server_common::auth_utils::signed_tenant_id(&signed)
-            .filter(|tenant| !tenant.eq_ignore_ascii_case("system"))
-            .ok_or(AdmissionError::Forbidden)?;
-        if claims.sub.trim().is_empty()
-            || claims.jti.trim().is_empty()
-            || claims
-                .session_id
-                .as_ref()
-                .is_some_and(|id| id.trim().is_empty())
-        {
-            return Err(AdmissionError::Forbidden);
-        }
-        let authority = Authority {
-            tenant_id,
-            actor_id: claims.sub.clone(),
-            token_id: claims.jti.clone(),
-            expires_at: claims.exp,
-            session_id: claims.session_id.clone(),
-        };
-        self.current_authority(&authority).await?;
-        Ok(authority)
+            .map_err(authority_admission_error)?;
+        Ok(Authority {
+            tenant_id: owner.tenant_id().to_owned(),
+            actor_id: owner.actor_id().to_owned(),
+            token_id: owner.token_id().to_owned(),
+            expires_at: owner.expires_at(),
+            session_id: owner.session_id().map(str::to_owned),
+        })
     }
 
     pub async fn admit(
