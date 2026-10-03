@@ -14,6 +14,7 @@ const ALLOWED_METHODS = new Set([
   "ap_list_tasks",
   "ap_restore_checkpoint",
 ]);
+const READ_METHODS = new Set(["ap_list_tasks", "ap_list_steps", "ap_list_checkpoints"]);
 const decoder = new TextDecoder("utf-8", { fatal: true });
 const encoder = new TextEncoder();
 
@@ -33,6 +34,9 @@ export async function GET(request: Request) {
   const method = url.searchParams.get("method") ?? "";
   if (!ALLOWED_METHODS.has(method)) {
     return Response.json({ error: "unsupported method" }, { status: 400 });
+  }
+  if (!READ_METHODS.has(method)) {
+    return Response.json({ error: "This operation requires POST" }, { status: 405, headers: { Allow: "POST" } });
   }
   const taskId = url.searchParams.get("task_id");
   return unwrapResult(await proxyBackendRequest(request, "/api/v1/rpc", {
