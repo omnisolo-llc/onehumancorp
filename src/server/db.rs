@@ -71,6 +71,7 @@ pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 mod harness_middleware_schema;
 
 pub mod sql_middleware;
+mod sqlite_key;
 
 fn database_url_from_environment()
 -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
@@ -625,75 +626,15 @@ impl DB {
             }
 
             // Enforce SQLCipher for Standalone mode unconditionally
-            let key = std::env::var("OMNISOLO_SQLITE_KEY").unwrap_or_else(|_| {
-                    let secret_path = crate::config::sqlite_key_path();
-                    if secret_path.exists() {
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            use std::os::unix::fs::PermissionsExt;
-                            let mut options = std::fs::OpenOptions::new();
-                            options.read(true);
-                            #[cfg(target_os = "linux")]
-                                options.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                options.custom_flags(0x0100); // O_NOFOLLOW
-                            if let Ok(mut file) = options.open(&secret_path) {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut perms = metadata.permissions();
-                                    if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on the OmniSolo SQLite key. Fixing them to prevent TOCTOU attacks.");
-                                        perms.set_mode(0o600);
-                                        if file.set_permissions(perms).is_err() {
-                                            tracing::error!("Failed to securely update OmniSolo SQLite key permissions");
-                                            std::process::exit(1);
-                                        }
-                                    }
-                                }
-                                use std::io::Read;
-                                let mut bytes = String::new();
-                                if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
-                            }
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
-                                if !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
-                            }
-                        }
-                    }
-
-                    let mut key_bytes = [0u8; 32];
+            let key = match sqlite_key::configured_key(std::env::var("OMNISOLO_SQLITE_KEY"))? {
+                Some(key) => key,
+                None => sqlite_key::resolve(&crate::config::sqlite_key_path(), || {
                     use rand::RngCore;
+                    let mut key_bytes = [0u8; 32];
                     rand::thread_rng().fill_bytes(&mut key_bytes);
-                    let new_key = hex::encode(key_bytes);
-
-                    #[cfg(unix)]
-                    {
-                        use std::io::Write;
-                        use std::os::unix::fs::OpenOptionsExt;
-                        let mut options = std::fs::OpenOptions::new();
-                        options.read(true).write(true).create_new(true).mode(0o600);
-                        #[cfg(target_os = "linux")]
-                        options.custom_flags(0x00020000); // O_NOFOLLOW
-                        #[cfg(target_os = "macos")]
-                        options.custom_flags(0x0100); // O_NOFOLLOW
-
-                        if let Ok(mut file) = options.open(&secret_path) {
-                            let _ = file.write_all(new_key.as_bytes());
-                        }
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        let _ = std::fs::write(secret_path, &new_key);
-                    }
-
-                    new_key
-                });
+                    hex::encode(key_bytes)
+                })?,
+            };
 
             if key.trim().is_empty() {
                 return Err("CRITICAL SECURITY ERROR: OMNISOLO_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
