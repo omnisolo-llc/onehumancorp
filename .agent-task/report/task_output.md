@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Architect and Implement Native Rust Omnichannel Chat Engine"
+issue_description: "The issue requests building a native Rust omnichannel chat system to replace Chatwoot, adding new channels (WhatsApp, SMS, WebWidget). This is blocked as it constitutes a new feature epic and expansion of channels without the required evidence-backed decision and expansion gate in RESEARCH.md. The contract strictly states: 'New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require evidence and the expansion gate in RESEARCH.md.' Therefore, no implementation can proceed without this prerequisite evidence."
+issue_priority: "P0"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
