@@ -18,10 +18,15 @@ async function loadPage(root, name, url = 'http://127.0.0.1:18789/') {
     virtualConsole,
     beforeParse(window) {
       // Unit boundary only: no application backend is claimed by these DOM tests.
-      window.fetch = async () => ({ ok: true, json: async () => [] });
+      window.fetch = async url => {
+        if (url === '/api/v1/auth/session-identity') return Response.json({ userId: 'modal-owner', tenantId: 'modal-tenant', expiresAt: Date.now() + 60_000 });
+        if (url === '/api/v1/billing/my-plan') return Response.json({ current_plan: 'Free' });
+        return { ok: true, json: async () => [] };
+      };
     },
   });
   await new Promise(resolve => dom.window.addEventListener('load', resolve, { once: true }));
+  await new Promise(resolve => setImmediate(resolve));
   return { dom, errors };
 }
 
@@ -79,10 +84,12 @@ for (const root of fullRoots) {
       assert.equal(visibility(paywall), 'hidden');
       assert.equal(visibility(embed), 'hidden');
       document.getElementById('remove-branding').click();
+      await new Promise(resolve => setImmediate(resolve));
       assert.equal(visibility(paywall), 'visible');
       document.getElementById('close-paywall').click();
       assert.equal(visibility(paywall), 'hidden');
       document.getElementById('get-code-btn').click();
+      await new Promise(resolve => setImmediate(resolve));
       assert.equal(visibility(embed), 'visible');
       document.getElementById('close-embed-btn').click();
       assert.equal(visibility(embed), 'hidden');

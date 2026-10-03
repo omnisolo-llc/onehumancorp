@@ -34,22 +34,37 @@ test.describe('Referral Widget Entitlement', () => {
     await expectEntitlementUnchanged(page, fixture);
   });
 
-  test('an existing server-verified Pro plan retains branding controls', async ({ page, baseURL }) => {
-    const fixture = await createEntitlementOwner(page, baseURL, 'Pro');
-    const loadedPlan = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/billing/my-plan' && response.status() === 200);
-    await page.goto('/referral-widget');
-    await loadedPlan;
-    const checkbox = page.getByLabel('Remove "OmniSolo" Branding');
-    await checkbox.check();
-    await expect(checkbox).toBeChecked();
-    await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).not.toBeVisible();
-    await page.getByRole('button', { name: 'Get Embed Code' }).click();
-    await expect(page.locator('textarea')).toHaveValue(/hide_branding=true/);
-    await page.getByRole('button', { name: 'Close', exact: true }).click();
-    await checkbox.uncheck();
-    await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).toBeVisible();
-    await expectEntitlementUnchanged(page, fixture);
-  });
+  for (const plan of ['Pro', 'Business'] as const) {
+    test(`an existing server-verified ${plan} plan retains authenticated branding controls`, async ({ page, baseURL }) => {
+      const fixture = await createEntitlementOwner(page, baseURL, plan);
+      const loadedPlan = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/billing/my-plan' && response.status() === 200);
+      await page.goto('/referral-widget');
+      await loadedPlan;
+      const checkbox = page.getByLabel('Remove "OmniSolo" Branding');
+      await checkbox.check();
+      await expect(checkbox).toBeChecked();
+      await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).not.toBeVisible();
+      await page.getByRole('button', { name: 'Get Embed Code' }).click();
+      await expect(page.locator('textarea')).toHaveValue(/hide_branding=true/);
+      const code = await page.locator('textarea').inputValue();
+      const source = code.match(/src="([^"]+)"/);
+      expect(source).not.toBeNull();
+      const preview = new URL(source![1].replaceAll('&amp;', '&'));
+      expect(preview.searchParams.get('tenant')).toBe(fixture.owner.tenantId);
+      const response = await page.request.get(preview.toString());
+      expect(response.status()).toBe(200);
+      const html = await response.text();
+      expect(html).toContain('offer-draft');
+      expect(html).toContain('not configured');
+      expect(html).not.toContain('⚡ OmniSolo');
+      expect(html).not.toContain('/referrals/click');
+      await page.getByRole('button', { name: 'Close', exact: true }).click();
+      await checkbox.uncheck();
+      await expect(page.getByRole('link', { name: /Powered by OmniSolo/i })).toBeVisible();
+      await expectEntitlementUnchanged(page, fixture);
+    });
+
+  }
 
   test('Smoke test: referral_widget', async ({ page, request, loginAs, adminUser }) => {
     await loginAs(page, adminUser);

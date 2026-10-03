@@ -424,11 +424,7 @@ where
             get(handle_footer_branding_embed),
         )
         .route("/testimonial/embed", get(handle_testimonial_embed))
-        .route(
-            "/customer-referral/embed",
-            get(handle_customer_referral_embed),
-        )
-        .route("/post-purchase/embed", get(handle_post_purchase_embed))
+        .merge(super::growth_previews::router(pool.clone()))
         .route("/storefront/og-card", get(handle_og_card))
         .route("/flash-sale/embed", get(handle_flash_sale_embed))
         .route("/spin-to-win/embed", get(handle_spin_to_win_embed))
@@ -1368,309 +1364,9 @@ pub struct StorefrontEmbedQuery {
     pub theme: Option<String>,
 }
 
-#[derive(Deserialize)]
-pub struct PostPurchaseEmbedQuery {
-    pub tenant: Option<String>,
-    pub discount: Option<String>,
-    pub theme: Option<String>,
-    #[serde(rename = "hideBranding")]
-    pub hide_branding: Option<String>,
-}
 
-#[derive(Deserialize)]
-pub struct CustomerReferralEmbedQuery {
-    pub tenant: Option<String>,
-    pub give: Option<String>,
-    pub get: Option<String>,
-    pub theme: Option<String>,
-    pub hide_branding: Option<String>,
-}
 
-async fn handle_post_purchase_embed(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<PostPurchaseEmbedQuery>,
-) -> impl IntoResponse {
-    let escape_html = |s: &str| {
-        s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#x27;")
-    };
 
-    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
-    let referral_url = escape_html(&format!(
-        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
-        urlencoding::encode(raw_tenant)
-    ));
-    let discount = escape_html(query.discount.as_deref().unwrap_or("15pct"));
-
-    let discount_display = if discount.ends_with("pct") {
-        format!("{}%", discount.trim_end_matches("pct"))
-    } else if discount.ends_with("flat") {
-        format!("${}", discount.trim_end_matches("flat"))
-    } else {
-        discount.clone()
-    };
-
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#ffffff"
-    } else {
-        "#1f2937"
-    };
-    let border_color = if query.theme.as_deref() == Some("dark") {
-        "#374151"
-    } else {
-        "#e5e7eb"
-    };
-
-    let mut has_pro = false;
-    if query.hide_branding.as_deref() == Some("true") {
-        // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
-        )
-        .bind(raw_tenant)
-        .fetch_optional(&state.pool)
-        .await;
-
-        if let Ok(Some(plan)) = is_pro_res
-            && plan.to_lowercase() == "pro"
-        {
-            has_pro = true;
-        }
-    }
-
-    let branding = if has_pro {
-        "".to_string()
-    } else {
-        format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="{}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
-            referral_url
-        )
-    };
-
-    let html = format!(
-        r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: {bg_color};
-            color: {text_color};
-            margin: 0;
-            padding: 16px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            height: 100vh;
-            box-sizing: border-box;
-        }}
-        .widget-icon {{ font-size: 32px; margin-bottom: 12px; }}
-        h3 {{ margin: 0 0 8px 0; font-size: 20px; font-weight: 700; }}
-        p {{ margin: 0 0 16px 0; font-size: 14px; opacity: 0.8; line-height: 1.5; }}
-        .input-group {{ display: flex; gap: 8px; justify-content: center; }}
-        input {{
-            padding: 12px;
-            border: 1px solid {border_color};
-            border-radius: 8px;
-            background: rgba(128,128,128,0.1);
-            color: {text_color};
-            outline: none;
-            width: 60%;
-            max-width: 300px;
-        }}
-        button {{
-            background: #0066FF;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-        }}
-    </style>
-</head>
-<body>
-    <div class="widget-icon">🎁</div>
-    <h3>Share and Get {discount_display} OFF</h3>
-    <p>Share your link with friends. They get {discount_display} off their first order, and you get {discount_display} off your next!</p>
-    <div class="input-group">
-        <input type="text" readonly value="{referral_url}" id="ref-link" />
-        <button onclick="copyLink(this)">Copy Link</button>
-    </div>
-    {branding}
-    <script>
-        function copyLink(btn) {{
-            const link = document.getElementById('ref-link');
-            link.select();
-            document.execCommand('copy');
-            const oldText = btn.textContent;
-            btn.textContent = 'Copied!';
-            setTimeout(() => {{ btn.textContent = oldText; }}, 2000);
-        }}
-    </script>
-</body>
-</html>"#,
-        bg_color = bg_color,
-        text_color = text_color,
-        border_color = border_color,
-        discount_display = discount_display,
-        branding = branding,
-        referral_url = referral_url
-    );
-
-    axum::response::Html(html)
-}
-
-async fn handle_customer_referral_embed(
-    Extension(state): Extension<GrowthState>,
-    axum::extract::Query(query): axum::extract::Query<CustomerReferralEmbedQuery>,
-) -> impl IntoResponse {
-    let escape_html = |s: &str| {
-        s.replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("\'", "&#x27;")
-    };
-
-    let raw_tenant = query.tenant.as_deref().unwrap_or("embed");
-    // Identity stays raw for DB reads; only the output URL/attribute is encoded.
-    let referral_url = escape_html(&format!(
-        "https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref={}",
-        urlencoding::encode(raw_tenant)
-    ));
-    let give = escape_html(query.give.as_deref().unwrap_or("10"));
-    let get = escape_html(query.get.as_deref().unwrap_or("10"));
-    let bg_color = if query.theme.as_deref() == Some("dark") {
-        "#111827"
-    } else {
-        "#ffffff"
-    };
-    let text_color = if query.theme.as_deref() == Some("dark") {
-        "#ffffff"
-    } else {
-        "#1f2937"
-    };
-    let border_color = if query.theme.as_deref() == Some("dark") {
-        "#374151"
-    } else {
-        "#e5e7eb"
-    };
-    let mut has_pro = false;
-    if query.hide_branding.as_deref() == Some("true") {
-        // Validate pro status in DB
-        let is_pro_res = sqlx::query_scalar::<_, String>(
-            "SELECT plan_tier FROM tenants WHERE CAST(id AS TEXT) = $1",
-        )
-        .bind(raw_tenant)
-        .fetch_optional(&state.pool)
-        .await;
-
-        if let Ok(Some(plan)) = is_pro_res
-            && plan.to_lowercase() == "pro"
-        {
-            has_pro = true;
-        }
-    }
-
-    let branding = if has_pro {
-        "".to_string()
-    } else {
-        format!(
-            r#"<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="{}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a></div>"#,
-            referral_url
-        )
-    };
-
-    let html = format!(
-        r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: {bg_color};
-            color: {text_color};
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            box-sizing: border-box;
-        }}
-        .card {{
-            border: 1px solid {border_color};
-            border-radius: 16px;
-            padding: 24px;
-            text-align: center;
-            max-width: 400px;
-            width: 100%;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }}
-        .icon {{
-            font-size: 48px;
-            margin-bottom: 16px;
-        }}
-        h2 {{
-            margin: 0 0 8px 0;
-            font-size: 24px;
-        }}
-        p {{
-            margin: 0 0 24px 0;
-            color: #6b7280;
-            font-size: 14px;
-            line-height: 1.5;
-        }}
-        .button {{
-            background-color: #10b981;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: background-color 0.2s;
-        }}
-        .button:hover {{
-            background-color: #059669;
-        }}
-    </style>
-</head>
-<body>
-    <div class="card">
-        <div class="icon">🎁</div>
-        <h2>Give ${give}, Get ${get}</h2>
-        <p>Give your friends ${give} off their first order, and get ${get} when they purchase.</p>
-        <button class="button" id="referral-share" data-referral-url="{referral_url}">Share your link</button>
-        {branding}
-    </div>
-    <script>
-        document.getElementById('referral-share').addEventListener('click', function() {{
-            window.open(this.dataset.referralUrl, '_blank');
-        }});
-    </script>
-</body>
-</html>"#
-    );
-
-    axum::response::Html(html)
-}
 
 #[derive(Debug, Deserialize)]
 pub struct OneTapReferralEmbedQuery {
@@ -4403,44 +4099,21 @@ mod cloud_bridge_tests {
     }
 
     #[tokio::test]
-    async fn test_customer_referral_embed() {
-        let pool = setup_db().await;
-        if sqlx::query("SELECT 1").execute(&pool).await.is_err() {
-            return;
-        }
-        let (event_tx, _) = tokio::sync::mpsc::channel(100);
-        let hub = Arc::new(crate::hub::Hub::new(event_tx, pool.clone()));
-        let state = GrowthState {
-            pool: pool.clone(),
-            hub: hub.clone(),
-            viral_loop_tracker: std::sync::Arc::new(
-                crate::services::growth::viral_loop::ViralLoopTracker::new(),
-            ),
-        };
-
-        let query = super::CustomerReferralEmbedQuery {
-            tenant: Some("test-tenant".to_string()),
+    async fn customer_referral_preview_requires_a_verified_current_owner() {
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://postgres@127.0.0.1:1/ohc_unused_preview_test")
+            .unwrap();
+        let query = crate::api::growth_previews::CustomerReferralEmbedQuery {
+            tenant: Some("claimed-tenant".to_string()),
             give: Some("15".to_string()),
             get: Some("20".to_string()),
             theme: None,
-            hide_branding: None,
+            hide_branding: Some("true".to_string()),
         };
-        let res = super::handle_customer_referral_embed(
-            Extension(state.clone()),
-            axum::extract::Query(query),
-        )
-        .await
-        .into_response();
-
-        let body_bytes = axum::body::to_bytes(res.into_body(), usize::MAX)
-            .await
-            .unwrap();
-        let html = String::from_utf8(body_bytes.to_vec()).unwrap();
-
-        assert!(html.contains("Give $15, Get $20"));
-        assert!(html.contains("test-tenant"));
-        assert!(html.contains("Give your friends $15 off"));
-        assert!(html.contains("OmniSolo"));
+        let response = crate::api::growth_previews::handle_customer_referral_embed(
+            Extension(pool), None, axum::extract::Query(query),
+        ).await.into_response();
+        assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
     }
 
     #[tokio::test]

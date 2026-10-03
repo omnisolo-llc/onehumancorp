@@ -29,7 +29,11 @@ const cases = [
   { name: 'tip jar', Page: TipJar, button: /^Copy Code$/, prepare: () => fireEvent.click(screen.getByRole('button', { name: 'Get Widget Code' })) },
   { name: 'poll', Page: Poll, button: /^Copy Code$/, prepare: () => fireEvent.click(screen.getByRole('button', { name: 'Generate Embed Code' })) },
   { name: 'quote', Page: Quote, button: /^Copy Embed Code$/, prepare: () => {} },
-  { name: 'referral', Page: Referral, button: /^Copy Code$/, prepare: () => fireEvent.click(screen.getByRole('button', { name: 'Get Embed Code' })) },
+  { name: 'referral', Page: Referral, button: /^Copy Code$/, prepare: async () => {
+    const open = screen.getByRole('button', { name: 'Get Embed Code' });
+    await waitFor(() => expect(open).toBeEnabled());
+    fireEvent.click(open);
+  } },
   { name: 'affiliate', Page: Affiliate, button: /^Copy Code$/, prepare: () => fireEvent.click(screen.getByRole('button', { name: 'Get Embed Code' })) },
   { name: 'business card', Page: DigitalCard, button: /^Copy$/, prepare: () => {
     fireEvent.change(screen.getByPlaceholderText('e.g. Jane Doe'), { target: { value: 'Alex Example' } });
@@ -52,6 +56,11 @@ function verifyQuoteFixture(name: string) {
   if (name === 'quote') vi.mocked(fetch).mockImplementation(async url => String(url).endsWith('/session-identity')
     ? Response.json({ userId: 'quote-owner', tenantId: 'quote-tenant', expiresAt: Date.now() + 60_000 })
     : Response.json({ error: 'not_authenticated' }, { status: 401 }));
+  if (name === 'referral') vi.mocked(fetch).mockImplementation(async url => {
+    if (String(url) === '/api/v1/auth/session-identity') return Response.json({ userId: 'referral-owner', tenantId: 'referral-tenant', expiresAt: Date.now() + 60_000 });
+    if (String(url) === '/api/v1/billing/my-plan') return Response.json({ current_plan: 'Free' });
+    throw new Error(`Unexpected referral fixture request: ${url}`);
+  });
 }
 
 describe('clipboard feedback follows the actual platform outcome', () => {
@@ -63,7 +72,7 @@ describe('clipboard feedback follows the actual platform outcome', () => {
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText, write } });
       verifyQuoteFixture(name);
       await act(async () => { render(<TooltipProvider><Page /></TooltipProvider>); });
-      prepare();
+      await prepare();
       const copy = screen.getByRole('button', { name: button });
       fireEvent.click(copy);
       expect(copy).toBeDisabled();
@@ -83,7 +92,7 @@ describe('clipboard feedback follows the actual platform outcome', () => {
       Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText, write } });
       verifyQuoteFixture(name);
       await act(async () => { render(<TooltipProvider><Page /></TooltipProvider>); });
-      prepare();
+      await prepare();
       fireEvent.click(screen.getByRole('button', { name: button }));
       await act(async () => { completion.reject(new DOMException('Denied', 'NotAllowedError')); });
       expect(screen.getByRole('alert')).toHaveTextContent(/copy failed/i);
