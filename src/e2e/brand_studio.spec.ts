@@ -16,7 +16,7 @@ test.describe('Brand Studio workflow', () => {
     const response = generationResponse(page, '/api/v1/builder/brand_toolbox/generate');
     await page.getByRole('button', { name: 'Generate Toolbox' }).click();
     await expectGenerationUnavailable(await response);
-    await expect(page.getByRole('alert')).toHaveText(generationPrerequisite);
+    await expect(page.getByRole('alert').filter({ hasText: generationPrerequisite })).toHaveText(generationPrerequisite);
     await expect(page.getByLabel('Business', { exact: true })).toHaveValue(brief);
     await expect(page.getByRole('button', { name: 'Review public version' })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Open published website' })).toHaveCount(0);

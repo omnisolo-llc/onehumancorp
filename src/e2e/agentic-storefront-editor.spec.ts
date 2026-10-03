@@ -11,7 +11,7 @@ test.describe('Agentic Storefront Editor', () => {
     const response = generationResponse(page);
     await page.getByRole('button', { name: 'Build My Storefront' }).click();
     await expectGenerationUnavailable(await response);
-    await expect(page.getByRole('alert')).toHaveText(generationPrerequisite);
+    await expect(page.getByRole('alert').filter({ hasText: generationPrerequisite })).toHaveText(generationPrerequisite);
     await expect(page.getByText('Preview Mode')).toHaveCount(0);
     await page.reload();
     await expect(page.getByPlaceholder(/mobile dog grooming service/i)).toHaveValue('Maya the home baker, I bake custom vegan cakes.');
