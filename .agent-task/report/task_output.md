@@ -1,0 +1,6 @@
+outcome: blocked
+issue_title: Architect Native Rust Omnichannel Chat System to Replace External Chat Service
+issue_description: |
+  The task asks to build a new Omnichannel Chat System to replace an external chat service, adding new UI and database schemas for conversations, inboxes, channels, contacts, and messages. However, there is no explicit expansion gate or evidence in `RESEARCH.md` authorizing a new "omnichannel chat system" capability to be implemented. The `RESEARCH.md` specifically says: "New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require evidence and the expansion gate in RESEARCH.md. Do not interpret a successful PR as a completed customer business outcome." and "The owner explicitly requests completing the migration and recorded defect remediation, not another research-only plan... The exclusive digital-service first market is suspended...".
+
+  The contract states: "According to the OHC operating contract, new verticals, channels, agent marketplaces, and harness adapters require explicit evidence and an expansion gate in RESEARCH.md. Without it, implementation is blocked." Therefore, this new channel/omnichannel capability is blocked.
