@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement Offline-Tolerant Tap-to-Pay & Sync Engine for Mobile Operators"
+issue_description: "The issue requests offline-tolerant tap-to-pay using Flutter for the frontend and Go for the backend. However, the One Human Corp repository maintains Next.js/Tauri and Rust. As per the rules in RESEARCH.md and the system prompt, creating additional frontends (e.g., Flutter) or full rewrites is explicitly forbidden, and we must 'discover the active path instead of starting another frontend'. Implementing this requires unavailable Go/Flutter environments. Furthermore, we must not invent follow-up features or dummy changes. Loaded skills: skills/using-superpowers/SKILL.md from revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d."
