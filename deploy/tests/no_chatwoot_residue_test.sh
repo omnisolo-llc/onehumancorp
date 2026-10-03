@@ -85,7 +85,7 @@ for record in "${tracked_records[@]}"; do
         append_tracked "$path"
       fi
       ;;
-    120000)
+    120000|160000)
       if [[ ! -L "$path" ]]; then
         scanner_error "tracked symlink input invalid" "$path"
       fi
@@ -184,7 +184,7 @@ for path in "${symlinks[@]}"; do
       semantic_alias_targets+=("$target_path")
       append_tracked "$target_path"
       ;;
-    120000)
+    120000|160000)
       scanner_error "tracked symlink target did not resolve" "$path" "$target_path"
       ;;
     *)
