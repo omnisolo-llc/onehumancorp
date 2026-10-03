@@ -661,8 +661,11 @@ impl DB {
                 })
                 .connect_with(conn_opts)
                 .await?;
+            let canonical_connection =
+                sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(sqlite_pool.clone());
             if let Err(error) =
-                crate::persistence::connection::require_sqlite_encryption(&sqlite_pool).await
+                crate::persistence::connection::require_sqlite_encryption(&canonical_connection)
+                    .await
             {
                 sqlite_pool.close().await;
                 return Err(error.into());
