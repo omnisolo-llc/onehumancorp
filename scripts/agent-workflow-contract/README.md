@@ -24,7 +24,7 @@ python3 scripts/focused_ci_gate.py agent-workflow-contract
 ```
 
 The required PostgreSQL security CI job also runs this offline gate. The wrapper
-requires at least 97 executed tests, rejects failures/skips/filters, and retains
+requires at least 98 executed tests, rejects failures/skips/filters, and retains
 the log plus source manifest. `make test` checks the mandatory CI registration
 through the native-contract discovery guard; it does not claim that discovery is
 runtime acceptance.

@@ -64,6 +64,9 @@ The actual production constructor requires:
   supplies no fabricated price or default commercial tariff.
 - An already configured persisted usage account/spending limit. The existing
   owner-scoped usage spending-limit API creates that authorization explicitly.
+  Apply additive PostgreSQL migration1025 or the portable SQLite migration
+  beforehand with the deployment migration role; request handlers need no schema
+  privileges and never run accounting DDL.
   Inference never creates an allowance, adds payment credit or changes a plan.
 
 Receipt storage and UsageLedger use the exact same configured SeaORM SQLx pool,
@@ -143,3 +146,9 @@ The historical `*.mock-contract.ts` swarm and portfolio-event examples are not
 current production acceptance tests. They do not certify an automatic swarm,
 portfolio business outcome or live MiniMax execution. The bounded authenticated
 text dispatch contracts above are the supported behavior.
+
+Usage records accept only `after` plus optional `tenant_id` and `user_id`
+compatibility query parameters. If present, these must equal current authenticated
+Claims. The web proxy rewrites supplied identity parameters from its sealed
+session; it does not add them when absent. Other query fields remain invalid.
+These query fields never select another account.

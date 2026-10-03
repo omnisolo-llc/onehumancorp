@@ -968,6 +968,16 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_agent_definition_test
           python3 scripts/focused_ci_gate.py agent-definition-contract
+      - uses: actions/setup-node@v6
+        if: ${{ !cancelled() }}
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Install the pinned workflow proxy witness
+        if: ${{ !cancelled() }}
+        run: |
+          python3 scripts/agent-workflow-contract/verify_node_lock.py
+          npm ci --prefix scripts/agent-workflow-contract --ignore-scripts --omit=dev --no-audit --no-fund
       - name: Fetch locked receipt PostgreSQL contract dependencies
         if: ${{ !cancelled() }}
         timeout-minutes: 5
@@ -980,16 +990,6 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_agent_receipt_test
           python3 scripts/focused_ci_gate.py agent-receipt-postgres-contract
-      - uses: actions/setup-node@v6
-        if: ${{ !cancelled() }}
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - name: Install the pinned workflow proxy witness
-        if: ${{ !cancelled() }}
-        run: |
-          python3 scripts/agent-workflow-contract/verify_node_lock.py
-          npm ci --prefix scripts/agent-workflow-contract --ignore-scripts --omit=dev --no-audit --no-fund
       - name: Verify agent workflow tenant isolation and requested tasks offline
         if: ${{ !cancelled() }}
         env:

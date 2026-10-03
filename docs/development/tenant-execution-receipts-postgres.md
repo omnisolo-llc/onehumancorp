@@ -57,16 +57,16 @@ additional acceptance requirements.
 
 ## Focused local result (2026-10-02)
 
-The current source-bound receipt harness passes 50 cases with zero ignored or
+The current source-bound receipt harness passes 53 cases with zero ignored or
 filtered, including the 40-case revocation/storage foundation, retained SQLite
 lifecycle cases, exact prepared-request bounds, explicit funding policy and an
 actual forced-RLS PostgreSQL worker/provider/ledger transaction. The separate
-mounted workflow gate passes 97 and builder compatibility gate passes 50; all
+mounted workflow gate passes 98 and builder compatibility gate passes 50; all
 three pass strict all-target Clippy. SQLite schema enforcement passes nine cases.
 These owned database/loopback results do not certify a live paid vendor or the
 full integrated workspace. No production account or credit was changed.
 
 The checked-in focused Cargo lock must be an exact registry/version/source/checksum
 subset of the root lock. CI fetches this focused graph for the Rust host with
-`--locked`; tests remain `--locked --offline`. The mandatory gate has a 50-case floor
+`--locked`; tests remain `--locked --offline`. The mandatory gate has a 53-case floor
 and uses the existing PostgreSQL lane, without adding a runner.

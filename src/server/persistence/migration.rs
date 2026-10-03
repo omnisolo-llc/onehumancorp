@@ -32,6 +32,21 @@ where
     C: ConnectionTrait + TransactionTrait,
 {
     let backend = connection.get_database_backend();
+    // Deployment migrations install accounting tables without granting a budget.
+    // Runtime usage handlers never require schema ownership or DDL privileges.
+    match backend {
+        sea_orm::DatabaseBackend::Postgres => {
+            connection
+                .execute_unprepared(include_str!("usage_ledger_postgres.sql"))
+                .await?;
+        }
+        sea_orm::DatabaseBackend::Sqlite => {
+            connection
+                .execute_unprepared(include_str!("usage_ledger_sqlite.sql"))
+                .await?;
+        }
+        _ => {}
+    }
     let schema = Schema::new(backend);
 
     let mut versions = schema.create_table_from_entity(entities::schema_version::Entity);

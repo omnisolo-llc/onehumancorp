@@ -191,40 +191,23 @@ macro_rules! transaction {
 impl UsageLedger {
     /// Deployment migration hook. Never loads credentials from a request payload.
     pub async fn initialize(&self) -> Result<(), LedgerError> {
-        const SCHEMA: [&str; 3] = [
-            "CREATE TABLE IF NOT EXISTS ohc_usage_accounts (tenant_id TEXT PRIMARY KEY, limit_micros BIGINT NOT NULL CHECK(limit_micros >= 0), spent_micros BIGINT NOT NULL DEFAULT 0 CHECK(spent_micros >= 0), reserved_micros BIGINT NOT NULL DEFAULT 0 CHECK(reserved_micros >= 0))",
-            "CREATE TABLE IF NOT EXISTS ohc_usage_records (tenant_id TEXT NOT NULL, event_id TEXT NOT NULL, request_digest TEXT NOT NULL, scope_json TEXT NOT NULL, state TEXT NOT NULL, reserved_micros BIGINT NOT NULL CHECK(reserved_micros >= 0), charged_micros BIGINT, provider_cost_micros BIGINT, receipt_json TEXT, receipt_digest TEXT, created_at TEXT NOT NULL DEFAULT (CAST(CURRENT_TIMESTAMP AS TEXT)), PRIMARY KEY(tenant_id,event_id), FOREIGN KEY(tenant_id) REFERENCES ohc_usage_accounts(tenant_id))",
-            "CREATE TABLE IF NOT EXISTS ohc_usage_receipts (tenant_id TEXT NOT NULL, provider TEXT NOT NULL, provider_request_id TEXT NOT NULL, event_id TEXT NOT NULL, PRIMARY KEY(tenant_id,provider,provider_request_id), FOREIGN KEY(tenant_id,event_id) REFERENCES ohc_usage_records(tenant_id,event_id))",
-        ];
         match self {
             Self::Postgres(pool) => {
                 let mut tx = pool.begin().await?;
-                // Serialize schema installation independently of customer transactions.
                 sqlx::query("SELECT pg_advisory_xact_lock(734562191)")
                     .execute(&mut *tx)
                     .await?;
-                for ddl in SCHEMA {
-                    sqlx::query(ddl).execute(&mut *tx).await?;
-                }
-                for table in [
-                    "ohc_usage_accounts",
-                    "ohc_usage_records",
-                    "ohc_usage_receipts",
-                ] {
-                    sqlx::query(&format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
-                        .execute(&mut *tx)
-                        .await?;
-                    sqlx::query(&format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
-                        .execute(&mut *tx)
-                        .await?;
-                    sqlx::query(&format!("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname=current_schema() AND tablename='{table}' AND policyname='ohc_usage_tenant') THEN CREATE POLICY ohc_usage_tenant ON {table} USING (tenant_id=current_setting('app.current_tenant',true)) WITH CHECK (tenant_id=current_setting('app.current_tenant',true)); END IF; END $$")).execute(&mut *tx).await?;
-                }
+                sqlx::raw_sql(include_str!("../../persistence/usage_ledger_postgres.sql"))
+                    .execute(&mut *tx)
+                    .await?;
                 tx.commit().await?;
             }
             Self::Sqlite(pool) => {
-                for ddl in SCHEMA {
-                    sqlx::query(ddl).execute(pool).await?;
-                }
+                let mut tx = pool.begin().await?;
+                sqlx::raw_sql(include_str!("../../persistence/usage_ledger_sqlite.sql"))
+                    .execute(&mut *tx)
+                    .await?;
+                tx.commit().await?;
             }
         }
         Ok(())

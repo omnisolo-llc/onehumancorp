@@ -2291,3 +2291,25 @@ async fn readback_large_escaped_complete_receipts_pass_the_real_authenticated_pr
     assert_eq!(status, StatusCode::OK);
     assert_eq!(detail["workflow"]["output"], "\u{0001}".repeat(64000));
 }
+
+#[tokio::test]
+async fn usage_portable_sqlite_migration_installs_schema_without_granting_or_resetting_budget() {
+    use server_harness::middleware::usage_ledger::{LedgerError, UsageLedger};
+    let f = Fixture::new().await;
+    let ledger = UsageLedger::Sqlite(f.database.connection().get_sqlite_connection_pool().clone());
+    assert_eq!(
+        ledger.summary("workflow-tenant-a").await,
+        Err(LedgerError::Unconfigured),
+        "migration must install tables without creating a spending authorization"
+    );
+    ledger.set_limit("workflow-tenant-a", 700).await.unwrap();
+    persistence::migration::migrate(&f.database).await.unwrap();
+    assert_eq!(
+        ledger
+            .summary("workflow-tenant-a")
+            .await
+            .unwrap()
+            .limit_micros,
+        700
+    );
+}

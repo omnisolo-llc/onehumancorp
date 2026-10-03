@@ -1230,6 +1230,9 @@ impl DB {
                 unlock_result?;
             }
             (DbStore::Sqlite(sqlite_pool), None) => {
+                sqlx::raw_sql(include_str!("persistence/usage_ledger_sqlite.sql"))
+                    .execute(sqlite_pool)
+                    .await?;
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
