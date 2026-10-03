@@ -34,6 +34,8 @@ async fn exercise_registration_writers(
         issued_at: Set(now),
         expires_at: Set(now + chrono::Duration::minutes(20)),
         consumed_at: Set(None),
+        consumed_by_user_id: Set(None),
+        consumed_by_tenant_id: Set(None),
         invitation_id: Set(None),
     }
     .insert(repo.connection())
