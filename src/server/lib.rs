@@ -9278,7 +9278,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             ),
         )
         .nest("/api/v1/cart", api::cart::router(hub.clone()))
-        .nest("/api/v1/storefront", api::storefront_delivery::router().with_state(api::storefront_delivery::DeliveryState { pool: db.pool.clone() }))
+        .nest("/api/v1/storefront", api::storefront_delivery::router(db.pool.clone(), http_auth_store.clone()))
 
         .route("/api/v1/voice/command", axum::routing::post(api::audio_command::handle_voice_command).with_state(api::audio_command::VoiceCommandState {
             orchestrator: dept_orchestrator.clone(),
