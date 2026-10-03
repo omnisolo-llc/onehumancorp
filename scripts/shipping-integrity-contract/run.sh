@@ -14,6 +14,7 @@ python3 scripts/shipping-integrity-contract/prepare.py
 before=$(sha256sum scripts/shipping-integrity-contract/source-manifest.json)
 status=0
 cargo test --locked --offline --manifest-path scripts/shipping-integrity-contract/Cargo.toml -- --test-threads=1 || status=$?
+cargo test --locked --offline -p server_integrations_shippo --lib || status=$?
 python3 scripts/shipping-integrity-contract/prepare.py
 test "$before" = "$(sha256sum scripts/shipping-integrity-contract/source-manifest.json)"
 exit "$status"

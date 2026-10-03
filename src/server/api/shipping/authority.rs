@@ -38,6 +38,7 @@ impl ShippingAccess {
                             "orders",
                             "delivery_tasks",
                             "delivery_provider_bindings",
+                            "shipping_purchase_intents",
                             "customers",
                             "order_items",
                             "products",
@@ -99,6 +100,12 @@ impl AuthorizedOwner {
         match self {
             Self::Postgres(owner) => owner.tenant_id(),
             Self::Sqlite(owner) => owner.tenant_id(),
+        }
+    }
+    pub fn actor_id(&self) -> &str {
+        match self {
+            Self::Postgres(owner) => owner.actor_id(),
+            Self::Sqlite(owner) => owner.actor_id(),
         }
     }
     pub async fn confirm(self) -> Result<(), Error> {

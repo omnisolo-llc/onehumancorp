@@ -7,7 +7,7 @@ schema='\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\);',so
 db_source=(ROOT/'src/server/db.rs').read_text()
 sqlite='\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\s{20}\);',db_source,re.S).group() for name in ['orders','delivery_tasks'])
 (HERE/'sqlite_schema.sql').write_text(sqlite+'\n')
-(HERE/'schema.sql').write_text(schema+'\n'+(ROOT/'src/server/migrations/102_delivery_task_provider_tracking.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1029_delivery_provider_bindings.sql').read_text())
+(HERE/'schema.sql').write_text(schema+'\n'+(ROOT/'src/server/migrations/102_delivery_task_provider_tracking.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1029_delivery_provider_bindings.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1031_shipping_purchase_intents.sql').read_text())
 modules={'fulfillment':'src/server/api/fulfillment.rs','shipping':'src/server/api/shipping.rs'}
 lines=['pub use server_common as common;','pub mod api { pub use crate::{fulfillment,shipping}; }','pub mod integrations { pub use server_integrations_shippo as shippo; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore } }']
 for name,path in modules.items(): lines.append(f'#[path={json.dumps(str(ROOT/path))}]pub mod {name};')
@@ -40,7 +40,7 @@ assert startup in db_source, 'SQLite bootstrap must invoke the real shipping sch
 lines.append('pub async fn actual_sqlite_shipping_startup(sqlite_pool:&sqlx::SqlitePool)->Result<(),sqlx::Error>{'+startup+'Ok(())}')
 lines.append('#[cfg(test)]#[path="test.rs"]mod contract;')
 (HERE/'generated.rs').write_text('\n'.join(lines)+'\n')
-paths=[ROOT/p for p in [*modules.values(),'src/server/lib.rs','src/server/utils/tenant_middleware.rs','src/server/db.rs','Cargo.toml','Cargo.lock','.github/workflows/ci.yml','scripts/focused_ci_gate.py','src/server/migrations/001_initial.sql','src/server/migrations/102_delivery_task_provider_tracking.sql','src/server/migrations/1029_delivery_provider_bindings.sql']]
+paths=[ROOT/p for p in [*modules.values(),'src/server/lib.rs','src/server/utils/tenant_middleware.rs','src/server/db.rs','Cargo.toml','Cargo.lock','.github/workflows/ci.yml','scripts/focused_ci_gate.py','src/server/migrations/001_initial.sql','src/server/migrations/102_delivery_task_provider_tracking.sql','src/server/migrations/1029_delivery_provider_bindings.sql','src/server/migrations/1031_shipping_purchase_intents.sql']]
 for folder in ['src/server/api/fulfillment','src/server/api/shipping','src/server/integrations/shippo','src/server/common','src/server/config','src/server/auth','src/server/oidc','src/server/omnisolo','src/server/telemetry','src/server/integrations/core','src/server/integrations/omnichannel']:
  paths += [p for p in (ROOT/folder).rglob('*') if p.is_file() and (p.suffix in ('.rs','.sql') or p.name=='Cargo.toml')]
 paths += [p for p in HERE.iterdir() if p.is_file() and p.name not in ['Cargo.lock','source-manifest.json']]

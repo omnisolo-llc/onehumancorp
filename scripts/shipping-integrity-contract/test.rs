@@ -306,7 +306,7 @@ async fn shippo_tracking_never_matches_order_id_or_changes_provider() {
 #[tokio::test]
 async fn successful_label_purchase_is_not_shipping_or_order_fulfillment() {
     let f = Fixture::new().await;
-    let app=Router::new().route("/transactions",axum::routing::post(||async{axum::Json(json!({"status":"SUCCESS","object_state":"VALID","object_id":"transaction_a","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf","tracking_number":"tracking_a","tracking_carrier":"usps"}))}));
+    let app=Router::new().route("/transactions",axum::routing::post(|axum::Json(request):axum::Json<Value>|async move{axum::Json(json!({"metadata":request["metadata"],"rate":request["rate"],"status":"SUCCESS","object_state":"VALID","object_id":"transaction_a","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf","tracking_number":"tracking_a","tracking_carrier":"usps"}))}));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
@@ -871,11 +871,26 @@ async fn sqlite_forward_schema_preserves_unbound_legacy_data_and_records_real_la
     let (auth, token) = sqlite_auth(&pool).await;
     let receipt=crate::integrations::shippo::client::ShippoClient::parse_label_response(&json!({"status":"SUCCESS","object_id":"actual_txn","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf"})).unwrap();
     assert!(receipt.tracking_number.is_none() && receipt.carrier.is_none());
-    crate::shipping::labels::record(
+    let crate::shipping::purchases::Admission::Dispatch(intent) =
+        crate::shipping::purchases::admit(
+            authorize_db(&db, auth.clone(), &token).await,
+            &scope(),
+            "order-a",
+            "rate_a",
+        )
+        .await
+        .unwrap()
+    else {
+        panic!("first purchase must be admitted");
+    };
+    crate::shipping::purchases::observe(
         authorize_db(&db, auth.clone(), &token).await,
         &scope(),
-        "order-a",
-        &receipt,
+        &intent,
+        &crate::integrations::shippo::client::Observation {
+            transaction_id: Some(receipt.transaction_id.clone()),
+            label: Some(receipt.clone()),
+        },
     )
     .await
     .unwrap();
@@ -911,15 +926,21 @@ async fn sqlite_forward_schema_preserves_unbound_legacy_data_and_records_real_la
         .await
         .is_err()
     );
-    assert!(
-        crate::shipping::labels::record(
+    let crate::shipping::purchases::Admission::Existing(replayed) =
+        crate::shipping::purchases::admit(
             authorize_db(&db, auth.clone(), &token).await,
             &scope(),
             "order-a",
-            &receipt
+            "rate_a",
         )
         .await
-        .is_err()
+        .unwrap()
+    else {
+        panic!("a recorded label can never dispatch again");
+    };
+    assert_eq!(
+        replayed.receipt.unwrap().transaction_id,
+        receipt.transaction_id
     );
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM delivery_provider_bindings")
         .fetch_one(&pool)
@@ -937,15 +958,35 @@ async fn failed_label_binding_rolls_back_task_change_without_fulfilling_order() 
     };
     let receipt=crate::integrations::shippo::client::ShippoClient::parse_label_response(&json!({"status":"SUCCESS","object_id":"actual_txn","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf"})).unwrap();
     sqlx::query("ALTER TABLE delivery_provider_bindings ADD CONSTRAINT synthetic_refuse_label CHECK (provider <> 'shippo')").execute(&f.owner).await.unwrap();
-    assert!(
-        crate::shipping::labels::record(
+    let crate::shipping::purchases::Admission::Dispatch(intent) =
+        crate::shipping::purchases::admit(
             authorize_db(&db, f.auth.clone(), &f.token).await,
             &scope(),
             "order-a",
-            &receipt
+            "rate_a",
+        )
+        .await
+        .unwrap()
+    else {
+        panic!("first purchase must be admitted");
+    };
+    assert!(
+        crate::shipping::purchases::observe(
+            authorize_db(&db, f.auth.clone(), &f.token).await,
+            &scope(),
+            &intent,
+            &crate::integrations::shippo::client::Observation {
+                transaction_id: Some(receipt.transaction_id.clone()),
+                label: Some(receipt)
+            }
         )
         .await
         .is_err()
+    );
+    let state:String=sqlx::query_scalar("SELECT status FROM shipping_purchase_intents WHERE organization_id='tenant-a' AND order_id='order-a'").fetch_one(&f.owner).await.unwrap();
+    assert_eq!(
+        state, "dispatched",
+        "failed receipt recording must preserve the durable no-retry fence"
     );
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM delivery_tasks")
         .fetch_one(&f.owner)
@@ -1285,9 +1326,9 @@ async fn authority_revoked_during_provider_response_never_records_local_success(
     let f = Fixture::new().await;
     let signed = f.auth.validate_token(&f.token).await.unwrap();
     let auth = f.auth.clone();
-    let app=Router::new().route("/transactions",axum::routing::post(move || {let auth=auth.clone();let signed=signed.clone();async move {
+    let app=Router::new().route("/transactions",axum::routing::post(move |axum::Json(request):axum::Json<Value>| {let auth=auth.clone();let signed=signed.clone();async move {
         auth.revoke_token(signed.jti,chrono::DateTime::from_timestamp(signed.exp,0).unwrap(),"tenant-a").await.unwrap();
-        axum::Json(json!({"status":"SUCCESS","object_id":"transaction_revoked","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf"}))
+        axum::Json(json!({"metadata":request["metadata"],"rate":request["rate"],"status":"SUCCESS","object_id":"transaction_revoked","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf"}))
     }}));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
@@ -1618,9 +1659,9 @@ async fn sqlite_mounted_purchase(revoke: bool) {
     let (auth, token) = sqlite_auth(&pool).await;
     let signed = auth.validate_token(&token).await.unwrap();
     let provider_auth = auth.clone();
-    let provider=Router::new().route("/transactions",axum::routing::post(move||{let auth=provider_auth.clone();let signed=signed.clone();async move {
+    let provider=Router::new().route("/transactions",axum::routing::post(move|axum::Json(request):axum::Json<Value>|{let auth=provider_auth.clone();let signed=signed.clone();async move {
         if revoke {auth.revoke_token(signed.jti,chrono::DateTime::from_timestamp(signed.exp,0).unwrap(),"tenant-a").await.unwrap();}
-        axum::Json(json!({"status":"SUCCESS","object_id":"transaction_sqlite","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf"}))
+        axum::Json(json!({"metadata":request["metadata"],"rate":request["rate"],"status":"SUCCESS","object_id":"transaction_sqlite","test":true,"label_url":"https://app.goshippo.com/labels/actual.pdf"}))
     }}));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
@@ -1740,3 +1781,119 @@ async fn authority_unbound_business_cannot_invoke_any_shipping_provider_work() {
     canonical.finish().await;
     data.finish().await;
 }
+
+// The production failure these tests detect is a second provider POST for an
+// already dispatched order after retry, another tab, or a process restart.
+#[tokio::test]
+async fn purchase_unknown_restart_and_changed_client_key_never_repost() {
+    let f = Fixture::new().await;
+    let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = calls.clone();
+    let provider = Router::new().route(
+        "/transactions",
+        axum::routing::post(move || {
+            let calls = observed.clone();
+            async move {
+                calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                (StatusCode::BAD_GATEWAY, "synthetic unknown outcome")
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, provider).await.unwrap() });
+    temp_env::async_with_vars(
+        [
+            ("SHIPPO_API_BASE", Some(base.as_str())),
+            ("SHIPPO_API_TOKEN", Some("shippo_test_synthetic")),
+            ("SHIPPO_TENANT_ID", Some("tenant-a")),
+            ("SHIPPO_ACCOUNT_NAMESPACE", Some("synthetic-account")),
+            ("SHIPPO_WEBHOOK_MODE", Some("test")),
+        ],
+        async {
+            for key in ["first-click", "different-tab-key", "restart-key"] {
+                let app = crate::actual_parent_mount(
+                    Arc::new(crate::db::DB {
+                        pool: f.pool.clone(),
+                        store: crate::db::DbStore::Postgres,
+                    }),
+                    f.auth.clone(),
+                )
+                .await;
+                let headers = [
+                    ("authorization", format!("Bearer {}", f.token)),
+                    ("idempotency-key", key.into()),
+                ];
+                let (status, body) = response(
+                    app,
+                    "/api/v1/shipping/label",
+                    Some(json!({"orderId":"order-a","rateId":signed_fixture_rate()})),
+                    &headers,
+                )
+                .await;
+                assert_eq!(status, StatusCode::ACCEPTED);
+                assert_eq!(body["reconciliationRequired"], true);
+            }
+            assert_eq!(
+                calls.load(std::sync::atomic::Ordering::SeqCst),
+                1,
+                "a persisted unknown purchase must never be sent twice"
+            );
+        },
+    )
+    .await;
+    server.abort();
+    f.finish().await;
+}
+
+#[tokio::test]
+async fn purchase_parallel_requests_admit_one_provider_dispatch() {
+    let f = Fixture::new().await;
+    let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let observed = calls.clone();
+    let provider = Router::new().route(
+        "/transactions",
+        axum::routing::post(move || {
+            let calls = observed.clone();
+            async move {
+                calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                tokio::time::sleep(Duration::from_millis(80)).await;
+                (StatusCode::BAD_GATEWAY, "synthetic unknown outcome")
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let base = format!("http://{}", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move { axum::serve(listener, provider).await.unwrap() });
+    temp_env::async_with_vars(
+        [
+            ("SHIPPO_API_BASE", Some(base.as_str())),
+            ("SHIPPO_API_TOKEN", Some("shippo_test_synthetic")),
+            ("SHIPPO_TENANT_ID", Some("tenant-a")),
+            ("SHIPPO_ACCOUNT_NAMESPACE", Some("synthetic-account")),
+            ("SHIPPO_WEBHOOK_MODE", Some("test")),
+        ],
+        async {
+            let app = f.shipping_app().await;
+            let headers = f.headers();
+            let body = Some(json!({"orderId":"order-a","rateId":signed_fixture_rate()}));
+            let (a, b) = tokio::join!(
+                response(app.clone(), "/label", body.clone(), &headers),
+                response(app, "/label", body, &headers)
+            );
+            assert_eq!(a.0, StatusCode::ACCEPTED);
+            assert_eq!(b.0, StatusCode::ACCEPTED);
+            assert_eq!(
+                calls.load(std::sync::atomic::Ordering::SeqCst),
+                1,
+                "concurrent requests need an atomic durable admission winner"
+            );
+        },
+    )
+    .await;
+    server.abort();
+    f.finish().await;
+}
+
+#[path = "purchase_tests.rs"]
+mod purchase_tests;

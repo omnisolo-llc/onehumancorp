@@ -3,101 +3,91 @@ use super::authority::{AuthorizedOwner, Error};
 use crate::integrations::shippo::client::PurchaseLabelResponse;
 use sqlx::Row;
 
-/// This records an observed receipt. It does not provide provider-call admission
-/// or idempotency; failures after the POST require reconciliation, never retry.
-pub async fn record(
-    owner: AuthorizedOwner,
+// These operations run inside the purchase caller's canonical transaction.
+pub(super) async fn record_pg(
+    connection: &mut sqlx::PgConnection,
     scope: &ProviderScope,
     order_id: &str,
     label: &PurchaseLabelResponse,
 ) -> Result<(), Error> {
-    if label.test != scope.is_test {
+    let order = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT status FROM orders WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+    )
+    .bind(&scope.tenant_id)
+    .bind(order_id)
+    .fetch_optional(&mut *connection)
+    .await?;
+    validate_order(order)?;
+    let tasks=sqlx::query("SELECT id,provider,provider_delivery_id,status FROM delivery_tasks WHERE organization_id=$1 AND order_id=$2 FOR UPDATE")
+                .bind(&scope.tenant_id).bind(order_id).fetch_all(&mut *connection).await?;
+    if tasks.len() > 1 {
         return Err(Error::Conflict(
-            "provider receipt mode does not match configured account",
+            "multiple delivery tasks require reconciliation",
         ));
     }
-    if owner.tenant_id() != scope.tenant_id {
-        return Err(server_auth::commit_authority::AuthorityError::Forbidden.into());
-    }
-    match owner {
-        AuthorizedOwner::Postgres(owner) => {
-            let mut tx = owner.begin().await?;
-            let order = sqlx::query_scalar::<_, Option<String>>(
-                "SELECT status FROM orders WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
-            )
-            .bind(&scope.tenant_id)
-            .bind(order_id)
-            .fetch_optional(tx.connection())
-            .await?;
-            validate_order(order)?;
-            let tasks=sqlx::query("SELECT id,provider,provider_delivery_id,status FROM delivery_tasks WHERE organization_id=$1 AND order_id=$2 FOR UPDATE")
-                .bind(&scope.tenant_id).bind(order_id).fetch_all(tx.connection()).await?;
-            if tasks.len() > 1 {
-                return Err(Error::Conflict(
-                    "multiple delivery tasks require reconciliation",
-                ));
-            }
-            let id = if let Some(task) = tasks.first() {
-                validate_task(
-                    task.try_get("provider")?,
-                    task.try_get("provider_delivery_id")?,
-                    task.try_get("status")?,
-                )?;
-                let id: uuid::Uuid = task.try_get("id")?;
-                sqlx::query("UPDATE delivery_tasks SET provider='shippo',provider_delivery_id=$3,status='LABEL_CREATED',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND organization_id=$2")
-                    .bind(id).bind(&scope.tenant_id).bind(&label.tracking_number).execute(tx.connection()).await?;
-                id
-            } else {
-                let id = uuid::Uuid::new_v4();
-                sqlx::query("INSERT INTO delivery_tasks(id,organization_id,order_id,provider,provider_delivery_id,status) VALUES($1,$2,$3,'shippo',$4,'LABEL_CREATED')")
-                    .bind(id).bind(&scope.tenant_id).bind(order_id).bind(&label.tracking_number).execute(tx.connection()).await?;
-                id
-            };
-            sqlx::query("INSERT INTO delivery_provider_bindings(delivery_task_id,organization_id,provider,account_namespace,provider_object_id,label_url,tracking_number,carrier,is_test) VALUES($1,$2,'shippo',$3,$4,$5,$6,$7,$8)")
-                .bind(id).bind(&scope.tenant_id).bind(&scope.account_namespace).bind(&label.transaction_id).bind(&label.label_url).bind(&label.tracking_number).bind(&label.carrier).bind(label.test).execute(tx.connection()).await?;
-            tx.commit().await?;
-        }
-        AuthorizedOwner::Sqlite(owner) => {
-            let mut tx = owner.begin().await?;
-            let order = sqlx::query_scalar::<_, Option<String>>(
-                "SELECT status FROM orders WHERE tenant_id=? AND id=?",
-            )
-            .bind(&scope.tenant_id)
-            .bind(order_id)
-            .fetch_optional(tx.connection())
-            .await?;
-            validate_order(order)?;
-            let tasks=sqlx::query("SELECT id,provider,provider_delivery_id,status FROM delivery_tasks WHERE organization_id=? AND order_id=?")
-                .bind(&scope.tenant_id).bind(order_id).fetch_all(tx.connection()).await?;
-            if tasks.len() > 1 {
-                return Err(Error::Conflict(
-                    "multiple delivery tasks require reconciliation",
-                ));
-            }
-            let id = if let Some(task) = tasks.first() {
-                validate_task(
-                    task.try_get("provider")?,
-                    task.try_get("provider_delivery_id")?,
-                    task.try_get("status")?,
-                )?;
-                let id: String = task.try_get("id")?;
-                sqlx::query("UPDATE delivery_tasks SET provider='shippo',provider_delivery_id=?,status='LABEL_CREATED',updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?")
-                    .bind(&label.tracking_number).bind(&id).bind(&scope.tenant_id).execute(tx.connection()).await?;
-                id
-            } else {
-                let id = uuid::Uuid::new_v4().to_string();
-                sqlx::query("INSERT INTO delivery_tasks(id,organization_id,order_id,provider,provider_delivery_id,status) VALUES(?,?,?,'shippo',?,'LABEL_CREATED')")
-                    .bind(&id).bind(&scope.tenant_id).bind(order_id).bind(&label.tracking_number).execute(tx.connection()).await?;
-                id
-            };
-            sqlx::query("INSERT INTO delivery_provider_bindings(delivery_task_id,organization_id,provider,account_namespace,provider_object_id,label_url,tracking_number,carrier,is_test) VALUES(?,?,'shippo',?,?,?,?,?,?)")
-                .bind(&id).bind(&scope.tenant_id).bind(&scope.account_namespace).bind(&label.transaction_id).bind(&label.label_url).bind(&label.tracking_number).bind(&label.carrier).bind(label.test).execute(tx.connection()).await?;
-            tx.commit().await?;
-        }
-    }
+    let id = if let Some(task) = tasks.first() {
+        validate_task(
+            task.try_get("provider")?,
+            task.try_get("provider_delivery_id")?,
+            task.try_get("status")?,
+        )?;
+        let id: uuid::Uuid = task.try_get("id")?;
+        sqlx::query("UPDATE delivery_tasks SET provider='shippo',provider_delivery_id=$3,status='LABEL_CREATED',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND organization_id=$2")
+                    .bind(id).bind(&scope.tenant_id).bind(&label.tracking_number).execute(&mut *connection).await?;
+        id
+    } else {
+        let id = uuid::Uuid::new_v4();
+        sqlx::query("INSERT INTO delivery_tasks(id,organization_id,order_id,provider,provider_delivery_id,status) VALUES($1,$2,$3,'shippo',$4,'LABEL_CREATED')")
+                    .bind(id).bind(&scope.tenant_id).bind(order_id).bind(&label.tracking_number).execute(&mut *connection).await?;
+        id
+    };
+    sqlx::query("INSERT INTO delivery_provider_bindings(delivery_task_id,organization_id,provider,account_namespace,provider_object_id,label_url,tracking_number,carrier,is_test) VALUES($1,$2,'shippo',$3,$4,$5,$6,$7,$8)")
+                .bind(id).bind(&scope.tenant_id).bind(&scope.account_namespace).bind(&label.transaction_id).bind(&label.label_url).bind(&label.tracking_number).bind(&label.carrier).bind(label.test).execute(&mut *connection).await?;
     Ok(())
 }
-fn validate_order(status: Option<Option<String>>) -> Result<(), Error> {
+pub(super) async fn record_sqlite(
+    connection: &mut sqlx::SqliteConnection,
+    scope: &ProviderScope,
+    order_id: &str,
+    label: &PurchaseLabelResponse,
+) -> Result<(), Error> {
+    let order = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT status FROM orders WHERE tenant_id=? AND id=?",
+    )
+    .bind(&scope.tenant_id)
+    .bind(order_id)
+    .fetch_optional(&mut *connection)
+    .await?;
+    validate_order(order)?;
+    let tasks=sqlx::query("SELECT id,provider,provider_delivery_id,status FROM delivery_tasks WHERE organization_id=? AND order_id=?")
+                .bind(&scope.tenant_id).bind(order_id).fetch_all(&mut *connection).await?;
+    if tasks.len() > 1 {
+        return Err(Error::Conflict(
+            "multiple delivery tasks require reconciliation",
+        ));
+    }
+    let id = if let Some(task) = tasks.first() {
+        validate_task(
+            task.try_get("provider")?,
+            task.try_get("provider_delivery_id")?,
+            task.try_get("status")?,
+        )?;
+        let id: String = task.try_get("id")?;
+        sqlx::query("UPDATE delivery_tasks SET provider='shippo',provider_delivery_id=?,status='LABEL_CREATED',updated_at=CURRENT_TIMESTAMP WHERE id=? AND organization_id=?")
+                    .bind(&label.tracking_number).bind(&id).bind(&scope.tenant_id).execute(&mut *connection).await?;
+        id
+    } else {
+        let id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO delivery_tasks(id,organization_id,order_id,provider,provider_delivery_id,status) VALUES(?,?,?,'shippo',?,'LABEL_CREATED')")
+                    .bind(&id).bind(&scope.tenant_id).bind(order_id).bind(&label.tracking_number).execute(&mut *connection).await?;
+        id
+    };
+    sqlx::query("INSERT INTO delivery_provider_bindings(delivery_task_id,organization_id,provider,account_namespace,provider_object_id,label_url,tracking_number,carrier,is_test) VALUES(?,?,'shippo',?,?,?,?,?,?)")
+                .bind(&id).bind(&scope.tenant_id).bind(&scope.account_namespace).bind(&label.transaction_id).bind(&label.label_url).bind(&label.tracking_number).bind(&label.carrier).bind(label.test).execute(&mut *connection).await?;
+    Ok(())
+}
+
+pub(super) fn validate_order(status: Option<Option<String>>) -> Result<(), Error> {
     let Some(status) = status else {
         return Err(Error::Conflict("order is not in the configured tenant"));
     };
@@ -113,7 +103,7 @@ fn validate_order(status: Option<Option<String>>) -> Result<(), Error> {
     }
     Ok(())
 }
-fn validate_task(
+pub(super) fn validate_task(
     provider: Option<String>,
     delivery: Option<String>,
     status: String,

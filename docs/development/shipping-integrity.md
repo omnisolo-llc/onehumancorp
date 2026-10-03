@@ -16,8 +16,10 @@ live provider transaction or observed delivery.
   Provider I/O holds no database locks. Shipping reauthorizes after the response;
   revoked authority after an external label response returns202 with its actual
   transaction ID and reconciliation required, without recording local success.
-  This does not supply a durable purchase reservation or serialize external
-  dispatch with revocation.
+  Migration1031 now supplies a durable, owner-bound purchase admission fence
+  for the mounted label endpoints, as described below. Admission is the
+  linearization point; revocation after an admitted request cannot undo a
+  provider effect already in flight.
 
 - Shippo uses its documented `shippo-auth-signature` header over timestamp,
   literal dot and exact raw body. Missing/blank secrets, malformed/duplicate
@@ -83,13 +85,10 @@ is available, retain the old record and its blocked status.
 
 ## Required follow-ons and verification limits
 
-1. Durable purchase admission/idempotency is not implemented here. Concurrent
-   requests, process crashes, network uncertainty, cancellation/revocation around
-   dispatch, or failed local recording after provider success still require a
-   durable request/receipt engine before paid-shipping completion can be claimed.
-   Unknown outcomes are reported as reconciliation-required; never automatically
-   repeat the provider POST. The page-local retry block is not restart/cross-tab
-   protection. Historical provider receipts are not created by this migration.
+1. The durable purchase follow-on below is local/loopback verification, not
+   provider-sandbox or paid-purchase certification. No provider idempotency or
+   negative-lookup finality is assumed. An admitted unknown is never reopened
+   automatically, even if no provider transaction is visible yet.
 2. Real per-order shipping addresses, bounded expiring quote/cost authority and
    account-bound provider rate evidence remain required. Existing global
    destination configuration is not a per-customer address model.
@@ -112,3 +111,70 @@ Official protocol references checked 2026-10-03:
 - https://docs.goshippo.com/tracking/webhooks
 - https://developer.doordash.com/en-US/docs/drive/how_to/webhooks/
 - https://developer.doordash.com/en-US/docs/drive/reference/webhooks/
+
+## Durable purchase admission and read-only recovery
+
+The existing purchase body remains `{orderId, rateId}`. No client idempotency key
+is required or trusted. A single canonical tenant/order purchase lifecycle holds
+an immutable actor, original rate, account namespace, test/live mode and opaque
+purchase ID. Changing a client key, rate, actor, account or mode cannot create a
+second dispatch for that lifecycle. Migration1031 and the equivalent SQLite
+startup schema add `shipping_purchase_intents`; identity columns and a confirmed
+receipt cannot be overwritten. Existing rows are not backfilled or relabeled.
+
+The canonical OwnerPg/OwnerSqlite transaction locks the real order, rejects
+ineligible or previously bound delivery state, and commits the one-time dispatch
+fence with current authority. Only that successful caller may POST. Concurrent
+callers and fresh processes read the same recorded receipt or unknown state.
+An unconfirmed admission commit never causes a provider call. There is no lease,
+expiry, retry worker or reset that can issue a replacement purchase. Provider I/O
+holds no database locks. A further owner check immediately precedes the POST;
+current authority is checked again before saving its result and at local commit.
+Revocation/cancellation after admission cannot promise to cancel an in-flight
+provider action; rejected local recording leaves the durable fence closed.
+
+The POST carries `ohc_shipping_<purchase UUID>` in Shippo metadata. The client
+verifies that exact correlation, the original rate (string or expanded object),
+mode and actual transaction ID. Metadata is only a correlation field. Shippo
+has no documented deduplication guarantee for it. HTTP redirects and reqwest
+protocol retries are disabled; requests and response bodies are bounded. Raw
+provider errors, URLs and API keys are not returned in purchase errors.
+
+A matched successful receipt, its existing `delivery_provider_bindings` entry,
+LABEL_CREATED and the intent's immutable receipt are saved in one transaction.
+Label purchase never projects an order as shipped or fulfilled. WAITING, ERROR,
+malformed labels and network uncertainty remain reconciliation-required; a valid
+matched transaction ID is retained when current authority permits the save.
+
+- `GET /api/v1/shipping/purchase/{order_id}` returns local state only. It makes no
+  provider request and survives a browser or process restart.
+- `POST /api/v1/shipping/label/reconcile` accepts `{orderId, transactionId?}` and
+  makes only provider GET requests. The optional ID is a lookup hint, never a
+  browser-supplied receipt. A stored different ID rejects the hint before I/O.
+- With a known ID, recovery GETs that exact transaction under the configured
+  original account. Without one, it reads rate-filtered pages and matches the
+  exact persisted metadata/rate/mode. Pagination constructs fixed endpoint URLs;
+  provider-supplied next URLs never receive credentials. At most ten pages of
+  100 entries are inspected, with a 30-second overall recovery deadline.
+- No match, a404, malformed/incomplete pages, conflicting receipts, multiple
+  matching transactions or changed account context leave the purchase held.
+  None proves that no purchase occurred. The next recovery may GET again but
+  cannot POST a label. Recovered success passes the same atomic owner-authorized
+  local recorder as the original response.
+
+The pre-existing rules already reject replacement of established delivery
+identity. This repair preserves that rule. A deliberate replacement/refund
+workflow is not introduced: it would need an explicit new authorized lifecycle
+and verified disposition of the old purchase, rather than deleting or resetting
+an unknown fence. Another owner cannot silently adopt an actor-bound intent.
+
+The source-bound harness adds real PostgreSQL and SQLite reopened-file purchase
+cases, mounted retry/concurrency/revocation paths, exact receipt recovery and
+loopback transport tests. Final executed counts and scope are recorded in the
+associated verification evidence; complete `make lint`/`make test`, live Shippo
+transactions and provider-sandbox certification remain separate gates.
+
+Official transaction contract checked2026-10-03:
+- https://docs.goshippo.com/api-reference/transactions/create-a-shipping-label
+- https://docs.goshippo.com/api-reference/transactions/retrieve-a-shipping-label
+- https://docs.goshippo.com/api-reference/transactions/list-all-shipping-labels

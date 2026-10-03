@@ -50,6 +50,9 @@ pub async fn ensure_sqlite_schema(pool: &sqlx::SqlitePool) -> Result<(), sqlx::E
     sqlx::raw_sql(include_str!("bindings_sqlite.sql"))
         .execute(&mut *tx)
         .await?;
+    sqlx::raw_sql(include_str!("../shipping/purchases_sqlite.sql"))
+        .execute(&mut *tx)
+        .await?;
     tx.commit().await
 }
 

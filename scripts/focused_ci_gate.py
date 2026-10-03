@@ -13,7 +13,7 @@ import sys
 GATES = {
     'memory-jsonb-contract': (27, 'OHC_MEMORY_TEST_DATABASE_URL'),
     'approvals-read-contract': (12, 'OHC_APPROVAL_TEST_DATABASE_URL'),
-    'shipping-integrity-contract': (48, 'OHC_SHIPPING_TEST_DATABASE_URL'),
+    'shipping-integrity-contract': (83, 'OHC_SHIPPING_TEST_DATABASE_URL'),
     'field-boundary-contract': (89, 'OHC_FIELD_TEST_DATABASE_URL'),
     'checkpoint-restore-contract': (37, 'OHC_CHECKPOINT_TEST_DATABASE_URL'),
     'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
