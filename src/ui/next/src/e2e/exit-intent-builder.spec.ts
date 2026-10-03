@@ -1,41 +1,38 @@
 import { test, expect } from '../../../../e2e/fixtures';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from '../../../../e2e/support/entitlement_fixture';
 
-test.describe('Exit-Intent Pop-up Builder', () => {
-  test.use({ bypassCSP: true });
-  test('should update preview dynamically, copy embed code, and trigger paywall', async ({ page, context }) => {
+for (const plan of ['Free', 'Pro', 'Business'] as const) {
+  test(`exit-intent template editing and copying preserve the actual ${plan} plan`, async ({ page, context, baseURL }) => {
+    const fixture = await createEntitlementOwner(page, baseURL, plan);
+    const claims = trackTrialClaims(page);
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    // 1. Navigate to the builder page
     await page.goto('/exit-intent-builder');
-
-    // 2. Assert page loaded correctly
-    await expect(page.getByRole('heading', { name: 'Exit-Intent Pop-up Builder' })).toBeVisible({ timeout: 15000 });
-
-    // 3. Edit input fields
-    await page.getByPlaceholder('Wait! Before you go...').fill('Special Limited Time Offer!');
-    await page.getByPlaceholder('Get 10% off your first order...').fill('Get 10% off your first order when you sign up for our newsletter.');
-
-    // 4. Assert Live Preview reflects changes
-    await expect(page.locator('.max-w-4xl').filter({ hasText: 'Live Preview' }).getByRole('heading', { name: 'Special Limited Time Offer!' })).toBeVisible();
-
-    // 5. Test Copy Embed Code logic
+    await expect(page.getByRole('heading', { name: 'Exit-Intent Pop-up Builder' })).toBeVisible();
+    await expect(page.getByText(/Offer text is a draft/)).toBeVisible();
+    await page.getByPlaceholder('Wait! Before you go...').fill('Owner supplied offer');
+    await page.getByPlaceholder('Get 10% off your first order...').fill('Ask us about our current offer.');
+    await expect(page.locator('.max-w-4xl').filter({ hasText: 'Live Preview' }).getByRole('heading', { name: 'Owner supplied offer' })).toBeVisible();
+    const toggle = page.getByRole('switch', { name: 'Remove OmniSolo Branding' });
+    await expect(toggle).toBeEnabled();
+    await toggle.click();
+    if (plan === 'Free') {
+      await expect(page.getByRole('link', { name: 'Review plans' })).toHaveAttribute('href', '/pricing');
+      await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    } else {
+      await expect(toggle).toHaveAttribute('aria-checked', 'true');
+    }
     await page.getByRole('button', { name: 'Copy to Clipboard' }).click();
     await expect(page.getByRole('button', { name: 'Copied!' })).toBeVisible();
-
-    // 6. Test Paywall logic
-    // Ensure "Remove OmniSolo Branding" toggle is present and clickable
-    const brandingToggle = page.getByRole('switch');
-    await expect(brandingToggle).toBeVisible();
-    await brandingToggle.click();
-
-    // Ensure the paywall modal opens
-    const upgradeButton = page.getByRole('button', { name: 'Upgrade to Pro' });
-    await expect(upgradeButton).toBeVisible();
-
-    // Click "Upgrade to Pro" to close modal and simulate upgrade state
-    await upgradeButton.click();
-
-    // Ensure modal closes and toggle switches to on
-    await expect(upgradeButton).toBeHidden();
-    await expect(brandingToggle).toHaveAttribute('aria-checked', 'true');
+    const copied = await page.evaluate(() => navigator.clipboard.readText());
+    expect(copied).toContain('Owner supplied offer');
+    expect(copied).toContain('Ask us about our current offer.');
+    expect(copied.includes('Powered by OmniSolo')).toBe(plan === 'Free');
+    if (plan === 'Free') {
+      await toggle.click(); await page.getByRole('link', { name: 'Review plans' }).click();
+      await expect(page).toHaveURL(/\/pricing$/);
+    }
+    expect(claims).toEqual([]);
+    await expectEntitlementUnchanged(page, fixture);
   });
-});
+}
