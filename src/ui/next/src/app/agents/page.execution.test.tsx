@@ -178,7 +178,7 @@ test('reload accepts a stored reference only after the authenticated workflow re
   const view = await open(); await waitFor(() => expect(screen.getByRole('button', { name: 'Start task' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
   expect(await screen.findByText(/Text analysis queued/)).toBeVisible();
-  workflowRows = [{ id: receipt.workflow_id, actor_id: firstOwner.userId, name: 'Actual analysis', task: 'Supplied task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
+  workflowRows = [{ id: receipt.workflow_id, tenant_id: firstOwner.tenantId, actor_id: firstOwner.userId, name: 'Actual analysis', task: 'Supplied task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
   view.unmount(); await open();
   expect(await screen.findByText(/Previously accepted text analysis/)).toBeVisible();
   expect(screen.getAllByText('Actual returned text').length).toBeGreaterThan(0);
@@ -229,7 +229,7 @@ test('recovers a request UUID only from its authenticated owner receipt after a 
   fireEvent.click(screen.getByRole('button', { name: 'Start task' }));
   expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
   const requestId = new Headers(mutations()[0][1]!.headers).get('idempotency-key');
-  workflowRows = [{ id: receipt.workflow_id, request_id: requestId, actor_id: firstOwner.userId, agent_id: receipt.agent_id, name: 'Actual accepted work', task: 'Submitted task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
+  workflowRows = [{ id: receipt.workflow_id, request_id: requestId, tenant_id: firstOwner.tenantId, actor_id: firstOwner.userId, agent_id: receipt.agent_id, name: 'Actual accepted work', task: 'Submitted task', workflow: 'expert_task', status: 'completed', output: 'Actual returned text' }];
   view.unmount(); await open();
   expect(await screen.findByText(/Previously accepted text analysis/)).toBeVisible();
   expect(mutations()).toHaveLength(1);
@@ -268,7 +268,7 @@ test('lost acknowledgement recovery reads its exact request even when history om
   expect(await screen.findByText(/Could not confirm whether this task was accepted/)).toBeVisible();
   const requestId = new Headers(mutations()[0][1]!.headers).get('idempotency-key');
   const original = vi.mocked(fetch).getMockImplementation()!;
-  vi.mocked(fetch).mockImplementation((url, options) => (url === `/api/v1/agents/workflows/by-request/${requestId}` || url === `/api/v1/agents/workflows/${receipt.workflow_id}`) ? Promise.resolve(Response.json({ workflow: { id: receipt.workflow_id, request_id: requestId, actor_id: firstOwner.userId, agent_id: receipt.agent_id, name: 'Old accepted work', task: 'Supplied task', workflow: 'analysis', status: 'completed', output: 'Complete old output' } })) : original(url, options));
+  vi.mocked(fetch).mockImplementation((url, options) => (url === `/api/v1/agents/workflows/by-request/${requestId}` || url === `/api/v1/agents/workflows/${receipt.workflow_id}`) ? Promise.resolve(Response.json({ workflow: { id: receipt.workflow_id, request_id: requestId, tenant_id: firstOwner.tenantId, actor_id: firstOwner.userId, agent_id: receipt.agent_id, name: 'Old accepted work', task: 'Supplied task', workflow: 'analysis', status: 'completed', output: 'Complete old output' } })) : original(url, options));
   workflowRows = [];
   view.unmount(); await open();
   expect(await screen.findByText(/Previously accepted text analysis/)).toBeVisible();

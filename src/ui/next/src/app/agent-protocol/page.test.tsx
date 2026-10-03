@@ -1,101 +1,68 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import AgentProtocolPage from './page';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
+import { installOnboardingLocks } from '../onboarding/testLocks';
 
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
+const mockRuntime = vi.fn();
+const task = { task_id: 'task-1', input: 'Write a poem' };
+let tasks: typeof task[];
+let steps: { step_id: string; status: string; input?: string; output?: string }[];
+async function loadRuntime() {
+  render(<AgentProtocolPage />);
+  fireEvent.click(screen.getByRole('button', { name: 'Load workspace runtime tasks' }));
+  await waitFor(() => expect(mockRuntime).toHaveBeenCalledWith('/api/v1/agents/protocol?method=ap_list_tasks', undefined));
+}
 describe('Agent Protocol UI', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ({ tasks: [] }),
+    cleanup(); localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks(); tasks = []; steps = [];
+    mockRuntime.mockReset().mockImplementation(async (url, options) => {
+      if (options?.method === 'POST') {
+        const body = JSON.parse(options.body);
+        if (body.method === 'ap_create_task') { tasks = [task]; return Response.json(task); }
+        if (body.method === 'ap_execute_step') { steps = [{ step_id: 'step-1', status: 'completed', input: 'Line 1', output: 'Roses are red' }]; return Response.json(steps[0]); }
+        if (body.method === 'ap_restore_checkpoint') { steps = []; return Response.json({ success: true }); }
+      }
+      if (String(url).includes('ap_list_steps')) return Response.json({ steps });
+      if (String(url).includes('ap_list_checkpoints')) return Response.json({ checkpoints: [{ checkpoint_id: 'cp-1', created_at: '2026-10-03' }] });
+      return Response.json({ tasks });
     });
+    vi.stubGlobal('fetch', vi.fn(async (url, options) => {
+      if (String(url).endsWith('/session-identity')) return Response.json({ userId: 'owner', tenantId: 'tenant', expiresAt: Date.now() + 60_000 });
+      if (url === '/api/v1/agents/execution-policy') return Response.json({ available: false, mode: 'text_analysis', workspace_access: false, tools: [], policy: null });
+      if (url === '/api/v1/agents/workflows') return Response.json({ workflows: [] });
+      return mockRuntime(url, options);
+    }));
   });
-
-  it('renders the agent protocol page', async () => {
+  afterEach(() => { cleanup(); notifyQueueIdentityChange(); vi.unstubAllGlobals(); });
+  it('keeps runtime reads explicit and does not mistake an unloaded list for an empty one', async () => {
     render(<AgentProtocolPage />);
     expect(screen.getByText('Agent Protocol UI')).toBeInTheDocument();
     expect(screen.getByText('Tasks')).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(mockFetch).toHaveBeenCalledWith('/api/v1/agents/protocol?method=ap_list_tasks');
-    });
+    expect(mockRuntime).not.toHaveBeenCalled(); expect(screen.queryByText('No tasks found.')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Load workspace runtime tasks' }));
+    expect(await screen.findByText('No tasks found.')).toBeVisible();
   });
-
-  it('allows creating a task', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ tasks: [] }), // initial load
-    });
-
-    render(<AgentProtocolPage />);
-
-    const taskInput = screen.getByPlaceholderText('New Task Input...');
-    fireEvent.change(taskInput, { target: { value: 'Write a poem' } });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ task_id: 'task-1' }), // create response
-    });
-
-    // The second fetchTasks call
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ tasks: [{ task_id: 'task-1', input: 'Write a poem' }] }),
-    });
-
+  it('preserves actual runtime creation and its method', async () => {
+    await loadRuntime();
+    fireEvent.change(screen.getByPlaceholderText('New Task Input...'), { target: { value: task.input } });
     fireEvent.click(screen.getByRole('button', { name: 'Create' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Write a poem')).toBeInTheDocument();
-    });
+    expect(await screen.findByText(task.input)).toBeVisible();
+    const [, options] = mockRuntime.mock.calls.find(([, options]) => options?.method === 'POST')!;
+    expect(JSON.parse(options.body)).toEqual({ method: 'ap_create_task', params: { input: task.input } });
   });
-
-  it('allows selecting a task and executing a step', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ tasks: [{ task_id: 'task-1', input: 'Write a poem' }] }), // initial load
-    });
-
-    render(<AgentProtocolPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText('Write a poem')).toBeInTheDocument();
-    });
-
-    // Select the task
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ steps: [] }), // fetch steps response
-    });
-
-    fireEvent.click(screen.getByText('Write a poem'));
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Execute Step' })).toBeInTheDocument();
-    });
-
-    const stepInput = screen.getByPlaceholderText('Optional Step Input...');
-    fireEvent.change(stepInput, { target: { value: 'Line 1' } });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ step_id: 'step-1' }), // execute response
-    });
-
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ steps: [{ step_id: 'step-1', status: 'completed', input: 'Line 1', output: 'Roses are red' }] }), // fetch steps
-    });
-
+  it('preserves actual step execution and checkpoint restoration without routing either to text analysis', async () => {
+    tasks = [task]; await loadRuntime(); fireEvent.click(await screen.findByText(task.input));
+    fireEvent.change(await screen.findByPlaceholderText('Optional Step Input...'), { target: { value: 'Line 1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Execute Step' }));
-
-    await waitFor(() => {
-      expect(screen.getByText('Roses are red')).toBeInTheDocument();
-    });
+    expect(await screen.findByText('Roses are red')).toBeVisible();
+    fireEvent.click(await screen.findByRole('button', { name: 'Restore Checkpoint' }));
+    await waitFor(() => expect(screen.queryByText('Roses are red')).toBeNull());
+    expect(mockRuntime.mock.calls.filter(([, options]) => options?.method === 'POST').map(([, options]) => JSON.parse(options.body))).toEqual([
+      { method: 'ap_execute_step', params: { task_id: 'task-1', input: 'Line 1' } },
+      { method: 'ap_restore_checkpoint', params: { task_id: 'task-1', checkpoint_id: 'cp-1' } },
+    ]);
+    expect(vi.mocked(fetch).mock.calls.some(([url]) => url === '/api/v1/agents/hire')).toBe(false);
   });
 });

@@ -2,13 +2,26 @@
 
 import { errorMessage } from '@/lib/errors';
 
-import { useState,useEffect,useRef } from 'react';
+import { useState,useEffect,useRef,useCallback } from 'react';
+import { useTenantAnalysis } from '../agents/useTenantAnalysis';
+import { RecordedTextAnalysis } from './RecordedTextAnalysis';
 
 type ProtocolTask = { task_id: string; input?: string };
 type ProtocolStep = { step_id: string; status: string; input?: string; output?: string };
 type ProtocolCheckpoint = { checkpoint_id: string; created_at: string };
 
 export default function AgentProtocolPage() {
+  const [scope, setScope] = useState(0);
+  const retire = useCallback(() => setScope(value => value + 1), []);
+  const execution = useTenantAnalysis(retire);
+  return <main className="max-w-6xl mx-auto p-8 font-sans">
+    <h1 className="text-3xl font-bold mb-4">Agent Protocol UI</h1>
+    <RecordedTextAnalysis key={`analysis-${scope}`} execution={execution} />
+    <WorkspaceRuntime key={`runtime-${scope}`} />
+  </main>;
+}
+
+function WorkspaceRuntime() {
   const [tasks, setTasks] = useState<ProtocolTask[]>([]);
   const [taskInput, setTaskInput] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState('');
@@ -20,16 +33,18 @@ export default function AgentProtocolPage() {
   const [unknownCreation, setUnknownCreation] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('');
   const creating = useRef(false);
+  const [taskRead, setTaskRead] = useState('unverified');
 
   const fetchTasks = async () => {
+    setTaskRead('loading');
     try {
       const res = await fetch('/api/v1/agents/protocol?method=ap_list_tasks');
       if (!res.ok) throw new Error('Failed to fetch tasks');
       const data = await res.json();
       if (!data || !Array.isArray(data.tasks) || data.error != null || data.success === false) throw new Error('The task list could not be verified');
-      setTasks(data.tasks); return true;
+      setTasks(data.tasks); setTaskRead('ready'); return true;
     } catch (e: unknown) {
-      setError(errorMessage(e)); return false;
+      setTaskRead('unavailable'); setError(errorMessage(e)); return false;
     }
   };
 
@@ -141,10 +156,6 @@ export default function AgentProtocolPage() {
   };
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
-
-  useEffect(() => {
     if (selectedTaskId) {
       fetchSteps(selectedTaskId);
       fetchCheckpoints(selectedTaskId);
@@ -156,11 +167,13 @@ export default function AgentProtocolPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-8 font-sans">
-      <div className="text-3xl font-bold mb-4">Agent Protocol UI</div>
+      <h2 className="text-2xl font-bold mb-4">Workspace runtime</h2>
       <p className="text-gray-600 mb-8">
-        Interact with the standardized Agent Protocol (AutoGPT Unique Harness Innovations).
+        These existing Agent Protocol controls require a separately configured and authorized workspace runtime. Text analysis does not grant runtime or workspace access.
       </p>
 
+      <button type="button" disabled={taskRead === 'loading'} onClick={() => void fetchTasks()}>Load workspace runtime tasks</button>
+      {taskRead === 'unavailable' && <p role="alert">Workspace runtime task history could not be verified.</p>}
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
           <span className="block sm:inline">{error}</span>
@@ -203,7 +216,7 @@ export default function AgentProtocolPage() {
                 <div className="text-xs text-gray-500 truncate">{task.task_id}</div>
               </li>
             ))}
-            {tasks.length === 0 && <div className="text-gray-500 text-sm italic">No tasks found.</div>}
+            {taskRead === 'ready' && tasks.length === 0 && <div className="text-gray-500 text-sm italic">No tasks found.</div>}
           </ul>
         </div>
 

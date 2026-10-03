@@ -83,7 +83,7 @@ export function useTenantAnalysis(retireView: () => void) {
               const snapshot = record(await lookup.json());
               if (!current(expected, token, epoch)) return;
               const row = record(snapshot?.workflow);
-              const matching = lookup.ok && row?.actor_id === expected.userId && (acknowledged ? row.id === acknowledged.workflow_id : row.request_id === requestId) ? [row] : [];
+              const matching = lookup.status === 200 && snapshot?.error == null && (snapshot?.success === undefined || snapshot.success === true) && row?.tenant_id === expected.tenantId && row?.actor_id === expected.userId && (acknowledged ? row.id === acknowledged.workflow_id : row.request_id === requestId) ? [row] : [];
               if (matching.length === 1 && readOwnedOnboardingItem(REQUEST) === pending && typeof matching[0]?.status === 'string' && ['queued', 'running', 'completed', 'failed', 'cancelled', 'outcome_unknown'].includes(matching[0].status)) {
                 const confirmed = acknowledged ?? receiptFrom({ id: matching[0].agent_id, agent_id: matching[0].agent_id, workflow_id: matching[0].id, status: 'queued' });
                 if (confirmed) {
@@ -165,6 +165,27 @@ export function useTenantAnalysis(retireView: () => void) {
     }
   };
 
+  const cancelReceipt = useCallback(async (id: string): Promise<unknown> => {
+    const expected = owner.current, token = generation.current, epoch = onboardingSessionEpoch();
+    if (!expected || !current(expected, token, epoch) || inFlight.current) throw new Error('Session or task unavailable');
+    if (!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id) || id === '00000000-0000-0000-0000-000000000000') throw new Error('Invalid receipt');
+    const controller = new AbortController(); request.current = controller;
+    const timeout = window.setTimeout(() => controller.abort(), 30_000);
+    inFlight.current = true; setBusy(true);
+    try {
+      const response = await untilAborted(fetchForOwnedBusinessAction(`/api/v1/agents/workflows/${id}/cancel`, { method: 'POST', signal: controller.signal }, expected, () => {
+        if (controller.signal.aborted || !current(expected, token, epoch)) throw new Error('Task view changed before cancellation');
+      }), controller.signal);
+      const data: unknown = await untilAborted(response.json(), controller.signal);
+      if (!current(expected, token, epoch) || controller.signal.aborted || !response.ok) throw new Error('Cancellation unconfirmed');
+      return data;
+    } finally {
+      window.clearTimeout(timeout);
+      if (request.current === controller) request.current = null;
+      if (current(expected, token, epoch)) { inFlight.current = false; setBusy(false); }
+    }
+  }, [current]);
+
   const startAnother = async () => {
     const expected = owner.current, accepted = receipt;
     if (!expected || !accepted || inFlight.current || !navigator.locks?.request) return;
@@ -179,5 +200,5 @@ export function useTenantAnalysis(retireView: () => void) {
     } catch { if (current(expected, token, epoch)) setNotice('The acknowledged request could not be retired locally. No new task was sent.'); }
     finally { if (current(expected, token, epoch)) { inFlight.current = false; setBusy(false); } }
   };
-  return { policy, ready, busy, held, receipt, notice, revision, readSnapshot, start, startAnother };
+  return { policy, ready, busy, held, receipt, notice, revision, readSnapshot, start, startAnother, cancelReceipt };
 }
