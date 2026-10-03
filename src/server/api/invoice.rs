@@ -166,9 +166,42 @@ impl InvoiceService for InvoiceServiceImpl {
 
         let status = "draft".to_string();
 
-        // This operation creates a local draft, not a provider checkout session.
-        // Empty means payment has not been configured; never invent a payable URL.
-        let stripe_payment_link = String::new();
+        let db_view = crate::db::DB {
+            pool: pool.clone(),
+            store: crate::db::DbStore::Postgres,
+        };
+
+        let mut stripe_payment_link = String::new();
+        let mut stripe_session_id = String::new();
+
+        if let Ok(stripe_key) = crate::api::tool_integrations::stripe_key_for_tenant(&db_view, &req.tenant_id).await {
+            let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+            if stripe_client.require_api_key().is_ok() {
+                use sha2::{Digest, Sha256};
+                let operation_id = format!(
+                    "invoice:{:x}",
+                    Sha256::digest(format!("{}:{}", req.tenant_id, invoice_id))
+                );
+
+                if let Ok(receipt) = stripe_client
+                    .create_checkout_session_idempotent(
+                        crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                            name: &format!("Invoice #{}", invoice_id),
+                            reference: &invoice_id,
+                            amount_cents: total_cents as i64,
+                            interval: None,
+                            product: Some(&invoice_id),
+                            currency: &req.currency.to_lowercase(),
+                            operation_id: &operation_id,
+                        },
+                    )
+                    .await
+                {
+                    stripe_payment_link = receipt.url;
+                    stripe_session_id = receipt.id;
+                }
+            }
+        }
 
         let base_currency = if req.base_currency.is_empty() {
             "USD".to_string()
@@ -186,9 +219,11 @@ impl InvoiceService for InvoiceServiceImpl {
             req.exchange_rate
         };
 
+        let status = "unpaid".to_string();
+
         sqlx::query(
-            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, base_currency, transaction_currency, exchange_rate, total_amount, stripe_payment_link, total_amount_cents, amount_paid_cents, payment_status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, 'draft')"
+            "INSERT INTO invoices (id, tenant_id, client_id, client_name, status, due_date, currency, base_currency, transaction_currency, exchange_rate, total_amount, stripe_payment_link, stripe_invoice_id, total_amount_cents, amount_paid_cents, payment_status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0, 'unpaid')"
         )
         .bind(&invoice_id)
         .bind(&req.tenant_id)
@@ -202,6 +237,7 @@ impl InvoiceService for InvoiceServiceImpl {
         .bind(exchange_rate)
         .bind(total_amount)
         .bind(&stripe_payment_link)
+        .bind(&stripe_session_id)
         .bind(total_cents)
         .execute(&mut *tx)
         .await
