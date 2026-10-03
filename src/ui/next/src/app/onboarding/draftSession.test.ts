@@ -3,7 +3,7 @@ beforeLocks(() => installOnboardingLocks());
 import {installOnboardingLocks} from './testLocks';
 import {beforeEach,afterEach,it,expect,vi} from 'vitest';
 import {notifyQueueIdentityChange} from '@/lib/sync/queueIdentity';
-import {openOnboardingSession,fetchForOnboardingOwner,onboardingOwner} from './draftSession';
+import {openOnboardingSession,fetchForOnboardingOwner,fetchForOwnedBusinessRead,onboardingOwner} from './draftSession';
 const owner={userId:'a',tenantId:'ta'};
 beforeEach(()=>{localStorage.clear();notifyQueueIdentityChange();vi.stubGlobal('fetch',vi.fn(async(url:string)=>Response.json(url.endsWith('/session-identity')?{...owner,expiresAt:Date.now()+60_000}:{})));});
 afterEach(()=>vi.unstubAllGlobals());
@@ -39,4 +39,18 @@ it('serializes draft commits across delayed response bodies before accepting a n
  await new Promise(resolve=>setTimeout(resolve,10));
  const beforeRelease=[...dispatched];releaseFirst();await Promise.all([first,second]);
  expect(beforeRelease).toEqual(['A']);expect(remote).toBe('B');
+});
+
+it('confines workflow detail and cursor reads to canonical same-origin destinations',async()=>{
+ const expected=await openOnboardingSession();
+ const uuid='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+ for(const url of [`/api/v1/agents/workflows/${uuid}`,`/api/v1/agents/workflows/by-request/${uuid}`,`/api/v1/agents/workflows?limit=20&before=1800000000%3A${uuid}`]) {
+  await fetchForOwnedBusinessRead(url,expected);
+  expect(vi.mocked(fetch).mock.calls.at(-1)?.[0]).toBe(url);
+ }
+ const count=vi.mocked(fetch).mock.calls.length;
+ for(const url of [`https://other.example/api/v1/agents/workflows/${uuid}`,`/api/v1/agents/workflows/${uuid}/../../private`,`/api/v1/agents/workflows/by-request/${uuid.toUpperCase()}`,`/api/v1/agents/workflows?limit=21`,`/api/v1/agents/workflows?before=0:${uuid}&before=1:${uuid}`,`/api/v1/agents/workflows?tenant_id=foreign`]) {
+  await expect(fetchForOwnedBusinessRead(url,expected)).rejects.toThrow('Invalid business read destination');
+ }
+ expect(vi.mocked(fetch).mock.calls).toHaveLength(count);
 });

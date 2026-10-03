@@ -13,13 +13,18 @@ pool_end=db_source.index('\npub fn get_sqlite_pool_if_exists()',pool_start)
 pool_helper=db_source[pool_start:pool_end]
 assert re.search(r'\.nest\(\s*"/api/widget"\s*,\s*api::widget::router\(', mount)
 assert '.merge(widget_router)' in source
-modules={'widget':'src/server/api/widget/mod.rs','omnichannel_repo':'src/server/domain/repository/omnichannel_repo.rs','chat_models':'src/server/services/chat/models.rs'}
-lines=['pub mod services { pub mod chat { pub use crate::chat_models as models; } }','pub mod domain { pub mod repository { pub use crate::omnichannel_repo; } }','pub mod api { pub use crate::widget; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore }'+pool_helper+'}']
+assert 'pub mod outbox;' in (ROOT/'src/server/services/chat/mod.rs').read_text()
+modules={'widget':'src/server/api/widget/mod.rs','omnichannel_repo':'src/server/domain/repository/omnichannel_repo.rs','chat_models':'src/server/services/chat/models.rs','redis_pool':'src/server/redis_pool.rs','chat_outbox':'src/server/services/chat/outbox.rs'}
+standalone=re.search(r'pub fn is_standalone_runtime\(\) -> bool \{.*?\n\}',source,re.S).group()
+lines=['pub use server_config as config;',standalone,'pub mod services { pub mod chat { pub use crate::chat_models as models; pub use crate::chat_outbox as outbox; } }','pub mod domain { pub mod repository { pub use crate::omnichannel_repo; } }','pub mod api { pub use crate::widget; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore }'+pool_helper+'}']
 for name,path in modules.items():lines.append(f'#[path={json.dumps(str(ROOT/path))}]pub mod {name};')
 lines.append('pub fn actual_parent_mount(db:std::sync::Arc<db::DB>,http_auth_store:std::sync::Arc<server_auth::Store>)->axum::Router { let _=&http_auth_store;\n'+mount+'\naxum::Router::new().merge(widget_router)\n}')
+bootstrap_start=source.index('    let (_chat_outbox_shutdown, chat_outbox_shutdown_rx)')
+bootstrap=source[bootstrap_start:start]
+lines.append('pub fn actual_outbox_bootstrap(db:std::sync::Arc<db::DB>,legacy_sqlx_background_enabled:bool)->tokio::sync::watch::Sender<bool> {\n'+bootstrap+'\n_chat_outbox_shutdown\n}')
 lines.append('#[cfg(test)]#[path="test.rs"]mod tests;')
 generated='\n'.join(lines)+'\n';(HERE/'generated.rs').write_text(generated)
-paths=[ROOT/p for p in [*modules.values(),'src/server/api/widget/chat.rs','src/server/lib.rs','src/server/db.rs','Cargo.toml','Cargo.lock','src/server/migrations/233_chat_omnichannel.sql','src/server/migrations/1021_chat_sender_identity_text.sql','src/server/services/chat/service.rs']]
+paths=[ROOT/p for p in [*modules.values(),'src/server/api/widget/chat.rs','src/server/lib.rs','src/server/db.rs','Cargo.toml','Cargo.lock','.github/workflows/ci.yml','src/server/migrations/060_job_queue_and_ledger.sql','src/server/migrations/233_chat_omnichannel.sql','src/server/migrations/1021_chat_sender_identity_text.sql','src/server/services/chat/service.rs','src/server/services/chat/mod.rs']]
 paths += [p for name in ['auth','common','config','oidc','omnisolo','telemetry'] for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 paths += list((ROOT/'src/proto').rglob('*.proto'))
 paths += list((HERE/'compatibility').glob('*.sql'))

@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {JSDOM,VirtualConsole} from 'jsdom';
+import {JSDOM,VirtualConsole} from './test-support/offline-dom.mjs';
 const roots=['src/ui/next/public','src/ui/next/public/ui','src/ui/tauri/src/ui'];
 const owner={userId:'member-a',tenantId:'tenant-a / &',expiresAt:Date.now()+600000};
 const profile={store_name:'Private member business',bio:'Private saved description',theme:'dark',links:[{id:'1',title:'Owned link',url:'https://example.test/owned'}],remove_branding:false};

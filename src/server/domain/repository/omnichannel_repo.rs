@@ -246,7 +246,7 @@ impl OmniChannelRepo {
         Ok(())
     }
 
-    async fn lock_chat_conversation(
+    pub(crate) async fn lock_chat_conversation(
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         tenant_id: Uuid,
         conversation_id: Uuid,
@@ -302,40 +302,38 @@ impl OmniChannelRepo {
         ).bind(Uuid::new_v4()).bind(tenant_id).bind(conversation_id).bind(actor_id).bind(content)
             .fetch_optional(&mut *tx).await?.ok_or(WidgetChatError::NotFound)?;
 
-        // Prepare Redis publishing or Outbox
-        let mut published = false;
-        let topic = format!("unified:chat:{}", tenant_id);
+        // A committed message and its event intent are inseparable. Redis I/O
+        // is only allowed after commit and never determines message persistence.
+        let event_id = record.id.to_string();
         let payload = serde_json::json!({
+            "event_id": record.id,
             "action": "new_message",
             "message": record
         });
+        sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'publish_chat_event', $3, 'PENDING')")
+            .bind(&event_id)
+            .bind(tenant_id.to_string())
+            .bind(sqlx::types::Json(payload))
+            .execute(&mut *tx)
+            .await?;
+        tx.commit().await?;
 
-        if let Some(client) = crate::redis_pool::get_redis_client() {
-            if let Ok(mut rconn) = client.get_async_connection().await {
-                let publish_res: Result<(), redis::RedisError> =
-                    redis::AsyncCommands::publish(&mut rconn, &topic, payload.to_string()).await;
-                if let Err(e) = publish_res {
-                    tracing::warn!("Failed to publish to redis: {}", e);
-                } else {
-                    published = true;
-                }
-            } else {
-                tracing::warn!("Failed to get redis connection for chat publish");
+        if let Some(redis) = crate::redis_pool::get_redis_pool() {
+            let relay = crate::services::chat::outbox::relay_chat_event(
+                &self.db.pool,
+                redis,
+                tenant_id,
+                &event_id,
+            );
+            if !matches!(
+                tokio::time::timeout(std::time::Duration::from_secs(2), relay).await,
+                Ok(Ok(_))
+            ) {
+                // The committed outbox row remains available to the worker.
+                // Returning an error here would encourage a duplicate POST.
+                tracing::warn!("Committed chat event awaits its durable relay");
             }
         }
-
-        if !published {
-            // Store in outbox (job queue) for retry, ATOMICALLY inside the transaction
-            let outbox_job_id = Uuid::new_v4().to_string();
-            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'publish_chat_event', $3, 'PENDING')")
-                .bind(&outbox_job_id)
-                .bind(&tenant_id.to_string())
-                .bind(payload.to_string())
-                .execute(&mut *tx)
-                .await?;
-        }
-
-        tx.commit().await?;
 
         Ok(record)
     }

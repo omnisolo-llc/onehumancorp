@@ -22,3 +22,18 @@ by a later global authentication layer; isolated child-router tests cannot prove
 that boundary. The tier layer only applies action limits to protected/autodream
 paths and is not compiled into this focused boundary. Full hosted browser acceptance
 remains required.
+
+The gate also compiles the complete mutable storefront router, builder edge
+renderer, production cache, and shared response-cache middleware. Its 93 cases
+retain all 81 publication cases. Signed requests cannot reuse a public URI cache;
+current owner and tenant checks precede private product/domain cache reads. A
+deleted product cannot reappear from an old entry, and foreign or mixed-tag
+invalidation requests leave both tenants' caches unchanged. Private directives
+and Set-Cookie responses remain private and cannot enter the shared cache.
+
+The runner owns a loopback HTTP denial proxy. It never forwards traffic and fails
+on any non-loopback HTTP attempt, while retaining real local database and HTTP
+fixtures. These tests do not send edge purge requests. Private cold rendering,
+legacy SEO escaping and truthful inventory fallback have separate outstanding
+regressions; the cache/privacy proof does not certify those paths. Public
+owner-reviewed snapshots remain available through the immutable publication API.

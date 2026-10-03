@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 
 const builders = ['src/ui/next/public/ai-lead-magnet-builder.html', 'src/ui/next/public/ui/ai-lead-magnet-builder.html', 'src/ui/tauri/src/ui/ai-lead-magnet-builder.html'];
 const dashboards = ['src/ui/next/public/dashboard.html', 'src/ui/next/public/ui/dashboard.html', 'src/ui/tauri/src/ui/dashboard.html'];

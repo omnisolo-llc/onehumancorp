@@ -21,6 +21,12 @@ describe('Group Buy Widget Page', () => {
     global.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ current_plan: 'free' }) });
   });
 
+  it('gives the selectable embed code its own accessible control', () => {
+    render(<Page />);
+    expect((screen.getByRole('textbox', { name: 'Embed Code' }) as HTMLTextAreaElement).value).toContain('<iframe');
+    expect(screen.getByRole('button', { name: 'Copy Code' })).toBeEnabled();
+  });
+
   it('marks unconfigured editor-preview actions unavailable with a visible reason', () => {
     render(<Page />);
     for(const name of ['Join Group Buy', 'Share with friends']) {

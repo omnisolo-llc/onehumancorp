@@ -451,7 +451,7 @@
     </div>
 
     <h1>Post-Purchase Share Widget</h1>
-    <p class="subtitle">Turn buyers into promoters instantly. Generate an embeddable post-checkout widget.</p>
+    <p class="subtitle">Draft a post-purchase offer and preview its appearance.</p>
 
     <div class="layout-grid">
       <!-- Config Panel -->
@@ -478,14 +478,15 @@
         </div>
 
         <label class="checkbox-group">
-          <input type="checkbox" id="remove-branding" />
+          <input type="checkbox" id="remove-branding" disabled />
           <div class="text-col">
             <span class="title">Remove "OmniSolo"</span>
             <span class="text-secondary desc">Pro Feature</span>
           </div>
         </label>
 
-        <button class="primary-btn" id="get-code-btn">Get Embed Code</button>
+        <p id="entitlement-status" role="status">Verifying your current plan…</p>
+        <button class="primary-btn" id="get-code-btn" disabled>Get Embed Code</button>
       </div>
 
       <!-- Preview Panel -->
@@ -497,14 +498,14 @@
 
           <div class="widget-content">
             <div class="widget-icon">🎁</div>
-            <h3 class="widget-title" id="preview-title">Give 15%, Get 15%</h3>
+            <h3 class="widget-title" id="preview-title">Draft offer: Give 15%, Get 15%</h3>
             <p class="widget-desc" id="preview-desc">
-              Share your link with friends. They get 15% off their first order, and you get 15% off your next!
+              Preview only: proposed 15% discount. No coupon, referral link, or reward has been created.
             </p>
 
             <div class="widget-input-group">
-              <input type="text" class="widget-link-input" readonly value="https://cloud.omnisolo.co/setup.html?ref=my-store&promo=ref123" id="preview-link" />
-              <button class="widget-copy-btn">Copy Link</button>
+              <input type="text" class="widget-link-input" readonly value="" placeholder="Referral program link is not configured" id="preview-link" />
+              <button class="widget-copy-btn" disabled>Link unavailable</button>
             </div>
 
             <div class="widget-footer" id="preview-branding">
@@ -521,12 +522,12 @@
     <div class="modal-content">
       <button class="modal-close" id="close-embed">&times;</button>
       <h2 class="modal-title">Embed Referral Widget</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 20px;">Copy and paste this HTML snippet into your post-checkout or thank-you page.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Authenticated preview code. Public embedding and discount fulfillment are not configured.</p>
 
       <textarea class="code-block" id="embed-code" readonly></textarea>
 
       <div class="modal-actions">
-        <button class="primary-btn" id="copy-code-btn">Copy Code</button>
+        <button class="primary-btn" id="copy-code-btn" disabled>Copy Code</button>
         <button class="btn-secondary" id="close-embed-btn">Close</button>
       </div>
     </div>
@@ -535,13 +536,13 @@
   <!-- Paywall Modal -->
   <div class="modal-overlay paywall-modal" id="paywall-modal">
     <div class="modal-content" style="max-width: 400px;">
-      <button class="modal-close" id="close-paywall">&times;</button>
+      <button class="modal-close" id="close-paywall" aria-label="Close upgrade options">&times;</button>
       <div class="paywall-icon">✨</div>
       <h2 class="modal-title">Upgrade to Pro</h2>
-      <p style="color: var(--text-secondary); margin-bottom: 20px;">Make the Post-Purchase Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark, or share on X to unlock a 7-day Pro trial for free.</p>
+      <p style="color: var(--text-secondary); margin-bottom: 20px;">Make the Post-Purchase Widget 100% yours. A verified Pro or Business plan can remove the "OmniSolo" watermark. Sharing does not change your plan.</p>
 
       <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
-        <button class="primary-btn" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock 7 Days</button>
+        <a href="/trial-extension">Review account access</a>
         <button class="primary-btn" id="upgrade-btn" style="background-color: #1d1d1f;">Upgrade to Pro</button>
       </div>
       <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
@@ -552,8 +553,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       // State
       let state = {
-        tenant: (() => { try { return localStorage.getItem('tenant') || 'my-store'; } catch(e) { return 'my-store'; } })(),
-        hasPro: (() => { try { return localStorage.getItem('has_pro') === 'true'; } catch(e) { return false; } })(),
+        tenant: null,
+        hasPro: false,
         amount: '15',
         type: '%',
         theme: 'light',
@@ -582,12 +583,73 @@
       const paywallModal = document.getElementById('paywall-modal');
       const closePaywallBtn = document.getElementById('close-paywall');
       const upgradeBtn = document.getElementById('upgrade-btn');
-      const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
-      const softPaywallStatus = document.getElementById('soft-paywall-status');
+      const entitlementStatus = document.getElementById('entitlement-status');
 
       // Initialize
-      previewLink.value = `https://cloud.omnisolo.co/setup.html?ref=${state.tenant}&promo=ref123`;
+      previewLink.value = '';
       updatePreview();
+
+      const identityEpochKey = 'omnisolo_queue_identity_epoch_v2';
+      let owner = null;
+      let ownerStorageEpoch = null;
+      let epoch = 0;
+      let embedRequest = 0;
+      let expiry;
+      let refreshing = false;
+      const sameOwner = (a, b) => a.userId === b.userId && a.tenantId === b.tenantId;
+      function retire(message = 'Your session changed. Reload to verify widget access.') {
+        epoch += 1; embedRequest += 1; owner = null; ownerStorageEpoch = null; state.tenant = null; state.hasPro = false; state.removeBranding = false;
+        clearTimeout(expiry); removeBrandingCheckbox.checked = false;
+        removeBrandingCheckbox.disabled = true; getCodeBtn.disabled = true; copyCodeBtn.disabled = true; embedCodeTextarea.value = '';
+        embedModal.classList.remove('active'); paywallModal.classList.remove('active');
+        entitlementStatus.textContent = message; updatePreview();
+      }
+      window.addEventListener('omnisolo_auth_changed', () => retire());
+      window.addEventListener('pagehide', () => retire());
+      window.addEventListener('storage', event => { if (event.key === null || event.key === identityEpochKey) retire(); });
+      async function identity() {
+        const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+        const value = await response.json();
+        if (response.status !== 200 || !value || typeof value !== 'object' || Array.isArray(value)
+          || value.error != null || ('success' in value && value.success !== true)
+          || typeof value.userId !== 'string' || !value.userId || typeof value.tenantId !== 'string' || !value.tenantId
+          || !Number.isSafeInteger(value.expiresAt) || value.expiresAt <= Date.now()) throw new Error('Identity unavailable');
+        return value;
+      }
+      async function refreshPlan() {
+        if (refreshing) return false;
+        refreshing = true;
+        const expectedEpoch = epoch;
+        removeBrandingCheckbox.disabled = true; getCodeBtn.disabled = true;
+        try {
+          const storageEpoch = localStorage.getItem(identityEpochKey);
+          const verified = await identity();
+          if (expectedEpoch !== epoch) return false;
+          if (owner && !sameOwner(owner, verified)) throw new Error('Owner changed');
+          const response = await fetch('/api/v1/billing/my-plan', {
+            credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+            headers: { 'x-ohc-expected-user': verified.userId, 'x-ohc-expected-tenant': verified.tenantId },
+          });
+          const plan = await response.json();
+          const latest = await identity();
+          if (expectedEpoch !== epoch) return false;
+          if (storageEpoch !== localStorage.getItem(identityEpochKey) || !sameOwner(verified, latest)) throw new Error('Owner changed');
+          if (response.status !== 200 || !plan || typeof plan !== 'object' || Array.isArray(plan)
+            || plan.error != null || ('success' in plan && plan.success !== true)
+            || typeof plan.current_plan !== 'string' || !['free', 'starter', 'pro', 'business'].includes(plan.current_plan.toLowerCase())) throw new Error('Plan unavailable');
+          owner = latest; ownerStorageEpoch = storageEpoch; state.tenant = latest.tenantId;
+          state.hasPro = ['pro', 'business'].includes(plan.current_plan.toLowerCase());
+          if (!state.hasPro) { state.removeBranding = false; removeBrandingCheckbox.checked = false; }
+          removeBrandingCheckbox.disabled = false; getCodeBtn.disabled = false;
+          entitlementStatus.textContent = 'Current plan verified. Offer text is a draft; discounts and referral rewards are not configured by this preview.';
+          clearTimeout(expiry); expiry = setTimeout(() => retire(), Math.min(latest.expiresAt - Date.now(), 2147483647));
+          updatePreview(); return true;
+        } catch {
+          if (expectedEpoch === epoch) retire('Current account or plan is unavailable. Reload to retry.');
+          return false;
+        } finally { refreshing = false; }
+      }
+      void refreshPlan();
 
       // Event Listeners
       amountInput.addEventListener('input', (e) => {
@@ -616,35 +678,50 @@
         updatePreview();
       });
 
-      removeBrandingCheckbox.addEventListener('change', (e) => {
-        if (e.target.checked && !state.hasPro) {
-          e.target.checked = false;
-          paywallModal.classList.add('active');
-          return;
+      removeBrandingCheckbox.addEventListener('change', async (e) => {
+        const requested = e.target.checked;
+        e.target.checked = state.removeBranding;
+        if (!await refreshPlan()) return;
+        if (requested && !state.hasPro) {
+          paywallModal.classList.add('active'); return;
         }
-        state.removeBranding = e.target.checked;
+        state.removeBranding = requested; removeBrandingCheckbox.checked = requested;
         updatePreview();
       });
 
-      getCodeBtn.addEventListener('click', () => {
-        generateEmbedCode();
-        embedModal.classList.add('active');
+      getCodeBtn.addEventListener('click', async () => {
+        const request = ++embedRequest;
+        if (!await refreshPlan() || request !== embedRequest) return;
+        generateEmbedCode(); copyCodeBtn.disabled = false; embedModal.classList.add('active');
       });
 
       closeEmbedBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+          embedRequest += 1;
+          embedCodeTextarea.value = ''; copyCodeBtn.disabled = true;
           embedModal.classList.remove('active');
           copyCodeBtn.textContent = 'Copy Code';
         });
       });
 
       copyCodeBtn.addEventListener('click', () => {
-        embedCodeTextarea.select();
-        document.execCommand('copy');
-        copyCodeBtn.textContent = 'Copied!';
-        setTimeout(() => {
-          copyCodeBtn.textContent = 'Copy Code';
-        }, 2000);
+        let storageEpoch;
+        try { storageEpoch = localStorage.getItem(identityEpochKey); }
+        catch { retire(); return; }
+        if (!owner || owner.expiresAt <= Date.now() || refreshing || !embedCodeTextarea.value
+            || ownerStorageEpoch !== storageEpoch) {
+          retire(); return;
+        }
+        const expectedEpoch = epoch;
+        try {
+          embedCodeTextarea.select();
+          if (typeof document.execCommand !== 'function' || !document.execCommand('copy')) throw new Error('Clipboard unavailable');
+          if (expectedEpoch !== epoch) return;
+          copyCodeBtn.textContent = 'Copied!';
+          setTimeout(() => { if (expectedEpoch === epoch) copyCodeBtn.textContent = 'Copy Code'; }, 2000);
+        } catch {
+          if (expectedEpoch === epoch) copyCodeBtn.textContent = 'Copy failed. Copy manually.';
+        }
       });
 
       closePaywallBtn.addEventListener('click', () => {
@@ -655,81 +732,23 @@
         window.location.href = '/pricing';
       });
 
-      if (shareToUnlockBtn) {
-        shareToUnlockBtn.addEventListener('click', async () => {
-          const tenantId = state.tenant;
-          const message = `Check out my new Referral Program built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
-          const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-          // Open share dialog
-          window.open(shareUrl, '_blank');
-
-          shareToUnlockBtn.style.display = 'none';
-          softPaywallStatus.style.display = 'block';
-          softPaywallStatus.innerText = 'Verifying Share...';
-
-          try {
-            let url = '/api/v1/growth/trial-extension/claim';
-            if (window.__TAURI__ && window.__TAURI__.core) {
-                url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
-            }
-            const response = await fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              }
-            });
-
-            if (response.ok) {
-              softPaywallStatus.innerText = 'Unlocked!';
-              state.hasPro = true;
-              localStorage.setItem('has_pro', 'true');
-
-              setTimeout(() => {
-                paywallModal.classList.remove('active');
-                removeBrandingCheckbox.checked = true;
-                state.removeBranding = true;
-                updatePreview();
-
-                // reset state for next time
-                shareToUnlockBtn.style.display = 'block';
-                softPaywallStatus.style.display = 'none';
-              }, 1500);
-            } else {
-              softPaywallStatus.innerText = 'Failed to claim trial extension.';
-              setTimeout(() => {
-                shareToUnlockBtn.style.display = 'block';
-                softPaywallStatus.style.display = 'none';
-              }, 3000);
-            }
-          } catch (e) {
-            console.error(e);
-            softPaywallStatus.innerText = 'Error claiming trial extension.';
-            setTimeout(() => {
-                shareToUnlockBtn.style.display = 'block';
-                softPaywallStatus.style.display = 'none';
-            }, 3000);
-          }
-        });
-      }
-
       // Functions
       function updatePreview() {
         const sign = state.type === '$' ? '$' : '';
         const pct = state.type === '%' ? '%' : '';
         const val = state.amount;
 
-        previewTitle.textContent = `Give ${sign}${val}${pct}, Get ${sign}${val}${pct}`;
-        previewDesc.textContent = `Share your link with friends. They get ${sign}${val}${pct} off their first order, and you get ${sign}${val}${pct} off your next!`;
+        previewTitle.textContent = `Draft offer: Give ${sign}${val}${pct}, Get ${sign}${val}${pct}`;
+        previewDesc.textContent = `Preview only: proposed ${sign}${val}${pct} discount. No coupon, referral link, or reward has been created.`;
 
         previewBranding.style.display = state.removeBranding ? 'none' : 'block';
       }
 
       function generateEmbedCode() {
-        const origin = window.location.origin.includes('localhost') ? 'https://cloud.omnisolo.co' : window.location.origin;
+        const origin = window.location.origin;
         const discountStr = state.amount + (state.type === '%' ? 'pct' : 'flat');
 
-        const code = `<iframe src="${origin}/api/v1/growth/post-purchase/embed?tenant=${state.tenant}&theme=${state.theme}&discount=${discountStr}&hideBranding=${state.removeBranding}" width="100%" height="250" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Post-Purchase Widget"></iframe>`;
+        const code = `<iframe src="${origin}/api/v1/growth/post-purchase/embed?tenant=${encodeURIComponent(state.tenant)}&theme=${state.theme}&discount=${discountStr}&hideBranding=${state.removeBranding}" width="100%" height="250" style="border:none;border-radius:16px;overflow:hidden;" title="OmniSolo Post-Purchase Widget"></iframe>`;
 
         embedCodeTextarea.value = code;
       }

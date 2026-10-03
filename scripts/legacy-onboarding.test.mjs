@@ -2,7 +2,7 @@ import {createOriginLockManager} from './test-support/origin-locks.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { JSDOM } from 'jsdom';
+import { JSDOM } from './test-support/offline-dom.mjs';
 
 const paths = [
   'src/ui/tauri/src/ui/setup.html',

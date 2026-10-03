@@ -1,38 +1,25 @@
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from './support/entitlement_fixture';
 
 test('viral_upgrade_paywall', async ({ page, request, loginAs, adminUser }) => {
   await loginAs(page, adminUser);
   await currentAppSmoke(page, request, 'viral_upgrade_paywall');
 });
 
-test.describe('Viral SaaS Upgrade Soft Paywall Growth Loop', () => {
-  test('should display the upgrade paywall widget on the dashboard', async ({ page, loginAs, adminUser }) => {
-    // Navigate to dashboard
-    await loginAs(page, adminUser);
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    // 1. Verify the widget is visible
-    const widgetHeading = page.getByRole('heading', { name: /Unlock AI Autopilot/i });
-    await expect(widgetHeading).toBeVisible();
-
-    // 2. Verify the progress text
-    await expect(page.getByText(/\d+ \/ 3/).first()).toBeVisible();
-    await expect(page.getByText(/\d+ more to unlock/)).toBeVisible();
-
-    // 3. Verify the share/copy button is present
-    const widget = page.locator('div.group').filter({ has: widgetHeading });
-    const copyButton = widget.getByRole('button', { name: /Copy Link/i });
-    await expect(copyButton).toBeVisible();
-    await expect(copyButton).toBeEnabled();
-
-    // 4. Test the copy link interaction
-    await copyButton.click();
-    await expect(widget.getByRole('button', { name: /Copied!/i })).toBeVisible();
-
-    // Check if clipboard has correct format
-    // Playwright cannot easily check the clipboard in all headless browsers without permissions setup,
-    // but the success state change to "Copied!" verifies the handler ran.
-  });
+test('dashboard referral rewards disclose the unconfigured program and retain real plan review', async ({ page, baseURL }) => {
+  const fixture = await createEntitlementOwner(page, baseURL);
+  const claims = trackTrialClaims(page);
+  await page.goto('/dashboard');
+  const heading = page.getByRole('heading', { name: 'Referral rewards', exact: true });
+  await expect(heading).toBeVisible();
+  const widget = page.locator('section').filter({ has: heading });
+  await expect(widget.getByRole('status')).toHaveText(/unavailable until a verified program is configured/);
+  await expect(widget.getByText(/\d+ \/ 3|more to unlock/)).toHaveCount(0);
+  await expect(widget.getByRole('button', { name: /Copy|Share|Unlock/ })).toHaveCount(0);
+  await expect(widget.getByRole('link', { name: 'Review plans' })).toHaveAttribute('href', '/pricing');
+  await widget.getByRole('link', { name: 'Review plans' }).click();
+  await expect(page).toHaveURL(/\/pricing$/);
+  expect(claims).toEqual([]);
+  await expectEntitlementUnchanged(page, fixture);
 });

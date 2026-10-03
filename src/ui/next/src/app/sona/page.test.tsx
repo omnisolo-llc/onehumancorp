@@ -55,15 +55,13 @@ describe("SonaPatternsPage", () => {
       expect(screen.getByText("No patterns recorded yet.")).toBeInTheDocument();
     });
 
-    vi.mocked(global.fetch, { partial: true })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({})
+    let submitted: unknown;
+    vi.mocked(global.fetch)
+      .mockImplementationOnce(async (_url, init) => {
+        submitted = JSON.parse(String(init?.body));
+        return Response.json({ status: 'success' });
       })
-      .mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ patterns: [{ id: "2", initial_context: "New task", outcome_score: 1.0, successful_tools: ["new_tool"] }] })
-      });
+      .mockImplementationOnce(async () => Response.json({ patterns: [submitted] }));
 
     const contextInput = screen.getByPlaceholderText("Task Context (e.g. Fix null pointer)");
     const toolInput = screen.getByPlaceholderText("Tool used (e.g. edit_file)");
@@ -77,4 +75,38 @@ describe("SonaPatternsPage", () => {
       expect(screen.getByText("New task")).toBeInTheDocument();
     });
   });
+});
+
+it('shows an unavailable read instead of falsely reporting an empty pattern store', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: 'Agent runtime is not configured; no work was dispatched' }, { status: 503 }));
+  render(<SonaPatternsPage />);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Agent runtime is not configured; no work was dispatched');
+  expect(screen.queryByText('No patterns recorded yet.')).not.toBeInTheDocument();
+});
+
+it('retains inputs and never invents a pattern when recording is rejected', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ patterns: [] }));
+  render(<SonaPatternsPage />);
+  await screen.findByText('No patterns recorded yet.');
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ error: 'Runtime unavailable' }, { status: 503 }));
+  fireEvent.change(screen.getByPlaceholderText('Task Context (e.g. Fix null pointer)'), { target: { value: 'Unsaved task' } });
+  fireEvent.change(screen.getByPlaceholderText('Tool used (e.g. edit_file)'), { target: { value: 'bash' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Record Pattern' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Runtime unavailable');
+  expect(screen.queryByRole('heading', { name: 'Unsaved task' })).not.toBeInTheDocument();
+  expect(screen.getByPlaceholderText('Task Context (e.g. Fix null pointer)')).toHaveValue('Unsaved task');
+  expect(screen.getByPlaceholderText('Tool used (e.g. edit_file)')).toHaveValue('bash');
+});
+
+it('requires readback of the submitted pattern before clearing its inputs', async () => {
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ patterns: [] }));
+  render(<SonaPatternsPage />);
+  await screen.findByText('No patterns recorded yet.');
+  vi.mocked(fetch).mockResolvedValueOnce(Response.json({ status: 'success' })).mockResolvedValueOnce(Response.json({ patterns: [] }));
+  fireEvent.change(screen.getByPlaceholderText('Task Context (e.g. Fix null pointer)'), { target: { value: 'Missing readback' } });
+  fireEvent.change(screen.getByPlaceholderText('Tool used (e.g. edit_file)'), { target: { value: 'bash' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Record Pattern' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Pattern recording was not confirmed by the runtime');
+  expect(screen.queryByRole('heading', { name: 'Missing readback' })).not.toBeInTheDocument();
+  expect(screen.getByPlaceholderText('Task Context (e.g. Fix null pointer)')).toHaveValue('Missing readback');
 });

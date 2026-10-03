@@ -1,7 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { runtimeAcceptance, runtimeGateReason } from './generation-acceptance';
+import { expectRuntimeUnavailable, runtimeUnavailableMessage } from './support/runtime_unavailable';
 
 test.describe('SONA Neural Patterns Dashboard', () => {
-  test('User can view learned trajectory patterns', async ({ page }) => {
+  test('User can view learned trajectory patterns @runtime-acceptance', async ({ page }) => {
+    test.skip(!runtimeAcceptance, runtimeGateReason);
     // 1. Navigate to the SONA page
     await page.goto('/sona');
 
@@ -19,7 +22,8 @@ test.describe('SONA Neural Patterns Dashboard', () => {
     await expect(emptyState.or(patternScore).first()).toBeVisible();
   });
 
-  test('User can record a new trajectory pattern', async ({ page }) => {
+  test('User can record a new trajectory pattern @runtime-acceptance', async ({ page }) => {
+    test.skip(!runtimeAcceptance, runtimeGateReason);
     await page.goto('/sona');
     await expect(page.getByText('Loading patterns...')).not.toBeVisible({ timeout: 10000 });
 
@@ -35,8 +39,27 @@ test.describe('SONA Neural Patterns Dashboard', () => {
     await recordBtn.click();
 
     // Verify that the UI state updates and reflects the newly added pattern
-    // (mocked or real environment)
-    await expect(page.getByText('Write E2E tests for Playwright')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: 'Write E2E tests for Playwright', exact: true })).toBeVisible({ timeout: 15000 });
+    await page.reload();
+    await expect(page.getByRole('heading', { name: 'Write E2E tests for Playwright', exact: true })).toBeVisible();
+  });
+
+  test('unconfigured runtime neither hides failed reads nor invents a recorded pattern', async ({ page }) => {
+    test.skip(runtimeAcceptance, 'This contract requires an unconfigured runtime.');
+    const reading = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/sona' && response.request().method() === 'GET');
+    await page.goto('/sona');
+    await expectRuntimeUnavailable(await reading);
+    await expect(page.getByRole('alert').filter({ hasText: runtimeUnavailableMessage })).toBeVisible();
+    await expect(page.getByText('No patterns recorded yet.', { exact: true })).toHaveCount(0);
+    await page.getByPlaceholder('Task Context').fill('Unsaved runtime pattern');
+    await page.getByPlaceholder('Tool used').fill('bash');
+    const recording = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/sona' && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Record Pattern' }).click();
+    await expectRuntimeUnavailable(await recording);
+    await expect(page.getByRole('alert').filter({ hasText: runtimeUnavailableMessage })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Unsaved runtime pattern' })).toHaveCount(0);
+    await expect(page.getByPlaceholder('Task Context')).toHaveValue('Unsaved runtime pattern');
+    await expect(page.getByPlaceholder('Tool used')).toHaveValue('bash');
   });
 
   test('Form validation keeps button disabled if missing tool', async ({ page }) => {

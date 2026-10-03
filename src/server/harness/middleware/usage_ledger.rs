@@ -191,40 +191,23 @@ macro_rules! transaction {
 impl UsageLedger {
     /// Deployment migration hook. Never loads credentials from a request payload.
     pub async fn initialize(&self) -> Result<(), LedgerError> {
-        const SCHEMA: [&str; 3] = [
-            "CREATE TABLE IF NOT EXISTS ohc_usage_accounts (tenant_id TEXT PRIMARY KEY, limit_micros BIGINT NOT NULL CHECK(limit_micros >= 0), spent_micros BIGINT NOT NULL DEFAULT 0 CHECK(spent_micros >= 0), reserved_micros BIGINT NOT NULL DEFAULT 0 CHECK(reserved_micros >= 0))",
-            "CREATE TABLE IF NOT EXISTS ohc_usage_records (tenant_id TEXT NOT NULL, event_id TEXT NOT NULL, request_digest TEXT NOT NULL, scope_json TEXT NOT NULL, state TEXT NOT NULL, reserved_micros BIGINT NOT NULL CHECK(reserved_micros >= 0), charged_micros BIGINT, provider_cost_micros BIGINT, receipt_json TEXT, receipt_digest TEXT, created_at TEXT NOT NULL DEFAULT (CAST(CURRENT_TIMESTAMP AS TEXT)), PRIMARY KEY(tenant_id,event_id), FOREIGN KEY(tenant_id) REFERENCES ohc_usage_accounts(tenant_id))",
-            "CREATE TABLE IF NOT EXISTS ohc_usage_receipts (tenant_id TEXT NOT NULL, provider TEXT NOT NULL, provider_request_id TEXT NOT NULL, event_id TEXT NOT NULL, PRIMARY KEY(tenant_id,provider,provider_request_id), FOREIGN KEY(tenant_id,event_id) REFERENCES ohc_usage_records(tenant_id,event_id))",
-        ];
         match self {
             Self::Postgres(pool) => {
                 let mut tx = pool.begin().await?;
-                // Serialize schema installation independently of customer transactions.
                 sqlx::query("SELECT pg_advisory_xact_lock(734562191)")
                     .execute(&mut *tx)
                     .await?;
-                for ddl in SCHEMA {
-                    sqlx::query(ddl).execute(&mut *tx).await?;
-                }
-                for table in [
-                    "ohc_usage_accounts",
-                    "ohc_usage_records",
-                    "ohc_usage_receipts",
-                ] {
-                    sqlx::query(&format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY"))
-                        .execute(&mut *tx)
-                        .await?;
-                    sqlx::query(&format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
-                        .execute(&mut *tx)
-                        .await?;
-                    sqlx::query(&format!("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname=current_schema() AND tablename='{table}' AND policyname='ohc_usage_tenant') THEN CREATE POLICY ohc_usage_tenant ON {table} USING (tenant_id=current_setting('app.current_tenant',true)) WITH CHECK (tenant_id=current_setting('app.current_tenant',true)); END IF; END $$")).execute(&mut *tx).await?;
-                }
+                sqlx::raw_sql(include_str!("../../persistence/usage_ledger_postgres.sql"))
+                    .execute(&mut *tx)
+                    .await?;
                 tx.commit().await?;
             }
             Self::Sqlite(pool) => {
-                for ddl in SCHEMA {
-                    sqlx::query(ddl).execute(pool).await?;
-                }
+                let mut tx = pool.begin().await?;
+                sqlx::raw_sql(include_str!("../../persistence/usage_ledger_sqlite.sql"))
+                    .execute(&mut *tx)
+                    .await?;
+                tx.commit().await?;
             }
         }
         Ok(())
@@ -326,6 +309,34 @@ impl UsageLedger {
         })
     }
 
+    /// Preserve every outstanding micro-unit when a durable execution claim
+    /// cannot be reconciled. This never converts a hold into a bill or releases
+    /// it, and never erases an already observed receipt.
+    pub async fn require_reconciliation(
+        &self,
+        tenant: &str,
+        event: &str,
+    ) -> Result<(), LedgerError> {
+        if !identifier(tenant) || !identifier(event) {
+            return Err(LedgerError::Invalid);
+        }
+        transaction!(self, tenant, tx, {
+            sqlx::query("UPDATE ohc_usage_records SET state='reconciliation_required' WHERE tenant_id=$1 AND event_id=$2 AND state IN ('reserved','in_flight')").bind(tenant).bind(event).execute(&mut *tx).await?;
+            let present: Option<(String,)> = sqlx::query_as(
+                "SELECT state FROM ohc_usage_records WHERE tenant_id=$1 AND event_id=$2",
+            )
+            .bind(tenant)
+            .bind(event)
+            .fetch_optional(&mut *tx)
+            .await?;
+            if present.is_none() {
+                return Err(LedgerError::State);
+            }
+            tx.commit().await?;
+            Ok(())
+        })
+    }
+
     pub async fn settle(
         &self,
         tenant: &str,
@@ -385,6 +396,12 @@ impl UsageLedger {
                 .bind(tenant).bind(&scope.provider).bind(&receipt.provider_request_id).bind(event)
                 .execute(&mut *tx).await?.rows_affected();
             if receipt_claimed != 1 {
+                // Keep the actual conflicting observation for reconciliation.
+                // Its identifier is already charged elsewhere, so this hold
+                // must neither be charged a second time nor silently released.
+                sqlx::query("UPDATE ohc_usage_records SET state='reconciliation_required',receipt_json=$3,receipt_digest=$4,provider_cost_micros=$5 WHERE tenant_id=$1 AND event_id=$2")
+                    .bind(tenant).bind(event).bind(&receipt_json).bind(&receipt_digest).bind(provider_cost).execute(&mut *tx).await?;
+                tx.commit().await?;
                 return Err(LedgerError::Conflict);
             }
             let charge = charge.ok_or(LedgerError::State)?;

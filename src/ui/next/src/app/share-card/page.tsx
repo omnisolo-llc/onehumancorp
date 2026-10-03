@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import RedirectAfterHydration from './RedirectAfterHydration';
 
 type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
@@ -14,7 +15,9 @@ function normalizeShareTarget(rawUrl: string) {
     if (Array.from(rawUrl).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127 || char === '\\')) return defaultTargetUrl;
     const parsedUrl = new URL(rawUrl, 'http://localhost:3000');
     if (parsedUrl.username || parsedUrl.password) return defaultTargetUrl;
-    const targetPath = decodeURIComponent(parsedUrl.pathname).replace(/\/+/g, '/').replace(/\/$/, '');
+    const decodedPath = decodeURIComponent(parsedUrl.pathname);
+    if (Array.from(decodedPath).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127 || char === '\\')) return defaultTargetUrl;
+    const targetPath = decodedPath.replace(/\/+/g, '/').replace(/\/$/, '');
     if (targetPath.toLowerCase() === '/share-card') return defaultTargetUrl;
     if (parsedUrl.origin === 'http://localhost:3000') {
       if (parsedUrl.pathname.startsWith('//')) return defaultTargetUrl;
@@ -64,17 +67,7 @@ export default async function ShareCardPage({ searchParams }: Props) {
   const urlParam = typeof resolvedSearchParams.url === 'string' ? resolvedSearchParams.url : defaultTargetUrl;
   const targetUrl = normalizeShareTarget(urlParam);
 
-  // Sanitize for safe HTML injection
-  const safeHtmlTarget = targetUrl.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  // Use client-side redirect so crawlers have a chance to read the OG tags
-  return (
-    <>
-      <meta httpEquiv="refresh" content={`0;url=${safeHtmlTarget}`} />
-      <script dangerouslySetInnerHTML={{ __html: `window.location.replace(${JSON.stringify(targetUrl).replace(/</g, '\\u003c')});` }} />
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-600 font-medium">Redirecting to <a href={safeHtmlTarget} className="text-[#0071E3] hover:underline">{safeHtmlTarget}</a>...</p>
-      </div>
-    </>
-  );
+  // Metadata stays in the server document for link previews. React escapes the
+  // real normalized URL; manually escaping it would corrupt query separators.
+  return <RedirectAfterHydration targetUrl={targetUrl} />;
 }

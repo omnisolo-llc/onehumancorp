@@ -32,46 +32,16 @@ async fn setup() -> PgPool {
 
 #[derive(Clone, Copy, Debug)]
 enum Embed {
-    PostPurchase,
-    CustomerReferral,
     ViralGoal,
     BirthdayClub,
 }
-const EMBEDS: [Embed; 4] = [
-    Embed::PostPurchase,
-    Embed::CustomerReferral,
-    Embed::ViralGoal,
-    Embed::BirthdayClub,
-];
+const EMBEDS: [Embed; 2] = [Embed::ViralGoal, Embed::BirthdayClub];
 
 async fn render(pool: &PgPool, embed: Embed, tenant: Option<&str>, hide: Option<&str>) -> String {
     let state = Extension(GrowthState { pool: pool.clone() });
     let tenant = tenant.map(str::to_owned);
     let hide_branding = hide.map(str::to_owned);
     let response = match embed {
-        Embed::PostPurchase => handle_post_purchase_embed(
-            state,
-            Query(PostPurchaseEmbedQuery {
-                tenant,
-                discount: None,
-                theme: None,
-                hide_branding,
-            }),
-        )
-        .await
-        .into_response(),
-        Embed::CustomerReferral => handle_customer_referral_embed(
-            state,
-            Query(CustomerReferralEmbedQuery {
-                tenant,
-                give: None,
-                get: None,
-                theme: None,
-                hide_branding,
-            }),
-        )
-        .await
-        .into_response(),
         Embed::ViralGoal => handle_viral_goal_tracker(
             state,
             Query(ViralGoalTrackerQuery {
@@ -132,11 +102,6 @@ macro_rules! pro_case {
         }
     };
 }
-pro_case!(post_purchase_pro_uses_canonical_id, Embed::PostPurchase);
-pro_case!(
-    customer_referral_pro_uses_canonical_id,
-    Embed::CustomerReferral
-);
 pro_case!(viral_goal_pro_uses_canonical_id, Embed::ViralGoal);
 pro_case!(birthday_club_pro_uses_canonical_id, Embed::BirthdayClub);
 
@@ -452,7 +417,6 @@ async fn assert_referral_context_safe(kind: usize) {
         "",
     ] {
         let html = match kind {
-            0 => render(&pool, Embed::CustomerReferral, Some(tenant), Some("true")).await,
             1 => render(&pool, Embed::ViralGoal, Some(tenant), Some("true")).await,
             2 => {
                 let response = handle_viral_widget_embed(
@@ -504,10 +468,6 @@ async fn assert_referral_context_safe(kind: usize) {
             String::from_utf8_lossy(&output.stderr)
         );
     }
-}
-#[tokio::test]
-async fn customer_referral_tenant_is_data_not_javascript() {
-    assert_referral_context_safe(0).await;
 }
 #[tokio::test]
 async fn viral_goal_tenant_is_data_not_javascript() {
@@ -599,10 +559,6 @@ async fn assert_referral_url_round_trip(embed: Embed, kind: &str) {
             String::from_utf8_lossy(&output.stderr)
         );
     }
-}
-#[tokio::test]
-async fn post_purchase_input_and_branding_url_preserve_raw_tenant() {
-    assert_referral_url_round_trip(Embed::PostPurchase, "post-purchase").await;
 }
 #[tokio::test]
 async fn birthday_branding_url_preserves_raw_tenant_and_capture_attribute() {

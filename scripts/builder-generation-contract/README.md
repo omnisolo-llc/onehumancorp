@@ -13,4 +13,64 @@ against the repository Cargo.lock and fingerprints all covered sources.
 These are focused local contract tests, not live-provider or full-server
 certification. Full Cargo/Next/desktop and hosted CI gates remain required.
 
-The combined gate preserves the original 32 generation/admission cases and 15 imported durable receipt lifecycle cases. Its mandatory CI floor is 47. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
+The combined gate preserves the original generation/admission cases, imported durable receipt lifecycle cases, and funded admission cases. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
+
+The mandatory inventory is 90 cases. Canonical brand writes require the actual
+same PostgreSQL pool as the credential store. Startup can reuse that pool for
+private builder storage only after proving that the configured business pool
+shares its real advisory-lock namespace, search path and canonical/business
+relation IDs. The proof performs no schema/data writes, rejects missing or
+ambiguous identity, and bypasses a second connection for an identical handle.
+Real cloned-database fixtures demonstrate why equal names/catalog IDs do not
+establish that namespace. Restricted roles remain restricted.
+
+SQLite and MySQL dummy PostgreSQL handles are excluded. Storage-independent
+text drafting remains available; SQLite builder persistence is unfinished.
+Separate configured stores are retained; rejected private binding never moves
+business data. Public publication reads and previously accepted workers are
+separate from the request bearer lifetime. Their broader backend guard and
+request-owned publication fence remain distinct follow-on work.
+
+The ten SQLite capability cases use real file-backed and max-one-connection
+in-memory databases. They verify exact-pool binding, canonical revocation,
+bounded/cancelled write intent, deferred COMMIT failure and an actual blocked
+COMMIT that can succeed after its acknowledgement deadline. Five additional
+cleanup/expiry unit tests live in the actual server_auth crate. The portable
+capability does not by itself fix builder storage.
+
+Five additional startup cases exercise the actual startup selection statement
+with real SQLite pools. They preserve existing accounts and business rows in
+the configured/default store, the max-one-connection in-memory database,
+connection hooks/options, selector conflict rejection and URL-file aliases.
+Environment-dependent cases run in isolated child processes. SQLite startup
+adopts the already configured legacy pool before constructing auth and portable
+repositories. Other backends keep their existing configured data selection.
+
+Requested encryption must fail when the actual engine lacks SQLCipher. The
+default focused graph tests that rejection. The optional `production-sqlcipher`
+feature selects the repository's pinned Linux production cipher dependency:
+
+```
+cargo test --locked --offline --manifest-path scripts/builder-generation-contract/Cargo.toml --features production-sqlcipher sqlite_startup_ -- --test-threads=1
+```
+
+With that feature the encryption case requires an actual cipher engine, writes
+an owned encrypted file, rejects a wrong key and reopens the original data with
+the correct fixture key. A plain-engine rejection is not encryption proof.
+
+The legacy startup cipher-check block is also compiled verbatim against the
+actual persistence parent's private connection declaration and explicit
+re-exports. A real max-one-connection fixture confirms that a successful check
+retains its database, while plain-engine rejection closes the failed startup
+pool. The harness does not publish synthetic connection-module aliases.
+
+Owned database teardown distinguishes real clients from PostgreSQL autovacuum
+maintenance. The lifecycle tests observe a real slow autovacuum, exercise normal
+template clone/drop while it is active, and retain a real client to prove that
+client leaks still fail with bounded, credential-free ownership diagnostics.
+Only autovacuum workers are excluded; unknown backend types remain blocking.
+
+A deterministic real after-release interleaving covers the pinned SQLx pool
+shutdown race. The max1 clone fixture acquires and acknowledges closure of its
+known backend before pool shutdown, then verifies the pool and server drain.
+The dependency version and the real cloned-catalog/namespace assertion stay intact.

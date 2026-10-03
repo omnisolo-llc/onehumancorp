@@ -1,5 +1,6 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { invalidateQueueOwner, readQueueOwner } from '@/lib/sync/queueIdentity';
 import Project from '../project-showcase/page';
 import Lead from '../lead-magnet-generator/page';
 import Referral from '../customer-referral-program/page';
@@ -16,12 +17,26 @@ import Fab from '../referral-fab-builder/page';
 import Testimonial from '../testimonial-widget/page';
 import Exit from '../exit-intent-builder/page';
 import Event from '../event-rsvp-builder/page';
-const plan = vi.hoisted(() => ({ hasPro: true }));
+const plan = vi.hoisted(() => ({
+  hasPro: true,
+  get currentPlan(): string { return this.hasPro ? 'Pro' : 'Free'; },
+  verifiedOwner: { userId: 'preview-owner', tenantId: 'preview-tenant' },
+  planError: null,
+  refreshPlan: async () => false,
+}));
 vi.mock('./useProPlan', () => ({ useProPlan: () => plan }));
 vi.mock('./AppShell', () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
 vi.mock('./PoweredByOmniSolo', () => ({ PoweredByOmniSolo: () => <span>Powered by OmniSolo</span> }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn(), back: vi.fn() }) }));
-beforeEach(() => { plan.hasPro = true; localStorage.clear(); Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } }); });
+beforeEach(async () => {
+  plan.hasPro = true; localStorage.clear(); act(() => invalidateQueueOwner());
+  vi.stubGlobal('fetch', vi.fn(async url => url === '/api/v1/auth/session-identity'
+    ? Response.json({ ...plan.verifiedOwner, expiresAt: Date.now() + 60_000 })
+    : Response.json({ error: 'unavailable' }, { status: 503 })));
+  await readQueueOwner();
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: vi.fn().mockResolvedValue(undefined) } });
+});
+afterEach(() => { cleanup(); act(() => invalidateQueueOwner()); vi.unstubAllGlobals(); });
 const copied = () => vi.mocked(navigator.clipboard.writeText).mock.calls.at(-1)![0];
 it('project showcase copy follows current eligibility while retaining the configured project', async () => {
   const view = render(<Project />); fireEvent.click(screen.getByRole('checkbox'));

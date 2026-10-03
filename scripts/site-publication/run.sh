@@ -4,6 +4,7 @@ cd "$(dirname "$0")/../.."
 : "${OHC_PUBLICATION_TEST_DATABASE_URL:?Supply an owned disposable PostgreSQL database}"
 python3 scripts/site-publication/database_guard.py
 python3 scripts/site-publication/test_mount.py
+python3 scripts/site-publication/test_deny_http_egress.py
 export OMNISOLO_DATABASE_URL="$OHC_PUBLICATION_TEST_DATABASE_URL" OMNISOLO_STANDALONE_MODE=false
 export NODE_PATH="$PWD/src/ui/next/node_modules${NODE_PATH:+:$NODE_PATH}"
 printf 'null' | node scripts/site-publication/jcs-proof.cjs >/dev/null
@@ -14,6 +15,6 @@ cargo metadata --locked --offline --manifest-path scripts/site-publication/Cargo
 python3 scripts/site-publication/verify_lock.py
 python3 scripts/site-publication/prepare.py
 before=$(sha256sum scripts/site-publication/source-manifest.json)
-cargo test --locked --offline --manifest-path scripts/site-publication/Cargo.toml -- --test-threads=1
+python3 scripts/site-publication/deny_http_egress.py -- cargo test --locked --offline --manifest-path scripts/site-publication/Cargo.toml -- --test-threads=1
 python3 scripts/site-publication/prepare.py
 test "$before" = "$(sha256sum scripts/site-publication/source-manifest.json)"

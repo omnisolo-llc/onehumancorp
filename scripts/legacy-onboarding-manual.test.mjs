@@ -2,7 +2,7 @@ import {createOriginLockManager} from './test-support/origin-locks.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {JSDOM} from 'jsdom';
+import {JSDOM} from './test-support/offline-dom.mjs';
 const paths=['src/ui/tauri/src/ui/setup.html',...['setup.html','ui/setup.html','api/ui/setup.html','api/v1/ui/setup.html'].map(p=>`src/ui/next/public/${p}`)];
 const owner={userId:'user-1',tenantId:'org-1'};
 const key='omnisolo_onboarding_owned_v1:'+encodeURIComponent(JSON.stringify([owner.userId,owner.tenantId]))+':legacy-draft';

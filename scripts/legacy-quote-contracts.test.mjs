@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 
 const files = ['src/ui/tauri/src/ui/quote.html', 'src/ui/next/public/quote.html', 'src/ui/next/public/ui/quote.html'];
 const quoteId = 'be72a36d-1dfd-46c0-b52d-29147bbbaacf';

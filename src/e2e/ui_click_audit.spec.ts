@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
-import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget, tagClickTargets } from './support/ui_click_audit';
 
 import { createServer } from 'node:http';
+import { runDynamicClickInventory } from '../../scripts/ui-audit-inventory.cjs';
 import { createAuditNavigation } from './support/ui_audit_navigation';
 
 // These verify the crawler's observation boundary using real browser behavior,
@@ -352,7 +353,8 @@ test('does not trigger delayed autosave DOM or network effects before an inert s
 });
 
 test('waits for a real busy shell replacement before discovering its control', async ({ page }) => {
-  const server = createServer((_request, response) => {
+  const server = createServer((request, response) => {
+    if (request.url !== '/fixture-busy') { response.writeHead(404).end(); return; }
     response.writeHead(200, { 'content-type': 'text/html' });
     response.end(`<div aria-busy="true"><button>Loading control</button></div><script>setTimeout(()=>{document.querySelector('div').outerHTML='<button onclick="this.textContent=String(Number(this.textContent)+1)">0</button>'},400)</script>`);
   });
@@ -361,7 +363,7 @@ test('waits for a real busy shell replacement before discovering its control', a
     const address = server.address();
     if (!address || typeof address === 'string') throw new Error('Missing fixture address');
     const navigate = createAuditNavigation(`http://127.0.0.1:${address.port}`, async () => undefined);
-    await navigate(page, '/');
+    await navigate(page, '/fixture-busy');
     await expect(page.getByRole('button', { name: 'Loading control' })).toHaveCount(0);
     const effect = await observeClickEffects(page, (await page.getByRole('button', { name: '0', exact: true }).elementHandle())!);
     expect(hasMeaningfulClickEffect(effect)).toBe(true);
@@ -403,4 +405,23 @@ test('focus moved into a hidden field or the document body is not a meaningful c
     expect(effect.focusSeen).toBe(false);
     expect(hasMeaningfulClickEffect(effect)).toBe(false);
   }
+});
+
+
+test('a vanished discovered button fails the real-browser crawl before claiming exhaustion', async ({ page }) => {
+  const baseline = '<button id="dismiss" onclick="document.querySelector(\'#approve\').remove()">Dismiss</button><button id="approve">Approve</button>';
+  await page.setContent(baseline);
+  const discovered: string[] = [], observed = new Set<string>();
+  await expect(runDynamicClickInventory(discovered, observed, {
+    discover: () => tagClickTargets(page),
+    visit: async (candidate: { key: string }) => {
+      const target = await resolveAuditTarget(page, candidate.key, () => tagClickTargets(page));
+      expect(hasMeaningfulClickEffect(await observeClickEffects(page, target))).toBe(true);
+      observed.add(candidate.key);
+    },
+    // Reproduce a backend-persisted dismissal surviving a document reset.
+    reset: async () => { await replaceAuditDocument(page); await page.setContent('<button id="dismiss">Dismiss</button>'); },
+  })).rejects.toThrow(/missing=.*Approve/);
+  expect(discovered).toHaveLength(2);
+  expect([...observed]).toHaveLength(1);
 });

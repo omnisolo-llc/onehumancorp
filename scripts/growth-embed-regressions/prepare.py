@@ -9,8 +9,6 @@ ROOT = HERE.parents[1]
 SOURCE = ROOT / "src/server/api/growth.rs"
 source = SOURCE.read_text()
 names = [
-    ("handle_post_purchase_embed", "PostPurchaseEmbedQuery"),
-    ("handle_customer_referral_embed", "CustomerReferralEmbedQuery"),
     ("handle_viral_goal_tracker", "ViralGoalTrackerQuery"),
     ("handle_birthday_club_embed", "BirthdayClubEmbedQuery"),
     ("handle_viral_widget_embed", "ViralWidgetEmbedQuery"),
@@ -55,7 +53,7 @@ use sqlx::PgPool;
 pub struct GrowthState { pool: PgPool }
 '''
 generated = head + "\n".join(items)
-generated += f"\nconst LOOKUPS: [&str; 4] = {json.dumps(queries)};\n"
+generated += f"\nconst LOOKUPS: [&str; 2] = {json.dumps(queries)};\n"
 generated += f"const PG_TENANTS_DDL: &str = {json.dumps(pg_ddl)};\n"
 generated += f"const PG_REFERRALS_DDL: &str = {json.dumps(referral_ddl)};\n"
 generated += f"const SQLITE_TENANTS_DDL: &str = {json.dumps(sqlite_ddl)};\n"
@@ -68,4 +66,4 @@ manifest = {
     "generated_sha256": hashlib.sha256(generated.encode()).hexdigest(),
 }
 (HERE / "source-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-print("Prepared five complete production handlers and canonical PostgreSQL/SQLite schemas")
+print("Prepared three complete production handlers and canonical PostgreSQL/SQLite schemas")

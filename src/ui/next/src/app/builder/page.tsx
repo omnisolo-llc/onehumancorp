@@ -5,11 +5,13 @@ import { SmartBlock, SkeletonBlock, ActionSheet, DraggableBlock } from "./compon
 import { useWalkthrough } from "../../components/help";
 import { WalkthroughTarget, InteractiveWalkthrough } from "../../components/Walkthrough";
 import { WithTooltip } from "../../components/TooltipRegistry";
-import { useBuilderStore, initializeBuilderDraft, builderDraftError, subscribeBuilderPersistence, LEGACY_BUILDER_DRAFT_KEY, isBuilderBlocks, type BuilderState } from "./store";
+import { useBuilderStore, initializeBuilderDraft, builderDraftError, subscribeBuilderPersistence, LEGACY_BUILDER_DRAFT_KEY, type BuilderState } from "./store";
 import { assertBuilderEditor, builderScopeActive, type BuilderScope } from './ownedDraft';
 import { fetchForOwnedBusinessAction, fetchForOwnedBusinessRead, subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { canonicalRequest } from '../onboarding/contracts';
 import { sameOwner, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { readGeneratedBlocks } from './generatedBlocks';
+import { generationFailureMessage } from './generationFailure';
 import { PublicationPanel } from './PublicationPanel';
 import { layoutPublicationSnapshot } from './layoutPublicationSnapshot';
 import { prepareSiteSnapshot } from './publicationContracts';
@@ -140,10 +142,8 @@ export default function BuilderPage() {
       const data = await response.json();
       if (!active()) return;
       if (canonicalRequest(input()) !== fingerprint) throw new Error('Your draft changed; the earlier generated result was not applied.');
-      if (response.status !== 200 || !data || data.success !== undefined && data.success !== true || data.error != null || !Array.isArray(data.pages) || !Array.isArray(data.pages[0]?.blocks)) throw new Error('The generated draft could not be confirmed.');
-      const names: Record<string, string> = { HeroBlock: 'Hero', ProductGridBlock: 'Catalog', ServiceBookingBlock: 'Booking', TestimonialBlock: 'Testimonials', ReferralBlock: 'Referral' };
-      const generated: unknown = data.pages[0].blocks.map((block: Record<string, unknown>) => ({ type: typeof block.block_type === 'string' ? names[block.block_type] || block.block_type : '', props: block.content }));
-      if (!isBuilderBlocks(generated)) throw new Error('The generated draft has unsupported content.');
+      if (response.status !== 200) throw new Error(generationFailureMessage(response.status, data));
+      const generated = readGeneratedBlocks(data);
       await prepareSiteSnapshot(layoutPublicationSnapshot({ title: submitted.businessName || 'Home', bio: submitted.bio, blocks: generated }));
       if (!active()) return;
       if (canonicalRequest(input()) !== fingerprint) throw new Error('Your draft changed; the earlier generated result was not applied.');

@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect } from '../fixtures';
 import { e2eDbQuery } from '../db_utils';
+import { publishOwnedStorefront } from '../published_storefront_fixture';
+import type { SiteSnapshot } from '../../ui/next/src/app/builder/publicationContracts';
 
 function productSchema(html: string): Record<string, unknown> {
   const script = html.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
@@ -9,7 +11,7 @@ function productSchema(html: string): Record<string, unknown> {
 }
 
 test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-rendering', () => {
-  test('Marketing Agent generates persisted SEO and invalidates the real storefront after a product edit', async ({ page, request, memberPage, anonymousPage }) => {
+  test('Marketing Agent refreshes private product SEO while reviewed public snapshots stay immutable', async ({ page, request, memberPage, anonymousPage, baseURL }) => {
     if (!process.env.E2E_POSTGRES_CONTAINER?.startsWith('ohc-e2e-pg-')) {
       throw new Error('Storefront fixtures require the native isolated E2E PostgreSQL container.');
     }
@@ -50,7 +52,7 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
     await expect(page).toHaveURL(/\/dashboard(?:[/?]|$)/);
 
     const mutationHeaders = { origin: new URL(page.url()).origin, 'sec-fetch-site': 'same-origin' };
-    const publication = await page.request.post('/api/v1/builder/publish_draft', {
+    const privateDraft = await page.request.post('/api/v1/builder/publish_draft', {
       headers: mutationHeaders,
       data: {
         domain: null,
@@ -64,13 +66,13 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
         },
       },
     });
-    expect(publication.status()).toBe(200);
-    const site = await publication.json() as { id: string };
+    expect(privateDraft.status()).toBe(200);
+    const site = await privateDraft.json() as { id: string };
     expect(site.id).toMatch(/^[a-f0-9-]{36}$/);
     await expect.poll(async () => {
       const rows = await e2eDbQuery('SELECT published_at IS NOT NULL AS published FROM builder_sites WHERE id = $1 AND tenant_id = $2', [site.id, tenantId]);
       return rows[0]?.published;
-    }, { message: 'The real publication job must mark the returned site published', timeout: 15000 }).toBe(true);
+    }, { message: 'The legacy private-draft job must finish before previewing it', timeout: 15000 }).toBe(true);
     const siteResponse = await page.request.get(`/api/v1/builder/edge/${tenantId}/${site.id}`);
     expect(siteResponse.status()).toBe(200);
     expect(await siteResponse.text()).toContain(storeName);
@@ -99,20 +101,30 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
       return { title: row?.title, price: Number(row?.price_cents), seoName: row?.seo_schema_json?.name, seoPrice: Number(row?.seo_schema_json?.offers?.price) };
     }, { message: 'The marketing agent must persist product-specific SEO from the actual creation event', timeout: 15000 }).toEqual({ title: productName, price: 5000, seoName: productName, seoPrice: 50 });
 
-    const storefrontUrl = new URL(`/api/v1/storefront/${tenantId}/${product.product_id}`, apiOrigin).toString();
-    const first = await anonymousPage.request.get(storefrontUrl);
+    const storefrontPath = `/api/v1/storefront/${tenantId}/${product.product_id}`;
+    expect((await anonymousPage.request.get(new URL(storefrontPath, apiOrigin).href)).status()).toBe(401);
+    expect((await request.get(storefrontPath)).status()).toBe(404);
+    const first = await page.request.get(storefrontPath);
     expect(first.status()).toBe(200);
-    expect(first.headers()['x-cache']).toBe('MISS');
+    expect(first.headers()['cache-control']).toContain('private, no-store');
+    expect(first.headers()['x-cache']).toBeUndefined();
     expect(productSchema(await first.text())).toMatchObject({ '@type': 'Product', name: productName, offers: { price: 50, priceCurrency: 'USD' } });
-    await expect.poll(async () => {
-      const cached = await anonymousPage.request.get(storefrontUrl);
-      expect(cached.status()).toBe(200);
-      expect(cached.headers()['cache-control']).toContain('s-maxage=60');
-      expect(cached.headers()['etag']).toBeTruthy();
-      return { cache: cached.headers()['x-cache'], schema: productSchema(await cached.text()) };
-    }, { message: 'The public edge cache must serve the generated product SEO', timeout: 15000 }).toMatchObject({ cache: 'HIT', schema: { name: productName, offers: { price: 50 } } });
-    await anonymousPage.goto(storefrontUrl);
-    await expect(anonymousPage).toHaveTitle(new RegExp(productName));
+    const initialSeo = (await persistedProduct()).seo_schema_json as SiteSnapshot['pages'][number]['seo_metadata'];
+    const reviewedSnapshot = (seo: SiteSnapshot['pages'][number]['seo_metadata']): SiteSnapshot => ({
+      domain: null, pages: [{ path: '/', title: productName, seo_metadata: seo,
+        blocks: [{ block_type: 'HeroBlock', sort_order: 0, content: { headline: productName, subtitle: description } }],
+      }],
+    });
+    const published = await publishOwnedStorefront(page, baseURL, { userId, tenantId }, reviewedSnapshot(initialSeo));
+    const publicPath = published.receipt.public_path as string;
+    const publicResponse = await anonymousPage.request.get(publicPath);
+    expect(publicResponse.status()).toBe(200);
+    expect(publicResponse.headers()['cache-control']).toContain('no-store');
+    expect(publicResponse.headers()['etag']).toBeTruthy();
+    const publicHtml = await publicResponse.text();
+    expect(productSchema(publicHtml)).toMatchObject({ '@type': 'Product', name: productName, offers: { price: 50, priceCurrency: 'USD' } });
+    await anonymousPage.goto(publicPath);
+    await expect(anonymousPage).toHaveTitle(productName);
     await expect(anonymousPage.locator('meta[name="description"]')).toHaveAttribute('content', new RegExp(description.replace('.', '\\.')));
 
     // Authorization, tenant isolation and invalid input must leave the real
@@ -136,19 +148,31 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
     expect((await updatedResponse).status()).toBe(200);
     await expect(page.getByRole('status').filter({ hasText: 'Product updated' })).toBeVisible();
     await expect(page.getByText('$45.00', { exact: true })).toBeVisible();
-    const invalidated = await anonymousPage.request.get(storefrontUrl);
+    const invalidated = await page.request.get(storefrontPath);
     expect(invalidated.status()).toBe(200);
-    expect(invalidated.headers()['x-cache']).toBe('MISS');
+    expect(invalidated.headers()['cache-control']).toContain('private, no-store');
+    expect(invalidated.headers()['x-cache']).toBeUndefined();
 
     await expect.poll(async () => {
       const row = await persistedProduct();
       return { price: Number(row?.price_cents), seoPrice: Number(row?.seo_schema_json?.offers?.price) };
     }, { message: 'ProductUpdated must refresh persisted pricing and generated SEO', timeout: 15000 }).toEqual({ price: 4500, seoPrice: 45 });
     await expect.poll(async () => {
-      const response = await anonymousPage.request.get(storefrontUrl);
+      const response = await page.request.get(storefrontPath);
       expect(response.status()).toBe(200);
-      return { cache: response.headers()['x-cache'], schema: productSchema(await response.text()) };
-    }, { message: 'The public cached storefront must contain the new price', timeout: 15000 }).toMatchObject({ cache: 'HIT', schema: { name: productName, offers: { price: 45 } } });
+      return productSchema(await response.text());
+    }, { message: 'The owner-only product preview must use refreshed SEO', timeout: 15000 }).toMatchObject({ name: productName, offers: { price: 45 } });
+    // Updating a private catalog is never fresh publication authority.
+    const unchanged = await anonymousPage.request.get(publicPath);
+    expect(unchanged.status()).toBe(200);
+    expect(await unchanged.text()).toBe(publicHtml);
+    expect(unchanged.headers()['etag']).toBe(publicResponse.headers()['etag']);
+    const updatedSeo = (await persistedProduct()).seo_schema_json as SiteSnapshot['pages'][number]['seo_metadata'];
+    const republished = await publishOwnedStorefront(page, baseURL, { userId, tenantId }, reviewedSnapshot(updatedSeo));
+    const updatedPublic = await anonymousPage.request.get(republished.receipt.public_path);
+    expect(updatedPublic.status()).toBe(200);
+    expect(productSchema(await updatedPublic.text())).toMatchObject({ name: productName, offers: { price: 45 } });
+    expect(republished.receipt.public_path).not.toBe(publicPath);
     await page.reload();
     await expect(page.getByText('$45.00', { exact: true })).toBeVisible();
 

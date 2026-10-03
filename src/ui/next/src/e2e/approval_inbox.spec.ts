@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { createDashboardAuditCase } from '../../../../e2e/support/dashboard_audit_fixture';
 
 test.describe('Unified Agent Feed Mobile Test', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -48,20 +49,23 @@ test.describe('Unified Agent Feed Mobile Test', () => {
     await expect(approvalTag).toHaveClass(/bg-\[#0066FF\]\/10/);
   });
 
-  test('should display action buttons for proposals', async ({ page }) => {
-    await page.goto('/dashboard');
-    await expect(page.locator('button', { hasText: /Proposals/ }).first()).toBeVisible({ timeout: 15000 });
-
-    const approveButton = page.locator('button', { hasText: 'Approve' }).first();
-    await expect(approveButton).toBeVisible();
-    await expect(approveButton).toHaveClass(/bg-green-500/);
-
-    const editButton = page.locator('button', { hasText: 'Edit' }).first();
-    await expect(editButton).toBeVisible();
-
-    const denyButton = page.locator('button', { hasText: 'Deny' }).first();
-    await expect(denyButton).toBeVisible();
-    await expect(denyButton).toHaveClass(/bg-red-100/);
+  test('should display action buttons for the recorded generic proposal', async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated app base URL is required');
+    const owned = await createDashboardAuditCase(browser, baseURL, { width: 375, height: 812 });
+    try {
+      await owned.navigate();
+      const proposal = owned.page.getByTestId(`triage-card-${owned.actor.namespace}-e2e-feed-reschedule`);
+      await expect(proposal).toBeVisible();
+      // Quote drafts have a distinct blue Approve & Send action. These existing
+      // assertions belong to the recorded generic proposal, not the first card.
+      const approveButton = proposal.getByRole('button', { name: 'Approve proposal', exact: true });
+      await expect(approveButton).toBeVisible();
+      await expect(approveButton).toHaveClass(/bg-green-500/);
+      await expect(proposal.getByRole('button', { name: 'Edit proposal', exact: true })).toBeVisible();
+      const denyButton = proposal.getByRole('button', { name: 'Reject proposal', exact: true });
+      await expect(denyButton).toBeVisible();
+      await expect(denyButton).toHaveClass(/bg-red-100/);
+    } finally { await owned.close(); }
   });
 
   test('should display empty state or loading state in Activity Feed correctly', async ({ page }) => {

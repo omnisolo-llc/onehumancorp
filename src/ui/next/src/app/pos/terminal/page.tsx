@@ -4,10 +4,32 @@ import { useState, useEffect, useRef } from 'react';
 import StripeTerminalClient from './StripeTerminalClient';
 import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
-import { QUEUE_IDENTITY_EPOCH_KEY } from '../../../lib/sync/queueIdentity';
+import { QUEUE_IDENTITY_EPOCH_KEY, currentVerifiedQueueOwner, currentVerifiedQueueLease, hasPendingQueueOwnerVerification, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '../../../lib/sync/queueIdentity';
+import { fetchForOwnedBusinessRead, openOnboardingSession } from '../../onboarding/draftSession';
 import { MutationService } from '../../../lib/sync/MutationService';
 
 type TerminalStaff = { id: string; name: string; role: string; tenant_id: string };
+type TerminalLease = NonNullable<ReturnType<typeof currentVerifiedQueueLease>>;
+
+function waitForTerminalLease(owner: QueueOwner, current: () => boolean): Promise<TerminalLease> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let unsubscribe = () => {};
+    const timer = window.setTimeout(() => finish(null), 3000);
+    const finish = (lease: TerminalLease | null) => {
+      if (settled) return;
+      settled = true; window.clearTimeout(timer); unsubscribe();
+      if (lease) resolve(lease); else reject(new Error('Verified terminal identity unavailable'));
+    };
+    unsubscribe = subscribeQueueIdentityReadiness(() => {
+      if (!current()) { finish(null); return; }
+      const lease = currentVerifiedQueueLease();
+      if (lease) finish(sameOwner(lease.owner, owner) ? lease : null);
+      else if (!hasPendingQueueOwnerVerification()) finish(null);
+    });
+    if (settled) unsubscribe();
+  });
+}
 
 function confirmedStaff(value: unknown): TerminalStaff | null {
   if (!value || typeof value !== 'object') return null;
@@ -28,6 +50,18 @@ export default function POSTerminal() {
   const [pin, setPin] = useState('');
   const [locked, setLocked] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
+  const [clockPending, setClockPending] = useState(false);
+  const [clockError, setClockError] = useState('');
+  const clockPendingRef = useRef(false);
+  const mounted = useRef(true);
+  const terminalVersion = useRef(0);
+  const terminalLease = useRef<TerminalLease | null>(null);
+  const committedClock = useRef<{ lease: TerminalLease; action: 'CLOCK_IN' | 'CLOCK_OUT' } | null>(null);
+  const [queueIdentityReady, setQueueIdentityReady] = useState(false);
+  const [queueAccessible, setQueueAccessible] = useState(false);
+  const leaseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const inventoryVersion = useRef(0);
+  const [inventoryError, setInventoryError] = useState('');
   const [activeStaff, setActiveStaff] = useState<TerminalStaff | null>(null);
   const [inventory, setInventory] = useState<import("@/lib/business-records").SaleProduct[]>([]);
   useState(true);
@@ -54,6 +88,37 @@ export default function POSTerminal() {
   const [, setSessionId] = useState<string | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
 
+  const retireTerminal = () => {
+    terminalVersion.current += 1; terminalLease.current = null; committedClock.current = null;
+    clearTimeout(leaseTimer.current); inventoryVersion.current += 1; setInventoryError('');
+    authenticationPending.current = false; setAuthenticating(false); setPin('');
+    clockPendingRef.current = false; setClockPending(false); setClockError('');
+    setQueueIdentityReady(false); setClockedIn(false); setLocked(true); setActiveStaff(null);
+    setInventory([]); setCart([]); setCheckoutComplete(false); setCheckoutQueued(false);
+  };
+
+  useEffect(() => {
+    mounted.current = true;
+    const unsubscribe = subscribeQueueIdentityReadiness(() => {
+      const lease = terminalLease.current;
+      if (!lease) { setQueueIdentityReady(false); return; }
+      try {
+        if (lease.expiresAt <= Date.now() || lease.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)) { retireTerminal(); return; }
+      } catch { retireTerminal(); return; }
+      const owner = currentVerifiedQueueOwner();
+      if (!owner) { setQueueIdentityReady(false); return; }
+      if (!sameOwner(owner, lease.owner)) { retireTerminal(); return; }
+      setQueueIdentityReady(true);
+      if (committedClock.current?.lease === lease) {
+        setClockedIn(committedClock.current.action === 'CLOCK_IN');
+        committedClock.current = null; setClockError('');
+      }
+    });
+    const retire = () => retireTerminal();
+    window.addEventListener('pagehide', retire);
+    return () => { mounted.current = false; terminalVersion.current += 1; terminalLease.current = null; clearTimeout(leaseTimer.current); inventoryVersion.current += 1; unsubscribe(); window.removeEventListener('pagehide', retire); };
+  }, []);
+
 
   useEffect(() => {
     let active = true;
@@ -68,17 +133,19 @@ export default function POSTerminal() {
         clearTimeout(successTimer);
         const cleared = navigator.onLine && lastKnownCount !== null && lastKnownCount > 0 && qLen === 0;
         lastKnownCount = qLen;
-        setPendingSyncCount(qLen); setQueueError('');
+        setPendingSyncCount(qLen); setQueueError(''); setQueueAccessible(true);
         setSyncSuccess(cleared); setSyncing(navigator.onLine && qLen > 0);
         if (cleared) successTimer = setTimeout(() => { if (active) setSyncSuccess(false); }, 3000);
       } catch {
         if (!active || version !== readVersion) return;
         lastKnownCount = null; clearTimeout(successTimer);
         setSyncSuccess(false); setSyncing(false);
+        setQueueAccessible(false);
         setQueueError('Queue status is unavailable. Saved actions remain held until your session and local storage can be verified.');
       }
     };
     const handleIdentityChanged = () => {
+      retireTerminal(); setQueueAccessible(false);
       lastKnownCount = null; clearTimeout(successTimer); setSyncSuccess(false);
       setPendingSyncCount(0); void checkQueue();
     };
@@ -143,14 +210,28 @@ export default function POSTerminal() {
 
         authenticationPending.current = true;
         setAuthenticating(true);
+        const attempt = ++terminalVersion.current;
         try {
+          const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+          const current = () => mounted.current && attempt === terminalVersion.current && storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+          const expectedOwner = await openOnboardingSession();
+          const lease = await waitForTerminalLease(expectedOwner, current);
+          if (!current()) return;
           const res = await fetch('/api/v1/pos/auth', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-ohc-expected-user': expectedOwner.userId, 'x-ohc-expected-tenant': expectedOwner.tenantId },
             body: JSON.stringify({ pin: newPin })
           });
           const staff = res.ok ? confirmedStaff(await res.json()) : null;
           if (staff) {
+            const owner = await readQueueOwner();
+            await waitForTerminalLease(expectedOwner, current);
+            if (!current()) return;
+            if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
+            terminalLease.current = lease;
+            clearTimeout(leaseTimer.current);
+            leaseTimer.current = setTimeout(() => { if (terminalLease.current === lease) retireTerminal(); }, Math.min(lease.expiresAt - Date.now(), 2_147_483_647));
+            setQueueIdentityReady(hasVerifiedOfflineQueueOwner(owner));
             setActiveStaff(staff);
             setLocked(false);
             setPin('');
@@ -163,7 +244,7 @@ export default function POSTerminal() {
                 body: JSON.stringify({ device_id: deviceId })
               });
               const sessionData = await sessionRes.json();
-              if (sessionData.success) {
+              if (sessionData.success && mounted.current && attempt === terminalVersion.current) {
                 setSessionId(sessionData.session_id);
               } else {
                 console.error("Failed to start terminal session", sessionData.error_message);
@@ -172,18 +253,20 @@ export default function POSTerminal() {
                console.error("Failed to fetch session", e);
             }
 
-          } else {
+          } else if (mounted.current && attempt === terminalVersion.current) {
             setAuthenticationError('Your staff identity could not be verified. The terminal remains locked.');
             setPin('');
           }
         } catch {
+           if (!mounted.current || attempt !== terminalVersion.current) return;
            setAuthenticationError('The authentication service is unavailable. The terminal remains locked.');
            setActiveStaff(null);
            setLocked(true);
            setPin('');
         } finally {
-           authenticationPending.current = false;
-           setAuthenticating(false);
+           if (mounted.current && attempt === terminalVersion.current) {
+             authenticationPending.current = false; setAuthenticating(false);
+           }
         }
       }
     }
@@ -192,23 +275,30 @@ export default function POSTerminal() {
   const handleClear = () => setPin('');
 
   const handleLock = () => {
-    setLocked(true);
-    setActiveStaff(null);
+    retireTerminal();
   };
 
   const loadDashboard = async () => {
+    const lease = terminalLease.current;
+    if (!lease) return;
+    const version = ++inventoryVersion.current;
+    const current = () => {
+      const owner = currentVerifiedQueueOwner();
+      try { return mounted.current && terminalLease.current === lease && version === inventoryVersion.current && lease.expiresAt > Date.now() && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && !!owner && sameOwner(owner, lease.owner); }
+      catch { return false; }
+    };
     if (isOffline) {
-       // Just load something empty for now
-       setInventory([]);
+       if (current()) { setInventory([]); setInventoryError('Inventory is unavailable while offline.'); }
        return;
     }
     try {
-      const res = await fetch('/api/v1/pos/inventory');
+      const res = await fetchForOwnedBusinessRead('/api/v1/pos/inventory', lease.owner);
       const data = await res.json();
-      setInventory(data.inventory || []);
+      if (!current()) return;
+      if (res.status !== 200 || !data || !Array.isArray(data.inventory)) throw new Error('Inventory unavailable');
+      setInventory(data.inventory); setInventoryError('');
     } catch (e) {
-      console.error("Failed to load inventory", e);
-      setInventory([]);
+      if (current()) { console.error("Failed to load inventory", e); setInventory([]); setInventoryError('Inventory is unavailable. Verify your session and retry.'); }
     }
   };
 
@@ -219,17 +309,35 @@ export default function POSTerminal() {
   }, [locked, activeStaff]);
 
   const handleClockAction = async (action: 'CLOCK_IN' | 'CLOCK_OUT') => {
-    if (!activeStaff) return;
-
-    const isClockingIn = action === 'CLOCK_IN';
-    setClockedIn(isClockingIn);
-
-    const event = {
-      type: action,
-      payload: { staff_id: activeStaff.id, timestamp: new Date().toISOString() },
+    const lease = terminalLease.current;
+    if (!activeStaff || !lease || committedClock.current || clockPendingRef.current || !queueAccessible || !hasVerifiedOfflineQueueOwner(lease.owner)) return;
+    const version = terminalVersion.current;
+    const current = () => {
+      try { return mounted.current && version === terminalVersion.current && terminalLease.current === lease && lease.expiresAt > Date.now() && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+      catch { return false; }
     };
-
-    await SyncManager.getInstance().enqueue(event);
+    clockPendingRef.current = true; setClockPending(true); setClockError('');
+    let committed = false;
+    try {
+      await SyncManager.getInstance().enqueue({
+        type: action,
+        payload: { staff_id: activeStaff.id, timestamp: new Date().toISOString() },
+      }, lease.owner);
+      committed = true;
+      if (!current()) { if (mounted.current && terminalLease.current === lease) retireTerminal(); return; }
+      committedClock.current = { lease, action };
+      const owner = await readQueueOwner();
+      if (!current() || !sameOwner(owner, lease.owner)) { if (mounted.current) retireTerminal(); return; }
+      setClockedIn(action === 'CLOCK_IN');
+      committedClock.current = null;
+    } catch {
+      if (current()) setClockError(committed
+        ? 'Clock change was saved locally, but the current session could not be verified. Reverify before continuing.'
+        : 'Clock change could not be saved. Your previous clock state is unchanged.');
+      else if (mounted.current && terminalLease.current === lease) retireTerminal();
+    } finally {
+      if (current()) { clockPendingRef.current = false; setClockPending(false); }
+    }
   };
 
   const handleAddToCart = (product: import("@/lib/business-records").SaleProduct) => {
@@ -399,7 +507,9 @@ export default function POSTerminal() {
   }
 
   return (
-     <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter md:py-10 w-full overflow-x-hidden">
+    <>
+     {!queueIdentityReady && <div role="status">Verifying your terminal session. Private details are hidden.{clockError && <p role="alert">{clockError}</p>}<button type="button" onClick={() => { void readQueueOwner().catch(() => {}); }}>Reverify terminal session</button></div>}
+     <div style={{ display: queueIdentityReady ? undefined : 'none' }} inert={!queueIdentityReady} className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] font-inter md:py-10 w-full overflow-x-hidden">
        {queueError && <p role="status" className="p-3 text-sm text-amber-800">{queueError}</p>}
       <div className="w-full max-w-[375px] mx-auto min-h-[100dvh] md:h-[812px] md:min-h-0 bg-white md:shadow-2xl overflow-hidden flex flex-col relative border-x border-gray-200 mobile-pos-container">
 
@@ -440,10 +550,15 @@ export default function POSTerminal() {
              <p className="text-sm text-gray-500 mb-6">
                 {clockedIn ? t('Your time is being tracked locally.') : t('Clock in to start your shift.')}
              </p>
+             <p role="status" className="text-sm mb-3">{queueAccessible && queueIdentityReady ? 'Offline queue ready for this session.' : 'Verify this session and local storage before offline work.'}</p>
+             {clockPending && <p role="status">Saving clock change...</p>}
+             {clockError && <p role="alert">{clockError}</p>}
+             {committedClock.current && <button type="button" onClick={() => { void readQueueOwner().catch(() => {}); }}>Reverify saved clock change</button>}
 
              {clockedIn ? (
                <button
                  onClick={() => handleClockAction('CLOCK_OUT')}
+                 disabled={clockPending || !!committedClock.current || !queueAccessible || !queueIdentityReady}
                  className="w-full py-4 rounded-xl bg-red-50 text-red-600 font-bold hover:bg-red-100 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock Out')}
@@ -451,6 +566,7 @@ export default function POSTerminal() {
              ) : (
                <button
                  onClick={() => handleClockAction('CLOCK_IN')}
+                 disabled={clockPending || !!committedClock.current || !queueAccessible || !queueIdentityReady}
                  className="charge-btn w-full py-4 bg-[#0071E3] text-white font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-colors min-h-[44px] min-w-[44px]"
                >
                  {t('Clock In')}
@@ -514,7 +630,9 @@ export default function POSTerminal() {
              <>
                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">{t('Product Catalog')}</h3>
                <div className="grid grid-cols-1 gap-3 mb-8">
-                  {inventory.length === 0 ? (
+                  {inventoryError ? (
+                    <div role="status">{inventoryError}<button type="button" onClick={() => { void loadDashboard(); }}>Refresh inventory</button></div>
+                  ) : inventory.length === 0 ? (
                     <p className="text-center text-gray-500 py-4 italic">{t('No products found in catalog')}</p>
                   ) : inventory.map(product => (
                     <button
@@ -751,5 +869,6 @@ export default function POSTerminal() {
         .font-outfit { font-family: 'Outfit', sans-serif; }
       `}} />
     </div>
+    </>
   );
 }

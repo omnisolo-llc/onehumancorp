@@ -1,42 +1,98 @@
 "use client";
 import { Suspense } from "react";
 import { parseMemorySummary, type CustomerMemorySummary } from './memorySummary';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { hasVerifiedOfflineQueueOwner, QUEUE_IDENTITY_EPOCH_KEY, readQueueOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '@/lib/sync/queueIdentity';
 import { useSearchParams } from 'next/navigation';
 import { PoweredByOmniSolo } from '../../components/PoweredByOmniSolo';
 import { FaInstagram, FaRegEnvelope, FaStore, FaCalendarCheck, FaGlobe, FaRobot } from 'react-icons/fa';
 
 function CustomerMemoryGraphContent() {
   const searchParams = useSearchParams();
-  const customerId = searchParams.get('customerId') || 'default-customer-id';
-  const tenantId = searchParams.get('tenantId') || 'default-tenant-id';
+  const customerId = searchParams.get('customerId')?.trim() || null;
+  if (!customerId) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <section className="max-w-md space-y-4 text-center">
+          <h1 className="text-2xl font-bold">Choose a customer</h1>
+          <p>Open a customer conversation in your inbox to view the available customer context.</p>
+          <a href="/inbox" className="inline-block rounded-md bg-blue-600 px-4 py-2 text-white">Open inbox</a>
+        </section>
+      </div>
+    );
+  }
+  // A different selection must never commit the previous customer's state,
+  // including the render before passive effect cleanup/reset runs.
+  return <SelectedCustomerMemoryGraph key={customerId} customerId={customerId} />;
+}
 
+function SelectedCustomerMemoryGraph({ customerId }: { customerId: string }) {
+  const [owner, setOwner] = useState<QueueOwner | null>(null);
+  const [sessionError, setSessionError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<CustomerMemorySummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const request = useRef<AbortController | null>(null);
+  const identityReady = useSyncExternalStore(subscribeQueueIdentityReadiness,
+    () => owner !== null && hasVerifiedOfflineQueueOwner(owner), () => false);
 
   useEffect(() => {
+    let active = true;
+    const retire = () => {
+      active = false;
+      request.current?.abort();
+      setOwner(null); setData(null);
+      setSessionError('Your session changed. Refresh to view customer history.');
+    };
+    const storage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) retire();
+    };
+    window.addEventListener('omnisolo_auth_changed', retire);
+    window.addEventListener('pagehide', retire);
+    window.addEventListener('storage', storage);
+    void readQueueOwner().then(verified => {
+      if (active) setOwner(verified);
+    }).catch(() => {
+      if (active) setSessionError('Customer access could not be verified. Refresh to try again.');
+    });
+    return () => {
+      active = false; request.current?.abort();
+      window.removeEventListener('omnisolo_auth_changed', retire);
+      window.removeEventListener('pagehide', retire);
+      window.removeEventListener('storage', storage);
+    };
+  }, []);
+
+  useEffect(() => {
+    setData(null); setError(null); setLoading(true);
+    if (!owner || !identityReady) return;
     const controller = new AbortController();
-    setLoading(true);
-    setData(null);
-    setError(null);
+    request.current = controller;
+    const current = () => !controller.signal.aborted && hasVerifiedOfflineQueueOwner(owner);
     const fetchMemoryGraph = async () => {
       try {
-        const res = await fetch(`/api/v1/memory/summary/${encodeURIComponent(customerId)}`, { signal: controller.signal });
-        if (!res.ok) throw new Error('Customer history unavailable');
+        const headers = new Headers({ 'x-ohc-expected-user': owner.userId, 'x-ohc-expected-tenant': owner.tenantId });
+        const res = await fetch(`/api/v1/memory/summary/${encodeURIComponent(customerId)}`, {
+          headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal: controller.signal,
+        });
+        if (res.status !== 200) throw new Error('Customer history unavailable');
         const summary = parseMemorySummary(await res.json());
-        if (!controller.signal.aborted) setData(summary);
+        if (current()) setData(summary);
       } catch {
-        if (!controller.signal.aborted) setError('Failed to fetch customer history.');
+        if (current()) setError('Failed to fetch customer history.');
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (current()) setLoading(false);
       }
     };
     void fetchMemoryGraph();
     return () => controller.abort();
-  }, [customerId]);
+  }, [customerId, owner, identityReady]);
 
-  if (loading) {
+  if (sessionError || (owner && !identityReady && hasVerifiedOfflineQueueOwner())) {
+    return <p role="status" className="p-6">{sessionError || 'Your session changed. Refresh to view customer history.'}</p>;
+  }
+
+  if (loading || !identityReady || !owner) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#0066FF]"></div>
@@ -134,7 +190,7 @@ function CustomerMemoryGraphContent() {
 
       </div>
       <div className="fixed bottom-4 left-0 right-0 flex justify-center z-50">
-          <PoweredByOmniSolo tenantId={tenantId} />
+          <PoweredByOmniSolo tenantId={owner.tenantId} />
       </div>
     </div>
   );

@@ -1,9 +1,11 @@
 "use client";
 
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
-import { useState,useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import Head from "next/head";
+import Link from 'next/link';
 import { useProPlan } from '../components/useProPlan';
+import { hasVerifiedOfflineQueueOwner } from '@/lib/sync/queueIdentity';
 
 function safeJavaScriptString(value: string): string {
   return JSON.stringify(value)
@@ -22,24 +24,25 @@ export default function ExitIntentBuilder() {
   const [themeColor, setThemeColor] = useState("#2563eb");
   const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
-  const { hasPro } = useProPlan();
-  const removeBranding = requestedBrandingRemoval && hasPro;
+  const { hasPro, currentPlan, verifiedOwner, planError, refreshPlan } = useProPlan();
+  const brandingReady = currentPlan !== null && verifiedOwner !== null && hasVerifiedOfflineQueueOwner(verifiedOwner);
+  const removeBranding = requestedBrandingRemoval && hasPro && brandingReady;
+  useEffect(() => {
+    if (!brandingReady || !hasPro) setRemoveBranding(false);
+    if (!brandingReady) setShowPaywall(false);
+  }, [brandingReady, hasPro]);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
   const handleBrandingToggle = () => {
+    if (!brandingReady || !hasVerifiedOfflineQueueOwner(verifiedOwner)) {
+      setRemoveBranding(false); setShowPaywall(false); void refreshPlan(); return;
+    }
     if (!removeBranding) {
       if (hasPro) setRemoveBranding(true);
       else setShowPaywall(true);
     } else {
       setRemoveBranding(false);
-    }
-  };
-
-  const handleUpgrade = () => {
-    setShowPaywall(false);
-    if (!process.env.VITEST) {
-      setRemoveBranding(true);
     }
   };
 
@@ -90,7 +93,12 @@ export default function ExitIntentBuilder() {
 `.trim();
 
   const clipboard = useClipboardFeedback(generatedCode);
-  const handleCopyCode = () => { void clipboard.copy(generatedCode); };
+  const handleCopyCode = () => {
+    if (requestedBrandingRemoval && (!brandingReady || !hasVerifiedOfflineQueueOwner(verifiedOwner))) {
+      setRemoveBranding(false); setShowPaywall(false); void refreshPlan(); return;
+    }
+    void clipboard.copy(generatedCode);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 flex flex-col items-center justify-center font-sans">
@@ -106,7 +114,7 @@ export default function ExitIntentBuilder() {
               Exit-Intent Pop-up Builder
             </h1>
             <p className="text-gray-500 text-sm">
-              Recover abandoning visitors by showing them a special offer right before they leave.
+              Edit an exit-intent pop-up template. Offer text is a draft; this code does not create a discount or connect the offer button to a fulfillment service.
             </p>
           </div>
 
@@ -173,10 +181,12 @@ export default function ExitIntentBuilder() {
             <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-900">Remove OmniSolo Branding</p>
-                <p className="text-xs text-gray-500">Upgrade to Pro to remove the watermark.</p>
+                <p className="text-xs text-gray-500">A verified Pro or Business plan can remove the watermark.</p>
+                {currentPlan === null && <p role="status" className="text-xs text-gray-500">{planError ?? 'Verifying your current plan…'}</p>}
               </div>
               <button
                 onClick={handleBrandingToggle}
+                disabled={!brandingReady}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   removeBranding ? "bg-[#0071E3]" : "bg-gray-200"
                 }`}
@@ -258,15 +268,15 @@ export default function ExitIntentBuilder() {
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Remove OmniSolo Branding</h3>
             <p className="text-gray-600 text-sm mb-6">
-              Upgrade to the Pro tier to remove the "Powered by OmniSolo" watermark and unlock advanced pop-up triggers.
+              Review Pro and Business plans for branding removal. Opening pricing does not change your current plan.
             </p>
             <div className="flex flex-col space-y-3">
-              <button
-                onClick={handleUpgrade}
+              <Link
+                href="/pricing"
                 className="w-full bg-[#0071E3] text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200"
               >
-                Upgrade to Pro
-              </button>
+                Review plans
+              </Link>
               <button
                 onClick={() => setShowPaywall(false)}
                 className="w-full text-gray-500 font-medium py-2 hover:text-gray-700 transition-colors"

@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { promisify } from 'node:util';
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
@@ -62,6 +63,7 @@ test.describe('real MiniMax hire-agent flow', () => {
     const agentName = `M3 E2E Business Operator ${Date.now()}`;
     const apiBase = process.env.OMNISOLO_API_URL || process.env.BACKEND_URL || process.env.BASE_URL || '';
     const hireResponse = await request.post(`${apiBase}/api/v1/agents/hire`, {
+      headers: { 'Idempotency-Key': randomUUID() },
       data: {
         name: agentName,
         role: 'Business growth operator',

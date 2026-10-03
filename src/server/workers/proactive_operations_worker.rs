@@ -1,129 +1,105 @@
-use crate::db::DB;
-use serde_json::json;
+use super::proactive_operations_polling::{bound_postgres_transaction, scan_tenants};
+use super::proactive_operations_storage::{ScanCounts, scan_postgres, scan_sqlite};
+use crate::db::{DB, DbStore};
 use std::sync::Arc;
 use std::time::Duration;
-use uuid::Uuid;
+
+const TENANTS_PER_POLL: i64 = 100;
+const POLL_INTERVAL: Duration = Duration::from_secs(60);
 
 pub struct ProactiveOperationsWorker {
     pub db: Arc<DB>,
     pub poll_interval: Duration,
 }
-
 impl ProactiveOperationsWorker {
     pub fn new(db: Arc<DB>) -> Self {
         Self {
             db,
-            poll_interval: Duration::from_secs(2), // Check every 2 seconds in dev / test
+            poll_interval: POLL_INTERVAL,
         }
     }
 
+    async fn scan_tenant(&self, tenant: &str) -> Result<ScanCounts, sqlx::Error> {
+        match &self.db.store {
+            DbStore::Postgres => {
+                let mut tx = self.db.pool.begin().await?;
+                bound_postgres_transaction(&mut tx).await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant).await?;
+                let result = scan_postgres(&mut tx, tenant).await?;
+                tx.commit().await?;
+                Ok(result)
+            }
+            DbStore::Sqlite(pool) => scan_sqlite(pool, tenant).await,
+        }
+    }
+
+    async fn poll_batch(&self, after: &mut String) -> Result<(), sqlx::Error> {
+        let tenants: Vec<String> = match &self.db.store {
+            DbStore::Postgres => {
+                sqlx::query_scalar("SELECT id FROM tenants WHERE id>$1 ORDER BY id LIMIT $2")
+                    .bind(after.as_str())
+                    .bind(TENANTS_PER_POLL)
+                    .fetch_all(&self.db.pool)
+                    .await?
+            }
+            DbStore::Sqlite(pool) => {
+                sqlx::query_scalar("SELECT id FROM tenants WHERE id>?1 ORDER BY id LIMIT ?2")
+                    .bind(after.as_str())
+                    .bind(TENANTS_PER_POLL)
+                    .fetch_all(pool)
+                    .await?
+            }
+        };
+        let results = scan_tenants(
+            after,
+            &tenants,
+            TENANTS_PER_POLL as usize,
+            |tenant| async move {
+                let changes = self.scan_tenant(&tenant).await?;
+                if changes.created > 0 || changes.retired > 0 {
+                    crate::api::agent_feed::get_agent_feed_cache()
+                        .invalidate_by_tag(&format!("agent_feed_tenant:{tenant}"))
+                        .await;
+                }
+                Ok(())
+            },
+        )
+        .await;
+        for (tenant, result) in results {
+            if let Err(error) = result {
+                tracing::warn!(event="operations.tenant_alert_scan_failed", tenant_id=%tenant, %error, "Operational scan did not finish; committed observations, if any, remain recorded");
+            }
+        }
+        Ok(())
+    }
+
     pub fn start(&self) {
-        let db = self.db.clone();
-        let interval_duration = self.poll_interval;
+        let worker = Self {
+            db: self.db.clone(),
+            poll_interval: self.poll_interval.max(POLL_INTERVAL),
+        };
+        tracing::info!(
+            event = "operations.alert_capabilities",
+            supported = "configured inventory thresholds",
+            unavailable = "supplier deadlines, staffing coverage requirements and scheduled checklist configuration are not stored; no such alerts are generated"
+        );
         tokio::spawn(async move {
-            let mut interval = tokio::time::interval(interval_duration);
+            let mut interval = tokio::time::interval(worker.poll_interval);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            let mut after = String::new();
             loop {
                 interval.tick().await;
-
-                // 1. Get all active tenants
-                let tenants: Vec<String> = match &db.store {
-                    crate::db::DbStore::Postgres => sqlx::query_scalar("SELECT id FROM tenants")
-                        .fetch_all(&db.pool)
-                        .await
-                        .unwrap_or_default(),
-                    crate::db::DbStore::Sqlite(_) => sqlx::query_scalar("SELECT id FROM tenants")
-                        .fetch_all(&db.pool)
-                        .await
-                        .unwrap_or_default(),
-                };
-
-                for tenant_id in tenants {
-                    // Check if there's already a pending proactive operations task for this tenant today
-                    let has_pending = match &db.store {
-                        crate::db::DbStore::Postgres => {
-                            sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = $1 AND event_source = 'operations' AND context_payload->>'feature_type' = 'proactive_ops' AND created_at > CURRENT_TIMESTAMP - INTERVAL '1 day'")
-                                .bind(&tenant_id)
-                                .fetch_one(&db.pool)
-                                .await
-                                .unwrap_or(0) > 0
-                        },
-                        crate::db::DbStore::Sqlite(_) => {
-                            sqlx::query_scalar::<_, i32>("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = $1 AND event_source = 'operations' AND json_extract(context_payload, '$.feature_type') = 'proactive_ops' AND created_at > datetime('now', '-1 day')")
-                                .bind(&tenant_id)
-                                .fetch_one(&db.pool)
-                                .await
-                                .unwrap_or(0) > 0
-                        }
-                    };
-
-                    if has_pending {
-                        continue;
+                match tokio::time::timeout(Duration::from_secs(30), worker.poll_batch(&mut after))
+                    .await
+                {
+                    Ok(Ok(())) => {}
+                    Ok(Err(error)) => {
+                        tracing::warn!(event="operations.alert_scan_failed", %error, "Operational facts were not verified")
                     }
-
-                    // Generate the 3 specific CUJ tasks
-                    let tasks = vec![
-                        (
-                            "Review Daily Prep Checklist",
-                            "Review Checklist",
-                            "mark_complete",
-                        ),
-                        (
-                            "Follow up on delayed supplier delivery from yesterday",
-                            "Assign to Staff",
-                            "assign_to_staff",
-                        ),
-                        (
-                            "Staffing alert: Only 1 person scheduled for closing shift.",
-                            "Draft Schedule Request",
-                            "draft_schedule_request",
-                        ),
-                    ];
-
-                    for (description, action_msg, action_type) in tasks {
-                        let task_id = Uuid::new_v4().to_string();
-                        let context_payload = json!({
-                            "description": description,
-                            "feature_type": "proactive_ops"
-                        });
-                        let proposed_action = json!({
-                            "message": action_msg,
-                            "action_type": action_type,
-                            "feature_type": "proactive_ops"
-                        });
-
-                        match &db.store {
-                            crate::db::DbStore::Postgres => {
-                                let _ = sqlx::query(
-                                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, $3, $4, $5, $6)"
-                                )
-                                .bind(&task_id)
-                                .bind(&tenant_id)
-                                .bind("operations")
-                                .bind(context_payload)
-                                .bind(proposed_action)
-                                .bind("PENDING_APPROVAL")
-                                .execute(&db.pool)
-                                .await;
-                            }
-                            crate::db::DbStore::Sqlite(_) => {
-                                let _ = sqlx::query(
-                                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES (?, ?, ?, ?, ?, ?)"
-                                )
-                                .bind(&task_id)
-                                .bind(&tenant_id)
-                                .bind("operations")
-                                .bind(context_payload)
-                                .bind(proposed_action)
-                                .bind("PENDING_APPROVAL")
-                                .execute(&db.pool)
-                                .await;
-                            }
-                        }
-                    }
-
-                    let cache = crate::api::agent_feed::get_agent_feed_cache();
-                    let tag = format!("agent_feed_tenant:{}", tenant_id);
-                    cache.invalidate_by_tag(&tag).await;
+                    Err(_) => tracing::warn!(
+                        event = "operations.alert_scan_timed_out",
+                        "Operational fact scan exceeded its bounded polling budget"
+                    ),
                 }
             }
         });

@@ -9,7 +9,7 @@ def function(path, start, end):
 def module(path, name):
     return f'#[path={json.dumps(str(ROOT/path))}] pub mod {name};\n'
 source = '#![allow(dead_code)]\npub use server_config as config;\n'
-source += function('src/server/lib.rs', 'pub fn is_standalone_runtime()', '\npub fn get_workflow_registry')
+source += function('src/server/lib.rs', 'pub fn is_standalone_runtime()', '\nimpl From<workflow_execution::receipts::Receipt>')
 source += module('src/server/redis_pool.rs', 'redis_pool')
 source += 'pub mod api { pub mod mesh_handler { use axum::http::HeaderMap;\n'
 source += function('src/server/api/mesh_handler.rs', 'pub fn check_spiffe_auth(', '\n/// Helper method')

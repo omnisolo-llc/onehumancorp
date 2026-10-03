@@ -1,69 +1,61 @@
-import { createGrowthOwner } from './growth_owner';
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
+import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from './support/entitlement_fixture';
 
 test.describe('Post-Purchase Share Widget Generator', () => {
-    test('verify post-purchase widget setup flow and viral branding', async ({ page, baseURL }) => {
-        const owner = await createGrowthOwner(page, baseURL);
-        await page.setViewportSize({ width: 1440, height: 900 });
-
-        // Navigate directly to post-purchase widget builder
-        await page.goto('/post-purchase-share.html');
-
-        // Verify page loads with the builder
-        await expect(page.getByRole('heading', { name: 'Post-Purchase Share Widget' })).toBeVisible();
-
-        // Verify "OmniSolo" watermark is present by default in the live preview
-        await expect(page.getByRole('link', { name: /OmniSolo/i })).toBeVisible();
-
-        // Try to toggle "Remove Branding"
-        await page.getByLabel(/Remove "OmniSolo"/).click();
-
-        // Verify soft paywall pops up
-        await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeVisible();
-        await expect(page.getByText(/Make the Post-Purchase Widget 100% yours/)).toBeVisible();
-
-        // Setup mocked window.open so the share button doesn't actually open a new tab and break tests
-        await page.evaluate(() => {
-            window.open = function() { return null; };
-        });
-
-        // Click Share to Unlock
-        const shareBtn = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-        await expect(shareBtn).toBeVisible();
-        await shareBtn.click();
-
-        // Verify loading state
-        await expect(page.getByText('Verifying Share...')).toBeVisible();
-
-        // Verify success state
-        await expect(page.getByText('Unlocked!')).toBeVisible({ timeout: 10000 });
-
-        // Verify modal closes and checkbox is now checked
-        await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).toBeHidden({ timeout: 5000 });
-        const checkbox = page.getByLabel(/Remove "OmniSolo"/);
+  for (const plan of ['Free', 'Pro', 'Business'] as const) {
+    test(`preserves the real ${plan} entitlement while generating an authenticated offer draft`, async ({ page, baseURL }) => {
+      const fixture = await createEntitlementOwner(page, baseURL, plan);
+      const claims = trackTrialClaims(page);
+      await page.addInitScript(() => {
+        localStorage.setItem('has_pro', 'true');
+        localStorage.setItem('tenant', 'forged-local-tenant');
+      });
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.goto('/post-purchase-share.html');
+      await expect(page.getByRole('heading', { name: 'Post-Purchase Share Widget', exact: true })).toBeVisible();
+      const checkbox = page.getByLabel(/Remove "OmniSolo"/);
+      await expect(checkbox).toBeEnabled();
+      await checkbox.click();
+      if (plan === 'Free') {
+        await expect(page.getByRole('heading', { name: 'Upgrade to Pro', exact: true })).toBeVisible();
+        await expect(page.getByText(/Sharing does not change your plan/)).toBeVisible();
+        await expect(checkbox).not.toBeChecked();
+        await expect(page.locator('#preview-branding')).toBeVisible();
+        await page.getByRole('button', { name: 'Close upgrade options', exact: true }).click();
+      } else {
         await expect(checkbox).toBeChecked();
-
-        // Verify branding is removed from preview
-        await expect(page.getByRole('link', { name: /OmniSolo/i })).toBeHidden();
-
-        // Verify embed API HTML renders successfully (integration with backend)
-        const response = await page.request.get(`/api/v1/growth/post-purchase/embed?tenant=${encodeURIComponent(owner.tenantId)}&discount=20pct&hideBranding=false`);
-        expect(response.ok()).toBeTruthy();
-        const html = await response.text();
-
-        // Check for presence of discount text and branding
-        expect(html).toContain('Share and Get 20% OFF');
-        expect(html).toContain('⚡ OmniSolo');
-
-        // Verify hideBranding parameter works on API
-        const responseNoBranding = await page.request.get(`/api/v1/growth/post-purchase/embed?tenant=${encodeURIComponent(owner.tenantId)}&discount=20pct&hideBranding=true`);
-        expect(responseNoBranding.ok()).toBeTruthy();
-        const htmlNoBranding = await responseNoBranding.text();
-        expect(htmlNoBranding).not.toContain('⚡ OmniSolo');
+        await expect(page.locator('#preview-branding')).not.toBeVisible();
+      }
+      await expect(page.locator('#preview-link')).toHaveValue('');
+      await expect(page.getByRole('button', { name: 'Link unavailable', exact: true })).toBeDisabled();
+      await page.getByRole('button', { name: 'Get Embed Code', exact: true }).click();
+      await expect(page.getByText('Authenticated preview code. Public embedding and discount fulfillment are not configured.', { exact: true })).toBeVisible();
+      const code = await page.locator('#embed-code').inputValue();
+      const source = code.match(/src="([^"]+)"/);
+      expect(source).not.toBeNull();
+      const preview = new URL(source![1]);
+      expect(preview.origin).toBe(new URL(page.url()).origin);
+      expect(preview.searchParams.get('tenant')).toBe(fixture.owner.tenantId);
+      expect(preview.searchParams.get('hideBranding')).toBe(String(plan !== 'Free'));
+      // A forged hideBranding query still requires the actual current server plan.
+      preview.searchParams.set('hideBranding', 'true');
+      const response = await page.request.get(preview.toString());
+      expect(response.status()).toBe(200);
+      expect(response.headers()['cache-control']).toContain('no-store');
+      const html = await response.text();
+      expect(html).toContain('offer-draft');
+      expect(html).toContain('not configured');
+      expect(html).not.toContain('Share and Get');
+      expect(html).not.toContain('/referrals/click');
+      expect(html.includes('⚡ OmniSolo')).toBe(plan === 'Free');
+      await page.getByRole('button', { name: 'Close', exact: true }).click();
+      expect(claims).toEqual([]);
+      await expectEntitlementUnchanged(page, fixture);
     });
+  }
 
-    test('Smoke test: post_purchase_share_widget', async ({ page, request }) => {
-      await currentAppSmoke(page, request, 'post_purchase_share_widget');
-    });
+  test('Smoke test: post_purchase_share_widget', async ({ page, request }) => {
+    await currentAppSmoke(page, request, 'post_purchase_share_widget');
+  });
 });

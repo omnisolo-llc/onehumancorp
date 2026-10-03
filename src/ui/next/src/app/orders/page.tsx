@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AppShell } from "../components/AppShell";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
 
 type Order = {
   id: string;
@@ -111,9 +110,7 @@ export default function OrdersPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Link href={`/orders/${order.id}`}>
-                          <Button variant="ghost" size="sm" className="h-8 text-[#0066FF] hover:text-[#0052CC] hover:bg-[#0066FF]/10">View</Button>
-                        </Link>
+                        <Link href={`/orders/${encodeURIComponent(order.id)}`} aria-label={`View order ${order.id}`} className="inline-flex min-h-[44px] items-center rounded-lg px-3 text-[#0066FF] hover:text-[#0052CC] hover:bg-[#0066FF]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">View</Link>
                       </td>
                     </tr>
                   ))}

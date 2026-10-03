@@ -7,12 +7,53 @@ pub trait LlmClient: Send + Sync {
         &self,
         req: ChatRequest,
     ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>;
+    /// Send an already-normalized, budget-bound request without another normalization.
+    async fn chat_prepared(
+        &self,
+        req: ChatRequest,
+    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+        self.chat(req).await
+    }
     async fn generate_embedding(
         &self,
         _text: &str,
     ) -> Result<Vec<f32>, Box<dyn std::error::Error + Send + Sync>> {
         Ok(vec![])
     }
+}
+
+pub const MAX_PROVIDER_RESPONSE_BYTES: usize = 2_097_152;
+/// Bound bytes before JSON parsing, including chunked/unknown-length responses.
+/// Error bodies are not reflected, so credentials or private prompt echoes
+/// cannot become an error string passed to another model.
+pub(crate) async fn read_provider_json<T: serde::de::DeserializeOwned>(
+    mut response: reqwest::Response,
+) -> Result<T, Box<dyn std::error::Error + Send + Sync>> {
+    if response
+        .content_length()
+        .is_some_and(|size| size > MAX_PROVIDER_RESPONSE_BYTES as u64)
+    {
+        return Err("provider response exceeded the byte limit".into());
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response.chunk().await? {
+        if bytes
+            .len()
+            .checked_add(chunk.len())
+            .is_none_or(|size| size > MAX_PROVIDER_RESPONSE_BYTES)
+        {
+            return Err("provider response exceeded the byte limit".into());
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    serde_json::from_slice(&bytes).map_err(|error| {
+        format!(
+            "provider JSON was invalid at line {} column {}",
+            error.line(),
+            error.column()
+        )
+        .into()
+    })
 }
 
 pub mod anthropic;

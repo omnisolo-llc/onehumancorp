@@ -7,6 +7,10 @@ import config from '../postcss.config.mjs';
 const require = createRequire(import.meta.url);
 
 describe('application CSS build', () => {
+  // This compiles the real application stylesheet and scans all production
+  // content, rather than mocking Tailwind. Cold compilation takes about four
+  // seconds alone and can exceed the unit-test budget under full-suite load.
+  // Bound this build integration case without changing other test timeouts.
   it('generates the spacing and sizing utilities used by launchers, controls, and cards', async () => {
     const source = new URL('../src/app/globals.css', import.meta.url);
     const plugins = Object.entries(config.plugins).map(([name, options]) => require(name)(options));
@@ -25,5 +29,5 @@ describe('application CSS build', () => {
     expect(declarations('.w-11')).toMatchObject({ width: '2.75rem' });
     expect(declarations('.h-6')).toMatchObject({ height: '1.5rem' });
     expect(declarations('.p-5')).toMatchObject({ padding: '1.25rem' });
-  });
+  }, 15_000);
 });

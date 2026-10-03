@@ -11,6 +11,30 @@ use crate::{User, user_repository::UserRepository};
 pub mod entities {
     use sea_orm::entity::prelude::*;
 
+    /// The canonical namespace fields used by registration on every database.
+    /// Other tenant settings keep their schema defaults until explicitly configured.
+    pub mod tenant {
+        use super::*;
+
+        #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+        #[sea_orm(table_name = "tenants")]
+        pub struct Model {
+            #[sea_orm(primary_key, auto_increment = false)]
+            pub id: String,
+            pub name: String,
+            #[sea_orm(default_value = "free")]
+            pub tier: String,
+            #[sea_orm(default_expr = "Expr::current_timestamp()")]
+            pub created_at: DateTimeUtc,
+            #[sea_orm(default_expr = "Expr::current_timestamp()")]
+            pub updated_at: DateTimeUtc,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+        impl ActiveModelBehavior for ActiveModel {}
+    }
+
     pub mod user {
         use super::*;
 
@@ -124,6 +148,11 @@ pub mod entities {
             pub expires_at: DateTimeUtc,
             pub consumed_at: Option<DateTimeUtc>,
             pub invitation_id: Option<String>,
+            /// Written atomically with the created account; never inferred from email.
+            #[sea_orm(column_type = "Text", nullable)]
+            pub consumed_by_user_id: Option<String>,
+            #[sea_orm(column_type = "Text", nullable)]
+            pub consumed_by_tenant_id: Option<String>,
         }
 
         #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -290,6 +319,34 @@ async fn invitation_creator_tenant(
         return Err("invitation unavailable".to_string());
     }
     Ok(creator.tenant_id)
+}
+
+/// Only open registration creates a namespace. A collision aborts the whole
+/// account transaction; it must never turn registration into access to an
+/// existing workspace or change that workspace's paid plan.
+async fn create_registration_namespace(
+    transaction: &DatabaseTransaction,
+    user: &User,
+    tenant_id: &str,
+    mode: RegistrationMode,
+) -> Result<(), String> {
+    if mode != RegistrationMode::Open {
+        return Ok(());
+    }
+    if tenant_id.trim().is_empty() || tenant_id.eq_ignore_ascii_case("system") {
+        return Err("registration namespace unavailable".to_string());
+    }
+    entities::tenant::ActiveModel {
+        id: Set(tenant_id.to_owned()),
+        name: Set(user.username.clone()),
+        tier: Set("free".to_owned()),
+        created_at: Set(user.created_at),
+        updated_at: Set(user.updated_at),
+    }
+    .insert(transaction)
+    .await
+    .map_err(db_error)?;
+    Ok(())
 }
 
 async fn claim_identity_email(
@@ -728,6 +785,8 @@ impl SeaOrmAuthRepository {
             expires_at: Set(ticket.expires_at),
             consumed_at: Set(None),
             invitation_id: Set(ticket.invitation_id),
+            consumed_by_user_id: Set(None),
+            consumed_by_tenant_id: Set(None),
         }
         .insert(&transaction)
         .await
@@ -811,6 +870,7 @@ impl SeaOrmAuthRepository {
             }
         };
         user.organization_id = Some(tenant_id.clone());
+        create_registration_namespace(&transaction, &user, &tenant_id, mode).await?;
         claim_identity_email(
             &transaction,
             &normalized_email,
@@ -834,6 +894,27 @@ impl SeaOrmAuthRepository {
         .await
         .map_err(db_error)?;
         replace_user_roles(&transaction, &user.id, &tenant_id, &user.roles).await?;
+        // This source receipt belongs to the same transaction as the account,
+        // email claim, roles and ticket consumption. A missing/failed receipt
+        // must roll back registration rather than leave an unprovable reward source.
+        let bound = registration_ticket::Entity::update_many()
+            .col_expr(
+                registration_ticket::Column::ConsumedByUserId,
+                sea_orm::sea_query::Expr::value(Some(user.id.clone())),
+            )
+            .col_expr(
+                registration_ticket::Column::ConsumedByTenantId,
+                sea_orm::sea_query::Expr::value(Some(tenant_id.clone())),
+            )
+            .filter(registration_ticket::Column::Id.eq(&ticket.id))
+            .filter(registration_ticket::Column::ConsumedByUserId.is_null())
+            .filter(registration_ticket::Column::ConsumedByTenantId.is_null())
+            .exec(&transaction)
+            .await
+            .map_err(db_error)?;
+        if bound.rows_affected != 1 {
+            return Err("registration source unavailable".to_string());
+        }
 
         transaction.commit().await.map_err(db_error)?;
         Ok(user)
@@ -1175,6 +1256,7 @@ impl SeaOrmAuthRepository {
             }
         };
         user.organization_id = Some(tenant_id.clone());
+        create_registration_namespace(&transaction, &user, &tenant_id, mode).await?;
         user.oidc_subject = Some(format!("{issuer}|{subject}"));
         claim_identity_email(
             &transaction,
@@ -1569,6 +1651,7 @@ mod atomic_registration_tests {
         let first = connect(url.clone()).await;
         let schema = Schema::new(first.get_database_backend());
         for statement in [
+            schema.create_table_from_entity(entities::tenant::Entity),
             schema.create_table_from_entity(entities::user::Entity),
             schema.create_table_from_entity(entities::application_setting::Entity),
             schema.create_table_from_entity(entities::email_challenge::Entity),
@@ -1829,6 +1912,8 @@ mod atomic_registration_tests {
             expires_at: Set(now + chrono::Duration::minutes(20)),
             consumed_at: Set(None),
             invitation_id: Set(None),
+            consumed_by_user_id: Set(None),
+            consumed_by_tenant_id: Set(None),
         }
         .insert(first.connection())
         .await
@@ -1858,6 +1943,19 @@ mod atomic_registration_tests {
             vec![crate::ROLE_ADMIN.to_string()]
         );
         assert!(!users[0].tenant_id.is_empty());
+        let receipt = entities::registration_ticket::Entity::find_by_id("ticket")
+            .one(first.connection())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            receipt.consumed_by_user_id.as_deref(),
+            Some(users[0].id.as_str())
+        );
+        assert_eq!(
+            receipt.consumed_by_tenant_id.as_deref(),
+            Some(users[0].tenant_id.as_str())
+        );
     }
 
     #[tokio::test]
@@ -1877,6 +1975,8 @@ mod atomic_registration_tests {
                 expires_at: Set(now + chrono::Duration::minutes(20)),
                 consumed_at: Set(None),
                 invitation_id: Set(None),
+                consumed_by_user_id: Set(None),
+                consumed_by_tenant_id: Set(None),
             }
             .insert(first.connection())
             .await
@@ -1910,6 +2010,32 @@ mod atomic_registration_tests {
                 .unwrap(),
             1
         );
+        let receipts = entities::registration_ticket::Entity::find()
+            .all(first.connection())
+            .await
+            .unwrap();
+        assert_eq!(
+            receipts
+                .iter()
+                .filter(|receipt| receipt.consumed_at.is_some())
+                .count(),
+            1
+        );
+        assert_eq!(
+            receipts
+                .iter()
+                .filter(|receipt| receipt.consumed_by_user_id.is_some()
+                    && receipt.consumed_by_tenant_id.is_some())
+                .count(),
+            1
+        );
+        for receipt in receipts
+            .iter()
+            .filter(|receipt| receipt.consumed_at.is_none())
+        {
+            assert!(receipt.consumed_by_user_id.is_none());
+            assert!(receipt.consumed_by_tenant_id.is_none());
+        }
     }
 
     #[tokio::test]

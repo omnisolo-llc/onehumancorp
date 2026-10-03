@@ -38,6 +38,8 @@ function discoverAppRoutes(root) {
     const relative = path.relative(app, path.dirname(file));
     const segments = relative === '' ? [] : relative.split(path.sep);
     if (segments.some(segment => segment === 'api' || segment.startsWith('('))) return null;
+    // Dynamic record pages must use a real canonical database fixture.
+    if (segments.join('/') === 'orders/[id]') return '/orders/e2e-seeded-record';
     return `/${segments.filter(segment => !segment.startsWith('_')).map(segment => examples[segment] || segment).join('/')}`.replace(/\/$/, '') || '/';
   }).filter(Boolean);
   return [...new Set(routes)].sort();

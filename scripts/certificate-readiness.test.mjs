@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 
 const roots = ['src/ui/next/public', 'src/ui/next/public/ui', 'src/ui/tauri/src/ui'];
 const fields = ['tenant', 'cert-title', 'recipient', 'course-name', 'theme'];

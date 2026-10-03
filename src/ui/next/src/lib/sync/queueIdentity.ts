@@ -13,6 +13,15 @@ export function hasVerifiedOfflineQueueOwner(expected?: QueueOwner | null): bool
   try { return !!verified && pendingVerifications.size === 0 && verified.expiresAt > Date.now() && verified.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && (expected === undefined || (!!expected && sameOwner(verified.owner, expected))); }
   catch { return false; }
 }
+/** A copied current canonical identity for private UI leases; never reads identity from storage. */
+export function currentVerifiedQueueOwner(): QueueOwner | null {
+  return hasVerifiedOfflineQueueOwner() && verified ? { ...verified.owner } : null;
+}
+/** Readonly UI lease evidence; copying it cannot extend or replace verified authority. */
+export function currentVerifiedQueueLease(): { owner: QueueOwner; expiresAt: number; storageEpoch: string | null } | null {
+  return hasVerifiedOfflineQueueOwner() && verified ? { owner: { ...verified.owner }, expiresAt: verified.expiresAt, storageEpoch: verified.storageEpoch } : null;
+}
+export function hasPendingQueueOwnerVerification(): boolean { return pendingVerifications.size > 0; }
 function publishReadiness(): void {
   clearTimeout(readinessExpiry);
   if (readinessListeners.size && verified && verified.expiresAt > Date.now()) {

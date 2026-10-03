@@ -7,7 +7,7 @@ test database. PostgreSQL is required; unavailable prerequisites fail explicitly
 The small harness compiles byte-exact complete production embed handlers and
 query structs from `src/server/api/growth.rs`. Only the unused Hub/tracker fields
 of their state container are omitted. SQLx calls and all HTML rendering are real.
-Four positive tests require unbranded HTML for the selected Pro tenant; additional
+Two positive tests require unbranded HTML for the selected Pro tenant; additional
 cases preserve exact case-insensitive Pro policy, explicit hide requests,
 free/unknown/error defaults, per-tenant reads and unchanged persisted plans.
 
@@ -29,7 +29,7 @@ referral rows and tenant plans unchanged. This is an explicit capability gap;
 these tests do not claim that individual referral tracking or rewards work.
 
 The context regression requires Python 3 and Node. It parses actual rendered HTML
-for customer-referral, viral-goal and viral-widget embeds, then executes only the
+for viral-goal and viral-widget embeds, then executes only the
 static listener in an isolated VM with a recording window.open and no network.
 Eight tenant inputs per handler cover quotes, ampersands, Unicode, encoded-looking
 text and script-looking text. The URL and attribution links must round-trip the
@@ -45,3 +45,12 @@ show that the request was accepted. Explicit client rejections retain editable
 inputs; unknown outcomes retain the form and prevent automatic or repeated
 submission in that document. This does not certify club membership, persisted
 CRM delivery, gifts, or reconciliation after the page is reloaded.
+
+The authenticated post-purchase and customer-referral previews now live in
+`api/growth_previews.rs`. Their former anonymous referral-URL assertions moved to
+`scripts/agent-definition-contract/growth_preview_test.rs`, which executes actual
+signed bearer authentication, current membership and forced-RLS plan reads.
+That gate preserves the branding, literal identity, supplied-field escaping,
+explicit hide request and unchanged-plan coverage, while requiring truthful
+private drafts instead of uncreated referral links. Run both gates for the
+complete growth embed regression set.

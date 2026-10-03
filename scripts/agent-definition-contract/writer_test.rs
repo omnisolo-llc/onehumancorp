@@ -1,6 +1,6 @@
 //! Actual existing auth writers, with synthetic identities and no provider calls.
 use super::*;
-use sea_orm::{ActiveModelTrait, Set};
+use sea_orm::{ActiveModelTrait, EntityTrait, Set};
 use server_auth::user_repository::UserRepository;
 fn registration_user(id: &str, tenant: &str) -> server_auth::User {
     let now = chrono::Utc::now();
@@ -34,6 +34,8 @@ async fn exercise_registration_writers(
         issued_at: Set(now),
         expires_at: Set(now + chrono::Duration::minutes(20)),
         consumed_at: Set(None),
+        consumed_by_user_id: Set(None),
+        consumed_by_tenant_id: Set(None),
         invitation_id: Set(None),
     }
     .insert(repo.connection())
@@ -43,13 +45,23 @@ async fn exercise_registration_writers(
         .consume_ticket_and_create_user(
             "public-synthetic-ticket-only",
             now,
-            registration_user("ticket-user", tenant),
+            registration_user("ticket-user", &format!("{tenant}-ticket")),
         )
         .await
         .unwrap();
+    let source = entities::registration_ticket::Entity::find_by_id("public-test-ticket")
+        .one(repo.connection())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        source.consumed_by_user_id.as_deref(),
+        Some(ticket.id.as_str())
+    );
+    assert_eq!(source.consumed_by_tenant_id, ticket.organization_id);
     let oidc = repo
         .create_oidc_user(
-            registration_user("oidc-user", tenant),
+            registration_user("oidc-user", &format!("{tenant}-oidc")),
             "synthetic-offline-provider",
             "https://issuer.example.test",
             "synthetic-subject",
@@ -57,6 +69,10 @@ async fn exercise_registration_writers(
         .await
         .unwrap();
     for user in [ticket, oidc] {
+        let tenant = user
+            .organization_id
+            .as_deref()
+            .expect("actual created namespace");
         let current = repo.get_by_id(&user.id, tenant).await.unwrap();
         assert_eq!(current.roles, vec!["ADMIN"]);
         let receipt = store

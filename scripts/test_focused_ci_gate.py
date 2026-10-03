@@ -12,9 +12,39 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_operations_worker_gate_compiles_actual_spawn_and_cache_boundary(self):
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        minimum, database = gate.GATES['proactive-worker-contract']
+        self.assertGreaterEqual(minimum, 11)
+        self.assertEqual(database, 'OHC_OPS_PROBE_DB')
+        folder = root/'scripts/proactive-worker-contract'
+        runpy.run_path(str(folder/'prepare.py'))
+        generated = (folder/'generated.rs').read_text()
+        self.assertIn(str(root/'src/server/workers/proactive_operations_worker.rs'), generated)
+        self.assertIn('pub struct DB {', generated)
+        self.assertIn('pub struct HybridCacheInner<T>', generated)
+        self.assertIn('pub fn get_agent_feed_cache()', generated)
+        self.assertNotIn('struct Mock', generated)
+        self.assertIn('worker.start();', (folder/'test.rs').read_text())
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py proactive-worker-contract', workflow)
+        self.assertIn('bash scripts/proactive-worker-contract/fetch.sh', workflow)
+
+    def test_staff_reads_require_real_owned_database_and_preserved_failure_cases(self):
+        minimum, database = gate.GATES['staff-read-contract']
+        self.assertGreaterEqual(minimum, 8)
+        self.assertEqual(database, 'OHC_STAFF_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py staff-read-contract', workflow)
+        self.assertIn('bash scripts/staff-read-contract/fetch.sh', workflow)
+        self.assertIn('--locked --offline', (root/'scripts/staff-read-contract/run.sh').read_text())
+
+
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
-        self.assertGreaterEqual(minimum, 47)
+        self.assertGreaterEqual(minimum, 90)
         self.assertEqual(database, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()
@@ -23,14 +53,23 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_builder_generation_preserves_receipt_storage_compile_inputs(self):
         import runpy
+        import re
         root = Path(__file__).resolve().parents[1]
         folder = root/'scripts/builder-generation-contract'
         runpy.run_path(str(folder/'prepare.py'))
         generated = (folder/'generated.rs').read_text()
         manifest = json.loads((folder/'source-manifest.json').read_text())
         self.assertIn('pub mod persistence {', generated)
+        parent = (root/'src/server/persistence/mod.rs').read_text()
         for name in ['capabilities', 'connection', 'entities', 'migration']:
-            self.assertIn(f'pub mod {name};', generated)
+            declaration = re.search(r'(?m)^(?:pub(?:\([^)]*\))? )?mod '+name+r';$', parent)
+            self.assertIsNotNone(declaration)
+            self.assertIn(declaration.group(), generated[generated.index('pub mod persistence {'):])
+        self.assertRegex(parent, r'(?m)^mod connection;$')
+        self.assertNotIn('pub mod connection;', generated)
+        self.assertNotIn('pub use crate::{capabilities,connection', generated)
+        self.assertIn('pub(crate) use connection::require_sqlite_encryption;', generated)
+        self.assertIn('crate::persistence::require_sqlite_encryption(&canonical_connection)', generated)
         required = list((root/'src/server/workflow_execution').rglob('*.rs'))
         required += [p for p in (root/'src/server/persistence').rglob('*') if p.is_file() and p.suffix in {'.rs', '.sql'}]
         for source in required:
@@ -52,18 +91,20 @@ class FocusedGateTests(unittest.TestCase):
     def test_site_publication_gate_requires_complete_pg_http_and_javascript_proof(self):
         self.assertIn('site-publication', gate.GATES)
         minimum, database = gate.GATES['site-publication']
-        self.assertGreaterEqual(minimum, 81)
+        self.assertGreaterEqual(minimum, 93)
         self.assertEqual(database, 'OHC_PUBLICATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/site-publication/run.sh').read_text()
         self.assertIn('node scripts/site-publication/jcs-proof.cjs', runner)
         self.assertIn('src/ui/next/node_modules', runner)
+        self.assertIn('python3 scripts/site-publication/test_deny_http_egress.py', runner)
+        self.assertIn('python3 scripts/site-publication/deny_http_egress.py -- cargo test --locked --offline', runner)
         witness = (root/'scripts/site-publication/jcs-proof.cjs').read_text()
         self.assertIn("'5.1.0'", witness)
         self.assertIn('process.versions.node', witness)
     def test_agent_receipt_postgres_gate_keeps_real_storage_and_sqlite_inventory(self):
         minimum, database = gate.GATES['agent-receipt-postgres-contract']
-        self.assertGreaterEqual(minimum, 40)
+        self.assertGreaterEqual(minimum, 56)
         self.assertEqual(database, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/agent-receipt-postgres-contract/run.sh').read_text()
@@ -74,7 +115,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_agent_definition_gate_requires_real_database_and_complete_inventory(self):
         minimum,database=gate.GATES['agent-definition-contract']
-        self.assertGreaterEqual(minimum,49)
+        self.assertGreaterEqual(minimum,63)
         self.assertEqual(database,'OHC_AGENT_DEFINITION_TEST_DATABASE_URL')
         self.assertTrue((Path(__file__).resolve().parents[1]/'scripts/agent-definition-contract/run.sh').is_file())
 
@@ -125,10 +166,40 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_agent_workflow_gate_keeps_its_full_offline_inventory(self):
         minimum, database = gate.GATES['agent-workflow-contract']
-        self.assertGreaterEqual(minimum, 57)
+        self.assertGreaterEqual(minimum, 108)
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertLess(workflow.index('Install the pinned workflow proxy witness'), workflow.index('Verify agent workflow tenant isolation and requested tasks offline'))
+        self.assertLess(workflow.index('Install the pinned workflow proxy witness'), workflow.index('Verify durable PostgreSQL execution receipts and SQLite lifecycle parity'))
+        self.assertIn('verify_node_lock.py', (root/'scripts/agent-workflow-contract/run.sh').read_text())
         self.assertIsNone(database)
         runner = Path(__file__).resolve().parents[1]/'scripts/agent-workflow-contract/run.sh'
         self.assertTrue(runner.is_file())
+
+    def test_checkpoint_restore_gate_requires_all_cases_and_owned_database(self):
+        minimum, database = gate.GATES['checkpoint-restore-contract']
+        self.assertGreaterEqual(minimum, 37)
+        self.assertEqual(database, 'OHC_CHECKPOINT_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py checkpoint-restore-contract', workflow)
+        self.assertNotIn('run: bash scripts/checkpoint-restore-contract/run.sh', workflow)
+        manifest_builder = (root/'scripts/checkpoint-restore-contract/prepare.py').read_text()
+        self.assertIn('scripts/focused_ci_gate.py', manifest_builder)
+        self.assertIn('scripts/test_focused_ci_gate.py', manifest_builder)
+
+    def test_checkpoint_restore_gate_rejects_partial_ignored_and_filtered_inventory(self):
+        minimum, _ = gate.GATES['checkpoint-restore-contract']
+        complete = 'test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;'
+        self.assertEqual(gate.validate_results(complete, minimum), 37)
+        for result in [
+            'ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out',
+            'ok. 37 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out',
+            'ok. 37 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out',
+            'FAILED. 37 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out',
+        ]:
+            with self.subTest(result=result), self.assertRaises(ValueError):
+                gate.validate_results('test result: '+result+';', minimum)
 
     def test_counts_real_passes_and_permits_empty_doctest_target(self):
         self.assertEqual(gate.validate_results('test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0s', 25), 25)
@@ -185,17 +256,23 @@ class FocusedGateTests(unittest.TestCase):
     def test_workflow_has_independent_required_gates_and_retained_artifacts(self):
         import yaml
         source = yaml.safe_load((Path(__file__).resolve().parents[1]/'.github/workflows/ci.yml').read_text())
-        job = source['jobs']['postgres-security']
         for name, (_, required) in gate.GATES.items():
+            job_name = 'native-test' if name == 'checkpoint-restore-contract' else 'postgres-security'
+            job = source['jobs'][job_name]
+            self.assertIn(job_name, source['jobs']['ci-required']['needs'])
             matches=[step for step in job['steps'] if f'focused_ci_gate.py {name}' in step.get('run','')]
             self.assertEqual(len(matches), 1, name)
             self.assertIn('!cancelled()', matches[0]['if'])
             if required:
                 self.assertIn(required, matches[0]['env'])
-                self.assertIn('createdb ', matches[0]['run'])
-        self.assertIn('postgres-security', source['jobs']['ci-required']['needs'])
-        uploads=[s for s in job['steps'] if s.get('uses','').startswith('actions/upload-artifact@')]
-        self.assertTrue(any(s.get('if')=='always()' and s['with']['path']=='target/focused-ci-results' for s in uploads))
+                if name == 'checkpoint-restore-contract':
+                    earlier = job['steps'][:job['steps'].index(matches[0])]
+                    self.assertTrue(any('createdb ' in step.get('run', '') and 'ohc_checkpoint_test' in step['run'] for step in earlier))
+                else:
+                    self.assertIn('createdb ', matches[0]['run'])
+        for job_name in ['postgres-security', 'native-test']:
+            uploads=[s for s in source['jobs'][job_name]['steps'] if s.get('uses','').startswith('actions/upload-artifact@')]
+            self.assertTrue(any(s.get('if')=='always()' and s['with']['path']=='target/focused-ci-results' for s in uploads), job_name)
 
 
 if __name__ == '__main__':

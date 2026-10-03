@@ -119,6 +119,14 @@ async function navigateToSettledApplicationPage(page: Page, route: string): Prom
       const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
       if (!response) throw new Error('navigation did not return a document response');
       if (response.status() < 500) {
+        // The share preview intentionally commits a new document after hydration.
+        // Its intermediate shell is visible before that redirect, so measuring it
+        // can race destruction of the execution context. Inspect the destination.
+        if (route === '/share-card') {
+          const destination = new URL('/onboarding', response.url()).href;
+          await page.waitForURL(destination, { waitUntil: 'load' });
+          await expect(page).toHaveURL(destination);
+        }
         if (route === '/inbox') {
           await expect(page.getByTestId('inbox-settled')).toBeVisible();
           await expect(page.locator('.app-main')).toHaveCount(1);

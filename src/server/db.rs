@@ -71,6 +71,7 @@ pub const MAX_DB_RETRY_ATTEMPTS: u32 = 3;
 mod harness_middleware_schema;
 
 pub mod sql_middleware;
+mod sqlite_key;
 
 fn database_url_from_environment()
 -> Result<Option<String>, ::server_common::secret_source::SecretSourceError> {
@@ -295,6 +296,14 @@ pub struct MemoryContent<'a> {
 }
 
 impl DB {
+    /// Actual configured PostgreSQL storage; SQLite/MySQL dummy handles are not data stores.
+    pub fn postgres_pool(&self) -> Option<&PgPool> {
+        match &self.store {
+            DbStore::Postgres if GLOBAL_MYSQL_POOL.get().is_none() => Some(&self.pool),
+            _ => None,
+        }
+    }
+
     pub async fn query_available_slots(
         &self,
         tenant_id: &str,
@@ -617,75 +626,15 @@ impl DB {
             }
 
             // Enforce SQLCipher for Standalone mode unconditionally
-            let key = std::env::var("OMNISOLO_SQLITE_KEY").unwrap_or_else(|_| {
-                    let secret_path = crate::config::sqlite_key_path();
-                    if secret_path.exists() {
-                        #[cfg(unix)]
-                        {
-                            use std::os::unix::fs::OpenOptionsExt;
-                            use std::os::unix::fs::PermissionsExt;
-                            let mut options = std::fs::OpenOptions::new();
-                            options.read(true);
-                            #[cfg(target_os = "linux")]
-                                options.custom_flags(0x00020000); // O_NOFOLLOW
-                                #[cfg(target_os = "macos")]
-                                options.custom_flags(0x0100); // O_NOFOLLOW
-                            if let Ok(mut file) = options.open(&secret_path) {
-                                if let Ok(metadata) = file.metadata() {
-                                    let mut perms = metadata.permissions();
-                                    if perms.mode() & 0o777 != 0o600 {
-                                        tracing::warn!("Insecure permissions on the OmniSolo SQLite key. Fixing them to prevent TOCTOU attacks.");
-                                        perms.set_mode(0o600);
-                                        if file.set_permissions(perms).is_err() {
-                                            tracing::error!("Failed to securely update OmniSolo SQLite key permissions");
-                                            std::process::exit(1);
-                                        }
-                                    }
-                                }
-                                use std::io::Read;
-                                let mut bytes = String::new();
-                                if file.read_to_string(&mut bytes).is_ok() && !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
-                            }
-                        }
-                        #[cfg(not(unix))]
-                        {
-                            if let Ok(bytes) = std::fs::read_to_string(&secret_path) {
-                                if !bytes.trim().is_empty() {
-                                    return bytes.trim().to_string();
-                                }
-                            }
-                        }
-                    }
-
-                    let mut key_bytes = [0u8; 32];
+            let key = match sqlite_key::configured_key(std::env::var("OMNISOLO_SQLITE_KEY"))? {
+                Some(key) => key,
+                None => sqlite_key::resolve(&crate::config::sqlite_key_path(), || {
                     use rand::RngCore;
+                    let mut key_bytes = [0u8; 32];
                     rand::thread_rng().fill_bytes(&mut key_bytes);
-                    let new_key = hex::encode(key_bytes);
-
-                    #[cfg(unix)]
-                    {
-                        use std::io::Write;
-                        use std::os::unix::fs::OpenOptionsExt;
-                        let mut options = std::fs::OpenOptions::new();
-                        options.read(true).write(true).create_new(true).mode(0o600);
-                        #[cfg(target_os = "linux")]
-                        options.custom_flags(0x00020000); // O_NOFOLLOW
-                        #[cfg(target_os = "macos")]
-                        options.custom_flags(0x0100); // O_NOFOLLOW
-
-                        if let Ok(mut file) = options.open(&secret_path) {
-                            let _ = file.write_all(new_key.as_bytes());
-                        }
-                    }
-                    #[cfg(not(unix))]
-                    {
-                        let _ = std::fs::write(secret_path, &new_key);
-                    }
-
-                    new_key
-                });
+                    hex::encode(key_bytes)
+                })?,
+            };
 
             if key.trim().is_empty() {
                 return Err("CRITICAL SECURITY ERROR: OMNISOLO_SQLITE_KEY is empty. Encrypted storage is mandatory in Standalone Mode.".into());
@@ -712,6 +661,14 @@ impl DB {
                 })
                 .connect_with(conn_opts)
                 .await?;
+            let canonical_connection =
+                sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(sqlite_pool.clone());
+            if let Err(error) =
+                crate::persistence::require_sqlite_encryption(&canonical_connection).await
+            {
+                sqlite_pool.close().await;
+                return Err(error.into());
+            }
 
             Ok(DB {
                 pool: dummy_pool,
@@ -1230,6 +1187,9 @@ impl DB {
                 unlock_result?;
             }
             (DbStore::Sqlite(sqlite_pool), None) => {
+                sqlx::raw_sql(include_str!("persistence/usage_ledger_sqlite.sql"))
+                    .execute(sqlite_pool)
+                    .await?;
                 let schema = r#"
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id TEXT PRIMARY KEY,
@@ -4835,36 +4795,53 @@ mod autodream_db_tests {
     }
 
     #[tokio::test]
-    async fn test_local_sqlite_encryption_hardening_mock() {
-        // We verify that `DB::new()` parses OMNISOLO_SQLITE_KEY and cipher directives
-        // without causing thread safety or panic issues in parsing logic
-        // We bypass full sqlcipher linkage issues by just simulating the connect string
-        // via standard sqlx SqliteConnectOptions to ensure it doesn't crash on invalid pragma
-        use sqlx::sqlite::SqliteConnectOptions;
-        use std::str::FromStr;
-
-        // Ensure we handle cipher directives explicitly and gracefully
-        let opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .expect("Database URL or operation failed in test")
-            .pragma("key", "secure_test_key_123")
-            .pragma("cipher", "'sqlcipher'")
-            .pragma("cipher_page_size", "4096")
-            .pragma("cipher_compatibility", "4");
-
-        let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("PRAGMA secure_delete = ON").await?;
-                    Ok(())
-                })
-            })
-            .connect_with(opts)
-            .await;
-
-        // It should either connect fine, or fail gracefully if sqlcipher extension is strictly missing,
-        // but it must NOT panic, leak memory or expose cleartext fallback unconditionally
-        assert!(pool_result.is_ok() || pool_result.is_err());
+    async fn local_sqlite_encryption_uses_real_cipher_and_validates_the_existing_key() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("owned-encrypted.sqlite");
+        let url = format!("sqlite://{}?mode=rwc", path.display());
+        let key = "public-local-cipher-regression-key";
+        let database = crate::persistence::AppDatabase::connect_with_sqlcipher_key(&url, key)
+            .await
+            .expect("the production root explicitly links bundled SQLCipher");
+        let pool = database.connection().get_sqlite_connection_pool();
+        let version: String = sqlx::query_scalar("PRAGMA cipher_version")
+            .fetch_one(pool)
+            .await
+            .expect("a real SQLCipher engine is mandatory");
+        assert!(!version.is_empty());
+        sqlx::query("CREATE TABLE cipher_witness(value TEXT NOT NULL)")
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO cipher_witness VALUES('actual encrypted fixture data')")
+            .execute(pool)
+            .await
+            .unwrap();
+        pool.close().await;
+        assert!(
+            !std::fs::read(&path)
+                .unwrap()
+                .starts_with(b"SQLite format 3\0")
+        );
+        let wrong = crate::persistence::AppDatabase::connect_with_sqlcipher_key(
+            &url,
+            "public-wrong-cipher-regression-key",
+        )
+        .await;
+        assert!(
+            wrong.is_err(),
+            "an existing encrypted database must be read with its actual key before startup accepts it"
+        );
+        let reopened = crate::persistence::AppDatabase::connect_with_sqlcipher_key(&url, key)
+            .await
+            .unwrap();
+        let pool = reopened.connection().get_sqlite_connection_pool();
+        let value: String = sqlx::query_scalar("SELECT value FROM cipher_witness")
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        assert_eq!(value, "actual encrypted fixture data");
+        pool.close().await;
     }
 }
 

@@ -103,3 +103,13 @@ it('retires a late generated result when its input changes', async () => {
   await act(async () => { release(Response.json(toolbox())); });
   expect(screen.getByLabelText('Business')).toHaveValue('Newer owner description'); expect(screen.queryByText('Owner supplied brand')).toBeNull();
 });
+
+it('explains the missing authorized provider without inventing brand output or losing the brief', async () => {
+  generate = async () => Response.json({ code: 'generation_unavailable' }, { status: 503 });
+  render(<BrandStudio />);
+  fireEvent.change(await screen.findByLabelText('Business'), { target: { value: 'Owner described professional services' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Generate Toolbox' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent(/Configure the builder operator tenant and an authorized text-generation provider/);
+  expect(screen.getByLabelText('Business')).toHaveValue('Owner described professional services');
+  expect(screen.queryByRole('button', { name: 'Review public version' })).toBeNull();
+});

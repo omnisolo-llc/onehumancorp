@@ -5,6 +5,7 @@ import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { Card, CardContent } from "@/components/ui/card";
 import { useCloudInvitation } from '../referrals/useCloudInvitation';
 import { RecordedOrderMilestone } from './RecordedOrderMilestone';
+import { PublishedStorefrontEmbed } from './PublishedStorefrontEmbed';
 
 const noPrivateDraft = () => {};
 
@@ -12,10 +13,7 @@ export default function GrowthReferralWidget() {
   const invitation = useCloudInvitation(noPrivateDraft);
   const referralLink = invitation.link;
   const inviteCopy = useClipboardFeedback(referralLink);
-  const tenantId = typeof window !== 'undefined' ? (localStorage.getItem('business_display_name') || 'default-team') : 'default-team';
-  const encodedTenant = encodeURIComponent(tenantId);
-  const embedCode = `<iframe src="https://omnisolo.co/api/v1/growth/storefront/embed?tenant=${encodedTenant}" width="100%" height="600" frameborder="0" style="border-radius: 12px; border: 1px solid #eaeaea;"></iframe>\n<div style="text-align:center; font-size:12px; margin-top:8px;"><a href="https://omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${encodedTenant}" target="_blank" rel="noopener noreferrer" style="color:#6b7280;text-decoration:none;">⚡ OmniSolo</a></div>`;
-  const embedCopy = useClipboardFeedback(embedCode);
+
 
   const handleCopy = () => { void inviteCopy.copy(referralLink); };
 
@@ -104,35 +102,7 @@ export default function GrowthReferralWidget() {
         </CardContent>
       </Card>
 
-      <Card className="border-white/20 dark:border-white/10 shadow-xl overflow-hidden backdrop-blur-[30px] saturate-[210%] bg-white/30 dark:bg-black/30">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-6 items-center">
-            <div className="flex-1">
-              <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-semibold">
-                <span>🌐 Viral Storefront Embed</span>
-              </div>
-              <h2 className="text-2xl font-bold font-outfit text-gray-900 dark:text-white mb-2">
-                Embed Your Business
-              </h2>
-              <p className="text-gray-600 dark:text-gray-300 text-sm flex items-center gap-2">
-                <svg className="w-4 h-4 text-[#0066FF]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                Copy a storefront embed preview. Business identity and referral rewards have not been verified.
-              </p>
-            </div>
-
-            <div className="w-full md:w-auto">
-              <button
-                onClick={() => { void embedCopy.copy(embedCode); }}
-                disabled={embedCopy.state === 'pending'}
-                className="w-full app-button min-h-[44px] bg-[#0071E3] hover:bg-blue-700 text-white border-none py-3 px-6 text-sm rounded-md"
-              >
-                Copy Embed Code
-              </button>
-              {embedCopy.message && <p role={embedCopy.state === 'error' ? 'alert' : 'status'}>{embedCopy.message}</p>}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <PublishedStorefrontEmbed />
 
       <RecordedOrderMilestone invitation={invitation} />
     </div>

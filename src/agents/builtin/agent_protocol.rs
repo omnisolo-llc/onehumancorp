@@ -359,7 +359,7 @@ impl AgentProtocolServer {
         }
     }
 
-    pub async fn restore_checkpoint(&self, _task_id: &str, req_json: &str) -> serde_json::Value {
+    pub async fn restore_checkpoint(&self, task_id: &str, req_json: &str) -> serde_json::Value {
         let req: serde_json::Value = match serde_json::from_str(req_json) {
             Ok(r) => r,
             Err(_) => return serde_json::json!({ "error": "Invalid request" }),
@@ -371,7 +371,10 @@ impl AgentProtocolServer {
         };
 
         if let Some(cp) = &self.runner.core.agent.checkpointer {
-            match cp.restore_checkpoint(checkpoint_id).await {
+            match cp
+                .restore_checkpoint_for_thread(task_id, checkpoint_id)
+                .await
+            {
                 Ok(_) => {
                     serde_json::json!({ "success": true, "message": format!("Restored to checkpoint {}", checkpoint_id) })
                 }
@@ -479,6 +482,47 @@ mod tests {
                 response_id: Some("mock-id".to_string()),
             })
         }
+    }
+
+    #[tokio::test]
+    async fn test_protocol_checkpoint_restore_is_task_scoped() {
+        use crate::checkpointer::{Checkpoint, CheckpointSaver, GitCheckpointer};
+        let directory = tempfile::tempdir().unwrap();
+        let saver = Arc::new(GitCheckpointer::new(directory.path().to_path_buf()));
+        saver
+            .put_checkpoint(Checkpoint {
+                thread_id: "owner-task".into(),
+                checkpoint_id: "owner-checkpoint".into(),
+                parent_id: None,
+                data: serde_json::json!({}),
+                metadata: serde_json::json!({}),
+                created_at: chrono::Utc::now(),
+            })
+            .await
+            .unwrap();
+        std::fs::write(directory.path().join("untracked"), "preserve work").unwrap();
+        let index_before = std::fs::read(directory.path().join(".git/index")).unwrap();
+        let head_before = std::fs::read(directory.path().join(".git/HEAD")).unwrap();
+        let agent = Agent::new(Arc::new(MockLlmClient), vec![]).with_checkpointer(saver);
+        let server = AgentProtocolServer::new(Arc::new(Runner::new(Arc::new(agent))));
+        let request = r#"{"checkpoint_id":"owner-checkpoint"}"#;
+        let denied = server.restore_checkpoint("another-task", request).await;
+        assert!(denied.get("error").is_some(), "{denied}");
+        assert_eq!(
+            std::fs::read(directory.path().join(".git/index")).unwrap(),
+            index_before
+        );
+        assert_eq!(
+            std::fs::read(directory.path().join(".git/HEAD")).unwrap(),
+            head_before
+        );
+        assert_eq!(
+            std::fs::read_to_string(directory.path().join("untracked")).unwrap(),
+            "preserve work"
+        );
+        assert!(!directory.path().join(".git/refs/stash").exists());
+        let restored = server.restore_checkpoint("owner-task", request).await;
+        assert_eq!(restored["success"], true, "{restored}");
     }
 
     #[tokio::test]

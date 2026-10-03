@@ -95,8 +95,10 @@ it('does not invent an order milestone, a default-team capability, or a reward',
   expect(screen.getByRole('heading', { name: 'Order milestones unavailable' })).toBeVisible();
   expect(screen.queryByRole('link', { name: /Share to WhatsApp/ })).not.toBeInTheDocument();
 });
-it('does not promise referral rewards from an unverified embed preview', async () => {
+it('requires a real publication instead of promising rewards from an unverified embed', async () => {
   render(<GrowthReferralWidget />); await act(async () => {});
   expect(screen.queryByText(/built-in referral loop to reward you/)).not.toBeInTheDocument();
-  expect(screen.getByText(/Business identity and referral rewards have not been verified/)).toBeVisible();
+  expect(screen.getByText(/This does not create a publication, referral link, discount, or reward/)).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeDisabled();
+  expect(screen.queryByRole('textbox', { name: 'Published embed code' })).not.toBeInTheDocument();
 });

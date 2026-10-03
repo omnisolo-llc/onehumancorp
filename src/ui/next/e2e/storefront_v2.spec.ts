@@ -1,47 +1,34 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../e2e/fixtures';
+import { expectGeneratedDraft, expectGenerationUnavailable, fillBuilderBrief, generationAcceptance, generationGateReason, generationPrerequisite, generationResponse, publishAndReadAnonymous } from '../../../e2e/generation-acceptance';
 
-test.use({
-  viewport: { width: 390, height: 844 },
-  isMobile: true,
-  hasTouch: true,
+test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+
+test('mobile storefront retains the brief when generation is unconfigured', async ({ page, loginAs, adminUser }) => {
+  test.skip(generationAcceptance, 'This contract requires an unconfigured generation service.');
+  await loginAs(page, adminUser);
+  await fillBuilderBrief(page, 'Maya Cakes', 'I bake custom cakes for weddings and parties.');
+  const response = generationResponse(page);
+  await page.getByRole('button', { name: 'Build Store' }).click();
+  await expectGenerationUnavailable(await response);
+  await expect(page.getByText(generationPrerequisite, { exact: true })).toBeVisible();
+  await expect(page.getByPlaceholder(/mobile dog grooming service/i)).toHaveValue('I bake custom cakes for weddings and parties.');
+  await expect(page.getByText('Pick your draft')).toHaveCount(0);
 });
 
-test('Maya the baker journey storefront v2', async ({ page }) => {
-  await page.goto('/builder');
-
-  // Screen 1: Onboarding
-  await expect(page.getByText('What are you building today?')).toBeVisible();
-  await page.click('text=Selling Products');
-
-  // Screen 1.5: Wizard (Idle state)
-  await page.getByPlaceholder('e.g. Acme Corp').fill('Maya Cakes');
-  await page.getByPlaceholder('e.g. Retail, Consulting, Tech').fill('Bakery');
-  await page.click('text=Next: Choose Vibe');
-
-  await page.click('text=Friendly');
-  await page.click('text=Next: Details');
-
-  await page.getByPlaceholder('e.g. I run a mobile dog grooming service in Portland').fill('I bake custom cakes for weddings and parties.');
-  await page.click('id=generate-btn');
-
-  // Screen 2: Selection. The mocked API can resolve before the transient
-  // generating screen is observable, so assert the stable next state.
-  await expect(page.getByText('Pick your draft')).toBeVisible();
-  await page.click('text=Customize Selected Draft');
-
-  // Screen 3: Mobile Editor
+test('Maya reviews, edits and publishes actual generated copy on mobile @provider-acceptance', async ({ page, anonymousPage, loginAs, adminUser }) => {
+  test.skip(!generationAcceptance, generationGateReason);
+  test.setTimeout(180_000);
+  await loginAs(page, adminUser);
+  await fillBuilderBrief(page, 'Maya Cakes', 'I bake custom cakes for weddings and parties.');
+  const response = generationResponse(page);
+  await page.getByRole('button', { name: 'Build Store' }).click();
+  const draft = await expectGeneratedDraft(await response, adminUser.organizationId);
+  await page.getByRole('button', { name: 'Customize Selected Draft' }).click();
   await expect(page.getByText('Mobile Editor')).toBeVisible();
-  await expect(page.getByText('Maya Cakes')).toBeVisible();
-
-  // Test Action Sheet
-  await page.click('text=Maya Cakes');
+  const headline = draft.pages[0].blocks[0].content.headline;
+  await page.getByText(headline, { exact: true }).click();
   await expect(page.getByText('Edit Hero Block')).toBeVisible();
-  await page.click('text=Save Changes');
-
-  // Screen 4: Launch
-  await page.click('id=launch-btn');
-
-  // Success Screen
-  await expect(page.getByText("You're Live!")).toBeVisible();
-  await expect(page.getByText('https://mayacakes.cloud.omnisolo.co')).toBeVisible();
+  await page.locator('input[type="text"]').filter({ visible: true }).fill('Owner-reviewed custom cake copy');
+  await page.getByRole('button', { name: 'Save Changes' }).click();
+  await publishAndReadAnonymous(page, anonymousPage, 'Owner-reviewed custom cake copy');
 });

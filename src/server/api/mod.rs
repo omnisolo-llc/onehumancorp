@@ -21,6 +21,7 @@ pub mod billing_webhook_test;
 pub mod chaos;
 pub mod dynamic_workflows;
 pub mod growth;
+pub mod growth_previews;
 pub mod health;
 pub mod onboarding;
 pub mod syndication_handler;

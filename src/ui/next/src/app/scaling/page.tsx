@@ -10,6 +10,7 @@ export default function ScalingPage() {
   const [taskPayload, setTaskPayload] = useState('Analyze dataset');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const minInstances = 1;
   const maxInstances = 1000;
 
@@ -26,19 +27,26 @@ export default function ScalingPage() {
   const runDeployment = async () => {
     setLoading(true);
     setResults([]);
+    setError(null);
     try {
       const res = await fetch('/api/v1/scaling', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ count: instances, message: taskPayload }),
       });
-      if (!res.ok) {
-        throw new Error('Failed to run scalable deployment');
-      }
       const data = await res.json();
-      setResults(data.outputs || []);
+      if (!res.ok) {
+        throw new Error(typeof data?.error === 'string' && data.error.trim() ? data.error : 'Failed to run scalable deployment');
+      }
+      if (res.status !== 200 || !Array.isArray(data?.outputs) || !data.outputs.length
+        || data.outputs.some((output: unknown) => typeof output !== 'string' || !output.trim())
+        || data.error != null || data.success !== undefined && data.success !== true
+        || data.status !== undefined && data.status !== 'completed' && data.status !== 'success') {
+        throw new Error('Backend returned no confirmed agent outputs');
+      }
+      setResults(data.outputs);
     } catch (e: unknown) {
-      setResults([`Error: ${errorMessage(e)}`]);
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -141,6 +149,8 @@ export default function ScalingPage() {
           >
             {loading ? 'Deploying...' : 'Deploy Scalable Multi-Agent Fleet'}
           </button>
+
+          {error && <p role="alert" className="mb-6 text-red-700">{error}</p>}
 
           {results.length > 0 && (
             <div className="glassmorphism bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] p-6">

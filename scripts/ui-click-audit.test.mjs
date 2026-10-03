@@ -231,3 +231,14 @@ test('requires a separate verified navigation after each observed target', () =>
   f.shards[0].tests[0].attachments[0].navigations.pop();
   assert.throws(() => validateReceipts(f.shards, f.context, 2), /navigation/i);
 });
+
+test('dynamic order route audits the canonical persisted fixture instead of an invented ID', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'click-order-source-'));
+  try {
+    fs.mkdirSync(path.join(root, 'src/ui/next/src/app/orders/[id]'), { recursive: true });
+    fs.writeFileSync(path.join(root, 'src/ui/next/src/app/orders/[id]/page.tsx'), 'order page');
+    assert.deepEqual(protocol.discoverAppRoutes(root), ['/orders/e2e-seeded-record']);
+    const seed = fs.readFileSync(new URL('../src/e2e/e2e-seed.sql', import.meta.url), 'utf8');
+    assert.match(seed, /INSERT INTO orders[\s\S]*?'e2e-seeded-record'/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});

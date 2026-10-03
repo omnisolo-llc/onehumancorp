@@ -1,6 +1,6 @@
 //! Prototype authority proof: real restricted PostgreSQL, no provider/runtime.
 use super::PgFixture;
-use sqlx::{Executor, Postgres, Transaction};
+use sqlx::{Acquire, Executor, Postgres, Transaction};
 const SQL: &str = include_str!("../../src/server/persistence/agent_definition_authority_pg.sql");
 const GATE: i64 = 57129048260865031;
 async fn fixture() -> PgFixture {
@@ -55,9 +55,35 @@ async fn restricted_authority_projection_denies_direct_forgery_and_allows_fk_cas
         t.rollback().await.unwrap();
     }
     // A caller-created temp role table must not shadow the pinned trigger schema.
-    let mut t = tx(&pg, "b").await;
-    t.execute("CREATE TEMP TABLE identity_user_roles(user_id TEXT,role_name TEXT,tenant_id TEXT); INSERT INTO identity_user_roles VALUES('v','OWNER','b'); UPDATE users SET username='legitimate' WHERE id='v'").await.unwrap();
+    // Keep the probe transaction-scoped: closing a client pool does not wait for
+    // PostgreSQL to finish removing session-owned objects before role cleanup.
+    let mut shadow = pg.pool.acquire().await.unwrap();
+    let mut t = shadow.begin().await.unwrap();
+    server_common::auth_utils::set_org_context(&mut *t, "b")
+        .await
+        .unwrap();
+    t.execute("CREATE TEMP TABLE identity_user_roles(user_id TEXT,role_name TEXT,tenant_id TEXT) ON COMMIT DROP; INSERT INTO identity_user_roles VALUES('v','OWNER','b'); UPDATE users SET username='legitimate' WHERE id='v'").await.unwrap();
+    let shadow_is_active: bool = sqlx::query_scalar(
+        "SELECT to_regclass('identity_user_roles') = to_regclass('pg_temp.identity_user_roles')",
+    )
+    .fetch_one(&mut *t)
+    .await
+    .unwrap();
+    assert!(
+        shadow_is_active,
+        "the attack must exercise actual temporary-table shadowing"
+    );
     t.commit().await.unwrap();
+    let shadow_is_gone: bool =
+        sqlx::query_scalar("SELECT to_regclass('pg_temp.identity_user_roles') IS NULL")
+            .fetch_one(&mut *shadow)
+            .await
+            .unwrap();
+    assert!(
+        shadow_is_gone,
+        "the attack fixture must not leak a temporary table into the pool"
+    );
+    drop(shadow);
     assert!(!eligible(&pg, &b).await);
     let mut t = tx(&pg, "a").await;
     sqlx::query("UPDATE users SET active=FALSE WHERE id='u'")

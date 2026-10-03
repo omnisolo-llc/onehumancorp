@@ -1,30 +1,71 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 
+type Pattern = { id: string; initial_context: string; outcome_score: number; successful_tools: string[] };
+
+async function runtimeJson(response: Response): Promise<unknown> {
+  const payload: unknown = await response.json();
+  const error = payload && typeof payload === 'object' && 'error' in payload ? payload.error : undefined;
+  if (!response.ok || error != null) {
+    throw new Error(typeof error === 'string' && error.trim() ? error : 'Pattern runtime request failed');
+  }
+  return payload;
+}
+
+async function readPatterns(): Promise<Pattern[]> {
+  const payload = await runtimeJson(await fetch('/api/v1/sona'));
+  const patterns = payload && typeof payload === 'object' && 'patterns' in payload ? payload.patterns : undefined;
+  if (!Array.isArray(patterns) || patterns.some(pattern => !pattern || typeof pattern !== 'object'
+    || typeof pattern.id !== 'string' || !pattern.id || typeof pattern.initial_context !== 'string'
+    || typeof pattern.outcome_score !== 'number' || !Number.isFinite(pattern.outcome_score)
+    || !Array.isArray(pattern.successful_tools) || pattern.successful_tools.some((tool: unknown) => typeof tool !== 'string'))) {
+    throw new Error('Pattern runtime returned an invalid response');
+  }
+  return patterns;
+}
+
 export default function SonaPatternsPage() {
-  const [patterns, setPatterns] = useState<{ id: string; initial_context: string; outcome_score: number; successful_tools: string[] }[]>([]);
+  const [patterns, setPatterns] = useState<Pattern[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recording, setRecording] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [newTaskContext, setNewTaskContext] = useState('');
   const [newTool, setNewTool] = useState('');
 
   useEffect(() => {
-    fetch('/api/v1/sona')
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (!d) {
-          setLoading(false);
-          return;
-        }
-        if (d.error) {
-          setError(d.error);
-        } else if (d.patterns) {
-          setPatterns(d.patterns);
-        }
-        setLoading(false);
-      })
-      .catch((e) => { setError(e.message); setLoading(false); });
+    let current = true;
+    readPatterns()
+      .then(value => { if (current) setPatterns(value); })
+      .catch(error => { if (current) setError(error instanceof Error ? error.message : 'Could not load patterns'); })
+      .finally(() => { if (current) setLoading(false); });
+    return () => { current = false; };
   }, []);
+
+  const recordPattern = async () => {
+    if (recording || !newTaskContext.trim() || !newTool.trim()) return;
+    const pattern = {
+      id: crypto.randomUUID(), initial_context: newTaskContext,
+      successful_tools: [newTool], outcome_score: 1.0, created_at: new Date().toISOString(),
+    };
+    setRecording(true);
+    setError(null);
+    try {
+      await runtimeJson(await fetch('/api/v1/sona', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pattern),
+      }));
+      const recorded = await readPatterns();
+      if (!recorded.some(value => value.id === pattern.id && value.initial_context === pattern.initial_context
+        && value.outcome_score === pattern.outcome_score && value.successful_tools.length === 1
+        && value.successful_tools[0] === newTool)) {
+        throw new Error('Pattern recording was not confirmed by the runtime');
+      }
+      setPatterns(recorded);
+      setNewTaskContext('');
+      setNewTool('');
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Pattern recording could not be confirmed');
+    } finally { setRecording(false); }
+  };
 
   return (
     <div className="p-8 max-w-5xl mx-auto font-sans">
@@ -35,10 +76,10 @@ export default function SonaPatternsPage() {
 
       {loading ? (
         <div className="text-gray-500">Loading patterns...</div>
+      ) : error ? (
+        <div role="alert" className="text-[#FF3B30] bg-red-50 p-4 rounded-lg">{error}</div>
       ) : patterns.length === 0 ? (
         <div className="text-gray-500">No patterns recorded yet.</div>
-      ) : error ? (
-        <div className="text-[#FF3B30] bg-red-50 p-4 rounded-lg">{error}</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {patterns.map((p) => (
@@ -70,45 +111,23 @@ export default function SonaPatternsPage() {
           <input
             className="p-2 border rounded"
             placeholder="Task Context (e.g. Fix null pointer)"
+            disabled={recording}
             value={newTaskContext}
             onChange={(e) => setNewTaskContext(e.target.value)}
           />
           <input
             className="p-2 border rounded"
             placeholder="Tool used (e.g. edit_file)"
+            disabled={recording}
             value={newTool}
             onChange={(e) => setNewTool(e.target.value)}
           />
           <button
-            onClick={() => {
-              const newPat = {
-                id: Date.now().toString(),
-                initial_context: newTaskContext,
-                successful_tools: [newTool],
-                outcome_score: 1.0,
-                created_at: new Date().toISOString()
-              };
-              setPatterns(prev => [...prev, newPat]);
-              setNewTaskContext('');
-              setNewTool('');
-              fetch('/api/v1/sona', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newPat)
-              }).then(() => {
-                fetch('/api/v1/sona')
-                  .then(r => r.ok ? r.json() : null)
-                  .then(d => {
-                    if (d?.patterns && Array.isArray(d.patterns)) {
-                      setPatterns(d.patterns);
-                    }
-                  });
-              }).catch(() => {});
-            }}
+            onClick={recordPattern}
             className="bg-[#0071E3] text-white p-2 rounded w-fit"
-            disabled={!newTaskContext || !newTool}
+            disabled={loading || recording || !newTaskContext.trim() || !newTool.trim()}
           >
-            Record Pattern
+            {recording ? 'Recording...' : 'Record Pattern'}
           </button>
         </div>
       </div>

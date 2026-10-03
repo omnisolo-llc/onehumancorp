@@ -169,7 +169,7 @@ async fn test_builder_api() {
         None => return,
     };
 
-    let app = super::api::router(pool.clone());
+    let app = super::api::router(Some(pool.clone()));
 
     use ::server_common::Claims;
     let claims = Claims {
@@ -338,7 +338,7 @@ async fn generation_requires_a_provider_and_never_claims_unfetched_sources() {
         .acquire_timeout(Duration::from_millis(30))
         .connect_lazy("postgresql://invalid:invalid@127.0.0.1:1/unused")
         .unwrap();
-    let app = super::api::router(pool);
+    let app = super::api::router(Some(pool));
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let base = format!("http://{}", listener.local_addr().unwrap());
     let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });

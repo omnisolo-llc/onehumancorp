@@ -1,0 +1,11 @@
+{
+  "name": "ohc-workflow-proxy-witness",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.22.1 <23"
+  },
+  "dependencies": {
+    "typescript": "5.9.3"
+  }
+}

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 const pages = ['src/ui/next/public/dashboard.html', 'src/ui/next/public/ui/dashboard.html', 'src/ui/tauri/src/ui/dashboard.html'];
 const turn = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; let reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };

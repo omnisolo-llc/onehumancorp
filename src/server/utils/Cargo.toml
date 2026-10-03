@@ -24,6 +24,7 @@ chrono = { workspace = true }
 reqwest = { workspace = true }
 temp-env = "0.3.6"
 tower = "0.4"
+uuid = { version = "1", features = ["v4"] }
 
 [lib]
 path = "mod.rs"

@@ -5,6 +5,7 @@ import { openBuilderEditor, releaseBuilderEditor, assertBuilderEditor, builderSc
 import { fetchForOwnedBusinessAction, subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { canonicalRequest } from '../onboarding/contracts';
 import { sameOwner, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { generationFailureMessage } from '../builder/generationFailure';
 import { PublicationPanel } from '../builder/PublicationPanel';
 import { parsePublicationJson } from '../builder/publicationContracts';
 import { readBrandToolbox, brandPublicationSnapshot, safeBrandSvg, type BrandToolbox } from './contracts';
@@ -72,8 +73,9 @@ export default function BrandStudioPage() {
         method: 'POST', signal: request.abort.signal, headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ description, website_url: null, product_url: null, campaign_prompt: campaignPrompt || null, uploaded_asset_names: [] }),
       }, scope.owner, () => { assertBuilderEditor(scope, BRAND_DRAFT_KEY); if (!active() || fingerprint !== inputFingerprint()) throw new Error('Your generation request changed before dispatch.'); });
-      if (response.status !== 200) throw new Error('Could not generate the toolbox. No new draft or publication was confirmed.');
-      const data = await readBrandToolbox(parsePublicationJson(await response.text()));
+      const payload = parsePublicationJson(await response.text());
+      if (response.status !== 200) throw new Error(generationFailureMessage(response.status, payload));
+      const data = await readBrandToolbox(payload);
       if (!active() || fingerprint !== inputFingerprint()) return;
       assertBuilderEditor(scope, BRAND_DRAFT_KEY); generatedInput.current = fingerprint; setToolbox(data); setStatus('ready');
     } catch (error) { if (active()) { setStatus('error'); setErrorMessage(error instanceof Error ? error.message : 'Could not generate the toolbox.'); } }

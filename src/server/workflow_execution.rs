@@ -3,6 +3,10 @@
 use server_common::Claims;
 use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
 
+#[path = "workflow_execution/dispatch.rs"]
+pub(crate) mod dispatch;
+#[path = "workflow_execution/funding.rs"]
+pub(crate) mod funding;
 #[path = "workflow_execution/receipts.rs"]
 pub(crate) mod receipts;
 #[cfg(test)]
@@ -56,6 +60,11 @@ pub struct AdmittedAnalysis {
     authority: Authority,
     task: String,
     policy: AnalysisPolicy,
+    funding: Option<funding::FundingPolicy>,
+    input_token_bound: Option<i64>,
+    prepared: Option<omnisolo_builtin_agent::tenant_analysis::PreparedTextAnalysis>,
+    usage: Option<funding::UsageTicket>,
+    execution_id: String,
     // A non-cloneable admitted request is executed once and owns one bounded
     // in-process slot until completion, cancellation, or failed registration.
     _slot: tokio::sync::OwnedSemaphorePermit,
@@ -71,6 +80,11 @@ impl AdmittedAnalysis {
     }
     pub fn actor_id(&self) -> &str {
         &self.authority.actor_id
+    }
+    pub fn prepared(
+        &self,
+    ) -> Option<&omnisolo_builtin_agent::tenant_analysis::PreparedTextAnalysis> {
+        self.prepared.as_ref()
     }
     pub fn task(&self) -> &str {
         &self.task
@@ -111,27 +125,56 @@ impl AdmissionError {
 /// The production adapter performs one configured inference request. Tests may
 /// observe this final boundary, but admission/lifecycle always use this module.
 pub trait RegistrationLease: Send + Sync {
+    fn finished<'a>(&'a self, _status: &'a str) -> Pin<Box<dyn Future<Output = ()> + Send + 'a>> {
+        Box::pin(async {})
+    }
     fn is_active(&self) -> Pin<Box<dyn Future<Output = bool> + Send + '_>>;
 }
 
+pub struct InferenceResult {
+    pub output: Option<String>,
+    pub provider_request_id: Option<String>,
+    pub counts: Option<server_harness::middleware::usage_ledger::TokenCounts>,
+}
+
 pub trait TextInference: Send + Sync {
+    fn prepare(
+        &self,
+        _task: &str,
+        _policy: &AnalysisPolicy,
+    ) -> Result<omnisolo_builtin_agent::tenant_analysis::PreparedTextAnalysis, AdmissionError> {
+        Err(AdmissionError::Unavailable)
+    }
     fn infer<'a>(
         &'a self,
         input: &'a AdmittedAnalysis,
-    ) -> Pin<Box<dyn Future<Output = Result<String, ()>> + Send + 'a>>;
+    ) -> Pin<Box<dyn Future<Output = Result<InferenceResult, ()>> + Send + 'a>>;
 }
 
 pub struct WorkflowExecution {
     store: Arc<server_auth::Store>,
     configured: Option<(AnalysisPolicy, Arc<dyn TextInference>)>,
     slots: Arc<tokio::sync::Semaphore>,
+    receipts: Option<receipts::ReceiptStore>,
+    funding: Option<funding::FundingContext>,
+    workers: tokio::sync::Mutex<tokio::task::JoinSet<()>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum AnalysisOutcome {
     Completed(String),
     Cancelled,
+    BudgetUnavailable,
     OutcomeUnknown,
+}
+
+fn authority_admission_error(
+    error: server_auth::commit_authority::AuthorityError,
+) -> AdmissionError {
+    match error {
+        server_auth::commit_authority::AuthorityError::Forbidden => AdmissionError::Forbidden,
+        _ => AdmissionError::Unavailable,
+    }
 }
 
 impl WorkflowExecution {
@@ -140,8 +183,12 @@ impl WorkflowExecution {
             store,
             configured: None,
             slots: Arc::new(tokio::sync::Semaphore::new(4)),
+            receipts: None,
+            funding: None,
+            workers: tokio::sync::Mutex::new(tokio::task::JoinSet::new()),
         }
     }
+    #[cfg(test)]
     pub fn configured(
         store: Arc<server_auth::Store>,
         policy: AnalysisPolicy,
@@ -151,101 +198,92 @@ impl WorkflowExecution {
             store,
             configured: Some((policy, inference)),
             slots: Arc::new(tokio::sync::Semaphore::new(4)),
+            receipts: None,
+            funding: None,
+            workers: tokio::sync::Mutex::new(tokio::task::JoinSet::new()),
+        }
+    }
+    pub(crate) fn configured_funded(
+        store: Arc<server_auth::Store>,
+        policy: AnalysisPolicy,
+        inference: Arc<dyn TextInference>,
+        funding: funding::FundingContext,
+    ) -> Self {
+        if funding.policy.validate(&policy).is_err() {
+            return Self::unavailable(store);
+        }
+        Self {
+            store,
+            configured: Some((policy, inference)),
+            slots: Arc::new(tokio::sync::Semaphore::new(4)),
+            receipts: None,
+            funding: Some(funding),
+            workers: tokio::sync::Mutex::new(tokio::task::JoinSet::new()),
         }
     }
     pub fn policy(&self) -> Option<&AnalysisPolicy> {
         self.configured.as_ref().map(|(policy, _)| policy)
     }
 
-    async fn current_authority(&self, authority: &Authority) -> Result<(), AdmissionError> {
-        if authority.expires_at <= chrono::Utc::now().timestamp() {
-            return Err(AdmissionError::Forbidden);
+    pub(crate) async fn available_policy(
+        &self,
+        claims: &Claims,
+        headers: &axum::http::HeaderMap,
+    ) -> Result<Option<&AnalysisPolicy>, AdmissionError> {
+        let authority = self.authorize(claims, headers).await?;
+        if let Some(funding) = &self.funding {
+            if funding.policy.operator_tenant != authority.tenant_id {
+                return Err(AdmissionError::Forbidden);
+            }
+            if !tokio::time::timeout(
+                Duration::from_secs(3),
+                funding.ledger.summary(&authority.tenant_id),
+            )
+            .await
+            .is_ok_and(|value| value.is_ok())
+            {
+                return Ok(None);
+            }
         }
-        // Bound unavailable storage as well as provider execution. No private
-        // identity, token, or database error is returned through the HTTP API.
-        tokio::time::timeout(Duration::from_secs(3), async {
-            if self
-                .store
-                .is_revoked(&authority.token_id, &authority.tenant_id)
-                .await
-                .map_err(|_| AdmissionError::Unavailable)?
-            {
-                return Err(AdmissionError::Forbidden);
-            }
-            let user = self
-                .store
-                .get_user(&authority.actor_id, &authority.tenant_id)
-                .await
-                .ok_or(AdmissionError::Forbidden)?;
-            if !user.active
-                || user.organization_id.as_deref() != Some(authority.tenant_id.as_str())
-                || !user.roles.iter().any(|role| {
-                    role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin")
-                })
-            {
-                return Err(AdmissionError::Forbidden);
-            }
-            Ok(())
-        })
-        .await
-        .map_err(|_| AdmissionError::Unavailable)?
+        Ok(self.policy())
     }
 
-    // Receipt reconciliation requires current identity even when the provider is
-    // unavailable. This private snapshot grants no inference or workspace effect.
+    async fn current_authority(&self, authority: &Authority) -> Result<(), AdmissionError> {
+        server_auth::commit_authority::require_current_owner(
+            &self.store,
+            &authority.tenant_id,
+            &authority.actor_id,
+            &authority.token_id,
+            authority.expires_at,
+        )
+        .await
+        .map_err(authority_admission_error)
+    }
+
+    pub(crate) fn canonical_pg_authority(
+        &self,
+        pool: &sqlx::PgPool,
+    ) -> Result<server_auth::commit_authority::CanonicalPgAuthority, AdmissionError> {
+        server_auth::commit_authority::CanonicalPgAuthority::bind(self.store.clone(), pool)
+            .map_err(authority_admission_error)
+    }
+
+    // Receipt reconciliation needs current identity even when no provider is available.
     pub(crate) async fn authorize(
         &self,
         claims: &Claims,
         headers: &axum::http::HeaderMap,
     ) -> Result<Authority, AdmissionError> {
-        // Revalidate the exact bearer against the Store as well as requiring
-        // the middleware's current claims. A fabricated internal Claims value
-        // or caller-supplied tenant/actor is not a dispatch capability.
-        let mut values = headers.get_all(axum::http::header::AUTHORIZATION).iter();
-        let token = values
-            .next()
-            .filter(|_| values.next().is_none())
-            .and_then(|value| value.to_str().ok())
-            .and_then(|value| value.strip_prefix("Bearer "))
-            .filter(|value| {
-                !value.is_empty()
-                    && value.len() <= 16_384
-                    && !value.chars().any(char::is_whitespace)
-            })
-            .ok_or(AdmissionError::Forbidden)?;
-        let signed = tokio::time::timeout(Duration::from_secs(3), self.store.validate_token(token))
+        let owner = server_auth::commit_authority::verify_owner(&self.store, claims, headers)
             .await
-            .map_err(|_| AdmissionError::Unavailable)?
-            .map_err(|_| AdmissionError::Forbidden)?;
-        if signed.sub != claims.sub
-            || signed.organization_id != claims.organization_id
-            || signed.jti != claims.jti
-            || signed.exp != claims.exp
-            || signed.session_id != claims.session_id
-        {
-            return Err(AdmissionError::Forbidden);
-        }
-        let tenant_id = server_common::auth_utils::signed_tenant_id(&signed)
-            .filter(|tenant| !tenant.eq_ignore_ascii_case("system"))
-            .ok_or(AdmissionError::Forbidden)?;
-        if claims.sub.trim().is_empty()
-            || claims.jti.trim().is_empty()
-            || claims
-                .session_id
-                .as_ref()
-                .is_some_and(|id| id.trim().is_empty())
-        {
-            return Err(AdmissionError::Forbidden);
-        }
-        let authority = Authority {
-            tenant_id,
-            actor_id: claims.sub.clone(),
-            token_id: claims.jti.clone(),
-            expires_at: claims.exp,
-            session_id: claims.session_id.clone(),
-        };
-        self.current_authority(&authority).await?;
-        Ok(authority)
+            .map_err(authority_admission_error)?;
+        Ok(Authority {
+            tenant_id: owner.tenant_id().to_owned(),
+            actor_id: owner.actor_id().to_owned(),
+            token_id: owner.token_id().to_owned(),
+            expires_at: owner.expires_at(),
+            session_id: owner.session_id().map(str::to_owned),
+        })
     }
 
     pub async fn admit(
@@ -257,13 +295,18 @@ impl WorkflowExecution {
         workflow: &str,
     ) -> Result<AdmittedAnalysis, AdmissionError> {
         let authority = self.authorize(claims, headers).await?;
+        if let Some(funding) = &self.funding
+            && funding.policy.operator_tenant != authority.tenant_id
+        {
+            return Err(AdmissionError::Forbidden);
+        }
         if task.trim().is_empty()
             || task.chars().count() > MAX_TASK_CHARACTERS
             || !matches!(workflow, "" | "expert_task" | "analysis")
         {
             return Err(AdmissionError::Invalid);
         }
-        let (policy, _) = self
+        let (policy, inference) = self
             .configured
             .as_ref()
             .ok_or(AdmissionError::Unavailable)?;
@@ -273,6 +316,11 @@ impl WorkflowExecution {
         {
             return Err(AdmissionError::Invalid);
         }
+        let prepared = match inference.prepare(task, policy) {
+            Ok(request) => Some(request),
+            Err(error) if self.funding.is_some() => return Err(error),
+            Err(_) => None, // Only the test-only unmetered fixture constructor.
+        };
         let slot = self
             .slots
             .clone()
@@ -282,6 +330,11 @@ impl WorkflowExecution {
             authority,
             task: task.to_owned(),
             policy: policy.clone(),
+            funding: self.funding.as_ref().map(|funding| funding.policy.clone()),
+            input_token_bound: prepared.as_ref().map(|request| request.input_token_bound()),
+            prepared,
+            usage: None,
+            execution_id: uuid::Uuid::new_v4().to_string(),
             _slot: slot,
             registration: None,
         })
@@ -303,8 +356,11 @@ impl WorkflowExecution {
         Ok(())
     }
 
-    pub async fn run(&self, input: AdmittedAnalysis) -> AnalysisOutcome {
+    pub async fn run(&self, mut input: AdmittedAnalysis) -> AnalysisOutcome {
         if self.current_execution_authority(&input).await.is_err() {
+            if let (Some(funding), Some(ticket)) = (&self.funding, &input.usage) {
+                funding.cancel_reserved(ticket).await;
+            }
             return AnalysisOutcome::Cancelled;
         }
         let Some((policy, inference)) = &self.configured else {
@@ -313,10 +369,31 @@ impl WorkflowExecution {
         if policy != &input.policy {
             return AnalysisOutcome::Cancelled;
         }
-
-        // Polling this future can send the external request. From this point,
-        // cancellation/error cannot prove that the provider did no work. There
-        // is one attempt and no generic process, tool, memory, or retry path.
+        if let Some(funding) = &self.funding {
+            if input.funding.as_ref() != Some(&funding.policy) {
+                return AnalysisOutcome::Cancelled;
+            }
+            if input.usage.is_none() {
+                match funding.reserve_direct(&input).await {
+                    Ok(ticket) => input.usage = Some(ticket),
+                    Err(receipts::Error::Budget) => return AnalysisOutcome::BudgetUnavailable,
+                    Err(_) => return AnalysisOutcome::OutcomeUnknown,
+                }
+            }
+            let ticket = input
+                .usage
+                .as_ref()
+                .expect("funded admission has a reservation");
+            if funding.dispatched(ticket).await.is_err() {
+                return AnalysisOutcome::OutcomeUnknown;
+            }
+            // A committed in-flight reservation alone is never permission to
+            // ignore a cancellation or a changed owner immediately before I/O.
+            if self.current_execution_authority(&input).await.is_err() {
+                funding.unknown(ticket).await;
+                return AnalysisOutcome::OutcomeUnknown;
+            }
+        }
         let future = inference.infer(&input);
         tokio::pin!(future);
         let deadline = tokio::time::sleep(Duration::from_secs(90));
@@ -324,26 +401,39 @@ impl WorkflowExecution {
         let mut recheck = tokio::time::interval(Duration::from_millis(250));
         recheck.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
         recheck.tick().await;
-        loop {
+        let outcome = loop {
             tokio::select! {
                 biased;
-                _ = &mut deadline => return AnalysisOutcome::OutcomeUnknown,
-                _ = recheck.tick() => {
-                    if self.current_execution_authority(&input).await.is_err() {
-                        return AnalysisOutcome::OutcomeUnknown;
-                    }
+                _=&mut deadline=>break AnalysisOutcome::OutcomeUnknown,
+                _=recheck.tick()=>{
+                    if self.current_execution_authority(&input).await.is_err() {break AnalysisOutcome::OutcomeUnknown;}
                 }
-                result = &mut future => {
-                    if self.current_execution_authority(&input).await.is_err() {
-                        return AnalysisOutcome::OutcomeUnknown;
+                result=&mut future=>{
+                    if let Ok(result)=&result
+                        && let (Some(funding),Some(ticket))=(&self.funding,&input.usage) {
+                        let acknowledged = funding.settle(ticket,&server_harness::middleware::usage_ledger::UsageReceipt {
+                            provider_request_id:result.provider_request_id.clone().filter(|id|!id.is_empty()).unwrap_or_else(||format!("unknown:{}",ticket.event_id)),
+                            counts:result.counts.clone(),
+                        }).await;
+                        // Provider text alone cannot acknowledge a funded
+                        // effect. Preserve uncertainty and the durable hold
+                        // until accounting confirms the observed receipt.
+                        if !acknowledged { break AnalysisOutcome::OutcomeUnknown; }
                     }
-                    return match result {
-                        Ok(output) if !output.trim().is_empty() && output.len() <= MAX_OUTPUT_BYTES => AnalysisOutcome::Completed(output),
-                        _ => AnalysisOutcome::OutcomeUnknown,
+                    if self.current_execution_authority(&input).await.is_err() {break AnalysisOutcome::OutcomeUnknown;}
+                    break match result {
+                        Ok(InferenceResult{output:Some(output),..}) if !output.trim().is_empty() && output.len()<=MAX_OUTPUT_BYTES=>AnalysisOutcome::Completed(output),
+                        _=>AnalysisOutcome::OutcomeUnknown,
                     };
                 }
             }
+        };
+        if outcome == AnalysisOutcome::OutcomeUnknown
+            && let (Some(funding), Some(ticket)) = (&self.funding, &input.usage)
+        {
+            funding.unknown(ticket).await;
         }
+        outcome
     }
 }
 
@@ -392,7 +482,7 @@ mod tests {
         fn infer<'a>(
             &'a self,
             input: &'a AdmittedAnalysis,
-        ) -> Pin<Box<dyn Future<Output = Result<String, ()>> + Send + 'a>> {
+        ) -> Pin<Box<dyn Future<Output = Result<InferenceResult, ()>> + Send + 'a>> {
             Box::pin(async move {
                 let _guard = CompletionGuard(&self.dropped);
                 self.seen.lock().unwrap().push(Observed {
@@ -408,7 +498,11 @@ mod tests {
                 if self.fail {
                     Err(())
                 } else {
-                    Ok(format!("analysis of {}", input.task()))
+                    Ok(InferenceResult {
+                        output: Some(format!("analysis of {}", input.task())),
+                        provider_request_id: None,
+                        counts: None,
+                    })
                 }
             })
         }

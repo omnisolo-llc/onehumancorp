@@ -1,11 +1,44 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { Browser, Request } from '@playwright/test';
+import type { Browser, Page, Request } from '@playwright/test';
 import { createOwnedAuditSeed } from '../../../scripts/ui-audit-fixture.cjs';
 import { e2eDbTransaction } from '../db_utils';
 import { authenticateRequest } from '../authenticate';
 import { createAuditNavigation, type AuditNavigationReceipt } from './ui_audit_navigation';
+
+export const isolatedClickAuditRoutes = new Set([
+  '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder',
+]);
+
+export function clickAuditStates(route: string): string[] {
+  return route === '/builder' || route === '/website-builder' ? ['entry', 'started-draft'] : ['entry'];
+}
+
+// Both preparations are local wizard choices, never a dispatched business
+// action. Recreate them only in a newly seeded owner/context, before observation.
+export async function prepareClickAuditState(page: Page, route: string, state: string) {
+  if (state === 'entry') return;
+  if (state !== 'started-draft') throw new Error(`Unknown click audit state: ${state}`);
+  if (route === '/website-builder') {
+    await page.getByRole('button', { name: 'Start My Business', exact: true }).click();
+    await page.getByRole('button', { name: 'Online Store', exact: true }).waitFor({ state: 'visible' });
+  } else if (route === '/builder') {
+    await page.getByRole('button', { name: /Selling Products/ }).click();
+    await page.getByRole('button', { name: 'Next: Choose Vibe', exact: true }).waitFor({ state: 'visible' });
+  } else throw new Error(`No draft preparation exists for ${route}`);
+}
+
+const initialRouteReads: Record<string, string[]> = {
+  '/': ['/api/v1/ui/dashboard/unified-feed'],
+  '/dashboard': ['/api/v1/ui/dashboard/unified-feed'],
+  '/unified-feed': ['/api/v1/agent-feed'],
+  '/dashboard/unified-feed': ['/api/v1/agent-feed'],
+  '/feed': ['/api/v1/agent-feed'],
+  '/action-center': ['/api/v1/agents/approvals'],
+  '/builder': ['/api/v1/auth/session-identity'],
+  '/website-builder': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
+};
 
 const canonicalSeed = () => readFileSync(path.resolve(__dirname, '../e2e-seed.sql'), 'utf8');
 
@@ -64,20 +97,30 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
       const identity = await response.json();
       if (identity.userId !== actor.userId || identity.tenantId !== actor.tenantId) throw new Error('Dashboard audit reached a different owner');
     });
-    return { actor, page, close: () => context.close(), navigate: async (route: '/' | '/dashboard' = '/dashboard'): Promise<AuditNavigationReceipt> => {
-      const initialRead = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/ui/dashboard/unified-feed' && response.request().method() === 'GET');
-      // Observe the real initial feed read before discovery; no API substitution.
-      const [receipt, response] = await Promise.all([navigate(page, route), initialRead]);
-      if (response.status() !== 200) throw new Error(`Dashboard baseline read failed: HTTP ${response.status()}`);
-      await response.finished();
-      await page.getByText('Loading business metrics…', { exact: true }).waitFor({ state: 'hidden' });
-      await page.getByText('Loading Agent Proposals...', { exact: true }).waitFor({ state: 'hidden' });
+    return { actor, page, close: () => context.close(), navigate: async (route = '/dashboard'): Promise<AuditNavigationReceipt> => {
+      if (!isolatedClickAuditRoutes.has(route)) throw new Error(`No isolated click fixture exists for ${route}`);
+      const initialReads = initialRouteReads[route].map(path => page.waitForResponse(response =>
+        new URL(response.url()).pathname === path && response.request().method() === 'GET'));
+      // Complete the real initial reads before discovery; no API substitution.
+      const [receipt, responses] = await Promise.all([navigate(page, route), Promise.all(initialReads)]);
+      for (const response of responses) {
+        if (response.status() !== 200) throw new Error(`${route} baseline read failed: HTTP ${response.status()}`);
+        await response.finished();
+      }
+      if (route === '/' || route === '/dashboard') {
+        await page.getByText('Loading business metrics…', { exact: true }).waitFor({ state: 'hidden' });
+        await page.getByText('Loading Agent Proposals...', { exact: true }).waitFor({ state: 'hidden' });
+      } else if (route === '/unified-feed' || route === '/dashboard/unified-feed') {
+        await page.getByText('Loading feed...', { exact: true }).waitFor({ state: 'hidden' });
+      } else if (route === '/feed') {
+        await page.getByText('Checking your feed...', { exact: true }).waitFor({ state: 'hidden' });
+      }
       const deadline = Date.now() + 5000;
       while (true) {
         // Rendering after completed responses is scheduled in the browser realm.
         await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
         if (pending.size === 0) break;
-        if (Date.now() >= deadline) throw new Error('Dashboard baseline reads did not settle before discovery');
+        if (Date.now() >= deadline) throw new Error(`${route} baseline reads did not settle before discovery`);
         await page.waitForTimeout(25);
       }
       return receipt;

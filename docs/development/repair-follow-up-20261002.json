@@ -1,34 +1,34 @@
 {
-  "updated_at": "2026-10-02T22:07:00Z",
+  "updated_at": "2026-10-03T04:35:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
       "id": "hosted-acceptance",
       "owner": "integration",
-      "status": "pending",
+      "status": "failed_pending_repair_verification",
       "required_outcome": "Full locked make lint/test and actual browser acceptance on merged checkpoint",
-      "evidence_and_limit": "Previous835c33c:1718 browser passed,38failed; non-browser CI passed. Current local UI3051/scripts776/nativecontracts20 passed; exact locked hosted verification pending."
+      "evidence_and_limit": "Exact5c3d564 CI37094202140 ended naturally:1748 browser passed,22 failed,7 configured acceptance skipped. All build/Rust/Node/Next/Tauri/images/Docker/Kind/audit jobs passed. PostgreSQL failed only the builder cloned-database fixture70/71; reviewed53f4c9d fixes a real SQLx max1 close/return race and distinguishes autovacuum from retained clients, with74 cases twice andstrictClippy. Browser failures remain3 integration,5 entitlement and14 runtime-related assertions. Next candidate requires fresh hosted acceptance."
     },
     {
       "id": "legacy-agent-rpc",
       "owner": "durable-workflow",
-      "status": "contained",
+      "status": "partially_repaired",
       "required_outcome": "Implement supported Aider/Actor/Protocol/Goose/SONA/LangGraph operations with tenant authority and durable receipts",
-      "evidence_and_limit": "Missing runtime503 and upstream-auth502 are truthful; six browser401 causes addressed, positive operations remain open."
+      "evidence_and_limit": "Missing runtime503 and upstream-auth502 are truthful. Actor/expert now reject incomplete or contradictory completion envelopes; mutating protocol methods requirePOST before dispatch and synthesized private replies use no-store. Component fullNext3151 plus final server523 tests pass; canonical focused43/types pass. Genuine supported runtime operations remain open."
     },
     {
       "id": "durable-workflow",
       "owner": "durable-workflow",
-      "status": "in_progress",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Mount tenant/provider/payer-bound durable HTTP/hire execution with hard budget and unknown-outcome reconciliation",
-      "evidence_and_limit": "SQLite/PG receipts and40-case token-fence stage verified; later mounting/funding work excluded from checkpoint."
+      "evidence_and_limit": "Mounted tenant/provider/payer funded text dispatch and exact-request recovery/paging integrated; hosted workflow97/receiptPG50/builder50 green. Additive usage-schema1025 and verified proxy-query compatibility now component98/53/50 plus3Clippy; combined full application verification pending. Legacy arbitrary RPC operations remain separate."
     },
     {
       "id": "generation-write-fence",
-      "owner": "integration",
-      "status": "open",
+      "owner": "durable-workflow",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Fence revocation atomically across generated draft persistence; reject unsupported distinct auth storage",
-      "evidence_and_limit": "Current authority checks and32-case HTTP/PG component coverage do not prove cross-store commit atomicity."
+      "evidence_and_limit": "Reviewed d92fbeb introduces exact-bearer canonical PostgreSQL authority, a final token/role fence through generated-draft COMMIT, and a bounded same-database startup proof. Real builder65, workflow101 and receiptPG56 cases plus all three strict Clippy gates passed on component source. Shared SQLite writes, publication fencing, legacy CRUD and paid request recovery remain separate open work. Combined full-root and hosted acceptance are pending."
     },
     {
       "id": "publication-write-fence",
@@ -68,23 +68,23 @@
     {
       "id": "unknown-pricing-state",
       "owner": "entitlement",
-      "status": "repaired_pending_integration",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Distinguish unknown plan/usage from real Free/zero/unlimited",
-      "evidence_and_limit": "Separate pricing36-test follow-up excluded from immediate checkpoint."
+      "evidence_and_limit": "Unknown billing values remain distinct from Free/zero/unlimited; actual Stripe URL/status and current owner binding implemented. Exact d6a6eec Node/Next full suite green; browser blocked by unrelated worker compilation."
     },
     {
       "id": "operational-signals",
       "owner": "browser-operations",
-      "status": "in_progress",
+      "status": "verified_hosted",
       "required_outcome": "Remove invented recurring business claims and generate only recorded source-backed low-stock signals",
-      "evidence_and_limit": "Separate PostgreSQL10-scenario proof prepared;5SQLiteRust cases and hosted storage acceptance still pending."
+      "evidence_and_limit": "c8 actual backend/images/PG/worker gate pass. Worker retains real inventory thresholds, source revision/dedupe, preserved decisions and bounded fair polling; actual11-case spawn/storage/cache/fairness regression passed. Broader alert categories require their own configured source signals."
     },
     {
       "id": "location-escalation",
       "owner": "integration",
-      "status": "in_progress",
+      "status": "partially_repaired",
       "required_outcome": "Truthful real staff/task/summary reads and genuine draft/send escalation workflow",
-      "evidence_and_limit": "23 paired UI/API regressions pass in isolated work; native staff schema/read tests and real draft/send implementation pending."
+      "evidence_and_limit": "Paired d63d240/4b11f02 integrated: real staff/task/summary reads and additive1027, no fabricated draft results, actual8SQLite/PG cases andClippy; owner-bound UI3068fullNext/29focused pass on component source. Genuine draft/delivery, invitation and timecard-write outcomes remain separate open issues."
     },
     {
       "id": "audio-command",
@@ -133,7 +133,7 @@
       "owner": "integration",
       "status": "open",
       "required_outcome": "Use supported provider quote/service-area result instead of invented ETA/fee",
-      "evidence_and_limit": "No genuine quote acceptance evidence yet."
+      "evidence_and_limit": "Legacy mutable product/domain handlers accept path/Host tenant selections without local current-owner fencing; shared response cache keys only URI, and invalidation accepts arbitrary tags. Global auth blocks anonymous requests but does not establish private tenant ownership. Complete source-linked cache/router RED harness is prepared; first compile stopped before tests on900MiB disk floor. Public journeys must use owner-reviewed immutable publication receipts."
     },
     {
       "id": "integration-connectivity",
@@ -166,9 +166,180 @@
     {
       "id": "local-test-hang",
       "owner": "integration",
-      "status": "open",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Diagnose concurrent root Node invite-test stall without weakening assertions",
-      "evidence_and_limit": "Exact invite34 cases and full sequential776 pass. Concurrent attempt stalled after115; no successful aggregate claimed for it."
+      "evidence_and_limit": "Full-dashboard JSDOM fixtures exposed real WebSocket transports despite stubbed fetch. The offline helper denies network dispatch, subresources and default browser transports before scripts run; six boundary/dependency regressions and all 17 affected fixtures pass. Fresh safeguarded root suite833/833 passed, zero skipped/cancelled,78.51s. Normal npm-ci dry-run passes; actual hosted locked install still required because four installed pg packages predate their existing lock versions. Prior denied run outcomes remain unverified and inaccessible; no result was recovered through another route."
+    },
+    {
+      "id": "operations-worker-spawn",
+      "owner": "integration",
+      "status": "verified_hosted",
+      "required_outcome": "Build and run the exact production spawned worker with factual persistence, auth and cache behavior intact",
+      "evidence_and_limit": "Minimal153a371 fix passed actual11/Clippy; c8 full backend and production images plus required worker gate passed. No unsafe, lint suppression or worker/cache/auth replacement."
+    },
+    {
+      "id": "shipping-real-contracts",
+      "owner": "integration",
+      "status": "open",
+      "required_outcome": "Remove magic order, rate and label success; use actual owned order destination and durable idempotent provider receipts without equating label purchase to shipped fulfillment",
+      "evidence_and_limit": "Reachable orders/[id] e2e-shippo-order, weight9999 and fabricated rates/labels confirmed. Backend uses global destination, lacks durable purchase recovery and prematurely marks shipped/fulfilled; no live paid transaction authorized or performed."
+    },
+    {
+      "id": "staff-invitation-timecard",
+      "owner": "integration",
+      "status": "open",
+      "required_outcome": "Persist actual staff invitation lifecycle and report timecard write failures instead of successful unstored effects",
+      "evidence_and_limit": "Source audit found generated unstored invite token and ignored timecard insert failures; follow-on implementation/actual handler regressions required."
+    },
+    {
+      "id": "usage-schema-prerequisite",
+      "owner": "durable-workflow",
+      "status": "repaired_pending_hosted",
+      "required_outcome": "Serve usage under a restricted application role without request-time DDL and accept only matching verified proxy identity parameters",
+      "evidence_and_limit": "Reviewed1de943b integrated asf429be1: additive1025 plus portable SQLite/PG schema init; source-bound real restricted-role/proxy98workflow/53PG/50builder and3Clippy pass; combined hosted pending."
+    },
+    {
+      "id": "legacy-generation-functionality",
+      "owner": "generation",
+      "status": "partially_repaired",
+      "required_outcome": "Preserve actual generated text and owner edits; implement genuine supported URL/media/GEO/runtime paths or explicitly retire unadvertised unused paths",
+      "evidence_and_limit": "0f81521 preserves subtitle/TextBlock, rejects malformed provider envelopes and presents real HTTP/RPC errors. URL/media/GEO and tenant-bound repository runtime remain unimplemented; exact503 availability is not positive capability acceptance."
+    },
+    {
+      "id": "postgres-registration-namespace",
+      "owner": "entitlement",
+      "status": "repaired_pending_hosted",
+      "required_outcome": "Actual PostgreSQL ticket/OIDC registration atomically creates its fresh Free tenant namespace, account, roles and source binding while preserving paid invitations and collision rollback",
+      "evidence_and_limit": "Reviewedf5d8a84 fixes actual canonical FK failure by creating the fresh Free namespace atomically for ticket/OIDC registration; complete backend schemas preserve bootstrap order and paid invitations. Auth18, realPG/portable/schema13 and actualdefinition55 plusstrictClippy passed on component source; full combined hosted pending. MySQL has definition parity only, not live runtime acceptance. Exact5c hosted agent-definition55 and full native Rust gates pass after integration; no MySQL runtime claim."
+    },
+    {
+      "id": "worst-case-cached-tariff",
+      "owner": "durable-workflow",
+      "status": "repaired_pending_hosted",
+      "required_outcome": "Reserve a checked monetary ceiling covering either all-cached or all-uncached input before dispatch",
+      "evidence_and_limit": "ec97410 uses max of existing RateCard.cost extremes, with real 4864 vs 8960 RED then workflow99. Two genuine root lifecycle cases raise final workflow101/PG56/builder53; all three complete suites and strict Clippy passed on unchanged 98885c3 component source. Combined hosted acceptance remains open."
+    },
+    {
+      "id": "legacy-dashboard-feed-clobber",
+      "owner": "entitlement",
+      "status": "verified_hosted",
+      "required_outcome": "Only the actual feed endpoint may replace recorded agent feed state; unrelated referral/metric reads cannot erase it",
+      "evidence_and_limit": "Reviewed7ab3aff removes unrelated feed writers and missing renderer locals. Both dashboard savings/DOM journeys now pass on exact5c hosted run. Other dashboard capabilities, cache races and fabricated memory are separately tracked."
+    },
+    {
+      "id": "builder-paid-request-recovery",
+      "owner": "durable-workflow",
+      "status": "open",
+      "required_outcome": "Durable idempotent builder admission and request readback before a paid generation retry",
+      "evidence_and_limit": "Funding is enforced, but GenerationContext::draft directly admits/runs without a recoverable client request receipt. Lost generation/save ACK can lead a manual retry to another paid request. No automatic retry was added; canonical write fencing is a separate prerequisite."
+    },
+    {
+      "id": "field-routing-authority",
+      "owner": "field-routing",
+      "status": "in_progress",
+      "required_outcome": "Signed current authority, real recorded appointment/route writes and truthful bounded planning across Next and legacy clients",
+      "evidence_and_limit": "Mounted handlers trust body/header tenant or fall back to e2e/default tenants, invent staff/travel outcomes and ignore writes; online client status is local-only. Dedicated owner is repairing all four server/Next surfaces plus legacy IndexedDB callers; no default tenant may be created to satisfy FKs."
+    },
+    {
+      "id": "agent-feed-invalidation-race",
+      "owner": "integration",
+      "status": "investigation_open",
+      "required_outcome": "Determine why a freshly stored owned Ambassador item was absent in one hosted feed snapshot and verify stable read-after-mutation behavior",
+      "evidence_and_limit": "Ambassador failedc8 then passed2d/5c without a source repair. CustomerSuccess failed5c after shared-tenant SQL insertion following feed cache population. New fixture uses a unique signed owner and persists/verifies the row before first feed read, preserving real approval/DB assertions. Actual in-flight fetch versus invalidation behavior remains a separate unresolved investigation."
+    },
+    {
+      "id": "dashboard-memory-interaction",
+      "owner": "integration",
+      "status": "contained_implementation_open",
+      "required_outcome": "Implement durable current-actor/tenant-bound exact memory records and honest recorded/empty/error states; model consolidation requires actual execution evidence",
+      "evidence_and_limit": "Reachable dashboard substring replies and ownerless user_favorite_cake recall removed. Unsent input is retained and explicit session invalidation clears it. Seven actual rendered RED cases now pass; the former memory-consolidation browser test only exercised invented chocolate/localStorage behavior and is replaced by explicit negative safety coverage. Genuine persistence/recall acceptance remains open."
     }
-  ]
+  ],
+  "required_configured_acceptance": [
+    {
+      "id": "storefront-generation-edit",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/e2e/agentic-storefront-editor.spec.ts",
+      "test_title": "Maya generates and edits actual storefront copy @provider-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real provider/model, configured operator tenant, genuine budget/rate and isolated exact-source test stack; no paid-call approval currently granted",
+      "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "builder-wizard-selection",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/e2e/builder_wizard.spec.ts",
+      "test_title": "owner selects the actual generated draft and opens the editor @provider-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real provider/model, configured operator tenant, genuine budget/rate and isolated exact-source test stack; no paid-call approval currently granted",
+      "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "brand-persistence-publication",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/e2e/brand_studio.spec.ts",
+      "test_title": "generates a real text toolbox and publishes its reviewed website @provider-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real provider/model, configured operator tenant, genuine budget/rate and isolated exact-source test stack; no paid-call approval currently granted",
+      "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "desktop-builder-publication",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/ui/next/e2e/builder_ui.spec.ts",
+      "test_title": "builder generates and publishes the owner-reviewed website @provider-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real provider/model, configured operator tenant, genuine budget/rate and isolated exact-source test stack; no paid-call approval currently granted",
+      "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "mobile-edit-publication",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/ui/next/e2e/storefront_v2.spec.ts",
+      "test_title": "Maya reviews, edits and publishes actual generated copy on mobile @provider-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real provider/model, configured operator tenant, genuine budget/rate and isolated exact-source test stack; no paid-call approval currently granted",
+      "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "tenant-repository-runtime",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/e2e/aider_repomap.spec.ts",
+      "test_title": "the authorized runtime returns the actual repository map @runtime-acceptance",
+      "kind": "runtime",
+      "prerequisites": "Implemented and approved tenant-bound repository runtime with bounded workspace authority and isolated exact-source test stack",
+      "evidence": "No positive configured acceptance has been run; passing unconfigured503 or unit fixtures cannot close this gate."
+    },
+    {
+      "id": "recorded-text-analysis-provider",
+      "owner": "release_owner",
+      "status": "unexecuted",
+      "required_for_release": true,
+      "ordinary_ci": "explicitly_skipped_without_prerequisite",
+      "source_file": "src/e2e/recorded_text_analysis.spec.ts",
+      "test_title": "explicit text analysis returns actual durable provider output after reload @text-analysis-acceptance",
+      "kind": "provider",
+      "prerequisites": "Authorized real configured text provider and genuine funded tenant usage policy with explicit spending approval in the isolated exact-source stack; no live paid-call approval currently granted",
+      "evidence": "The new panel reuses durable admission/readback, but this positive configured browser/provider journey remains unexecuted. Unit and protocol tests do not close it."
+    }
+  ],
+  "completion_rule": "Ordinary CI success is not all-tests or release-readiness success while any required configured acceptance is skipped/unexecuted or any recorded capability issue remains open."
 }

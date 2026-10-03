@@ -1,7 +1,10 @@
 import { test, expect } from '../../../../e2e/fixtures';
+import { runtimeAcceptance, runtimeGateReason } from '../../../../e2e/generation-acceptance';
+import { expectRuntimeUnavailable, runtimeUnavailableMessage } from '../../../../e2e/support/runtime_unavailable';
 
 test.describe('LangGraph State Machine', () => {
-  test('should execute a task via LangGraph mechanics and trigger tool node routing from sidebar', async ({ page }) => {
+  test('should execute a task via LangGraph mechanics and trigger tool node routing from sidebar @runtime-acceptance', async ({ page }) => {
+    test.skip(!runtimeAcceptance, runtimeGateReason);
     test.setTimeout(180000);
     // Navigate to the dashboard (home page)
     await page.goto('/dashboard');
@@ -25,4 +28,19 @@ test.describe('LangGraph State Machine', () => {
     const resultText = await page.locator('pre').textContent();
     expect(resultText?.toLowerCase()).toContain('hello');
   });
+  test('unconfigured runtime retains the LangGraph prompt without claiming tool execution', async ({ page }) => {
+    test.skip(runtimeAcceptance, 'This contract requires an unconfigured runtime.');
+    await page.goto('/dashboard');
+    await page.locator('a[href="/langgraph"]').click();
+    const prompt = 'Use the Bash tool to execute "echo hello". Then confirm you have done so.';
+    await page.locator('#message').fill(prompt);
+    const execution = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/agents/langgraph' && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Run LangGraph' }).click();
+    await expectRuntimeUnavailable(await execution);
+    await expect(page.getByTestId('error-message')).toContainText(runtimeUnavailableMessage);
+    await expect(page.getByTestId('success-message')).toHaveCount(0);
+    await expect(page.locator('#message')).toHaveValue(prompt);
+    await expect(page.getByRole('button', { name: 'Run LangGraph' })).toBeEnabled();
+  });
+
 });

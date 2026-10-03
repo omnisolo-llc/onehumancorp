@@ -41,7 +41,8 @@ this harness does not pretend to execute that service. The widget grants no new
 contact/bot impersonation path. Unrelated legacy work-item/AI-draft methods are
 unchanged, so this is not whole-omnichannel certification.
 
-No provider, model, external database or process dispatch executes. Stopped,
+No provider, model, external database or business-process dispatch executes.
+Isolated test child processes are used for process-global configuration. Stopped,
 zero-discovery or ignored test runs are never a pass. Whole-main and hosted
 acceptance remain separate from this focused gate.
 
@@ -66,3 +67,46 @@ those errors roll back and are never retried automatically.
 Lock waits are capped at3s and statements at5s within each widget transaction;
 stricter configured values remain effective. A real held-parent timeout regression
 proves rollback/no receipt, later pool reuse, and retention of a100ms role default.
+
+
+## Committed event publication
+
+The gate also requires explicit `OHC_WIDGET_TEST_REDIS_URL` pointing to a
+disposable loopback Redis server with an explicit port, no credentials/options,
+and database0. The test runner clears production Redis configuration; only
+isolated child processes receive the validated test URL. Connection-stall tests
+inject failures only. Successful publications use actual Redis subscriptions,
+not simulated acknowledgements. No Redis keys or global flush commands are used.
+
+Invalid Redis configuration leaves the optional pool unavailable without a panic
+or URL/credential logging; a fresh-process test exercises the actual helper.
+The full production Redis pool, current configuration helper, outbox relay and
+exact server startup block are included. Migration060 supplies the actual JSONB
+queue and RLS policy, alongside the canonical chat migrations. A message and its
+pending event are one transaction; failed queue writes or deferred commit errors
+roll both back. The stable event identity is the canonical message ID. Redis
+publishing runs only after commit and re-reads tenant-owned canonical rows.
+
+The internal worker claims only `publish_chat_event` rows with SKIP LOCKED. Its
+transaction holds the queue and canonical authority rows while a750ms bounded
+connection/publication runs;
+all database and network work has a5s outer bound. Stricter configured statement
+and lock timeouts remain effective; authority rows stay locked through the local
+publication attempt. A timeout is an unknown Redis outcome, not cancellation of
+an already submitted command: late publication after lock release is possible. Process interruption cancels
+the claim instead of leaving a permanent PROCESSING job. Failures and zero
+subscribers retry with exponential delays, capped at256s and10attempts, then
+retain FAILED intent. A successful Redis command with active subscribers stores
+an explicit publication acknowledgement. This proves publication only, never
+recipient receipt, reading, processing or customer delivery. Consumers must
+deduplicate `event_id` and use authenticated history for catch-up: a lost database
+acknowledgement can produce the same event again. No in-repository browser
+subscriber or customer-delivery transport is introduced by this relay.
+
+Real PostgreSQL/Redis regressions cover no phantom event on commit rejection,
+atomic JSONB intent, explicit Redis publication metadata, zero-subscriber retry,
+restart bootstrap, concurrent claims, foreign/malformed identities, reassigned
+parents, connection outage, capped retries, cancellation and lost-database-ack
+replay. The startup fixture retains the extracted shutdown sender until its
+worker test completes; the ordinary HTTP fixture does not boot unrelated
+application workers. Complete backend/server and hosted gates remain separate.

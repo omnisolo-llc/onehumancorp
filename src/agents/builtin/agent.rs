@@ -1359,7 +1359,15 @@ impl Agent {
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
                                 if let Some(checkpointer) = &self.checkpointer {
                                     if let Some(cp_id) = &current_checkpoint_id {
-                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        checkpointer
+                                            .restore_checkpoint_for_thread(
+                                                cfg.thread_id.as_deref().unwrap_or("default"),
+                                                cp_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                format!("Failed to restore checkpoint {cp_id}: {e}")
+                                            })?;
                                         if let Some(thread_id) = &cfg.thread_id {
                                             if let Ok(Some(cp)) =
                                                 checkpointer.get_checkpoint(thread_id, cp_id).await
@@ -1412,7 +1420,15 @@ impl Agent {
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                                 if let Some(checkpointer) = &self.checkpointer {
                                     if let Some(cp_id) = &current_checkpoint_id {
-                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        checkpointer
+                                            .restore_checkpoint_for_thread(
+                                                cfg.thread_id.as_deref().unwrap_or("default"),
+                                                cp_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                format!("Failed to restore checkpoint {cp_id}: {e}")
+                                            })?;
                                         if let Some(thread_id) = &cfg.thread_id {
                                             if let Ok(Some(cp)) =
                                                 checkpointer.get_checkpoint(thread_id, cp_id).await
@@ -1507,7 +1523,17 @@ impl Agent {
                                 Err(crate::types::ToolError::UserFixable(err_msg)) => {
                                     if let Some(checkpointer) = &self.checkpointer {
                                         if let Some(cp_id) = &current_checkpoint_id {
-                                            let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                            checkpointer
+                                                .restore_checkpoint_for_thread(
+                                                    cfg.thread_id.as_deref().unwrap_or("default"),
+                                                    cp_id,
+                                                )
+                                                .await
+                                                .map_err(|e| {
+                                                    format!(
+                                                        "Failed to restore checkpoint {cp_id}: {e}"
+                                                    )
+                                                })?;
                                         }
                                     }
                                     if let Some(ref cb) = cfg.human_input_callback.0 {
@@ -1548,7 +1574,17 @@ impl Agent {
                                 Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                                     if let Some(checkpointer) = &self.checkpointer {
                                         if let Some(cp_id) = &current_checkpoint_id {
-                                            let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                            checkpointer
+                                                .restore_checkpoint_for_thread(
+                                                    cfg.thread_id.as_deref().unwrap_or("default"),
+                                                    cp_id,
+                                                )
+                                                .await
+                                                .map_err(|e| {
+                                                    format!(
+                                                        "Failed to restore checkpoint {cp_id}: {e}"
+                                                    )
+                                                })?;
                                         }
                                     }
                                     let self_correct_msg = omnisolo_builtin_agent_core::types::ToolResult::new_llm_recoverable(tc.id.clone(), &tc.name, &err_msg).error;
@@ -1941,7 +1977,15 @@ impl Agent {
                         Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                             if let Some(checkpointer) = &checkpointer_node {
                                 if let Some(cp_id) = &current_checkpoint_id {
-                                    let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                    checkpointer
+                                        .restore_checkpoint_for_thread(
+                                            cfg_arc_node.thread_id.as_deref().unwrap_or("default"),
+                                            cp_id,
+                                        )
+                                        .await
+                                        .map_err(|e| {
+                                            format!("Failed to restore checkpoint {cp_id}: {e}")
+                                        })?;
                                 }
                             }
                             let count = *error_counts.entry(tool_name.clone()).or_insert(0) + 1;
@@ -1968,7 +2012,15 @@ impl Agent {
                         Err(crate::types::ToolError::UserFixable(msg)) => {
                             if let Some(checkpointer) = &checkpointer_node {
                                 if let Some(cp_id) = &current_checkpoint_id {
-                                    let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                    checkpointer
+                                        .restore_checkpoint_for_thread(
+                                            cfg_arc_node.thread_id.as_deref().unwrap_or("default"),
+                                            cp_id,
+                                        )
+                                        .await
+                                        .map_err(|e| {
+                                            format!("Failed to restore checkpoint {cp_id}: {e}")
+                                        })?;
                                 }
                             }
                             if let Some(ref cb) = cfg_arc_node.human_input_callback.0
@@ -2012,7 +2064,18 @@ impl Agent {
                             crate::types::ToolError::LlmRecoverable(err_msg) => {
                                 if let Some(checkpointer) = &checkpointer_node {
                                     if let Some(cp_id) = &current_checkpoint_id {
-                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        checkpointer
+                                            .restore_checkpoint_for_thread(
+                                                cfg_arc_node
+                                                    .thread_id
+                                                    .as_deref()
+                                                    .unwrap_or("default"),
+                                                cp_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                format!("Failed to restore checkpoint {cp_id}: {e}")
+                                            })?;
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
                                 }
@@ -2026,7 +2089,18 @@ impl Agent {
                             crate::types::ToolError::UserFixable(msg) => {
                                 if let Some(checkpointer) = &checkpointer_node {
                                     if let Some(cp_id) = &current_checkpoint_id {
-                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        checkpointer
+                                            .restore_checkpoint_for_thread(
+                                                cfg_arc_node
+                                                    .thread_id
+                                                    .as_deref()
+                                                    .unwrap_or("default"),
+                                                cp_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                format!("Failed to restore checkpoint {cp_id}: {e}")
+                                            })?;
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
                                 }
@@ -2106,7 +2180,18 @@ impl Agent {
                             Err(crate::types::ToolError::LlmRecoverable(err_msg)) => {
                                 if let Some(checkpointer) = &checkpointer_node {
                                     if let Some(cp_id) = &current_checkpoint_id {
-                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        checkpointer
+                                            .restore_checkpoint_for_thread(
+                                                cfg_arc_node
+                                                    .thread_id
+                                                    .as_deref()
+                                                    .unwrap_or("default"),
+                                                cp_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                format!("Failed to restore checkpoint {cp_id}: {e}")
+                                            })?;
                                         // Memory revert for LangGraph is tricky without returning immediately. We will rely on the fact that if we revert workspace, it's safe.
                                     }
                                 }
@@ -2155,7 +2240,18 @@ impl Agent {
                             Err(crate::types::ToolError::UserFixable(err_msg)) => {
                                 if let Some(checkpointer) = &checkpointer_node {
                                     if let Some(cp_id) = &current_checkpoint_id {
-                                        let _ = checkpointer.restore_checkpoint(cp_id).await;
+                                        checkpointer
+                                            .restore_checkpoint_for_thread(
+                                                cfg_arc_node
+                                                    .thread_id
+                                                    .as_deref()
+                                                    .unwrap_or("default"),
+                                                cp_id,
+                                            )
+                                            .await
+                                            .map_err(|e| {
+                                                format!("Failed to restore checkpoint {cp_id}: {e}")
+                                            })?;
                                     }
                                 }
                                 if let Some(ref cb) = cfg_arc_node.human_input_callback.0
@@ -3188,7 +3284,7 @@ impl Agent {
                 .ok_or_else(|| format!("Checkpoint {} not found", checkpoint_id))?;
 
             checkpointer
-                .restore_checkpoint(checkpoint_id)
+                .restore_checkpoint_for_thread(thread_id, checkpoint_id)
                 .await
                 .map_err(|e| format!("Failed to restore workspace: {}", e))?;
 
@@ -3634,7 +3730,7 @@ impl Agent {
                     .map_err(|e| format!("Failed to deserialize requested checkpoint: {}", e))?;
                 last_checkpoint_id = Some(cp.checkpoint_id.clone());
                 checkpointer
-                    .restore_checkpoint(resume_id)
+                    .restore_checkpoint_for_thread(thread_id, resume_id)
                     .await
                     .map_err(|e| format!("Failed to restore workspace: {}", e))?;
             } else {
@@ -4335,32 +4431,32 @@ impl Agent {
                                 let _ = checkpoint_history.pop();
                                 if let Some(prev_id) = checkpoint_history.last().cloned() {
                                     let mut restored_msgs = None;
-                                    if let Some(checkpointer) = &self.checkpointer
-                                        && let Ok(Some(cp)) = checkpointer
-                                            .get_checkpoint(
-                                                final_cfg.thread_id.as_ref().unwrap(),
-                                                &prev_id,
+                                    if let Some(checkpointer) = &self.checkpointer {
+                                        let thread_id = final_cfg
+                                            .thread_id
+                                            .as_deref()
+                                            .ok_or("Checkpoint task ID is required for rewind")?;
+                                        let checkpoint = checkpointer.get_checkpoint(thread_id, &prev_id).await
+                                            .map_err(|e| format!("Failed to read rewind checkpoint {prev_id}: {e}"))?
+                                            .ok_or_else(|| format!("Rewind checkpoint {prev_id} not found for task"))?;
+                                        // Decode before restoring the filesystem so malformed state cannot
+                                        // leave the caller with a changed workspace and unusable messages.
+                                        let msgs = serde_json::from_value::<Vec<Message>>(
+                                            checkpoint.data,
+                                        )
+                                        .map_err(|e| {
+                                            format!(
+                                                "Failed to decode rewind checkpoint {prev_id}: {e}"
                                             )
-                                            .await
-                                        && let Ok(msgs) =
-                                            serde_json::from_value::<Vec<Message>>(cp.data)
-                                    {
-                                        if let Err(e) =
-                                            checkpointer.restore_checkpoint(&prev_id).await
-                                        {
-                                            tracing::warn!(
-                                                "Failed to restore workspace to checkpoint {}: {}",
-                                                prev_id,
-                                                e
-                                            );
-                                        } else {
-                                            restored_msgs = Some(msgs);
-                                        }
+                                        })?;
+                                        checkpointer.restore_checkpoint_for_thread(thread_id, &prev_id).await
+                                            .map_err(|e| format!("Failed to restore rewind checkpoint {prev_id}: {e}"))?;
+                                        restored_msgs = Some(msgs);
                                     }
 
                                     // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                    // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                    if restored_msgs.is_none() {
+                                    // Only an absent checkpointer permits lightweight message-only rewind.
+                                    if self.checkpointer.is_none() {
                                         let mut new_messages = Vec::new();
                                         let mut found = false;
                                         for m in messages.iter() {
@@ -4598,32 +4694,25 @@ impl Agent {
                                     let _ = checkpoint_history.pop();
                                     if let Some(prev_id) = checkpoint_history.last().cloned() {
                                         let mut restored_msgs = None;
-                                        if let Some(checkpointer) = &self.checkpointer
-                                            && let Ok(Some(cp)) = checkpointer
-                                                .get_checkpoint(
-                                                    final_cfg.thread_id.as_ref().unwrap(),
-                                                    &prev_id,
-                                                )
-                                                .await
-                                            && let Ok(msgs) =
-                                                serde_json::from_value::<Vec<Message>>(cp.data)
-                                        {
-                                            if let Err(e) =
-                                                checkpointer.restore_checkpoint(&prev_id).await
-                                            {
-                                                tracing::warn!(
-                                                    "Failed to restore workspace to checkpoint {}: {}",
-                                                    prev_id,
-                                                    e
-                                                );
-                                            } else {
-                                                restored_msgs = Some(msgs);
-                                            }
+                                        if let Some(checkpointer) = &self.checkpointer {
+                                            let thread_id = final_cfg.thread_id.as_deref().ok_or(
+                                                "Checkpoint task ID is required for rewind",
+                                            )?;
+                                            let checkpoint = checkpointer.get_checkpoint(thread_id, &prev_id).await
+                                                .map_err(|e| format!("Failed to read rewind checkpoint {prev_id}: {e}"))?
+                                                .ok_or_else(|| format!("Rewind checkpoint {prev_id} not found for task"))?;
+                                            // Decode before restoring the filesystem so malformed state cannot
+                                            // leave the caller with a changed workspace and unusable messages.
+                                            let msgs = serde_json::from_value::<Vec<Message>>(checkpoint.data)
+                                                .map_err(|e| format!("Failed to decode rewind checkpoint {prev_id}: {e}"))?;
+                                            checkpointer.restore_checkpoint_for_thread(thread_id, &prev_id).await
+                                                .map_err(|e| format!("Failed to restore rewind checkpoint {prev_id}: {e}"))?;
+                                            restored_msgs = Some(msgs);
                                         }
 
                                         // State Management: OpenAI uses lightweight previous_response_id chaining.
-                                        // Fallback to lightweight chaining if checkpointer is absent or fails.
-                                        if restored_msgs.is_none() {
+                                        // Only an absent checkpointer permits lightweight message-only rewind.
+                                        if self.checkpointer.is_none() {
                                             let mut new_messages = Vec::new();
                                             let mut found = false;
                                             for m in messages.iter() {
@@ -8699,6 +8788,16 @@ mod tests {
             filtered.reverse();
             Ok(filtered)
         }
+        async fn restore_checkpoint_for_thread(
+            &self,
+            thread_id: &str,
+            checkpoint_id: &str,
+        ) -> Result<(), String> {
+            self.get_checkpoint(thread_id, checkpoint_id)
+                .await?
+                .ok_or_else(|| "checkpoint not found for task".to_string())?;
+            Ok(())
+        }
     }
 
     #[tokio::test]
@@ -8764,10 +8863,11 @@ mod tests {
         cfg.thread_id = Some("test_thread".to_string());
 
         let mut events1 = Vec::new();
-        let _ = agent1
+        let first = agent1
             .run(&cfg, "Initial Task", &mut |e| events1.push(e))
             .await;
 
+        assert_eq!(first.unwrap(), "Final answer");
         let cps = checkpointer.checkpoints.lock().await;
         assert_eq!(cps.len(), 1, "Should have saved 1 checkpoint");
         let saved_cp_id = cps[0].checkpoint_id.clone();
@@ -8791,12 +8891,13 @@ mod tests {
         cfg2.resume_from_checkpoint_id = Some(saved_cp_id);
 
         let mut events2 = Vec::new();
-        let _ = agent2
+        let resumed = agent2
             .run(&cfg2, "Ignored Task (will use loaded messages)", &mut |e| {
                 events2.push(e)
             })
             .await;
 
+        assert_eq!(resumed.unwrap(), "Resumed answer");
         // Verify the second run resumed properly by checking if it loaded the messages.
         // It should have immediately hit the ChatResponse and finished.
         // However, because there are NO tool calls in the ChatResponse, the loop hits the "Terminal condition",
@@ -9797,7 +9898,13 @@ mod stream_tests {
             async fn list_checkpoints(&self, _tid: &str) -> Result<Vec<Checkpoint>, String> {
                 Ok(vec![])
             }
-            async fn restore_checkpoint(&self, _cid: &str) -> Result<(), String> {
+            async fn restore_checkpoint_for_thread(
+                &self,
+                thread_id: &str,
+                cid: &str,
+            ) -> Result<(), String> {
+                let checkpoints = self.checkpoints.lock().await;
+                assert_eq!(checkpoints.get(cid).unwrap().thread_id, thread_id);
                 Ok(())
             }
         }
@@ -9859,9 +9966,24 @@ mod stream_tests {
 
     #[tokio::test]
     async fn test_time_travel_rewind_mechanic() {
+        exercise_time_travel_rewind(false, false).await;
+    }
+
+    #[tokio::test]
+    async fn refusing_checkpoint_store_aborts_read_only_rewind_without_success_event() {
+        exercise_time_travel_rewind(true, true).await;
+    }
+
+    #[tokio::test]
+    async fn refusing_checkpoint_store_aborts_mutating_rewind_without_success_event() {
+        exercise_time_travel_rewind(true, false).await;
+    }
+
+    async fn exercise_time_travel_rewind(refuse_restore: bool, read_only: bool) {
         use crate::checkpointer::{Checkpoint, CheckpointSaver};
 
         struct MockCheckpointerRewind {
+            refuse_restore: bool,
             checkpoints: tokio::sync::Mutex<std::collections::HashMap<String, Checkpoint>>,
         }
 
@@ -9884,7 +10006,16 @@ mod stream_tests {
             async fn list_checkpoints(&self, _tid: &str) -> Result<Vec<Checkpoint>, String> {
                 Ok(vec![])
             }
-            async fn restore_checkpoint(&self, _cid: &str) -> Result<(), String> {
+            async fn restore_checkpoint_for_thread(
+                &self,
+                thread_id: &str,
+                cid: &str,
+            ) -> Result<(), String> {
+                let checkpoints = self.checkpoints.lock().await;
+                assert_eq!(checkpoints.get(cid).unwrap().thread_id, thread_id);
+                if self.refuse_restore {
+                    return Err("workspace restore deliberately refused".into());
+                }
                 Ok(())
             }
         }
@@ -9997,7 +10128,7 @@ mod stream_tests {
             Tool {
                 name: "fail_tool".to_string(),
                 description: "fails".to_string(),
-                is_read_only: false,
+                is_read_only: read_only,
                 parameters: serde_json::Value::Null,
                 execute: Arc::new(FailTool),
             },
@@ -10014,6 +10145,7 @@ mod stream_tests {
             call_count: tokio::sync::Mutex::new(0),
         });
         let checkpointer = Arc::new(MockCheckpointerRewind {
+            refuse_restore,
             checkpoints: tokio::sync::Mutex::new(std::collections::HashMap::new()),
         });
 
@@ -10027,6 +10159,25 @@ mod stream_tests {
         let mut events = vec![];
         let result = agent.run(&cfg, "Start", &mut |e| events.push(e)).await;
 
+        if refuse_restore {
+            assert!(
+                result.is_err(),
+                "refused workspace restore must fail: {result:?}"
+            );
+            assert!(
+                result
+                    .unwrap_err()
+                    .to_string()
+                    .contains("workspace restore deliberately refused")
+            );
+            assert!(
+                !events
+                    .iter()
+                    .any(|e| matches!(e, AgentEvent::RewindOccurred { .. })),
+                "refused restore must not emit successful rewind"
+            );
+            return;
+        }
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Success after rewind");
 
