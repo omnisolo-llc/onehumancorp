@@ -1,3 +1,0 @@
-outcome: blocked
-issue_title: "Market Research: AI Agentic Workflows & Native Omnichannel Solutions"
-issue_description: "The issue #35608 is a market research and competitor deep-dive analysis. As a research-only issue, it does not contain actionable implementation tasks that can be fulfilled by the development agent within this scope. Based on the OHC operating contract and evidence-first requirements, there are no code changes to be made. The research findings regarding omnichannel and agentic workflows are acknowledged, but implementation requires a specific, bounded slice based on retained-customer need, which is currently absent. The issue acts as a documentation of market gaps rather than a feature implementation request."
