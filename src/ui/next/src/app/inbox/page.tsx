@@ -355,7 +355,7 @@ function InboxWorkspace({
       actions={[{ label: "Audit", href: "/agent-audit-dashboard.html" }]}
     >
       <div className="mb-2 text-xs text-gray-500">
-        Loaded from `/api/v1/ui/inbox/messages`.
+        Conversations for the current workspace.
       </div>
       {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
@@ -586,7 +586,7 @@ function InboxLoadingState() {
   return (
     <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
       <div className="mb-2 text-xs text-gray-500">
-        Loaded from `/api/v1/ui/inbox/messages`.
+        Loading conversations for the current workspace.
       </div>
       <div className="app-panel" aria-busy="true">
         <div className="app-empty">Loading inbox messages...</div>
@@ -622,7 +622,7 @@ function ApiInboxFallback() {
     return (
       <AppShell title="Unified Inbox" subtitle="Local-first offline unified customer conversations and drafts.">
         <div className="mb-2 text-xs text-gray-500">
-          Loaded from `/api/v1/ui/inbox/messages`.
+          Current workspace conversations could not be loaded.
         </div>
         <div className="app-panel" data-testid="inbox-settled">
           <div className="app-empty">{error}</div>

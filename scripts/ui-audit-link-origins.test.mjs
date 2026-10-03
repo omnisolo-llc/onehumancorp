@@ -25,3 +25,24 @@ test('foreign origins, credentials and distinct local ports are never reclassifi
   assert.equal(normalize('//untrusted.example/path', 'https://business.example/wrapped'), null);
   assert.equal(normalize('http://[::broken]/path', 'https://business.example/wrapped'), null);
 });
+
+test('a malformed external link is reported while the actual sweep continues checking later links', async () => {
+  const helperNames = new Set(['normalizeInternalHref', 'routeLabel', 'externalHostAllowed', 'isFakeOmniSoloUrl']);
+  const helpers = source.statements.filter(node => ts.isFunctionDeclaration(node) && helperNames.has(node.name?.text)
+    || ts.isVariableStatement(node) && node.declarationList.declarations.some(declaration => declaration.name.getText(source) === 'allowedExternalHosts'));
+  let loop;
+  const visit = node => {
+    if (ts.isForOfStatement(node) && node.initializer.getText(source) === 'const link' && node.expression.getText(source) === 'hrefs') loop = node;
+    ts.forEachChild(node, visit);
+  };
+  visit(source); assert.ok(loop);
+  const script = ts.transpileModule(`${helpers.map(node => node.getText(source)).join('\n')}\nasync function run(hrefs) {const failures=[];const route='/audited-route';const page={url:()=> 'https://business.example/current'};${loop.getText(source)};return failures;}`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  const run = new Function(`${script};return run;`)();
+  const failures = await run([
+    { href: 'http://[broken', index: 0, text: 'Malformed link' },
+    { href: 'https://untrusted.example/path', index: 1, text: 'Later foreign link' },
+  ]);
+  assert.equal(failures.length, 2);
+  assert.match(failures[0], /audited-route.*Malformed link.*invalid URL/);
+  assert.match(failures[1], /Later foreign link.*unexpected external host/);
+});

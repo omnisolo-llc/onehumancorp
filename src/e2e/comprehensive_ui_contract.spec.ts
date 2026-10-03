@@ -445,7 +445,14 @@ test.describe('comprehensive UI contract', () => {
           continue;
         }
 
-        const url = new URL(link.href, page.url());
+        let url: URL;
+        try {
+          if (link.href.length > 8192) throw new Error('Oversized destination');
+          url = new URL(link.href, page.url());
+        } catch {
+          failures.push(`${target} uses an invalid URL`);
+          continue;
+        }
         if (normalizeInternalHref(link.href, page.url()) !== null) continue;
 
         if (!['http:', 'https:'].includes(url.protocol)) {
