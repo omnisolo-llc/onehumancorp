@@ -65,7 +65,11 @@ test.describe('Dashboard Cleanup Audit', () => {
       await page.goto(route);
       const response = await savingsRead;
       expect(response.status()).toBe(501);
-      expect(await response.json()).toMatchObject({ success: false, capability: 'measured_time_savings' });
+      // The widget rejects a non-200 response before reading its body. Verify
+      // the terminal API receipt independently of that browser body lifetime.
+      const receipt = await page.request.get('/api/v1/growth/time-savings');
+      expect(receipt.status()).toBe(501);
+      expect(await receipt.json()).toMatchObject({ success: false, capability: 'measured_time_savings' });
       const widget = page.locator('#ai-savings-widget');
       await expect(widget).toBeVisible();
       await expect(widget.locator('..')).toBeVisible();
