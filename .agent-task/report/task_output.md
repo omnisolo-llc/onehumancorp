@@ -1,0 +1,4 @@
+outcome: blocked
+issue_title: Multi-Tenant Universal Agent Feed and AI Decision Engine
+issue_description: >
+  The issue requests building a new "Universal Agent Feed" Flutter UI ("Flutter UI for the 375px mobile feed"). However, the RESEARCH.md, AGENTS.md, and docs/development/native-build.md files explicitly forbid creating new frontends or rewriting the existing React/Next.js UI. The current architecture strictly uses Tauri to package a Next standalone server, and "creating another frontend/rewrite" is explicitly unauthorized. Additionally, the issue is an expansion beyond the current supported scope ("new verticals, channels, agent marketplaces... require evidence and the expansion gate in RESEARCH.md"). Therefore, this task is blocked and no work can be performed. Loaded skills: skills/using-superpowers/SKILL.md, skills/brainstorming/SKILL.md. Provenance: 8ca22dba9a94f28898bbce59f2537ff4d87c747d.
