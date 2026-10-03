@@ -173,11 +173,12 @@ export default function UnifiedFeed() {
         payload.edited_payload = editedPayload;
       }
 
-      await fetch(`/api/v1/agent-feed/${itemId}`, {
+      const response = await fetch(`/api/v1/agent-feed/${itemId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      await response.text();
     } catch (e) {
       console.error(e);
     } finally {

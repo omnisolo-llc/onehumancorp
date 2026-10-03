@@ -96,6 +96,7 @@ export default function ActionCenterPage() {
         },
         body: JSON.stringify({ approved: true })
       });
+      await response.text();
       if (response.ok) {
         setActionStatus("Action approved and executed..");
       } else {
@@ -132,6 +133,7 @@ export default function ActionCenterPage() {
         },
         body: JSON.stringify({ approved: false })
       });
+      await response.text();
       if (response.ok) {
         setActionStatus("Action dismissed.");
       } else {

@@ -123,6 +123,7 @@ export default function FeedPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyPayload),
       });
+      await res.text();
       if (!res.ok) throw new Error('Action failed');
 
       // Update UI optimistically or refetch
