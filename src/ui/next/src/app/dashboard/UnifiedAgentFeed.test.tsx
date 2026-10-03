@@ -95,6 +95,61 @@ const pendingItem = {
   lifecycle_state: 'PENDING_APPROVAL', created_at: '2026-09-30T00:00:00Z', updated_at: '2026-09-30T00:00:00Z',
 };
 
+const customerDraft = {
+  ...pendingItem,
+  id: 'customer-draft-1', event_source: 'CustomerSuccessAgent',
+  context_payload: { description: 'Recorded customer inquiry' },
+  proposed_action: { draft: 'Owner-reviewed response' },
+};
+// load_ui_triage_from_db includes an alternate projection of this same
+// agent_feed_items record. It is not a second pending business action.
+const customerTriageProjection = {
+  ...customerDraft, source: 'CustomerSuccessAgent', action_type: 'approval',
+};
+
+it('renders one authoritative customer action when the same record is projected in triage', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ items: [customerDraft] })));
+  render(<UnifiedAgentFeed initialData={{ items: [customerDraft], triage: [customerTriageProjection, { id: 'distinct-triage', tenant_id: 'tenant-1', context: 'Separate recorded inquiry', action_payload: 'Separate draft' }] }} />);
+  await screen.findByText('Recorded customer inquiry');
+  expect(screen.getAllByTestId('triage-card-customer-draft-1')).toHaveLength(1);
+  expect(screen.getByTestId('triage-draft-customer-draft-1')).toHaveTextContent('Owner-reviewed response');
+  expect(screen.getByTestId('triage-card-distinct-triage')).toBeVisible();
+});
+
+it('does not reopen an approved canonical record from a stale triage projection', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ items: [] })));
+  render(<UnifiedAgentFeed initialData={{ items: [{ ...customerDraft, lifecycle_state: 'APPROVED' }], triage: [customerTriageProjection] }} />);
+  await screen.findByRole('heading', { name: 'No pending proposals are recorded.' });
+  expect(screen.queryByTestId('triage-card-customer-draft-1')).not.toBeInTheDocument();
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Activity Feed' }));
+  expect(screen.getByTestId('activity-feed-entry')).toBeVisible();
+});
+
+it('honors an authoritative empty triage refresh after canonical approval', async () => {
+  vi.useFakeTimers();
+  try {
+    const fetcher = vi.fn(async () => Response.json({ items: [], triage: [], priority_tasks: [] }));
+    vi.stubGlobal('fetch', fetcher);
+    render(<UnifiedAgentFeed initialData={{ items: [{ ...customerDraft, lifecycle_state: 'APPROVED' }], triage: [customerTriageProjection] }} />);
+    expect(screen.queryByTestId('triage-card-customer-draft-1')).not.toBeInTheDocument();
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(fetcher).toHaveBeenCalledWith('/api/v1/agent-feed');
+    expect(screen.queryByTestId('triage-card-customer-draft-1')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'No pending proposals are recorded.' })).toBeVisible();
+  } finally { vi.useRealTimers(); }
+});
+
+it('preserves a distinct triage projection when a refresh omits that collection', async () => {
+  vi.useFakeTimers();
+  try {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ items: [] })));
+    render(<UnifiedAgentFeed initialData={{ items: [{ ...customerDraft, lifecycle_state: 'APPROVED' }], triage: [{ id: 'distinct-triage', tenant_id: 'tenant-1', context: 'Separate recorded inquiry', action_payload: 'Separate draft' }] }} />);
+    expect(screen.getByTestId('triage-card-distinct-triage')).toBeVisible();
+    await act(async () => { await vi.advanceTimersByTimeAsync(5_000); });
+    expect(screen.getByTestId('triage-card-distinct-triage')).toBeVisible();
+  } finally { vi.useRealTimers(); }
+});
+
 it.each(['triage', 'task', 'order'])('forwards the owner-edited %s draft to the durable action endpoint', async (event_source) => {
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ success: true })));
   render(<UnifiedAgentFeed initialData={{ items: [{ ...pendingItem, event_source }] }} />);

@@ -213,13 +213,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 ...refreshedData,
                 items: refreshedData.items || initialData.items || [],
                 priority_tasks:
-                  refreshedData.priority_tasks && refreshedData.priority_tasks.length > 0
-                    ? refreshedData.priority_tasks
-                    : initialData.priority_tasks,
+                  refreshedData.priority_tasks === undefined
+                    ? initialData.priority_tasks
+                    : refreshedData.priority_tasks,
                 triage:
-                  refreshedData.triage && refreshedData.triage.length > 0
-                    ? refreshedData.triage
-                    : initialData.triage,
+                  refreshedData.triage === undefined
+                    ? initialData.triage
+                    : refreshedData.triage,
               }
             : refreshedData;
         }
@@ -257,9 +257,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
             // Integrate Triage Items (Messages)
             if (unifiedData.triage && Array.isArray(unifiedData.triage)) {
+              // The aggregate triage endpoint also projects agent_feed_items.
+              // Keep the canonical row and its lifecycle state when both reads
+              // include the same tenant/record; a stale projection must not
+              // create a second action or reopen an approved decision.
+              const canonicalRecords = new Set(unifiedData.items.map(
+                (item) => JSON.stringify([item.tenant_id, item.id]),
+              ));
               combinedItems = [
                 ...combinedItems,
-                ...unifiedData.triage.slice(0, 3).map((ti) => {
+                ...unifiedData.triage.filter(
+                  (item) => !canonicalRecords.has(JSON.stringify([item.tenant_id, item.id])),
+                ).slice(0, 3).map((ti) => {
                   let featureType = "triage";
 
                   if (ti.source?.toLowerCase() === "instagram dm" || ti.source?.toLowerCase() === "instagram") {
