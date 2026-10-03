@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "🤖 Implementer: [no-work finding]"
+issue_description: "Issue #36049 requests a native Rust replacement for the existing omnichannel chat system (ExternalChat). However, according to RESEARCH.md's current active capability map, OHC's strategy is to 'Integrate existing tools instead of rebuilding them' and 'Prefer popular, actively maintained libraries for... messaging'. There is no explicit expansion gate or evidence in RESEARCH.md authorizing a native rewrite of the chat infrastructure. Therefore, this issue cannot be implemented as requested and is marked as a no-work finding."
