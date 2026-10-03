@@ -9,6 +9,9 @@ use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 
 use crate::Store;
 
+mod sqlite;
+pub use sqlite::{AuthorizedSqliteOwner, CanonicalSqliteAuthority, OwnerSqliteTransaction};
+
 #[derive(Debug)]
 pub enum AuthorityError {
     Forbidden,

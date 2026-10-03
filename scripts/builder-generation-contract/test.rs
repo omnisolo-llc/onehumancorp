@@ -13,6 +13,9 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 
+#[path = "sqlite_authority_test.rs"]
+mod sqlite_authority_test;
+
 fn store_draft() -> Value {
     json!({"theme":"Clean","domain":null,"sample_products":[],"shipping_settings":null,"tax_settings":null,"pages":[{"path":"/","title":"Workshop","seo_metadata":{},"blocks":[{"block_type":"HeroBlock","content":{"headline":"Handmade furniture","subtitle":"A draft introduction to our workshop"},"sort_order":0}]}]})
 }

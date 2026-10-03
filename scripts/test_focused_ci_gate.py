@@ -44,7 +44,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
-        self.assertGreaterEqual(minimum, 74)
+        self.assertGreaterEqual(minimum, 84)
         self.assertEqual(database, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()

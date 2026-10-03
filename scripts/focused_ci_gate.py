@@ -13,7 +13,7 @@ import sys
 GATES = {
     'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
     'proactive-worker-contract': (11, 'OHC_OPS_PROBE_DB'),
-    'builder-generation-contract': (74, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
+    'builder-generation-contract': (84, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
     'widget-chat-contract': (32, 'OHC_WIDGET_TEST_DATABASE_URL'),
     'order-milestones': (13, 'OHC_MILESTONE_TEST_DATABASE_URL'),
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),

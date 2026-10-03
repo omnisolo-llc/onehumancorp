@@ -15,7 +15,7 @@ certification. Full Cargo/Next/desktop and hosted CI gates remain required.
 
 The combined gate preserves the original generation/admission cases, imported durable receipt lifecycle cases, and funded admission cases. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
 
-The mandatory inventory is 74 cases. Canonical brand writes require the actual
+The mandatory inventory is 84 cases. Canonical brand writes require the actual
 same PostgreSQL pool as the credential store. Startup can reuse that pool for
 private builder storage only after proving that the configured business pool
 shares its real advisory-lock namespace, search path and canonical/business
@@ -41,3 +41,10 @@ A deterministic real after-release interleaving covers the pinned SQLx pool
 shutdown race. The max1 clone fixture acquires and acknowledges closure of its
 known backend before pool shutdown, then verifies the pool and server drain.
 The dependency version and the real cloned-catalog/namespace assertion stay intact.
+
+The ten SQLite capability cases use real file-backed and max-one-connection
+in-memory databases. They verify exact-pool binding, canonical revocation,
+bounded/cancelled write intent, deferred COMMIT failure and an actual blocked
+COMMIT that can succeed after its acknowledgement deadline. Five additional
+cleanup/expiry unit tests live in the actual server_auth crate. The portable
+capability does not by itself fix production SQLite startup or builder storage.
