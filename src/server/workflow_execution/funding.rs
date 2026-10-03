@@ -392,16 +392,18 @@ mod tests {
                 .as_mut()
                 .unwrap()
                 .cached_input_micros_per_million = i64::MAX;
-            assert!(funding
-                .ticket(
-                    ("operator", "owner"),
-                    "Submitted text",
-                    &policy,
-                    "event".into(),
-                    "request",
-                    (4096, &"a".repeat(64))
-                )
-                .is_err());
+            assert!(
+                funding
+                    .ticket(
+                        ("operator", "owner"),
+                        "Submitted text",
+                        &policy,
+                        "event".into(),
+                        "request",
+                        (4096, &"a".repeat(64))
+                    )
+                    .is_err()
+            );
         }
     }
     #[test]
@@ -419,62 +421,76 @@ mod tests {
         };
         assert!(from(&remote, &[]).is_err());
         assert!(from(&remote, &[("OMNISOLO_LLM_TENANT_ID", "operator")]).is_err());
-        assert!(from(
-            &remote,
-            &[
-                ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                ("OMNISOLO_USAGE_PAYER", "managed_api"),
-                ("OMNISOLO_USAGE_MAX_REQUEST_MICROS", "1000")
-            ]
-        )
-        .is_err());
-        assert!(from(
-            &remote,
-            &[
-                ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                ("OMNISOLO_USAGE_PAYER", "native_subscription")
-            ]
-        )
-        .is_err());
-        assert!(from(
-            &remote,
-            &[
-                ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                ("OMNISOLO_USAGE_PAYER", "local")
-            ]
-        )
-        .is_err());
-        assert!(from(
-            &local,
-            &[
-                ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                ("OMNISOLO_USAGE_PAYER", "byok_api")
-            ]
-        )
-        .is_err());
-        assert!(from(
-            &local,
-            &[
-                ("OMNISOLO_LLM_TENANT_ID", "system"),
-                ("OMNISOLO_USAGE_PAYER", "local")
-            ]
-        )
-        .is_err());
-        assert!(from(
-            &local,
-            &[
-                ("OMNISOLO_LLM_TENANT_ID", "operator"),
-                ("OMNISOLO_USAGE_PAYER", "local")
-            ]
-        )
-        .is_ok());
-        assert!(from(
-            &remote,
-            &[
-                ("OMNISOLO_BUILDER_TENANT_ID", "operator"),
-                ("OMNISOLO_USAGE_PAYER", "byok_api")
-            ]
-        )
-        .is_ok());
+        assert!(
+            from(
+                &remote,
+                &[
+                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                    ("OMNISOLO_USAGE_PAYER", "managed_api"),
+                    ("OMNISOLO_USAGE_MAX_REQUEST_MICROS", "1000")
+                ]
+            )
+            .is_err()
+        );
+        assert!(
+            from(
+                &remote,
+                &[
+                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                    ("OMNISOLO_USAGE_PAYER", "native_subscription")
+                ]
+            )
+            .is_err()
+        );
+        assert!(
+            from(
+                &remote,
+                &[
+                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                    ("OMNISOLO_USAGE_PAYER", "local")
+                ]
+            )
+            .is_err()
+        );
+        assert!(
+            from(
+                &local,
+                &[
+                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                    ("OMNISOLO_USAGE_PAYER", "byok_api")
+                ]
+            )
+            .is_err()
+        );
+        assert!(
+            from(
+                &local,
+                &[
+                    ("OMNISOLO_LLM_TENANT_ID", "system"),
+                    ("OMNISOLO_USAGE_PAYER", "local")
+                ]
+            )
+            .is_err()
+        );
+        assert!(
+            from(
+                &local,
+                &[
+                    ("OMNISOLO_LLM_TENANT_ID", "operator"),
+                    ("OMNISOLO_USAGE_PAYER", "local")
+                ]
+            )
+            .is_ok()
+        );
+        assert!(
+            from(
+                &remote,
+                &[
+                    ("OMNISOLO_BUILDER_TENANT_ID", "operator"),
+                    ("OMNISOLO_USAGE_PAYER", "byok_api")
+                ]
+            )
+            .is_ok()
+        );
     }
 }

@@ -1,5 +1,5 @@
-//! Storage contract cases for the next durable-admission checkpoint.
-//! These require the configured portable database and never invoke a provider.
+//! Portable receipt and tracked-worker lifecycle contracts.
+//! These use real databases and never invoke a live provider.
 use super::receipts::{ReceiptStore, RequestMetadata, StoredPhase};
 use super::*;
 use crate::persistence::{AppDatabase, migration};
@@ -839,4 +839,160 @@ async fn an_unclaimed_restart_receipt_expires_on_both_direct_read_and_request_re
         );
         assert!(actual.output.is_none());
     }
+}
+
+// This test-only inference future exposes scheduling and cancellation, and only
+// returns a failure. It never fabricates provider output, usage or success.
+#[derive(Default)]
+struct WorkerLifecycleInference {
+    entered: tokio::sync::Notify,
+    release: tokio::sync::Notify,
+    calls: std::sync::atomic::AtomicUsize,
+    returned: std::sync::atomic::AtomicUsize,
+    dropped: std::sync::atomic::AtomicUsize,
+}
+impl TextInference for WorkerLifecycleInference {
+    fn infer<'a>(
+        &'a self,
+        _: &'a AdmittedAnalysis,
+    ) -> Pin<Box<dyn Future<Output = Result<InferenceResult, ()>> + Send + 'a>> {
+        Box::pin(async move {
+            struct ObserveDrop<'a>(&'a std::sync::atomic::AtomicUsize);
+            impl Drop for ObserveDrop<'_> {
+                fn drop(&mut self) {
+                    self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                }
+            }
+            let _drop = ObserveDrop(&self.dropped);
+            self.calls.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            self.entered.notify_one();
+            self.release.notified().await;
+            self.returned
+                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Err(())
+        })
+    }
+}
+fn lifecycle_execution(
+    fixture: &ReceiptFixture,
+    inference: Arc<WorkerLifecycleInference>,
+) -> Arc<WorkflowExecution> {
+    Arc::new(
+        WorkflowExecution::configured(
+            fixture.auth.clone(),
+            AnalysisPolicy::new("ollama".into(), "lifecycle-fixture".into(), 256).unwrap(),
+            inference,
+        )
+        .with_receipts(fixture.database.clone()),
+    )
+}
+
+#[tokio::test]
+async fn draining_a_failed_worker_waits_for_its_durable_unknown_receipt() {
+    use std::sync::atomic::Ordering::SeqCst;
+    let fixture = ReceiptFixture::open("sqlite::memory:").await;
+    let inference = Arc::new(WorkerLifecycleInference::default());
+    let execution = lifecycle_execution(&fixture, inference.clone());
+    let metadata = request();
+    let task = "Track this explicitly failing inference through its durable receipt";
+    let (claims, headers) = &fixture.identity;
+    let reserved = execution
+        .prepare(claims, headers, task, metadata.clone())
+        .await
+        .unwrap();
+    let id = reserved.receipt().id.clone();
+    execution.dispatch(reserved, None).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(3), inference.entered.notified())
+        .await
+        .unwrap();
+    assert_eq!(
+        execution
+            .get_receipt(claims, headers, &id)
+            .await
+            .unwrap()
+            .phase,
+        StoredPhase::Dispatching
+    );
+    let mut draining = Box::pin(execution.wait_for_workers());
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), &mut draining)
+            .await
+            .is_err(),
+        "draining must stay pending while the tracked inference is in flight"
+    );
+    assert_eq!(inference.returned.load(SeqCst), 0);
+    inference.release.notify_one();
+    tokio::time::timeout(Duration::from_secs(3), draining)
+        .await
+        .unwrap();
+    let saved = execution.get_receipt(claims, headers, &id).await.unwrap();
+    assert_eq!(saved.phase, StoredPhase::OutcomeUnknown);
+    assert!(saved.output.is_none());
+    assert_eq!(inference.returned.load(SeqCst), 1);
+    assert_eq!(inference.dropped.load(SeqCst), 1);
+    assert!(execution.workers.lock().await.is_empty());
+    let replay = execution
+        .prepare(claims, headers, task, metadata)
+        .await
+        .unwrap();
+    assert!(replay.replayed());
+    execution.dispatch(replay, None).await.unwrap();
+    execution.wait_for_workers().await;
+    assert_eq!(inference.calls.load(SeqCst), 1);
+}
+
+#[tokio::test]
+async fn stopping_an_inflight_worker_preserves_its_claim_for_uncertain_restart_recovery() {
+    use std::sync::atomic::Ordering::SeqCst;
+    let directory = ReceiptDirectory::new();
+    let url = format!(
+        "sqlite://{}?mode=rwc",
+        directory.0.join("stopped-worker.sqlite").display()
+    );
+    let fixture = ReceiptFixture::open(&url).await;
+    let inference = Arc::new(WorkerLifecycleInference::default());
+    let execution = lifecycle_execution(&fixture, inference.clone());
+    let metadata = request();
+    let task = "Stopping local work cannot prove an external effect never happened";
+    let (claims, headers) = &fixture.identity;
+    let reserved = execution
+        .prepare(claims, headers, task, metadata.clone())
+        .await
+        .unwrap();
+    let id = reserved.receipt().id.clone();
+    execution.dispatch(reserved, None).await.unwrap();
+    tokio::time::timeout(Duration::from_secs(3), inference.entered.notified())
+        .await
+        .unwrap();
+    tokio::time::timeout(Duration::from_secs(3), execution.stop_workers())
+        .await
+        .unwrap();
+    assert_eq!(inference.calls.load(SeqCst), 1);
+    assert_eq!(inference.returned.load(SeqCst), 0);
+    assert_eq!(inference.dropped.load(SeqCst), 1);
+    assert!(execution.workers.lock().await.is_empty());
+    drop(execution);
+    let reopened_database = AppDatabase::connect(&url).await.unwrap();
+    let reopened_auth = Arc::new(server_auth::Store::with_portable_repo(Arc::new(
+        server_auth::seaorm_store::SeaOrmAuthRepository::new(
+            reopened_database.connection().clone(),
+        ),
+    )));
+    let reopened =
+        Arc::new(WorkflowExecution::unavailable(reopened_auth).with_receipts(reopened_database));
+    let saved = reopened.get_receipt(claims, headers, &id).await.unwrap();
+    assert_eq!(saved.phase, StoredPhase::Dispatching);
+    assert!(saved.output.is_none());
+    let uncertain = reopened.cancel_receipt(claims, headers, &id).await.unwrap();
+    assert_eq!(uncertain.phase, StoredPhase::OutcomeUnknown);
+    assert!(uncertain.output.is_none());
+    let replay = reopened
+        .prepare(claims, headers, task, metadata)
+        .await
+        .unwrap();
+    assert!(replay.replayed());
+    assert_eq!(replay.receipt().phase, StoredPhase::OutcomeUnknown);
+    reopened.dispatch(replay, None).await.unwrap();
+    reopened.wait_for_workers().await;
+    assert_eq!(inference.calls.load(SeqCst), 1);
 }

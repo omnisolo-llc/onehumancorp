@@ -44,7 +44,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_builder_generation_requires_real_http_and_owned_storage(self):
         minimum, database = gate.GATES['builder-generation-contract']
-        self.assertGreaterEqual(minimum, 51)
+        self.assertGreaterEqual(minimum, 53)
         self.assertEqual(database, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()
@@ -93,7 +93,7 @@ class FocusedGateTests(unittest.TestCase):
         self.assertIn('process.versions.node', witness)
     def test_agent_receipt_postgres_gate_keeps_real_storage_and_sqlite_inventory(self):
         minimum, database = gate.GATES['agent-receipt-postgres-contract']
-        self.assertGreaterEqual(minimum, 54)
+        self.assertGreaterEqual(minimum, 56)
         self.assertEqual(database, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/agent-receipt-postgres-contract/run.sh').read_text()
@@ -155,7 +155,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_agent_workflow_gate_keeps_its_full_offline_inventory(self):
         minimum, database = gate.GATES['agent-workflow-contract']
-        self.assertGreaterEqual(minimum, 99)
+        self.assertGreaterEqual(minimum, 101)
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()
         self.assertLess(workflow.index('Install the pinned workflow proxy witness'), workflow.index('Verify agent workflow tenant isolation and requested tasks offline'))

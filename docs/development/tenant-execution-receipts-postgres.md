@@ -68,10 +68,16 @@ full integrated workspace. No production account or credit was changed.
 
 The checked-in focused Cargo lock must be an exact registry/version/source/checksum
 subset of the root lock. CI fetches this focused graph for the Rust host with
-`--locked`; tests remain `--locked --offline`. The mandatory gate has a 54-case floor
+`--locked`; tests remain `--locked --offline`. The mandatory gate has a 56-case floor
 and uses the existing PostgreSQL lane, without adding a runner.
 
 The subsequent cached-input tariff fix passed all 99 workflow cases and strict
 all-target Clippy after a genuine underreservation RED. Its shared pricing case
 raises the required receipt and builder inventories to 54 and 51; their full
 PostgreSQL reruns remain part of integrated validation.
+
+Two root-discovered worker lifecycle cases retain the existing focused assertions
+and directly exercise worker draining and cancellation against real SQLite
+receipts. They raise the required workflow/receipt/builder inventories to
+101/56/53. The controlled test inference returns only failure and records when its
+future is cancelled; it supplies no fabricated provider output or billing usage.
