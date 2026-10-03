@@ -720,6 +720,12 @@ impl DB {
                 })
                 .connect_with(conn_opts)
                 .await?;
+            if let Err(error) =
+                crate::persistence::connection::require_sqlite_encryption(&sqlite_pool).await
+            {
+                sqlite_pool.close().await;
+                return Err(error.into());
+            }
 
             Ok(DB {
                 pool: dummy_pool,
@@ -4846,36 +4852,53 @@ mod autodream_db_tests {
     }
 
     #[tokio::test]
-    async fn test_local_sqlite_encryption_hardening_mock() {
-        // We verify that `DB::new()` parses OMNISOLO_SQLITE_KEY and cipher directives
-        // without causing thread safety or panic issues in parsing logic
-        // We bypass full sqlcipher linkage issues by just simulating the connect string
-        // via standard sqlx SqliteConnectOptions to ensure it doesn't crash on invalid pragma
-        use sqlx::sqlite::SqliteConnectOptions;
-        use std::str::FromStr;
-
-        // Ensure we handle cipher directives explicitly and gracefully
-        let opts = SqliteConnectOptions::from_str("sqlite::memory:")
-            .expect("Database URL or operation failed in test")
-            .pragma("key", "secure_test_key_123")
-            .pragma("cipher", "'sqlcipher'")
-            .pragma("cipher_page_size", "4096")
-            .pragma("cipher_compatibility", "4");
-
-        let pool_result = sqlx::sqlite::SqlitePoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    use sqlx::Executor;
-                    conn.execute("PRAGMA secure_delete = ON").await?;
-                    Ok(())
-                })
-            })
-            .connect_with(opts)
-            .await;
-
-        // It should either connect fine, or fail gracefully if sqlcipher extension is strictly missing,
-        // but it must NOT panic, leak memory or expose cleartext fallback unconditionally
-        assert!(pool_result.is_ok() || pool_result.is_err());
+    async fn local_sqlite_encryption_uses_real_cipher_and_validates_the_existing_key() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("owned-encrypted.sqlite");
+        let url = format!("sqlite://{}?mode=rwc", path.display());
+        let key = "public-local-cipher-regression-key";
+        let database = crate::persistence::AppDatabase::connect_with_sqlcipher_key(&url, key)
+            .await
+            .expect("the production root explicitly links bundled SQLCipher");
+        let pool = database.connection().get_sqlite_connection_pool();
+        let version: String = sqlx::query_scalar("PRAGMA cipher_version")
+            .fetch_one(pool)
+            .await
+            .expect("a real SQLCipher engine is mandatory");
+        assert!(!version.is_empty());
+        sqlx::query("CREATE TABLE cipher_witness(value TEXT NOT NULL)")
+            .execute(pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO cipher_witness VALUES('actual encrypted fixture data')")
+            .execute(pool)
+            .await
+            .unwrap();
+        pool.close().await;
+        assert!(
+            !std::fs::read(&path)
+                .unwrap()
+                .starts_with(b"SQLite format 3\0")
+        );
+        let wrong = crate::persistence::AppDatabase::connect_with_sqlcipher_key(
+            &url,
+            "public-wrong-cipher-regression-key",
+        )
+        .await;
+        assert!(
+            wrong.is_err(),
+            "an existing encrypted database must be read with its actual key before startup accepts it"
+        );
+        let reopened = crate::persistence::AppDatabase::connect_with_sqlcipher_key(&url, key)
+            .await
+            .unwrap();
+        let pool = reopened.connection().get_sqlite_connection_pool();
+        let value: String = sqlx::query_scalar("SELECT value FROM cipher_witness")
+            .fetch_one(pool)
+            .await
+            .unwrap();
+        assert_eq!(value, "actual encrypted fixture data");
+        pool.close().await;
     }
 }
 

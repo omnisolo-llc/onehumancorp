@@ -15,7 +15,7 @@ certification. Full Cargo/Next/desktop and hosted CI gates remain required.
 
 The combined gate preserves the original generation/admission cases, imported durable receipt lifecycle cases, and funded admission cases. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
 
-The mandatory inventory is 84 cases. Canonical brand writes require the actual
+The mandatory inventory is 89 cases. Canonical brand writes require the actual
 same PostgreSQL pool as the credential store. Startup can reuse that pool for
 private builder storage only after proving that the configured business pool
 shares its real advisory-lock namespace, search path and canonical/business
@@ -31,6 +31,33 @@ business data. Public publication reads and previously accepted workers are
 separate from the request bearer lifetime. Their broader backend guard and
 request-owned publication fence remain distinct follow-on work.
 
+The ten SQLite capability cases use real file-backed and max-one-connection
+in-memory databases. They verify exact-pool binding, canonical revocation,
+bounded/cancelled write intent, deferred COMMIT failure and an actual blocked
+COMMIT that can succeed after its acknowledgement deadline. Five additional
+cleanup/expiry unit tests live in the actual server_auth crate. The portable
+capability does not by itself fix builder storage.
+
+Five additional startup cases exercise the actual startup selection statement
+with real SQLite pools. They preserve existing accounts and business rows in
+the configured/default store, the max-one-connection in-memory database,
+connection hooks/options, selector conflict rejection and URL-file aliases.
+Environment-dependent cases run in isolated child processes. SQLite startup
+adopts the already configured legacy pool before constructing auth and portable
+repositories. Other backends keep their existing configured data selection.
+
+Requested encryption must fail when the actual engine lacks SQLCipher. The
+default focused graph tests that rejection. The optional `production-sqlcipher`
+feature selects the repository's pinned Linux production cipher dependency:
+
+```
+cargo test --locked --offline --manifest-path scripts/builder-generation-contract/Cargo.toml --features production-sqlcipher sqlite_startup_ -- --test-threads=1
+```
+
+With that feature the encryption case requires an actual cipher engine, writes
+an owned encrypted file, rejects a wrong key and reopens the original data with
+the correct fixture key. A plain-engine rejection is not encryption proof.
+
 Owned database teardown distinguishes real clients from PostgreSQL autovacuum
 maintenance. The lifecycle tests observe a real slow autovacuum, exercise normal
 template clone/drop while it is active, and retain a real client to prove that
@@ -41,10 +68,3 @@ A deterministic real after-release interleaving covers the pinned SQLx pool
 shutdown race. The max1 clone fixture acquires and acknowledges closure of its
 known backend before pool shutdown, then verifies the pool and server drain.
 The dependency version and the real cloned-catalog/namespace assertion stay intact.
-
-The ten SQLite capability cases use real file-backed and max-one-connection
-in-memory databases. They verify exact-pool binding, canonical revocation,
-bounded/cancelled write intent, deferred COMMIT failure and an actual blocked
-COMMIT that can succeed after its acknowledgement deadline. Five additional
-cleanup/expiry unit tests live in the actual server_auth crate. The portable
-capability does not by itself fix production SQLite startup or builder storage.

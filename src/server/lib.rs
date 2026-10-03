@@ -4051,22 +4051,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let standalone = crate::is_standalone_runtime();
-    let portable_database = match crate::persistence::commands::connect_from_environment().await {
-        Ok(database) => Some(std::sync::Arc::new(database)),
-        Err(error) if standalone => {
-            tracing::warn!("portable database is unavailable in standalone mode: {error}");
-            None
-        }
-        Err(error) => return Err(error),
-    };
-    let catalog_repository = portable_database.as_ref().map(|database| {
-        std::sync::Arc::new(crate::persistence::catalog::CatalogRepository::new(
-            database.as_ref().clone(),
-        ))
-    });
-    let legacy_sqlx_background_enabled = portable_database
-        .as_ref()
-        .is_none_or(|database| database.backend() != crate::persistence::DatabaseBackend::MySql);
     let grpc_tls_config = grpc_tls_config_from_env(standalone)?;
     let builtin_agent_auth = if standalone {
         Some(
@@ -4083,6 +4067,29 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
+    let portable_database = match &db.store {
+        db::DbStore::Sqlite(pool) => Some(std::sync::Arc::new(
+            crate::persistence::AppDatabase::from_connection(
+                sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool.clone()),
+            ),
+        )),
+        _ => match crate::persistence::commands::connect_from_environment().await {
+            Ok(database) => Some(std::sync::Arc::new(database)),
+            Err(error) if standalone => {
+                tracing::warn!("portable database is unavailable in standalone mode: {error}");
+                None
+            }
+            Err(error) => return Err(error),
+        },
+    };
+    let catalog_repository = portable_database.as_ref().map(|database| {
+        std::sync::Arc::new(crate::persistence::catalog::CatalogRepository::new(
+            database.as_ref().clone(),
+        ))
+    });
+    let legacy_sqlx_background_enabled = portable_database
+        .as_ref()
+        .is_none_or(|database| database.backend() != crate::persistence::DatabaseBackend::MySql);
     db.run_migrations().await?;
     if let Some(database) = portable_database.as_ref() {
         crate::persistence::migration::migrate(database).await?;

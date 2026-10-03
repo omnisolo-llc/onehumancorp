@@ -23,6 +23,9 @@ tower = { version = "0.5", features = ["util"] }
 sha2 = "0.10"
 serde_jcs = "=0.2.0"
 sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-mysql", "sqlx-postgres", "sqlx-sqlite", "with-chrono", "with-json", "with-uuid"] }
+libsqlite3-sys = { version = "=0.30.1", features = ["bundled-sqlcipher"], optional = true }
+[features]
+production-sqlcipher = ["dep:libsqlite3-sys"]
 [lib]
 path = "generated.rs"
 [profile.dev]
