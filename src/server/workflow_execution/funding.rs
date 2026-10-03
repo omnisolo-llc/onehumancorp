@@ -279,7 +279,7 @@ impl FundingContext {
         .map_err(|_| Error::Unavailable)?
         .map_err(ledger_error)
     }
-    pub(crate) async fn settle(&self, ticket: &UsageTicket, receipt: &UsageReceipt) {
+    pub(crate) async fn settle(&self, ticket: &UsageTicket, receipt: &UsageReceipt) -> bool {
         // Unknown quantities, over-reservation responses or ambiguous commits
         // retain exposure in the ledger. No estimate is substituted as a bill.
         let result = tokio::time::timeout(
@@ -288,7 +288,9 @@ impl FundingContext {
                 .settle(&ticket.scope.tenant_id, &ticket.event_id, receipt),
         )
         .await;
+        let acknowledged = matches!(&result, Ok(Ok(())));
         observe_write(&ticket.event_id, "settle", result);
+        acknowledged
     }
     pub(crate) async fn unknown(&self, ticket: &UsageTicket) {
         let result = tokio::time::timeout(

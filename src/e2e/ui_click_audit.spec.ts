@@ -1,7 +1,8 @@
 import { test, expect } from './fixtures';
-import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget } from './support/ui_click_audit';
+import { hasMeaningfulClickEffect, hasFragmentTarget, observeClickEffects, replaceAuditDocument, resolveAuditTarget, tagClickTargets } from './support/ui_click_audit';
 
 import { createServer } from 'node:http';
+import { runDynamicClickInventory } from '../../scripts/ui-audit-inventory.cjs';
 import { createAuditNavigation } from './support/ui_audit_navigation';
 
 // These verify the crawler's observation boundary using real browser behavior,
@@ -404,4 +405,23 @@ test('focus moved into a hidden field or the document body is not a meaningful c
     expect(effect.focusSeen).toBe(false);
     expect(hasMeaningfulClickEffect(effect)).toBe(false);
   }
+});
+
+
+test('a vanished discovered button fails the real-browser crawl before claiming exhaustion', async ({ page }) => {
+  const baseline = '<button id="dismiss" onclick="document.querySelector(\'#approve\').remove()">Dismiss</button><button id="approve">Approve</button>';
+  await page.setContent(baseline);
+  const discovered: string[] = [], observed = new Set<string>();
+  await expect(runDynamicClickInventory(discovered, observed, {
+    discover: () => tagClickTargets(page),
+    visit: async (candidate: { key: string }) => {
+      const target = await resolveAuditTarget(page, candidate.key, () => tagClickTargets(page));
+      expect(hasMeaningfulClickEffect(await observeClickEffects(page, target))).toBe(true);
+      observed.add(candidate.key);
+    },
+    // Reproduce a backend-persisted dismissal surviving a document reset.
+    reset: async () => { await replaceAuditDocument(page); await page.setContent('<button id="dismiss">Dismiss</button>'); },
+  })).rejects.toThrow(/missing=.*Approve/);
+  expect(discovered).toHaveLength(2);
+  expect([...observed]).toHaveLength(1);
 });

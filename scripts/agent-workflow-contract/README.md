@@ -24,7 +24,7 @@ python3 scripts/focused_ci_gate.py agent-workflow-contract
 ```
 
 The required PostgreSQL security CI job also runs this offline gate. The wrapper
-requires at least 101 executed tests, rejects failures/skips/filters, and retains
+requires at least 108 executed tests, rejects failures/skips/filters, and retains
 the log plus source manifest. `make test` checks the mandatory CI registration
 through the native-contract discovery guard; it does not claim that discovery is
 runtime acceptance.
@@ -33,6 +33,13 @@ The configured tenant text adapter and real LLM client modules are compiled. Its
 unit tests record the terminal LlmClient request, proving exact model/text and an
 empty tool list without contacting a provider. The full server and genuine
 provider execution still require their separate gates.
+
+Funded completion also requires acknowledged durable usage settlement. The
+owned-loopback cases verify authenticated receipt readback remains unknown with
+no output for missing usage, missing provider identity, duplicate provider
+receipts, and a real SQLite settlement-write rejection. A confirmed settlement
+still publishes its actual output. These checks preserve the outstanding budget
+hold and never retry the provider request.
 
 The raw RPC boundary tests compile the complete production JSON-RPC HTTP handler,
 router constructor, authenticated proxy and exact main mount/outer middleware.

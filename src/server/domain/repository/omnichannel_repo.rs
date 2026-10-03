@@ -301,7 +301,42 @@ impl OmniChannelRepo {
             "INSERT INTO chat_messages(id,tenant_id,conversation_id,sender_type,sender_id,content) SELECT $1,$2,c.id,'agent',$4,$5 FROM chat_conversations c JOIN chat_inboxes i ON i.id=c.inbox_id AND i.tenant_id=c.tenant_id JOIN chat_contacts p ON p.id=c.contact_id AND p.tenant_id=c.tenant_id WHERE c.id=$3 AND c.tenant_id=$2 RETURNING id,tenant_id,conversation_id,sender_type,sender_id,content,created_at,updated_at"
         ).bind(Uuid::new_v4()).bind(tenant_id).bind(conversation_id).bind(actor_id).bind(content)
             .fetch_optional(&mut *tx).await?.ok_or(WidgetChatError::NotFound)?;
+
+        // Prepare Redis publishing or Outbox
+        let mut published = false;
+        let topic = format!("unified:chat:{}", tenant_id);
+        let payload = serde_json::json!({
+            "action": "new_message",
+            "message": record
+        });
+
+        if let Some(client) = crate::redis_pool::get_redis_client() {
+            if let Ok(mut rconn) = client.get_async_connection().await {
+                let publish_res: Result<(), redis::RedisError> =
+                    redis::AsyncCommands::publish(&mut rconn, &topic, payload.to_string()).await;
+                if let Err(e) = publish_res {
+                    tracing::warn!("Failed to publish to redis: {}", e);
+                } else {
+                    published = true;
+                }
+            } else {
+                tracing::warn!("Failed to get redis connection for chat publish");
+            }
+        }
+
+        if !published {
+            // Store in outbox (job queue) for retry, ATOMICALLY inside the transaction
+            let outbox_job_id = Uuid::new_v4().to_string();
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'publish_chat_event', $3, 'PENDING')")
+                .bind(&outbox_job_id)
+                .bind(&tenant_id.to_string())
+                .bind(payload.to_string())
+                .execute(&mut *tx)
+                .await?;
+        }
+
         tx.commit().await?;
+
         Ok(record)
     }
 

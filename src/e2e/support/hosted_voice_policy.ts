@@ -1,3 +1,5 @@
+import { isSonaRuntimeUnavailable, runtimeUnavailableMessage } from './runtime_policy';
+
 /** The real hosted deployment denies instance-global voice authority. */
 export function isHostedVoiceUnavailable(input: {
   url: string; origin: string; method: string; status: number; body: unknown;
@@ -24,7 +26,18 @@ export function isVerifiedVoicePolicyDiagnostic(text: string, url: string, verif
 export function recordSmokeHttpResponse(response: {
   status(): number; url(): string; request(): { method(): string }; json(): Promise<unknown>;
 }, origin: string, results: { failures: string[]; httpFailures: string[]; verifiedPolicyUrls: Set<string>; policyChecks: Promise<void>[] }): void {
-  if (response.status() >= 500) results.failures.push(`${response.status()} ${response.url()}`);
+  if (response.status() >= 500) {
+    const input = { url: response.url(), origin, method: response.request().method(), status: response.status() };
+    if (!isSonaRuntimeUnavailable({ ...input, body: { error: runtimeUnavailableMessage } })) {
+      results.failures.push(`${response.status()} ${response.url()}`);
+      return;
+    }
+    results.policyChecks.push((async () => {
+      const body: unknown = await response.json().catch(() => null);
+      if (isSonaRuntimeUnavailable({ ...input, body })) results.verifiedPolicyUrls.add(response.url());
+      else results.failures.push(`${response.status()} ${response.url()}`);
+    })());
+  }
   else if (response.status() >= 400 && !response.url().includes('e2e-route-record')) {
     let candidate = false;
     try {

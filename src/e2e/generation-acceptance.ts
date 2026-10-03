@@ -6,7 +6,7 @@ export const generationAcceptance = process.env.OMNISOLO_E2E_GENERATION_ACCEPTAN
 export const runtimeAcceptance = process.env.OMNISOLO_E2E_RUNTIME_ACCEPTANCE === '1';
 export const generationPrerequisite = 'Configure the builder operator tenant and an authorized text-generation provider before generating a draft.';
 export const generationGateReason = 'Release owner must supply an authorized real provider, tenant and usage budget. See docs/development/generation-acceptance.md. This journey is unverified when skipped.';
-export const runtimeGateReason = 'Release owner must supply a tenant-bound repository runtime. See docs/development/generation-acceptance.md. RepoMap completion is unverified when skipped.';
+export const runtimeGateReason = 'Release owner must supply an authorized tenant-bound runtime and any required model/tool grants. See docs/development/generation-acceptance.md. Runtime execution is unverified when skipped.';
 
 export function generationResponse(page: Page, endpoint = '/api/v1/builder/generate') {
   return page.waitForResponse(response => new URL(response.url()).pathname === endpoint && response.request().method() === 'POST', { timeout: 120_000 });

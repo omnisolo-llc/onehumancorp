@@ -411,10 +411,14 @@ impl WorkflowExecution {
                 result=&mut future=>{
                     if let Ok(result)=&result
                         && let (Some(funding),Some(ticket))=(&self.funding,&input.usage) {
-                        funding.settle(ticket,&server_harness::middleware::usage_ledger::UsageReceipt {
+                        let acknowledged = funding.settle(ticket,&server_harness::middleware::usage_ledger::UsageReceipt {
                             provider_request_id:result.provider_request_id.clone().filter(|id|!id.is_empty()).unwrap_or_else(||format!("unknown:{}",ticket.event_id)),
                             counts:result.counts.clone(),
                         }).await;
+                        // Provider text alone cannot acknowledge a funded
+                        // effect. Preserve uncertainty and the durable hold
+                        // until accounting confirms the observed receipt.
+                        if !acknowledged { break AnalysisOutcome::OutcomeUnknown; }
                     }
                     if self.current_execution_authority(&input).await.is_err() {break AnalysisOutcome::OutcomeUnknown;}
                     break match result {

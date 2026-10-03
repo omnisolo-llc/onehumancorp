@@ -16,12 +16,12 @@ The release owner is responsible for provisioning and running these gates, recor
 
 | Gate | Browser journeys retained | Required evidence |
 | --- | --- | --- |
-| `@provider-acceptance` | Agentic storefront generation and edit; builder wizard selection; Brand toolbox persistence and reviewed publication; desktop builder publication; mobile editing and publication | Real provider output and provenance for the authenticated operator tenant, actual persisted Brand readback, reviewed publication receipt and anonymous HTTP readback |
-| `@runtime-acceptance` | Aider RepoMap of `src/agents/builtin` | Approved tenant-bound workspace runtime returns the actual `agent.rs` and `aider_repomap.rs` map through the mounted authenticated gateway |
+| `@provider-acceptance` | Agentic storefront generation and edit; builder wizard selection; Brand toolbox persistence and reviewed publication; desktop/mobile publication; narrative proposal draft; text-analysis workflow admission | Real provider output for the authenticated tenant, actual persisted Brand/workflow readback, reviewed publication receipt and anonymous HTTP readback. Queued workflow admission is not completed analysis. |
+| `@runtime-acceptance` | Aider RepoMap; Actor Model; LangGraph tools; expert synthesis; scalable agent outputs; computational success/failure; SONA reads and recording; provider-backed visual workflow approval | Approved tenant-bound runtime returns genuine outputs through the mounted gateway, real shell/tool execution and SONA readback. Visual workflow additionally needs its configured local model. No legacy global runtime or fixed-response provider may satisfy these cases. |
 
 ### Ordinary unconfigured verification
 
-Use the normal native build/test workflow in [native-build.md](native-build.md). No provider or runtime credentials are needed. The six availability tests require exact HTTP 503 responses and expected error codes/messages; arbitrary authorization, validation, transport or database failures do not count as passing availability checks. The configured acceptance tests are explicitly skipped with their outstanding prerequisite visible in the report.
+Use the normal native build/test workflow in [native-build.md](native-build.md). No provider or runtime credentials are needed. The generation/runtime availability tests require exact HTTP 503 responses and expected error codes/messages; arbitrary authorization, validation, transport or database failures do not count as passing availability checks. The configured acceptance tests are explicitly skipped with their outstanding prerequisite visible in the report.
 
 ### Configured acceptance
 
@@ -37,7 +37,7 @@ PLAYWRIGHT_TEST_DIR=./src OMNISOLO_E2E_GENERATION_ACCEPTANCE=1 \
   --grep @provider-acceptance --workers=1 --retries=0
 ```
 
-For RepoMap, first implement/provision and review the tenant-bound repository runtime with a bounded workspace grant for the seeded unlimited admin tenant. Configure `OMNISOLO_AGENT_URL` and any approved runtime authentication on the test backend. Do not expose the unscoped legacy AppServer as a workaround.
+For runtime acceptance, first implement/provision and review the tenant-bound repository runtime with a bounded workspace grant for the seeded unlimited admin tenant. Configure `OMNISOLO_AGENT_URL` and any approved runtime authentication on the test backend. Do not expose the unscoped legacy AppServer as a workaround.
 
 ```sh
 PLAYWRIGHT_TEST_DIR=./src OMNISOLO_E2E_RUNTIME_ACCEPTANCE=1 \
@@ -58,3 +58,20 @@ Using the pinned Node 22.22.1 runtime on the final UI source:
 - Real-stack browser execution, full `make lint`/`make test`, the five configured-provider journeys and the configured-runtime journey remain unexecuted for this checkpoint. No native compilation or external generation was claimed by the frontend test results.
 
 Negative regressions were run before their repairs: provider failures, contradictory/empty/malformed generated layouts, array-valued text properties, absent catalog items, dropped real subtitle/text content, lost agent edit input, and invalid Aider HTTP/RPC envelopes all failed as expected. Production repairs then passed those checks.
+
+
+## Current runtime and browser-contract repair, 2026-10-03
+
+Run `37108893789` exposed assertions that still depended on fabricated legacy runtime output even though the native runner now intentionally starts without an approved runtime. This repair retains **13 configured acceptance cases** in addition to the existing six: three Actor cases, two SONA cases, two computational verification cases, and one each for Scaling, LangGraph, expert synthesis, visual workflow, narrative proposal generation and text-analysis workflow admission. These are **required open product gates**, not completed features or success inferred from a 503. Agent Protocol's independent repair also retains its real task and checkpoint journeys.
+
+Ordinary unconfigured browser cases now verify the exact runtime prerequisite, retained input, recovered controls and absence of fabricated outputs. Scaling must not count an error as one agent result. SONA must show read errors rather than an invented empty store, and a successful POST is insufficient: the exact submitted pattern must be returned by the runtime before it appears in the UI or the inputs clear. The page crawl classifies only the exact same-origin GET `/api/v1/sona` 503 body and requires the corresponding visible error; unrelated statuses, routes, methods and response bodies still fail.
+
+### Source-specific prerequisites and product gaps
+
+- `src/server/lib.rs::proxy_agent_rpc_handler` needs `OMNISOLO_AGENT_URL` for a reviewed tenant-bound runtime. Multitenant runtime dispatch is explicitly unavailable. The server's legacy raw `/rpc` remains contained because it has global state without tenant-bound workspace authority. Pointing the gateway back to that endpoint is not a valid repair.
+- `src/server/api/proposals.rs::draft_narrative` is mounted and calls the genuine local model adapter. The default local endpoint is `http://127.0.0.1:11434/api/generate`, model `llama3`, and requires actual usage counters. The native runner has no local model process. Its default browser case only proves handling of the current empty 502 response, not why the provider failed or successful generation. A source-specific prerequisite response remains a product gap.
+- `src/server/lib.rs` mounts the visual workflow with hardcoded `http://localhost:11434` Ollama. A real Input→HumanInLoop graph can exercise the approval boundary without a model. The original Input→LLM→HumanInLoop journey remains required and unverified until a real authorized local model is configured.
+- The Agents workflow form submits supported text analysis through `/api/v1/agents/hire`. It cannot claim a repository review, a CLI command, or `ohc_review_branch` from that admission. Configured acceptance requires its genuine queued receipt and persisted supplied task; execution completion needs separate evidence.
+- Storefront product URLs under `/api/v1/storefront` are owner-only private previews. Anonymous positive SEO checks use the actual reviewed snapshot published at `/api/v1/public/sites/{id}`. A private price change must update private SEO without changing previously approved public bytes; an explicit fresh publication is required for a new public price. Both surfaces intentionally use no-store policies instead of public mutable-draft CDN caching.
+
+No paid provider, local model service or unsafe legacy runtime was provisioned by this repair. On the isolated browser worktree, 19 total configured cases were discovered, not executed; the normal browser runner stopped at missing `target/debug/server`. Fresh real-stack execution and full repository acceptance remain outstanding until the current-source server/web artifacts and Docker prerequisites are available.

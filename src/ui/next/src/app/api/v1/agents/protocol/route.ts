@@ -20,12 +20,28 @@ const encoder = new TextEncoder();
 
 async function unwrapResult(response: Response): Promise<Response> {
   if (!response.ok) return response;
+  const json = (body: unknown, status = 200) => Response.json(body, {
+    status, headers: { "Cache-Control": "private, no-store" },
+  });
+  const invalid = () => json({ error: "Backend returned an invalid Agent Protocol response" }, 502);
+  if (response.status !== 200) return invalid();
   try {
     const payload = await response.json();
-    if (payload?.error) return Response.json({ error: payload.error.message }, { status: 502 });
-    return Response.json(payload?.result ?? null);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) return invalid();
+    const result = payload.result;
+    // The runtime reports transport-level RPC errors and operation-level errors
+    // (for example, an unconfigured checkpointer) in different envelopes.
+    const error = payload.error ?? result?.error;
+    if (error != null) {
+      const message = typeof error === "string" ? error : error.message;
+      return json({ error: typeof message === "string" && message.trim() ? message : "Agent Protocol operation failed" }, 502);
+    }
+    if (!result || typeof result !== "object" || Array.isArray(result)
+      || payload.success !== undefined && payload.success !== true
+      || result.success !== undefined && result.success !== true) return invalid();
+    return json(result);
   } catch {
-    return Response.json({ error: "Backend returned an invalid response" }, { status: 502 });
+    return invalid();
   }
 }
 

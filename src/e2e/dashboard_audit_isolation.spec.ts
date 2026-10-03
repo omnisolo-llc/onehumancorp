@@ -1,8 +1,9 @@
 import { test, expect } from './fixtures';
 import { e2eDbQuery } from './db_utils';
-import { createDashboardAuditCase } from './support/dashboard_audit_fixture';
+import { createDashboardAuditCase, prepareClickAuditState } from './support/dashboard_audit_fixture';
 import { tagClickTargets } from './support/ui_click_audit';
 import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
+import { scopeClickInventory } from '../../scripts/ui-audit-inventory.cjs';
 
 test('a real dismiss in one dashboard case cannot erase another required control in the next case', async ({ browser, baseURL }) => {
   if (!baseURL) throw new Error('The isolated app base URL is required');
@@ -49,3 +50,60 @@ test('a real dismiss in one dashboard case cannot erase another required control
     } finally { await second.close(); }
   } finally { await first.close(); }
 });
+
+for (const route of ['/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center']) {
+  test(`a persisted action on ${route} cannot erase the next case's coverage`, async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated app base URL is required');
+    const first = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+    try {
+      await first.navigate(route);
+      const discover = () => tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds);
+      const baseline = (await discover()).map(target => target.key);
+      const mutation = first.page.waitForResponse(response =>
+        ['PUT', 'POST'].includes(response.request().method())
+        && /^\/api\/v1\/(?:agent-feed|agents\/approvals)\//.test(new URL(response.url()).pathname));
+      await first.page.getByRole('button', { name: route.includes('unified-feed') ? 'Reject' : 'Dismiss', exact: true }).first().click();
+      const response = await mutation;
+      expect(response.status()).toBe(200);
+      await response.finished();
+      // Verify the mutation survived a real reload before comparing inventories.
+      await first.navigate(route);
+      await expect.poll(async () => (await discover()).length).toBeLessThan(baseline.length);
+      const changed = (await discover()).map(target => target.key);
+      expect(() => assertSameClickInventory(baseline, changed)).toThrow('missing=');
+      const second = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+      try {
+        await second.navigate(route);
+        expect(second.actor.tenantId).not.toBe(first.actor.tenantId);
+        assertSameClickInventory(baseline, (await tagClickTargets(second.page, second.actor.namespace, second.actor.canonicalIds)).map(target => target.key));
+      } finally { await second.close(); }
+    } finally { await first.close(); }
+  });
+}
+
+for (const route of ['/builder', '/website-builder']) {
+  test(`local draft progress on ${route} preserves entry and started-state audit coverage`, async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated app base URL is required');
+    const first = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+    try {
+      await first.navigate(route);
+      const baseline = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
+      await prepareClickAuditState(first.page, route, 'started-draft');
+      const started = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
+      expect(started.some(key => !baseline.includes(key))).toBe(true);
+      const entryKeys = scopeClickInventory(baseline.map(key => ({ key })), 'entry').map(target => target.key);
+      const startedKeys = scopeClickInventory(started.map(key => ({ key })), 'started-draft').map(target => target.key);
+      expect(new Set([...entryKeys, ...startedKeys]).size).toBe(baseline.length + started.length);
+      await first.navigate(route);
+      assertSameClickInventory(started, (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key));
+      expect(() => assertSameClickInventory(baseline, started)).toThrow('missing=');
+      const second = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+      try {
+        await second.navigate(route);
+        assertSameClickInventory(baseline, (await tagClickTargets(second.page, second.actor.namespace, second.actor.canonicalIds)).map(target => target.key));
+        await prepareClickAuditState(second.page, route, 'started-draft');
+        assertSameClickInventory(started, (await tagClickTargets(second.page, second.actor.namespace, second.actor.canonicalIds)).map(target => target.key));
+      } finally { await second.close(); }
+    } finally { await first.close(); }
+  });
+}

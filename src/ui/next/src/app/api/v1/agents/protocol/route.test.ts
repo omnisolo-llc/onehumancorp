@@ -28,3 +28,48 @@ it.each(['ap_create_task', 'ap_execute_step', 'ap_restore_checkpoint'])('POST pr
   expect(request).toMatchObject({ jsonrpc: '2.0', method, params: { task_id: 'owner-task' } });
   expect(request.params.user_id).toBeUndefined(); expect(request.params.tenant_id).toBeUndefined();
 });
+
+it.each([
+  { error: 'Workspace permission denied' },
+  { error: { code: -32000, message: 'Workspace permission denied' } },
+  { result: { error: 'Workspace permission denied' } },
+  { result: { error: { message: 'Workspace permission denied' } } },
+])('preserves actual protocol failure envelopes instead of acknowledging success %#', async payload => {
+  vi.mocked(proxyBackendRequest).mockResolvedValue(Response.json(payload));
+  const response = await GET(new Request('http://localhost/api/v1/agents/protocol?method=ap_list_checkpoints'));
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({ error: 'Workspace permission denied' });
+  expect(response.headers.get('cache-control')).toBe('private, no-store');
+});
+
+it.each([{}, { result: null }, { result: [] }, { result: 'unverified' }, { result: { success: false } }, { success: false, result: { success: true } }])('rejects missing or contradicted protocol results %#', async payload => {
+  vi.mocked(proxyBackendRequest).mockResolvedValue(Response.json(payload));
+  const response = await GET(new Request('http://localhost/api/v1/agents/protocol?method=ap_list_tasks'));
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({ error: 'Backend returned an invalid Agent Protocol response' });
+  expect(response.headers.get('cache-control')).toBe('private, no-store');
+});
+
+it('does not convert an accepted runtime operation into an acknowledged success', async () => {
+  vi.mocked(proxyBackendRequest).mockResolvedValue(Response.json({ result: { success: true } }, { status: 202 }));
+  const response = await POST(new Request('http://localhost/api/v1/agents/protocol', { method: 'POST', body: JSON.stringify({ method: 'ap_restore_checkpoint', params: { task_id: 'task', checkpoint_id: 'checkpoint' } }) }));
+  expect(response.status).toBe(502);
+  expect(await response.json()).toEqual({ error: 'Backend returned an invalid Agent Protocol response' });
+});
+
+it.each([{ tasks: [] }, { checkpoints: [] }, { success: true, message: 'Restored checkpoint' }])('keeps actual protocol data private and uncacheable %#', async result => {
+  vi.mocked(proxyBackendRequest).mockResolvedValue(Response.json({ result }));
+  const response = await GET(new Request('http://localhost/api/v1/agents/protocol?method=ap_list_tasks'));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual(result);
+  expect(response.headers.get('cache-control')).toBe('private, no-store');
+});
+
+it('preserves unavailable runtime status and its exact prerequisite', async () => {
+  const upstream = Response.json({ error: 'Agent runtime is not configured; no work was dispatched' }, { status: 503, headers: { 'Cache-Control': 'private, no-store' } });
+  vi.mocked(proxyBackendRequest).mockResolvedValue(upstream);
+  const response = await GET(new Request('http://localhost/api/v1/agents/protocol?method=ap_list_tasks'));
+  expect(response).toBe(upstream);
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({ error: 'Agent runtime is not configured; no work was dispatched' });
+});

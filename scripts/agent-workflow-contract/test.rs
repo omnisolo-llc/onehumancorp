@@ -1364,6 +1364,17 @@ async fn production_provider_dispatch_commits_reservation_then_settles_only_obse
         saved.funding.as_ref().unwrap().operator_tenant,
         "workflow-tenant-a"
     );
+    let (status, body) = f
+        .request(
+            "GET",
+            &format!("/api/v1/agents/workflows/{}", saved.id),
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["workflow"]["status"], "completed");
+    assert_eq!(body["workflow"]["output"], "Observed local provider result");
 }
 
 #[tokio::test]
@@ -1382,6 +1393,7 @@ async fn missing_provider_usage_remains_unknown_and_retains_the_hard_budget_hold
         .unwrap()
         .remove("usage");
     let reserved = provider.prepare(&f, &f.a).await.unwrap();
+    let id = reserved.receipt().id.clone();
     provider.execution.dispatch(reserved, None).await.unwrap();
     provider.execution.wait_for_workers().await;
     let entries = ledger.records("workflow-tenant-a", "").await.unwrap();
@@ -1397,6 +1409,68 @@ async fn missing_provider_usage_remains_unknown_and_retains_the_hard_budget_hold
             > 0
     );
     assert_eq!(provider.requests.lock().unwrap().len(), 1);
+    let (status, body) = f
+        .request(
+            "GET",
+            &format!("/api/v1/agents/workflows/{id}"),
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["workflow"]["status"], "outcome_unknown");
+    assert!(body["workflow"]["output"].is_null());
+}
+
+#[tokio::test]
+async fn rejected_settlement_write_cannot_publish_a_completed_workflow() {
+    use server_harness::middleware::usage_ledger::UsageLedger;
+    let f = Fixture::new().await;
+    let pool = f.database.connection().get_sqlite_connection_pool();
+    let ledger = UsageLedger::Sqlite(pool.clone());
+    ledger.initialize().await.unwrap();
+    ledger.set_limit("workflow-tenant-a", 20000).await.unwrap();
+    let provider = OwnedHttpProvider::open(&f).await;
+    let reserved = provider.prepare(&f, &f.a).await.unwrap();
+    let id = reserved.receipt().id.clone();
+    let held = ledger
+        .summary("workflow-tenant-a")
+        .await
+        .unwrap()
+        .reserved_micros;
+    assert!(held > 0);
+    // A real database rejection after the accounting update rolls back the
+    // settlement transaction. Admission and the single provider request remain
+    // real, and the separately written workflow receipt can still be read.
+    sqlx::query(
+        "CREATE TRIGGER reject_test_usage_settlement BEFORE UPDATE OF state ON ohc_usage_records
+         WHEN NEW.state='settled' BEGIN SELECT RAISE(ABORT,'test settlement rejected'); END",
+    )
+    .execute(pool)
+    .await
+    .unwrap();
+    provider.execution.dispatch(reserved, None).await.unwrap();
+    provider.execution.wait_for_workers().await;
+
+    let entries = ledger.records("workflow-tenant-a", "").await.unwrap();
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].state, "reconciliation_required");
+    assert_eq!(entries[0].charged_micros, None);
+    let account = ledger.summary("workflow-tenant-a").await.unwrap();
+    assert_eq!(account.spent_micros, 0);
+    assert_eq!(account.reserved_micros, held);
+    assert_eq!(provider.requests.lock().unwrap().len(), 1);
+    let (status, body) = f
+        .request(
+            "GET",
+            &format!("/api/v1/agents/workflows/{id}"),
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["workflow"]["status"], "outcome_unknown");
+    assert!(body["workflow"]["output"].is_null());
 }
 
 #[tokio::test]
@@ -1550,6 +1624,17 @@ async fn duplicate_provider_receipt_preserves_evidence_without_a_second_charge_o
     let account = ledger.summary("workflow-tenant-a").await.unwrap();
     assert_eq!(account.spent_micros, 160);
     assert!(account.reserved_micros > 0);
+    let (status, body) = f
+        .request(
+            "GET",
+            &format!("/api/v1/agents/workflows/{}", uncharged.event_id),
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["workflow"]["status"], "outcome_unknown");
+    assert!(body["workflow"]["output"].is_null());
 }
 
 #[tokio::test]
@@ -1977,6 +2062,17 @@ async fn missing_external_provider_id_is_not_replaced_by_billable_sdk_evidence()
             .reserved_micros
             > 0
     );
+    let (status, body) = f
+        .request(
+            "GET",
+            &format!("/api/v1/agents/workflows/{id}"),
+            Some(&f.a),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["workflow"]["status"], "outcome_unknown");
+    assert!(body["workflow"]["output"].is_null());
 }
 
 #[tokio::test]

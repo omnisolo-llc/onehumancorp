@@ -166,7 +166,7 @@ class FocusedGateTests(unittest.TestCase):
 
     def test_agent_workflow_gate_keeps_its_full_offline_inventory(self):
         minimum, database = gate.GATES['agent-workflow-contract']
-        self.assertGreaterEqual(minimum, 101)
+        self.assertGreaterEqual(minimum, 108)
         root = Path(__file__).resolve().parents[1]
         workflow = (root/'.github/workflows/ci.yml').read_text()
         self.assertLess(workflow.index('Install the pinned workflow proxy witness'), workflow.index('Verify agent workflow tenant isolation and requested tasks offline'))

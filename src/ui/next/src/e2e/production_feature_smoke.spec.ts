@@ -1,6 +1,7 @@
 import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
 import { recordSmokeHttpResponse, isVerifiedVoicePolicyDiagnostic } from "../../../../e2e/support/hosted_voice_policy";
+import { isVerifiedRuntimePolicyDiagnostic, runtimeUnavailableMessage } from "../../../../e2e/support/runtime_policy";
 import { createLinkBioActor } from "../../../../e2e/link_bio_owner";
 
 const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? process.env.BASE_URL ?? "http://127.0.0.1:3000";
@@ -102,6 +103,10 @@ test("all application pages render through the real authenticated service", asyn
       if (response.status() >= 400) {
         routeFailures.push(`${response.status()} ${route}`);
       }
+      if (route === '/sona') {
+        await expect(page.getByRole('alert').filter({ hasText: runtimeUnavailableMessage })).toBeVisible();
+        await expect(page.getByText('No patterns recorded yet.', { exact: true })).toHaveCount(0);
+      }
       if (route === '/settings') {
         await expect(page.getByText('Voice settings are unavailable in this deployment. No provider action can be started.', { exact: true })).toBeVisible();
         await expect(page.getByRole('checkbox', { name: 'Enable AI Voice Receptionist', exact: true })).toBeDisabled();
@@ -120,13 +125,13 @@ test("all application pages render through the real authenticated service", asyn
   }
 
   await Promise.all(policyChecks);
-  expect([...verifiedPolicyUrls], "the hosted voice boundary was verified from its actual response").toEqual([new URL("/api/v1/settings/voice", baseUrl).href]);
+  expect([...verifiedPolicyUrls].sort(), "the exact hosted voice and absent runtime boundaries were verified from their actual responses").toEqual([new URL("/api/v1/settings/voice", baseUrl).href, new URL("/api/v1/sona", baseUrl).href].sort());
   expect(routeFailures, "application page failures during the page crawl").toEqual([]);
   expect(contentFailures, "fabricated data or legacy branding during the page crawl").toEqual([]);
   expect(httpFailures, "unexpected HTTP 4xx responses during the page crawl").toEqual([]);
   expect(failures, "server-side 5xx responses during the page crawl").toEqual([]);
   expect(requestFailures, "failed browser requests during the page crawl").toEqual([]);
-  expect(consoleErrors.filter(({ text, url }) => !isVerifiedVoicePolicyDiagnostic(text, url, verifiedPolicyUrls)), "browser console errors during the page crawl").toEqual([]);
+  expect(consoleErrors.filter(({ text, url }) => !isVerifiedVoicePolicyDiagnostic(text, url, verifiedPolicyUrls) && !isVerifiedRuntimePolicyDiagnostic(text, url, verifiedPolicyUrls)), "browser console errors during the page crawl").toEqual([]);
   expect(websocketFailures, "failed WebSocket upgrades during the page crawl").toEqual([]);
 });
 

@@ -15,4 +15,27 @@ async function runFiniteClickInventory(baseline, operations) {
   }
   assertSameClickInventory(expected, (await operations.discover()).map(item => item.key));
 }
-module.exports = { runFiniteClickInventory, FINITE_CLICK_CASE_BUDGET };
+// The dynamic crawler retains its discovery history across document resets.
+async function runDynamicClickInventory(discoveredKeys, audited, operations) {
+  const startedAt = Date.now();
+  while (true) {
+    const candidates = await operations.discover();
+    for (const target of candidates) if (!discoveredKeys.includes(target.key)) discoveredKeys.push(target.key);
+    const candidate = candidates.find(target => !audited.has(target.key));
+    if (!candidate) {
+      // Exhaustion is about every historical discovery, not just the current
+      // document. A persisted mutation must never silently erase coverage.
+      assertSameClickInventory(discoveredKeys, [...audited]);
+      return;
+    }
+    if (Date.now() - startedAt > 90_000) {
+      throw new Error(`Click target enumeration did not converge after ${audited.size} targets; next=${candidate.label}. No remaining coverage was silently skipped.`);
+    }
+    await operations.visit(candidate);
+    await operations.reset();
+  }
+}
+function scopeClickInventory(inventory, state) {
+  return inventory.map(target => ({ ...target, sourceKey: target.key, key: JSON.stringify([state, target.key]) }));
+}
+module.exports = { runFiniteClickInventory, runDynamicClickInventory, scopeClickInventory, FINITE_CLICK_CASE_BUDGET };

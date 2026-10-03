@@ -26,13 +26,40 @@ function WorkspaceRuntime() {
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [stepInput, setStepInput] = useState('');
   const [steps, setSteps] = useState<ProtocolStep[]>([]);
+  const [stepRead, setStepRead] = useState<'unverified' | 'loading' | 'ready' | 'unavailable'>('unverified');
   const [checkpoints, setCheckpoints] = useState<ProtocolCheckpoint[]>([]);
+  const [checkpointRead, setCheckpointRead] = useState<'unverified' | 'loading' | 'ready' | 'unavailable'>('unverified');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unknownCreation, setUnknownCreation] = useState<string | null>(null);
   const [reviewStatus, setReviewStatus] = useState('');
   const creating = useRef(false);
   const [taskRead, setTaskRead] = useState('unverified');
+  const selectedTask = useRef('');
+  const selectionEpoch = useRef(0);
+  const stepRequest = useRef(0);
+  const actionInFlight = useRef(false);
+  const checkpointRequest = useRef(0);
+  const runtimeMounted = useRef(false);
+  useEffect(() => {
+    runtimeMounted.current = true;
+    return () => { runtimeMounted.current = false; selectionEpoch.current += 1; stepRequest.current += 1; checkpointRequest.current += 1; };
+  }, []);
+  const selectTask = (taskId: string) => {
+    // Retire the previous selection synchronously, before its request can settle
+    // between the click and the new selection's effect.
+    if (selectedTask.current !== taskId) {
+      selectedTask.current = taskId;
+      selectionEpoch.current += 1;
+      stepRequest.current += 1;
+      checkpointRequest.current += 1;
+      setSteps([]);
+      setStepRead('unverified');
+      setCheckpoints([]);
+      setCheckpointRead('unverified');
+    }
+    setSelectedTaskId(taskId);
+  };
 
   const fetchTasks = async () => {
     setTaskRead('loading');
@@ -48,7 +75,7 @@ function WorkspaceRuntime() {
   };
 
   const createTask = async () => {
-    if (!taskInput.trim() || loading || creating.current || unknownCreation !== null) return;
+    if (!taskInput.trim() || loading || creating.current || actionInFlight.current || unknownCreation !== null) return;
     const submittedInput = taskInput;
     creating.current = true; setLoading(true); setError(null);
     let unconfirmed = false;
@@ -71,7 +98,7 @@ function WorkspaceRuntime() {
         if (prev.some((t) => t.task_id === data.task_id)) return prev;
         return [data, ...prev];
       });
-      setSelectedTaskId(data.task_id);
+      selectTask(data.task_id);
       await fetchTasks();
       setTaskInput(current => current === submittedInput ? '' : current);
     } catch (e: unknown) {
@@ -88,30 +115,58 @@ function WorkspaceRuntime() {
   };
 
   const fetchSteps = async (taskId: string) => {
+    if (!runtimeMounted.current || selectedTask.current !== taskId) return;
+    const request = ++stepRequest.current;
+    const current = () => runtimeMounted.current && selectedTask.current === taskId && stepRequest.current === request;
+    setStepRead('loading');
+    setSteps([]);
     try {
       const res = await fetch(`/api/v1/agents/protocol?method=ap_list_steps&task_id=${taskId}`);
+      if (!current()) return;
       if (!res.ok) throw new Error('Failed to fetch steps');
       const data = await res.json();
-      setSteps(data.steps || []);
-    } catch (e: unknown) {
-      setError(errorMessage(e));
+      if (!current()) return;
+      if (res.status !== 200 || !data || !Array.isArray(data.steps) || data.error != null || data.success === false
+        || !data.steps.every((step: ProtocolStep) => step && typeof step.step_id === 'string' && step.step_id.trim()
+          && typeof step.status === 'string' && step.status.trim())) throw new Error('Unverified step list');
+      setSteps(data.steps);
+      setStepRead('ready');
+    } catch {
+      if (!current()) return;
+      setSteps([]);
+      setStepRead('unavailable');
     }
   };
 
-
   const fetchCheckpoints = async (taskId: string) => {
+    if (!runtimeMounted.current || selectedTask.current !== taskId) return;
+    const request = ++checkpointRequest.current;
+    const current = () => runtimeMounted.current && selectedTask.current === taskId && checkpointRequest.current === request;
+    setCheckpointRead('loading');
+    setCheckpoints([]);
     try {
       const res = await fetch(`/api/v1/agents/protocol?method=ap_list_checkpoints&task_id=${taskId}`);
+      if (!current()) return;
       if (!res.ok) throw new Error('Failed to fetch checkpoints');
       const data = await res.json();
-      setCheckpoints(data.checkpoints || []);
-    } catch (e: unknown) {
-      console.error(e);
+      if (!current()) return;
+      if (res.status !== 200 || !data || !Array.isArray(data.checkpoints) || data.error != null || data.success === false
+        || !data.checkpoints.every((checkpoint: ProtocolCheckpoint) => checkpoint && typeof checkpoint.checkpoint_id === 'string' && checkpoint.checkpoint_id.trim()
+          && typeof checkpoint.created_at === 'string' && checkpoint.created_at.trim())) throw new Error('Unverified checkpoint list');
+      setCheckpoints(data.checkpoints);
+      setCheckpointRead('ready');
+    } catch {
+      if (!current()) return;
       setCheckpoints([]);
+      setCheckpointRead('unavailable');
     }
   };
 
   const restoreCheckpoint = async (taskId: string, checkpointId: string) => {
+    if (!runtimeMounted.current || selectedTask.current !== taskId || actionInFlight.current || creating.current) return;
+    const selection = selectionEpoch.current;
+    const current = () => runtimeMounted.current && selectedTask.current === taskId && selectionEpoch.current === selection;
+    actionInFlight.current = true;
     setLoading(true);
     try {
       const res = await fetch('/api/v1/agents/protocol', {
@@ -122,18 +177,28 @@ function WorkspaceRuntime() {
           params: { task_id: taskId, checkpoint_id: checkpointId }
         }),
       });
+      if (!current()) return;
       if (!res.ok) throw new Error('Failed to restore checkpoint');
       await fetchSteps(taskId);
+      if (!current()) return;
       await fetchCheckpoints(taskId);
     } catch (e: unknown) {
-      setError(errorMessage(e));
+      if (current()) setError(errorMessage(e));
     } finally {
-      setLoading(false);
+      // Only one runtime mutation is admitted at a time, even after navigation
+      // selects another task. Release that global lock without changing its view.
+      actionInFlight.current = false;
+      if (runtimeMounted.current) setLoading(false);
     }
   };
 
   const executeStep = async () => {
-    if (!selectedTaskId) return;
+    const taskId = selectedTask.current;
+    if (!runtimeMounted.current || !taskId || actionInFlight.current || creating.current) return;
+    const selection = selectionEpoch.current;
+    const submittedInput = stepInput;
+    const current = () => runtimeMounted.current && selectedTask.current === taskId && selectionEpoch.current === selection;
+    actionInFlight.current = true;
     setLoading(true);
     try {
       const res = await fetch('/api/v1/agents/protocol', {
@@ -141,17 +206,20 @@ function WorkspaceRuntime() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           method: 'ap_execute_step',
-          params: { task_id: selectedTaskId, input: stepInput }
+          params: { task_id: taskId, input: submittedInput }
         }),
       });
+      if (!current()) return;
       if (!res.ok) throw new Error('Failed to execute step');
-      await fetchSteps(selectedTaskId);
-      await fetchCheckpoints(selectedTaskId);
-      setStepInput('');
+      await fetchSteps(taskId);
+      if (!current()) return;
+      await fetchCheckpoints(taskId);
+      if (current()) setStepInput(value => value === submittedInput ? '' : value);
     } catch (e: unknown) {
-      setError(errorMessage(e));
+      if (current()) setError(errorMessage(e));
     } finally {
-      setLoading(false);
+      actionInFlight.current = false;
+      if (runtimeMounted.current) setLoading(false);
     }
   };
 
@@ -161,7 +229,9 @@ function WorkspaceRuntime() {
       fetchCheckpoints(selectedTaskId);
     } else {
       setSteps([]);
+      setStepRead('unverified');
       setCheckpoints([]);
+      setCheckpointRead('unverified');
     }
   }, [selectedTaskId]);
 
@@ -210,7 +280,7 @@ function WorkspaceRuntime() {
               <li
                 key={task.task_id}
                 className={`p-4 border rounded-xl cursor-pointer transition shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%] ${selectedTaskId === task.task_id ? 'border-[#0066FF] ring-1 ring-[#0066FF] bg-blue-50/50' : 'border-gray-200 hover:bg-gray-50/80'}`}
-                onClick={() => setSelectedTaskId(task.task_id)}
+                onClick={() => selectTask(task.task_id)}
               >
                 <div className="font-semibold">{task.input || 'Untitled Task'}</div>
                 <div className="text-xs text-gray-500 truncate">{task.task_id}</div>
@@ -243,6 +313,8 @@ function WorkspaceRuntime() {
                 </button>
               </div>
 
+              {stepRead === 'loading' && <p role="status">Loading steps…</p>}
+              {stepRead === 'unavailable' && <p role="alert">Step history could not be verified.</p>}
               <ul className="space-y-4">
                 {steps.map((step, idx) => (
                   <li key={step.step_id} className="p-4 border rounded-xl border-gray-200 shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%]">
@@ -256,11 +328,13 @@ function WorkspaceRuntime() {
                     {step.output && <div className="text-sm text-gray-700 mt-2 bg-gray-50 p-2 rounded whitespace-pre-wrap">{step.output}</div>}
                   </li>
                 ))}
-                {steps.length === 0 && <div className="text-gray-500 text-sm italic">No steps executed yet.</div>}
+                {stepRead === 'ready' && steps.length === 0 && <div className="text-gray-500 text-sm italic">No steps executed yet.</div>}
               </ul>
 
               <div className="mt-8">
                 <h3 className="text-lg font-bold mb-4">State Checkpoints</h3>
+                {checkpointRead === 'loading' && <p role="status">Loading checkpoints…</p>}
+                {checkpointRead === 'unavailable' && <p role="alert">Checkpoint history could not be verified.</p>}
                 <ul className="space-y-4">
                   {checkpoints.map((cp) => (
                     <li key={cp.checkpoint_id} className="p-4 border rounded-xl border-gray-200 shadow-sm bg-white/80 backdrop-blur-[30px] saturate-[210%]">
@@ -280,7 +354,7 @@ function WorkspaceRuntime() {
                       <div className="text-xs text-gray-400">Created: {cp.created_at}</div>
                     </li>
                   ))}
-                  {checkpoints.length === 0 && <div className="text-gray-500 text-sm italic">No checkpoints saved.</div>}
+                  {checkpointRead === 'ready' && checkpoints.length === 0 && <div className="text-gray-500 text-sm italic">No checkpoints saved.</div>}
                 </ul>
               </div>
             </>

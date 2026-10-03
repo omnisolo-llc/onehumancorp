@@ -1,6 +1,7 @@
 pub mod models;
 pub mod repository;
 pub mod router;
+pub mod state_machine;
 pub mod traits;
 
 #[cfg(test)]
@@ -8,6 +9,7 @@ mod tests {
     use super::models::*;
     use super::repository::*;
     use super::router::*;
+    use super::state_machine::*;
     use super::traits::*;
     use async_trait::async_trait;
     use sea_orm::entity::prelude::*;
@@ -248,4 +250,92 @@ mod tests {
         assert_eq!(msg1.conversation_id, msg2.conversation_id);
         assert_eq!(msg1.sender_id, msg2.sender_id);
     }
+
+    #[test]
+    fn test_conversation_state_machine_transitions() {
+        let mut state = ConversationState::Open;
+
+        // Open -> BotHandling
+        state =
+            ConversationStateMachine::transition(&state, &ConversationEvent::AssignToBot).unwrap();
+        assert_eq!(state, ConversationState::BotHandling);
+
+        // BotHandling -> HumanAssigned
+        state = ConversationStateMachine::transition(&state, &ConversationEvent::AssignToHuman)
+            .unwrap();
+        assert_eq!(state, ConversationState::HumanAssigned);
+
+        // HumanAssigned -> Resolved
+        state = ConversationStateMachine::transition(&state, &ConversationEvent::Resolve).unwrap();
+        assert_eq!(state, ConversationState::Resolved);
+
+        // Resolved -> Open (incoming message)
+        state = ConversationStateMachine::transition(&state, &ConversationEvent::IncomingMessage)
+            .unwrap();
+        assert_eq!(state, ConversationState::Open);
+
+        // Open -> Snoozed
+        state = ConversationStateMachine::transition(&state, &ConversationEvent::Snooze).unwrap();
+        assert_eq!(state, ConversationState::Snoozed);
+
+        // Snoozed -> Open (reopen)
+        state = ConversationStateMachine::transition(&state, &ConversationEvent::Reopen).unwrap();
+        assert_eq!(state, ConversationState::Open);
+
+        // Snoozed -> Open (incoming message)
+        state = ConversationStateMachine::transition(
+            &ConversationState::Snoozed,
+            &ConversationEvent::Snooze,
+        )
+        .unwrap();
+        state = ConversationStateMachine::transition(&state, &ConversationEvent::IncomingMessage)
+            .unwrap();
+        assert_eq!(state, ConversationState::Open);
+
+        // Invalid transitions
+        assert!(ConversationStateMachine::transition(
+            &ConversationState::Resolved,
+            &ConversationEvent::AssignToBot
+        )
+        .is_err());
+        assert!(ConversationStateMachine::transition(
+            &ConversationState::Snoozed,
+            &ConversationEvent::Resolve
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn test_conversation_state_parsing() {
+        use std::str::FromStr;
+        assert_eq!(
+            ConversationState::from_str("open").unwrap(),
+            ConversationState::Open
+        );
+        assert_eq!(
+            ConversationState::from_str("Open").unwrap(),
+            ConversationState::Open
+        );
+        assert_eq!(
+            ConversationState::from_str("bot_handling").unwrap(),
+            ConversationState::BotHandling
+        );
+        assert_eq!(
+            ConversationState::from_str("bothandling").unwrap(),
+            ConversationState::BotHandling
+        );
+        assert!(ConversationState::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_conversation_state_display() {
+        assert_eq!(ConversationState::Open.to_string(), "open");
+        assert_eq!(ConversationState::BotHandling.to_string(), "bot_handling");
+        assert_eq!(
+            ConversationState::HumanAssigned.to_string(),
+            "human_assigned"
+        );
+    }
 }
+pub mod web_widget_adapter;
+pub mod whatsapp_adapter;

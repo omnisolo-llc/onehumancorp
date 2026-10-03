@@ -1,7 +1,9 @@
 import { test, expect } from '../fixtures';
+import { runtimeAcceptance, runtimeGateReason } from '../generation-acceptance';
 
 test.describe('Visual Workflow Builder', () => {
-  test('User can build and run a simple visual workflow', async ({ page }) => {
+  test('User can build and run an LLM workflow to its approval boundary @runtime-acceptance', async ({ page }) => {
+    test.skip(!runtimeAcceptance, runtimeGateReason);
     // Navigate to the visual workflow builder
     await page.goto('/visual-workflow');
 
@@ -32,6 +34,24 @@ test.describe('Visual Workflow Builder', () => {
 
     // Expect the Human In Loop node to return the error
     await expect(page.locator('text=USER_FIXABLE: Human in loop required')).toBeVisible({ timeout: 15000 });
+  });
+
+  test('a real input workflow stops at human approval without requiring an LLM', async ({ page }) => {
+    await page.goto('/visual-workflow');
+    await page.getByRole('button', { name: '+ Add Input Node' }).click();
+    await page.getByRole('button', { name: '+ Add Human-In-Loop Node' }).click();
+    await page.getByRole('button', { name: 'Connect from previous' }).click();
+    await expect(page.getByText('node-1 → node-2', { exact: true })).toBeVisible();
+    const execution = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/workflow/run' && response.request().method() === 'POST');
+    await page.getByRole('button', { name: '▶ Run Workflow' }).click();
+    const response = await execution;
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(result.success).toBe(false);
+    expect(result.result).toBeUndefined();
+    expect(result.error).toContain('USER_FIXABLE: Human in loop required');
+    await expect(page.locator('pre')).toContainText(result.error);
+    await expect(page.getByLabel('Input Value')).toHaveValue('Hello world');
   });
 
   test('User can add multiple output nodes and connect them', async ({ page }) => {

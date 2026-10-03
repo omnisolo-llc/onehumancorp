@@ -1,7 +1,10 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../../e2e/fixtures';
+import { runtimeAcceptance, runtimeGateReason } from '../../../e2e/generation-acceptance';
+import { expectRuntimeUnavailable, runtimeUnavailableMessage } from '../../../e2e/support/runtime_unavailable';
 
 test.describe('Expert Team', () => {
-  test('rejects duplicate expert outputs without inventing a delivered report', async ({ page }) => {
+  test('unconfigured expert team retains the task without inventing a delivered report', async ({ page }) => {
+    test.skip(runtimeAcceptance, 'This contract requires an unconfigured runtime.');
     // Navigate to the expert team page
     await page.goto('/expert-team');
 
@@ -18,28 +21,43 @@ test.describe('Expert Team', () => {
     // Verify that the loading state appears
     await expect(page.locator('button:has-text("Orchestrating Expert Team...")')).toBeVisible();
 
-    // The isolated runtime's deterministic fallback gives the experts duplicate
-    // outputs. The real pre-merge gate must reject them, as the CI trace shows.
-    // Successful synthesis is exercised at the provider boundary by unit tests.
-    const response = await execution;
-    expect(response.status()).toBe(502);
-    const failure = await response.json();
-    expect(failure.error).toBe('Pre-merge Gate Failed: High similarity detected (>75%) between expert outputs. Deduplication required.');
-    await expect(page.locator('.expert-error-content')).toContainText(failure.error);
+    await expectRuntimeUnavailable(await execution);
+    await expect(page.locator('.expert-error-content')).toContainText(runtimeUnavailableMessage);
+    await expect(page.locator('textarea')).toHaveValue(/Write a comprehensive business plan/);
     await expect(page.getByRole('heading', { name: 'Final Delivered Output' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Execute Task via Expert Team' })).toBeEnabled();
   });
 
-  test('should fail when API returns an error', async ({ page }) => {
+  test('short tasks still report the exact missing runtime', async ({ page }) => {
+    test.skip(runtimeAcceptance, 'This contract requires an unconfigured runtime.');
     await page.goto('/expert-team');
 
     // Fill in the task context that will fail a quality gate (e.g., missing chapters or short)
     await page.fill('textarea[placeholder*="Write a comprehensive business plan"]', 'Short task');
 
-    // Click the execute button
+    const execution = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/expert-team' && response.request().method() === 'POST');
     await page.click('button:has-text("Execute Task via Expert Team")');
+    await expectRuntimeUnavailable(await execution);
+    await expect(page.locator('.expert-error-content')).toContainText(runtimeUnavailableMessage);
 
     // Wait for the error message
     await expect(page.locator('h3:has-text("Quality Gate or Execution Error:")')).toBeVisible({ timeout: 15000 });
   });
+  test('authorized expert runtime produces a genuinely delivered report @runtime-acceptance', async ({ page }) => {
+    test.skip(!runtimeAcceptance, runtimeGateReason);
+    await page.goto('/expert-team');
+    await page.locator('textarea').fill('Write a business plan for a neighborhood bakery. Include distinct expert analysis, an executive summary, market assumptions, operations, risks, and a clearly labeled budget estimate.');
+    const execution = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/expert-team' && response.request().method() === 'POST');
+    await page.getByRole('button', { name: 'Execute Task via Expert Team' }).click();
+    const response = await execution;
+    expect(response.status()).toBe(200);
+    const result = await response.json();
+    expect(typeof result.result).toBe('string');
+    expect(result.result.trim().length).toBeGreaterThan(0);
+    expect(result.error).toBeUndefined();
+    await expect(page.getByRole('heading', { name: 'Final Delivered Output' })).toBeVisible();
+    await expect(page.locator('pre')).toHaveText(result.result);
+    await expect(page.locator('.expert-error-content')).toHaveCount(0);
+  });
+
 });
