@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "[Architecture] Universal Multi-Tenant Offline-First Mobile Tap-to-Pay and POS"
+issue_description: "The issue requests building a new POS engine and a Flutter mobile client. According to RESEARCH.md and the current usage audit (revision 2026-09-18), expanding into POS engines and initiating a Flutter rewrite require explicit evidence, an expansion gate, and authorization, which are currently unavailable. Therefore, this issue is blocked due to unauthorized scope expansion. \n\nSuperpowers Workflow:\n- Upstream Revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d\n- Loaded skills: skills/using-superpowers/SKILL.md"
