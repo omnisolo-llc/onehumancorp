@@ -312,7 +312,8 @@ impl OmniChannelRepo {
 
         if let Some(client) = crate::redis_pool::get_redis_client() {
             if let Ok(mut rconn) = client.get_async_connection().await {
-                let publish_res: Result<(), redis::RedisError> = redis::AsyncCommands::publish(&mut rconn, &topic, payload.to_string()).await;
+                let publish_res: Result<(), redis::RedisError> =
+                    redis::AsyncCommands::publish(&mut rconn, &topic, payload.to_string()).await;
                 if let Err(e) = publish_res {
                     tracing::warn!("Failed to publish to redis: {}", e);
                 } else {
@@ -338,9 +339,6 @@ impl OmniChannelRepo {
 
         Ok(record)
     }
-
-
-
 
     pub async fn create_ai_draft(
         &self,
