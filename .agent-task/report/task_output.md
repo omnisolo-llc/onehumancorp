@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Implement Native Rust Omnichannel Inbox & AI Work Triage (Chatwoot Replacement)"
+issue_description: "The issue requests building a native replacement for Chatwoot and adding new omnichannel capabilities. However, RESEARCH.md explicitly states to prioritize integrating existing tools over rebuilding them. It also notes that building native replacements for external services (e.g., Chatwoot) and adding new channels requires explicit authorization, evidence, and an expansion gate in RESEARCH.md. A review of RESEARCH.md confirms no such expansion gate exists for this feature."
