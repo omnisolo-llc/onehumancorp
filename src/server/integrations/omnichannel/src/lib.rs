@@ -249,3 +249,5 @@ mod tests {
         assert_eq!(msg1.sender_id, msg2.sender_id);
     }
 }
+pub mod web_widget_adapter;
+pub mod whatsapp_adapter;
