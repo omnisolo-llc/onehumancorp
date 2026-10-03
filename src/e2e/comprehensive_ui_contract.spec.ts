@@ -49,13 +49,14 @@ const viewports = [
   { name: 'mobile', width: 390, height: 844 },
 ];
 
-function normalizeInternalHref(href: string): string | null {
+function normalizeInternalHref(href: string, currentUrl: string): string | null {
   if (!href || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('tel:')) return null;
   if (href.startsWith('javascript:')) return 'javascript:';
 
   try {
-    const url = new URL(href, 'http://dummy.base');
-    if (url.origin !== 'http://dummy.base') return null;
+    const base = new URL(currentUrl);
+    const url = new URL(href, base);
+    if (!['http:', 'https:'].includes(base.protocol) || url.origin !== base.origin || url.username || url.password) return null;
     return `${url.pathname}${url.search}`;
   } catch {
     return null;
@@ -377,7 +378,7 @@ test.describe('comprehensive UI contract', () => {
       );
 
       for (const rawHref of hrefs) {
-        const href = normalizeInternalHref(rawHref);
+        const href = normalizeInternalHref(rawHref, page.url());
         if (!href) continue;
         if (href === 'javascript:') {
           failures.push(`${routeLabel(route)}: javascript: link`);
@@ -444,12 +445,13 @@ test.describe('comprehensive UI contract', () => {
           continue;
         }
 
-        const url = new URL(link.href, 'http://dummy.base');
-        if (url.origin === 'http://dummy.base') continue;
+        const url = new URL(link.href, page.url());
+        if (normalizeInternalHref(link.href, page.url()) !== null) continue;
 
         if (!['http:', 'https:'].includes(url.protocol)) {
           failures.push(`${target} uses unexpected protocol ${url.protocol}`);
         }
+        if (url.username || url.password) failures.push(`${target} embeds credentials in its destination`);
         if (!externalHostAllowed(url.hostname)) {
           failures.push(`${target} points at unexpected external host ${url.hostname}`);
         }

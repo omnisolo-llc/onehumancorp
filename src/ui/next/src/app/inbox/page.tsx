@@ -352,7 +352,7 @@ function InboxWorkspace({
         { label: "Messages", value: String(messages.length), tone: messages.length > 0 ? "good" : "neutral" },
         { label: "Open", value: String(openCount), tone: openCount > 0 ? "warn" : "good" },
       ]}
-      actions={[{ label: "Audit", href: "/agent-audit-dashboard" }]}
+      actions={[{ label: "Audit", href: "/agent-audit-dashboard.html" }]}
     >
       <div className="mb-2 text-xs text-gray-500">
         Loaded from `/api/v1/ui/inbox/messages`.
@@ -639,10 +639,6 @@ function ApiInboxFallback() {
 }
 
 export default function InboxPage() {
-  useEffect(() => {
-    void fetch('/api/v1/ui/inbox/messages');
-  }, []);
-
   return (
     <Suspense fallback={<InboxLoadingState />}>
     <PowerSyncProvider

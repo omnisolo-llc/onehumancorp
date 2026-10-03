@@ -17,11 +17,11 @@ test.describe('Inbox real-data behavior', () => {
     await page.goto('/inbox');
     // Hydration can retire its first read. Verify a complete authenticated API
     // response and the actual rendered owned record, not a transient response.
-    const response = await page.request.get('/api/v1/ui/inbox/messages', {
+    const response = await page.request.get('/api/v1/ui/omni_inbox', {
       headers: { 'x-ohc-expected-user': actor.userId, 'x-ohc-expected-tenant': actor.tenantId },
     });
 
-    expect(response.status(), '/api/v1/ui/inbox/messages must return confirmed data').toBe(200);
+    expect(response.status(), '/api/v1/ui/omni_inbox must return the recorded data rendered by this view').toBe(200);
     expect(await response.json()).toEqual([expect.objectContaining({ id: messageId })]);
     await expect(page.getByRole('heading', { name: 'Inbox' })).toBeVisible();
     const workspace = page.getByTestId('inbox-settled');
