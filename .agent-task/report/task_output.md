@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "[Architecture] Implement Native Rust Omnichannel Chat System to Replace Chatwoot"
+issue_description: "The issue requests building a native Rust Omnichannel Chat System to replace Chatwoot. However, per the One Human Corp guidelines and RESEARCH.md, requests to build native replacements for external services and adding additional channels require explicit authorization, evidence of retained-customer need, and an expansion gate in RESEARCH.md. There is no such expansion gate currently defined for omnichannel chat. Therefore, this implementation is blocked."
