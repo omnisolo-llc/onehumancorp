@@ -15,7 +15,7 @@ certification. Full Cargo/Next/desktop and hosted CI gates remain required.
 
 The combined gate preserves the original generation/admission cases, imported durable receipt lifecycle cases, and funded admission cases. Persistence modules, receipt sources and all included SQL are source-fingerprinted.
 
-The mandatory inventory is 65 cases. Canonical brand writes require the actual
+The mandatory inventory is 74 cases. Canonical brand writes require the actual
 same PostgreSQL pool as the credential store. Startup can reuse that pool for
 private builder storage only after proving that the configured business pool
 shares its real advisory-lock namespace, search path and canonical/business
@@ -30,3 +30,14 @@ Separate configured stores are retained; rejected private binding never moves
 business data. Public publication reads and previously accepted workers are
 separate from the request bearer lifetime. Their broader backend guard and
 request-owned publication fence remain distinct follow-on work.
+
+Owned database teardown distinguishes real clients from PostgreSQL autovacuum
+maintenance. The lifecycle tests observe a real slow autovacuum, exercise normal
+template clone/drop while it is active, and retain a real client to prove that
+client leaks still fail with bounded, credential-free ownership diagnostics.
+Only autovacuum workers are excluded; unknown backend types remain blocking.
+
+A deterministic real after-release interleaving covers the pinned SQLx pool
+shutdown race. The max1 clone fixture acquires and acknowledges closure of its
+known backend before pool shutdown, then verifies the pool and server drain.
+The dependency version and the real cloned-catalog/namespace assertion stay intact.

@@ -1172,11 +1172,14 @@ async fn startup_sqlite_business_store_never_selects_its_dummy_pg_handle() {
     );
 }
 
-async fn wait_owned_database_disconnect(control: &sqlx::PgPool, database: &str) {
-    tokio::time::timeout(std::time::Duration::from_secs(5), async {
+async fn wait_owned_database_disconnect(
+    control: &sqlx::PgPool,
+    database: &str,
+) -> Result<(), serde_json::Value> {
+    let drained = tokio::time::timeout(std::time::Duration::from_secs(5), async {
         loop {
             let connected: bool = sqlx::query_scalar(
-                "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1)",
+                "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND backend_type IS DISTINCT FROM 'autovacuum worker')",
             )
             .bind(database)
             .fetch_one(control)
@@ -1188,8 +1191,39 @@ async fn wait_owned_database_disconnect(control: &sqlx::PgPool, database: &str) 
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
     })
-    .await
-    .expect("owned database connections must finish closing before clone/drop");
+    .await;
+    if drained.is_err() {
+        // Never log query text or connection credentials. These fields identify
+        // a leaked client versus a PostgreSQL background backend on this exact
+        // test-owned database without guessing from a timeout alone.
+        let remaining: serde_json::Value = sqlx::query_scalar(
+            "SELECT COALESCE(jsonb_agg(jsonb_build_object('pid',pid,'database',datname,'role',usename,'application',application_name,'backend_type',backend_type,'state',state,'wait_type',wait_event_type,'wait_event',wait_event)), '[]'::jsonb) FROM pg_stat_activity WHERE datname=$1",
+        ).bind(database).fetch_one(control).await.unwrap();
+        return Err(remaining);
+    }
+    Ok(())
+}
+
+async fn close_owned_single_connection_pool(pool: &sqlx::PgPool, expected_pid: i32) -> i32 {
+    // The pinned pool can publish a returning connection after its close loop's
+    // last idle-queue check. Own and close this fixture's sole known connection
+    // before marking the pool closed; never terminate an arbitrary backend.
+    assert_eq!(pool.options().get_max_connections(), 1);
+    let mut connection = tokio::time::timeout(std::time::Duration::from_secs(3), pool.acquire())
+        .await
+        .unwrap()
+        .unwrap();
+    let actual_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&mut *connection)
+        .await
+        .unwrap();
+    connection.close().await.unwrap();
+    pool.close().await;
+    assert_eq!(
+        actual_pid, expected_pid,
+        "close the exact fixture-owned backend"
+    );
+    actual_pid
 }
 
 #[tokio::test]
@@ -1214,6 +1248,9 @@ async fn startup_cloned_database_relation_ids_cannot_replace_the_real_lock_names
     let mut source = DatabaseFixture::new_at(source_url.as_str()).await;
     source.pool.close().await;
     source.admin.close().await;
+    wait_owned_database_disconnect(&control, &source_name)
+        .await
+        .expect("owned source clients must close before template cloning");
     sqlx::query(&format!(
         "CREATE DATABASE {clone_name} TEMPLATE {source_name}"
     ))
@@ -1247,6 +1284,10 @@ async fn startup_cloned_database_relation_ids_cannot_replace_the_real_lock_names
         .fetch_one(&data)
         .await
         .unwrap();
+    let data_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&data)
+        .await
+        .unwrap();
     assert_eq!(
         canonical_ids, cloned_ids,
         "fixture must preserve catalog IDs across distinct real databases"
@@ -1257,21 +1298,250 @@ async fn startup_cloned_database_relation_ids_cannot_replace_the_real_lock_names
     let selected = crate::application_builder_pool(data.clone(), &canonical).await;
     let rejected = selected.is_none();
     drop(selected);
-    data.close().await;
-    wait_owned_database_disconnect(&control, &clone_name).await;
+    let before_close = (data.size(), data.num_idle(), data.is_closed());
+    let closing_pid = close_owned_single_connection_pool(&data, data_pid).await;
+    let after_close = (data.size(), data.num_idle(), data.is_closed());
+    let clone_drained = wait_owned_database_disconnect(&control, &clone_name).await;
+    let independent_observation = if clone_drained.is_err() {
+        use sqlx::Connection;
+        let mut observer = sqlx::PgConnection::connect_with(&control.connect_options())
+            .await
+            .unwrap();
+        let current: serde_json::Value = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('pid',pid,'backend_type',backend_type,'role',usename,'state',state,'wait_event',wait_event)), '[]'::jsonb) FROM pg_stat_activity WHERE datname=$1")
+            .bind(&clone_name).fetch_one(&mut observer).await.unwrap();
+        observer.close().await.unwrap();
+        Some(current)
+    } else {
+        None
+    };
+    assert!(
+        clone_drained.is_ok(),
+        "owned clone close: known_pid={data_pid}, closing_pid={closing_pid}, before={before_close:?}, after={after_close:?}, remaining={clone_drained:?}, independent={independent_observation:?}"
+    );
     sqlx::query(&format!("DROP DATABASE {clone_name}"))
         .execute(&control)
         .await
         .unwrap();
     source.close().await;
-    wait_owned_database_disconnect(&control, &source_name).await;
+    wait_owned_database_disconnect(&control, &source_name)
+        .await
+        .expect("owned source connections must finish closing before drop");
     sqlx::query(&format!("DROP DATABASE {source_name}"))
         .execute(&control)
         .await
         .unwrap();
     control.close().await;
+    assert_eq!(
+        data_pid, closing_pid,
+        "the max1 fixture must close its own known backend"
+    );
+    assert_eq!(after_close, (0, 0, true));
     assert!(
         rejected,
         "cloned schema/catalog identity is insufficient without the same actual advisory-lock namespace"
+    );
+}
+
+async fn create_owned_drain_database() -> (sqlx::PgPool, String, reqwest::Url) {
+    let base = std::env::var("OHC_BUILDER_GENERATION_TEST_DATABASE_URL").unwrap();
+    let mut url = reqwest::Url::parse(&base).unwrap();
+    assert!(matches!(
+        url.host_str(),
+        Some("localhost" | "127.0.0.1" | "[::1]")
+    ));
+    url.set_path("/postgres");
+    let control = sqlx::PgPool::connect(url.as_str()).await.unwrap();
+    let name = format!("ohc_drain_{}_test", uuid::Uuid::new_v4().simple());
+    sqlx::query(&format!("CREATE DATABASE {name} TEMPLATE template0"))
+        .execute(&control)
+        .await
+        .unwrap();
+    url.set_path(&format!("/{name}"));
+    (control, name, url)
+}
+
+#[tokio::test]
+async fn owned_single_connection_shutdown_drains_a_concurrently_returning_real_backend() {
+    let (control, name, url) = create_owned_drain_database().await;
+    let armed = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let entered = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .after_release({
+            let armed = armed.clone();
+            let entered = entered.clone();
+            let release = release.clone();
+            move |_, _| {
+                let pause = armed.swap(false, Ordering::SeqCst);
+                let entered = entered.clone();
+                let release = release.clone();
+                Box::pin(async move {
+                    if pause {
+                        entered.notify_one();
+                        release.notified().await;
+                    }
+                    Ok(true)
+                })
+            }
+        })
+        .connect(url.as_str())
+        .await
+        .unwrap();
+    let mut connection = pool.acquire().await.unwrap();
+    let expected_pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&mut *connection)
+        .await
+        .unwrap();
+    armed.store(true, Ordering::SeqCst);
+    drop(connection);
+    tokio::time::timeout(std::time::Duration::from_secs(3), entered.notified())
+        .await
+        .unwrap();
+    // Force the actual SQLx return_to_pool/close interleaving: its release hook
+    // has passed the closed check but has not published the idle connection.
+    let mut shutdown = Box::pin(close_owned_single_connection_pool(&pool, expected_pid));
+    std::future::poll_fn(|context| {
+        assert!(std::future::Future::poll(shutdown.as_mut(), context).is_pending());
+        std::task::Poll::Ready(())
+    })
+    .await;
+    release.notify_one();
+    let closed_pid = shutdown.await;
+    let state = (pool.size(), pool.num_idle(), pool.is_closed());
+    let still_connected: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND pid=$2)",
+    )
+    .bind(&name)
+    .bind(expected_pid)
+    .fetch_one(&control)
+    .await
+    .unwrap();
+    // Safe fixture cleanup even when the old close routine returned too early.
+    pool.close().await;
+    wait_owned_database_disconnect(&control, &name)
+        .await
+        .unwrap();
+    sqlx::query(&format!("DROP DATABASE {name}"))
+        .execute(&control)
+        .await
+        .unwrap();
+    control.close().await;
+    assert_eq!(closed_pid, expected_pid);
+    assert_eq!(
+        state,
+        (0, 0, true),
+        "fixture shutdown must not leave its known client in the closed pool; connected={still_connected}"
+    );
+}
+
+#[tokio::test]
+async fn owned_database_drain_reports_a_real_retained_client_and_waits_for_release() {
+    let (control, name, url) = create_owned_drain_database().await;
+    let options = url
+        .as_str()
+        .parse::<sqlx::postgres::PgConnectOptions>()
+        .unwrap()
+        .application_name("ohc-owned-retained-client");
+    let client = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(1)
+        .connect_with(options)
+        .await
+        .unwrap();
+    let mut held = client.acquire().await.unwrap();
+    let pid: i32 = sqlx::query_scalar("SELECT pg_backend_pid()")
+        .fetch_one(&mut *held)
+        .await
+        .unwrap();
+    let blocked = wait_owned_database_disconnect(&control, &name).await;
+    drop(held);
+    client.close().await;
+    let released = wait_owned_database_disconnect(&control, &name).await;
+    sqlx::query(&format!("DROP DATABASE {name}"))
+        .execute(&control)
+        .await
+        .unwrap();
+    control.close().await;
+    let remaining = blocked.expect_err("an owned client is still connected");
+    assert!(
+        remaining.as_array().unwrap().iter().any(|backend| {
+            backend["pid"] == pid
+                && backend["backend_type"] == "client backend"
+                && backend["application"] == "ohc-owned-retained-client"
+        }),
+        "safe diagnostics must identify the actual retained client: {remaining}"
+    );
+    assert!(
+        released.is_ok(),
+        "client release must clear the drain: {released:?}"
+    );
+}
+
+#[tokio::test]
+async fn owned_database_drain_does_not_misreport_real_autovacuum_as_a_leaked_client() {
+    let (control, name, url) = create_owned_drain_database().await;
+    let writer = sqlx::PgPool::connect(url.as_str()).await.unwrap();
+    sqlx::raw_sql("CREATE TABLE drain_vacuum_probe(id bigint, payload text) WITH (autovacuum_vacuum_threshold=1,autovacuum_vacuum_scale_factor=0,autovacuum_vacuum_cost_delay=100,autovacuum_vacuum_cost_limit=1); INSERT INTO drain_vacuum_probe SELECT value, repeat('x',200) FROM generate_series(1,5000) AS value; DELETE FROM drain_vacuum_probe;")
+        .execute(&writer).await.unwrap();
+    sqlx::query("SELECT pg_stat_force_next_flush()")
+        .execute(&writer)
+        .await
+        .unwrap();
+    writer.close().await;
+    // Default PostgreSQL schedules autovacuum approximately once a minute.
+    // The local owned-cluster reproduction can shorten that startup setting;
+    // this test never changes persisted or shared server configuration.
+    let observed = tokio::time::timeout(std::time::Duration::from_secs(75), async {
+        loop {
+            let active: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE datname=$1 AND backend_type='autovacuum worker')")
+                .bind(&name).fetch_one(&control).await.unwrap();
+            if active { break; }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+    }).await;
+    let drained = if observed.is_ok() {
+        wait_owned_database_disconnect(&control, &name).await
+    } else {
+        Err(serde_json::json!({"fixture":"no actual autovacuum observed"}))
+    };
+    let clone_name = name.replacen("ohc_drain_", "ohc_drain_clone_", 1);
+    let cloned = tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        sqlx::query(&format!("CREATE DATABASE {clone_name} TEMPLATE {name}")).execute(&control),
+    )
+    .await;
+    let clone_exists: bool =
+        sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_database WHERE datname=$1)")
+            .bind(&clone_name)
+            .fetch_one(&control)
+            .await
+            .unwrap();
+    if clone_exists {
+        sqlx::query(&format!("DROP DATABASE {clone_name}"))
+            .execute(&control)
+            .await
+            .unwrap();
+    }
+    // Ordinary PostgreSQL DROP handles its own maintenance worker on this
+    // exact uniquely-created database. No pg_terminate_backend is used.
+    tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        sqlx::query(&format!("DROP DATABASE {name}")).execute(&control),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    control.close().await;
+    assert!(
+        observed.is_ok(),
+        "real autovacuum fixture must run; no simulated backend is accepted"
+    );
+    assert!(
+        drained.is_ok(),
+        "all client pools closed; a maintenance worker is not a leaked connection: {drained:?}"
+    );
+    assert!(
+        matches!(cloned, Ok(Ok(_))),
+        "normal PostgreSQL template cloning must still succeed: {cloned:?}"
     );
 }
