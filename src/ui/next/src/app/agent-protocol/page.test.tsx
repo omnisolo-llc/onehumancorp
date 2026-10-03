@@ -16,6 +16,7 @@ const mockRuntime = vi.fn();
 const task = { task_id: 'task-1', input: 'Write a poem' };
 let tasks: typeof task[];
 let steps: { step_id: string; status: string; input?: string; output?: string }[];
+let checkpoints: { checkpoint_id: string; created_at: string }[];
 async function loadRuntime() {
   render(<AgentProtocolPage />);
   fireEvent.click(screen.getByRole('button', { name: 'Load workspace runtime tasks' }));
@@ -23,16 +24,16 @@ async function loadRuntime() {
 }
 describe('Agent Protocol UI', () => {
   beforeEach(() => {
-    cleanup(); localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks(); tasks = []; steps = [];
+    cleanup(); localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks(); tasks = []; steps = []; checkpoints = [{ checkpoint_id: 'cp-1', created_at: '2026-10-03' }];
     mockRuntime.mockReset().mockImplementation(async (url, options) => {
       if (options?.method === 'POST') {
         const body = JSON.parse(options.body);
         if (body.method === 'ap_create_task') { tasks = [task]; return Response.json(task); }
-        if (body.method === 'ap_execute_step') { steps = [{ step_id: 'step-1', status: 'completed', input: 'Line 1', output: 'Roses are red' }]; return Response.json(steps[0]); }
+        if (body.method === 'ap_execute_step') { checkpoints = [{ checkpoint_id: 'cp-2', created_at: '2026-10-03T12:00:00Z' }]; steps = [{ step_id: 'step-1', status: 'completed', input: 'Line 1', output: 'Roses are red' }]; return Response.json(steps[0]); }
         if (body.method === 'ap_restore_checkpoint') { steps = []; return Response.json({ success: true }); }
       }
       if (String(url).includes('ap_list_steps')) return Response.json({ steps });
-      if (String(url).includes('ap_list_checkpoints')) return Response.json({ checkpoints: [{ checkpoint_id: 'cp-1', created_at: '2026-10-03' }] });
+      if (String(url).includes('ap_list_checkpoints')) return Response.json({ checkpoints });
       return Response.json({ tasks });
     });
     vi.stubGlobal('fetch', vi.fn(async (url, options) => {
@@ -69,16 +70,25 @@ describe('Agent Protocol UI', () => {
     const [, options] = mockRuntime.mock.calls.find(([, options]) => options?.method === 'POST')!;
     expect(JSON.parse(options.body)).toEqual({ method: 'ap_create_task', params: { input: task.input } });
   });
+  it('refreshes the actual checkpoint list after a step completes', async () => {
+    tasks = [task]; await loadRuntime(); fireEvent.click(await screen.findByText(task.input));
+    expect(await screen.findByText('cp-1')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Execute Step' }));
+    expect(await screen.findByText('Roses are red')).toBeVisible();
+    expect(await screen.findByText('cp-2')).toBeVisible();
+    expect(screen.queryByText('cp-1')).not.toBeInTheDocument();
+  });
   it('preserves actual step execution and checkpoint restoration without routing either to text analysis', async () => {
     tasks = [task]; await loadRuntime(); fireEvent.click(await screen.findByText(task.input));
     fireEvent.change(await screen.findByPlaceholderText('Optional Step Input...'), { target: { value: 'Line 1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Execute Step' }));
     expect(await screen.findByText('Roses are red')).toBeVisible();
+    expect(await screen.findByText('cp-2')).toBeVisible();
     fireEvent.click(await screen.findByRole('button', { name: 'Restore Checkpoint' }));
     await waitFor(() => expect(screen.queryByText('Roses are red')).toBeNull());
     expect(mockRuntime.mock.calls.filter(([, options]) => options?.method === 'POST').map(([, options]) => JSON.parse(options.body))).toEqual([
       { method: 'ap_execute_step', params: { task_id: 'task-1', input: 'Line 1' } },
-      { method: 'ap_restore_checkpoint', params: { task_id: 'task-1', checkpoint_id: 'cp-1' } },
+      { method: 'ap_restore_checkpoint', params: { task_id: 'task-1', checkpoint_id: 'cp-2' } },
     ]);
     expect(vi.mocked(fetch).mock.calls.some(([url]) => url === '/api/v1/agents/hire')).toBe(false);
   });

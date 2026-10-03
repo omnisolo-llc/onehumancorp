@@ -1,5 +1,6 @@
 import { expect, test } from './fixtures';
 import { seedFeedItem } from './feed-fixtures';
+import { db } from './db_utils';
 
 test.describe('Unified Agent Feed Mobile MVP', () => {
   test.use({ viewport: { width: 375, height: 812 } });
@@ -38,7 +39,7 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     }
   });
 
-  test('should allow approving an action card in the feed', async ({ page }) => {
+  test('should allow approving an action card in the feed', async ({ page, adminUser }) => {
     test.setTimeout(180000);
 
     // Navigate to dashboard
@@ -61,19 +62,22 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
         expect(box.width).toBeGreaterThanOrEqual(44);
     }
 
-    // Store count to verify the count decreases
-    const initialCount = await approveButtons.count();
-
-    await approveButtons.first().click();
-
-    // Expect the card to disappear or change state, count should be less
-    await expect(async () => {
-       const newCount = await approveButtons.count();
-       expect(newCount).toBeLessThan(initialCount);
-    }).toPass({ timeout: 10000 });
+    // Dashboard data can refresh between reads. Assert the exact precondition
+    // with a retrying locator rather than snapshotting a transient zero count.
+    await expect(approveButtons).toHaveCount(1);
+    const decision = page.waitForResponse(response => response.request().method() === 'PUT'
+      && new URL(response.url()).pathname === `/api/v1/agent-feed/${feedItemId}`);
+    await approveButtons.click();
+    const response = await decision;
+    expect(response.status()).toBe(200);
+    expect(response.request().postDataJSON()).toEqual({ state: 'APPROVED' });
+    expect(await db.query('SELECT lifecycle_state FROM agent_feed_items WHERE id = $1 AND tenant_id = $2',
+      [feedItemId, adminUser.organizationId])).toEqual([{ lifecycle_state: 'APPROVED' }]);
+    await expect(approveButtons).toHaveCount(0);
+    await expect(card).toHaveCount(0);
   });
 
-  test('should allow dismissing an action card in the feed', async ({ page }) => {
+  test('should allow dismissing an action card in the feed', async ({ page, adminUser }) => {
     test.setTimeout(180000);
 
     // Navigate to dashboard
@@ -89,15 +93,16 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
     // We expect there to be at least one card generated for triage
     await expect(rejectButtons.first()).toBeVisible({ timeout: 15000 });
 
-    // Store count to verify the count decreases
-    const initialCount = await rejectButtons.count();
-
-    await rejectButtons.first().click();
-
-    // Expect the card to disappear or change state, count should be less
-    await expect(async () => {
-       const newCount = await rejectButtons.count();
-       expect(newCount).toBeLessThan(initialCount);
-    }).toPass({ timeout: 10000 });
+    await expect(rejectButtons).toHaveCount(1);
+    const decision = page.waitForResponse(response => response.request().method() === 'PUT'
+      && new URL(response.url()).pathname === `/api/v1/agent-feed/${feedItemId}`);
+    await rejectButtons.click();
+    const response = await decision;
+    expect(response.status()).toBe(200);
+    expect(response.request().postDataJSON()).toEqual({ state: 'DISMISSED' });
+    expect(await db.query('SELECT lifecycle_state FROM agent_feed_items WHERE id = $1 AND tenant_id = $2',
+      [feedItemId, adminUser.organizationId])).toEqual([{ lifecycle_state: 'DISMISSED' }]);
+    await expect(rejectButtons).toHaveCount(0);
+    await expect(card).toHaveCount(0);
   });
 });

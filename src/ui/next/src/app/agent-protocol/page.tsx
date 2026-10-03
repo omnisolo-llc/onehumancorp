@@ -146,6 +146,7 @@ function WorkspaceRuntime() {
       });
       if (!res.ok) throw new Error('Failed to execute step');
       await fetchSteps(selectedTaskId);
+      await fetchCheckpoints(selectedTaskId);
       setStepInput('');
     } catch (e: unknown) {
       setError(errorMessage(e));
