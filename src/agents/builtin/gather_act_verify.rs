@@ -274,7 +274,7 @@ impl GatherActVerifyHarness {
                                 Err(e) => match e {
                                     omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg) => {
                                         if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
-                                            if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
+                                            if let Err(restore_err) = cp_saver.restore_checkpoint_for_thread(config.thread_id.as_deref().unwrap_or("default"), cp_id).await {
                                                 tracing::warn!("Failed to restore checkpoint {} after UserFixable error: {}", cp_id, restore_err);
                                             } else {
                                                 let _ = tx.send(AgentEvent::TextChunk { content: format!("Workspace restored to checkpoint {}. Desync prevention activated.", cp_id) });
@@ -356,7 +356,7 @@ impl GatherActVerifyHarness {
                                     }),
                                     Err(omnisolo_builtin_agent_core::types::ToolError::LlmRecoverable(msg)) => {
                                         if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
-                                            if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
+                                            if let Err(restore_err) = cp_saver.restore_checkpoint_for_thread(config.thread_id.as_deref().unwrap_or("default"), cp_id).await {
                                                 tracing::warn!("Failed to restore checkpoint {} after LlmRecoverable error: {}", cp_id, restore_err);
                                             } else {
                                                 let _ = tx.send(AgentEvent::TextChunk { content: format!("Workspace restored to checkpoint {}. Desync prevention activated.", cp_id) });
@@ -379,7 +379,7 @@ impl GatherActVerifyHarness {
                                 Err(e) => match e {
                                     omnisolo_builtin_agent_core::types::ToolError::UserFixable(msg) => {
                                         if let (Some(cp_saver), Some(cp_id)) = (&checkpointer, &last_checkpoint_id) {
-                                            if let Err(restore_err) = cp_saver.restore_checkpoint(cp_id).await {
+                                            if let Err(restore_err) = cp_saver.restore_checkpoint_for_thread(config.thread_id.as_deref().unwrap_or("default"), cp_id).await {
                                                 tracing::warn!("Failed to restore checkpoint {} after UserFixable error: {}", cp_id, restore_err);
                                             } else {
                                                 let _ = tx.send(AgentEvent::TextChunk { content: format!("Workspace restored to checkpoint {}. Desync prevention activated.", cp_id) });
@@ -909,7 +909,7 @@ mod tests {
             async fn list_checkpoints(&self, _thread_id: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> {
                 Ok(vec![])
             }
-            async fn restore_checkpoint(&self, _checkpoint_id: &str) -> Result<(), String> {
+            async fn restore_checkpoint_for_thread(&self, _thread_id: &str, _checkpoint_id: &str) -> Result<(), String> {
                 self.restored_count.fetch_add(1, Ordering::SeqCst);
                 Ok(())
             }
@@ -1046,7 +1046,7 @@ mod tests {
             async fn list_checkpoints(&self, _thread_id: &str) -> Result<Vec<crate::checkpointer::Checkpoint>, String> {
                 Ok(vec![])
             }
-            async fn restore_checkpoint(&self, _checkpoint_id: &str) -> Result<(), String> {
+            async fn restore_checkpoint_for_thread(&self, _thread_id: &str, _checkpoint_id: &str) -> Result<(), String> {
                 self.restored_count.fetch_add(1, Ordering::SeqCst);
                 Ok(())
             }

@@ -64,6 +64,12 @@ impl PgFixture {
             .await
             .unwrap();
         sqlx::raw_sql(include_str!(
+            "../../src/server/migrations/060_job_queue_and_ledger.sql"
+        ))
+        .execute(&admin)
+        .await
+        .unwrap();
+        sqlx::raw_sql(include_str!(
             "../../src/server/migrations/233_chat_omnichannel.sql"
         ))
         .execute(&admin)
@@ -527,9 +533,17 @@ async fn deferred_commit_failure_does_not_return_a_created_message() {
         )
         .await;
     let counts = f.counts().await;
+    let queued: i64 = sqlx::query_scalar("SELECT count(*) FROM ohc_job_queue")
+        .fetch_one(&f.admin)
+        .await
+        .unwrap();
     f.finish().await;
     assert_eq!(result.0, StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(counts, (1, 0));
+    assert_eq!(
+        queued, 0,
+        "commit rejection must roll back durable event intent"
+    );
 }
 #[tokio::test]
 async fn an_owned_empty_conversation_is_distinct_from_an_unknown_conversation() {
@@ -1077,3 +1091,52 @@ async fn invalid_history_limits_and_oversized_stored_records_fail_honestly() {
 
 #[path = "parent_race_test.rs"]
 mod parent_races;
+
+#[tokio::test]
+async fn message_and_json_outbox_event_commit_together_under_real_rls() {
+    let f = PgFixture::new().await;
+    let conversation = f.seed_conversation(false).await;
+    let response = f.request(false, "POST", "/api/widget/messages", Some(&f.token),
+        json!({"tenant_id":f.a,"conversation_id":conversation,"content":"Durable Unicode 🦀 intent"})).await;
+    let events: Vec<(String, String, Value, String)> =
+        sqlx::query_as("SELECT tenant_id,job_type,payload,status FROM ohc_job_queue")
+            .fetch_all(&f.admin)
+            .await
+            .unwrap();
+    let counts = f.counts().await;
+    let tenant = f.a;
+    f.finish().await;
+    assert_eq!(response.0, StatusCode::OK, "{response:?}");
+    assert_eq!(counts, (1, 1));
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].0, tenant.to_string());
+    assert_eq!(events[0].1, "publish_chat_event");
+    assert!(
+        events[0].2.is_object(),
+        "outbox payload must be a JSON object, not a JSON string"
+    );
+    assert_eq!(events[0].2["action"], "new_message");
+    assert_eq!(events[0].2["message"], response.1);
+    assert_eq!(events[0].3, "PENDING", "persistence is not delivery");
+}
+
+#[tokio::test]
+async fn outbox_failure_rolls_back_message_without_success_receipt() {
+    let f = PgFixture::new().await;
+    let conversation = f.seed_conversation(false).await;
+    sqlx::raw_sql("ALTER TABLE ohc_job_queue ADD CONSTRAINT reject_widget_event CHECK (job_type <> 'publish_chat_event')")
+        .execute(&f.admin).await.unwrap();
+    let response = f.request(false, "POST", "/api/widget/messages", Some(&f.token),
+        json!({"tenant_id":f.a,"conversation_id":conversation,"content":"must roll back with event"})).await;
+    let counts = f.counts().await;
+    let queued: i64 = sqlx::query_scalar("SELECT count(*) FROM ohc_job_queue")
+        .fetch_one(&f.admin)
+        .await
+        .unwrap();
+    f.finish().await;
+    assert_eq!(response.0, StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(counts, (1, 0));
+    assert_eq!(queued, 0);
+}
+#[path = "outbox_test.rs"]
+mod outbox;

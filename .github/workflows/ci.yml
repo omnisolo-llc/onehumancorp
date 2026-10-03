@@ -214,7 +214,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Install native system libraries
-        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev postgresql-client
+        run: sudo apt-get update && sudo apt-get install -y pkg-config libssl-dev postgresql-client python3-yaml
       - uses: ./.github/actions/setup-native
         id: rust-setup
         with:
@@ -244,11 +244,32 @@ jobs:
         env:
           PGPASSWORD: ignored_fixture
         run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_chat_service_test
+      - name: Create the isolated database required by checkpoint restore tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_checkpoint_test
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         env:
           OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
+          OHC_CHECKPOINT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_checkpoint_test
         run: make test-backend
+
+      - name: Verify task-scoped checkpoint restore safety
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          OHC_CHECKPOINT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_checkpoint_test
+          RUST_TEST_THREADS: "1"
+        run: python3 scripts/focused_ci_gate.py checkpoint-restore-contract
+
+      - name: Retain checkpoint gate execution and source evidence
+        uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: checkpoint-restore-gate-results
+          path: target/focused-ci-results
+          if-no-files-found: error
 
       - name: Reject fabricated production capability receipts through real HTTP handlers
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
@@ -753,6 +774,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
+      widget_redis:
+        image: redis:7
+        ports:
+          - 6379/tcp
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     env:
       OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"
       OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security
@@ -929,6 +959,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           OHC_WIDGET_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_widget_chat_test
+          OHC_WIDGET_TEST_REDIS_URL: redis://127.0.0.1:${{ job.services.widget_redis.ports[6379] }}/0
           CARGO_TARGET_DIR: target
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_widget_chat_test

@@ -59,10 +59,15 @@ pub fn get_redis_pool() -> Option<&'static Arc<RedisPool>> {
     if url.trim().is_empty() {
         return None;
     }
-    Some(
-        REDIS_POOL
-            .get_or_init(|| Arc::new(RedisPool::new(&url).expect("Failed to create Redis pool"))),
-    )
+    let pool = match RedisPool::new(&url) {
+        Ok(pool) => pool,
+        Err(_) => {
+            // Never log the configured URL: it may contain credentials.
+            tracing::warn!("Invalid Redis configuration; optional Redis pool is unavailable");
+            return None;
+        }
+    };
+    Some(REDIS_POOL.get_or_init(|| Arc::new(pool)))
 }
 
 pub fn get_redis_client() -> Option<redis::Client> {
@@ -198,6 +203,36 @@ mod tests {
     }
 
     #[test]
+    fn invalid_redis_url_does_not_panic_or_create_a_pool() {
+        const CHILD: &str = "OHC_REDIS_INVALID_URL_TEST_CHILD";
+        if std::env::var_os(CHILD).is_some() {
+            assert!(get_redis_pool().is_none());
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "redis_pool::tests::invalid_redis_url_does_not_panic_or_create_a_pool",
+            ])
+            .env(CHILD, "1")
+            .env("OMNISOLO_STANDALONE_MODE", "false")
+            .env("OMNISOLO_DATABASE_URL", "sqlite::memory:")
+            .env("REDIS_URL", "https://invalid-redis-test.example.invalid")
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout)
+                .contains("test result: ok. 1 passed; 0 failed;")
+        );
+    }
+
+    #[test]
     fn test_get_redis_pool_returns_same_instance() {
         let pool1 = get_redis_pool();
         let pool2 = get_redis_pool();
@@ -214,15 +249,25 @@ mod tests {
             return;
         }
         // Configuration is cached globally; verify this mode in a fresh process.
-        let status = std::process::Command::new(std::env::current_exe().unwrap())
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
             .args([
                 "--exact",
                 "redis_pool::tests::test_returns_none_in_standalone_mode",
             ])
             .env(CHILD, "1")
             .env("OMNISOLO_STANDALONE_MODE", "true")
-            .status()
+            .output()
             .unwrap();
-        assert!(status.success());
+        assert!(
+            output.status.success(),
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout)
+                .contains("test result: ok. 1 passed; 0 failed;"),
+            "standalone child must execute its exact test, not just exit successfully"
+        );
     }
 }

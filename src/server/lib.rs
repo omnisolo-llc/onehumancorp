@@ -8801,6 +8801,15 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let setup_router: axum::Router =
         axum::Router::new().nest("/api/v1/setup", setup::router(db.clone()));
 
+    // Dropping this sender on server exit cancels any in-flight relay claim.
+    let (_chat_outbox_shutdown, chat_outbox_shutdown_rx) = tokio::sync::watch::channel(false);
+    if legacy_sqlx_background_enabled && matches!(&db.store, db::DbStore::Postgres) {
+        tokio::spawn(crate::services::chat::outbox::run_chat_outbox_worker(
+            db.pool.clone(),
+            chat_outbox_shutdown_rx,
+        ));
+    }
+
     let widget_router = axum::Router::new().nest(
         "/api/widget",
         api::widget::router(db.clone(), http_auth_store.clone()),

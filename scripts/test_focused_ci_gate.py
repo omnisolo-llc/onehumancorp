@@ -176,6 +176,31 @@ class FocusedGateTests(unittest.TestCase):
         runner = Path(__file__).resolve().parents[1]/'scripts/agent-workflow-contract/run.sh'
         self.assertTrue(runner.is_file())
 
+    def test_checkpoint_restore_gate_requires_all_cases_and_owned_database(self):
+        minimum, database = gate.GATES['checkpoint-restore-contract']
+        self.assertGreaterEqual(minimum, 37)
+        self.assertEqual(database, 'OHC_CHECKPOINT_TEST_DATABASE_URL')
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root/'.github/workflows/ci.yml').read_text()
+        self.assertIn('python3 scripts/focused_ci_gate.py checkpoint-restore-contract', workflow)
+        self.assertNotIn('run: bash scripts/checkpoint-restore-contract/run.sh', workflow)
+        manifest_builder = (root/'scripts/checkpoint-restore-contract/prepare.py').read_text()
+        self.assertIn('scripts/focused_ci_gate.py', manifest_builder)
+        self.assertIn('scripts/test_focused_ci_gate.py', manifest_builder)
+
+    def test_checkpoint_restore_gate_rejects_partial_ignored_and_filtered_inventory(self):
+        minimum, _ = gate.GATES['checkpoint-restore-contract']
+        complete = 'test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;'
+        self.assertEqual(gate.validate_results(complete, minimum), 37)
+        for result in [
+            'ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out',
+            'ok. 37 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out',
+            'ok. 37 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out',
+            'FAILED. 37 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out',
+        ]:
+            with self.subTest(result=result), self.assertRaises(ValueError):
+                gate.validate_results('test result: '+result+';', minimum)
+
     def test_counts_real_passes_and_permits_empty_doctest_target(self):
         self.assertEqual(gate.validate_results('test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0s', 25), 25)
 
@@ -231,17 +256,23 @@ class FocusedGateTests(unittest.TestCase):
     def test_workflow_has_independent_required_gates_and_retained_artifacts(self):
         import yaml
         source = yaml.safe_load((Path(__file__).resolve().parents[1]/'.github/workflows/ci.yml').read_text())
-        job = source['jobs']['postgres-security']
         for name, (_, required) in gate.GATES.items():
+            job_name = 'native-test' if name == 'checkpoint-restore-contract' else 'postgres-security'
+            job = source['jobs'][job_name]
+            self.assertIn(job_name, source['jobs']['ci-required']['needs'])
             matches=[step for step in job['steps'] if f'focused_ci_gate.py {name}' in step.get('run','')]
             self.assertEqual(len(matches), 1, name)
             self.assertIn('!cancelled()', matches[0]['if'])
             if required:
                 self.assertIn(required, matches[0]['env'])
-                self.assertIn('createdb ', matches[0]['run'])
-        self.assertIn('postgres-security', source['jobs']['ci-required']['needs'])
-        uploads=[s for s in job['steps'] if s.get('uses','').startswith('actions/upload-artifact@')]
-        self.assertTrue(any(s.get('if')=='always()' and s['with']['path']=='target/focused-ci-results' for s in uploads))
+                if name == 'checkpoint-restore-contract':
+                    earlier = job['steps'][:job['steps'].index(matches[0])]
+                    self.assertTrue(any('createdb ' in step.get('run', '') and 'ohc_checkpoint_test' in step['run'] for step in earlier))
+                else:
+                    self.assertIn('createdb ', matches[0]['run'])
+        for job_name in ['postgres-security', 'native-test']:
+            uploads=[s for s in source['jobs'][job_name]['steps'] if s.get('uses','').startswith('actions/upload-artifact@')]
+            self.assertTrue(any(s.get('if')=='always()' and s['with']['path']=='target/focused-ci-results' for s in uploads), job_name)
 
 
 if __name__ == '__main__':
