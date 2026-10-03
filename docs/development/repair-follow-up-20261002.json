@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T03:17:00Z",
+  "updated_at": "2026-10-03T03:43:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
@@ -25,10 +25,10 @@
     },
     {
       "id": "generation-write-fence",
-      "owner": "integration",
-      "status": "open",
+      "owner": "durable-workflow",
+      "status": "repaired_pending_hosted",
       "required_outcome": "Fence revocation atomically across generated draft persistence; reject unsupported distinct auth storage",
-      "evidence_and_limit": "Current authority checks and32-case HTTP/PG component coverage do not prove cross-store commit atomicity."
+      "evidence_and_limit": "Reviewed d92fbeb introduces exact-bearer canonical PostgreSQL authority, a final token/role fence through generated-draft COMMIT, and a bounded same-database startup proof. Real builder65, workflow101 and receiptPG56 cases plus all three strict Clippy gates passed on component source. Shared SQLite writes, publication fencing, legacy CRUD and paid request recovery remain separate open work. Combined full-root and hosted acceptance are pending."
     },
     {
       "id": "publication-write-fence",
