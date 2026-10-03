@@ -517,7 +517,7 @@ function InboxWorkspace({
                     <button
                       onClick={() => handleDraftQuoteWithAI(selected)}
                       className="app-button w-full min-h-[44px] min-w-[44px] rounded-[8px] bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:from-purple-600 hover:to-indigo-700 transition-all flex items-center justify-center gap-2"
-                    >✨ Draft Quote with AI</button>
+                    >✨ Draft Quote with AI (Enhanced)</button>
                   </div>
                 )}
               </div>
