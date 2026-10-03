@@ -258,7 +258,10 @@ fn redacted_environment(environment: &BTreeMap<String, String>) -> BTreeMap<Stri
 }
 
 fn debug_safe_environment_key(key: &str) -> bool {
-    matches!(key, "PATH" | "RUST_LOG" | "OPENAI_MODEL")
+    matches!(
+        key,
+        "PATH" | "RUST_LOG" | "OPENAI_MODEL" | "OPENAI_REASONING_EFFORT"
+    )
 }
 
 impl ProcessHarnessSpec {
@@ -5622,7 +5625,8 @@ mod tests {
         for (key, value) in [
             ("PATH", "/usr/local/bin:/usr/bin"),
             ("RUST_LOG", "server_harness=debug"),
-            ("OPENAI_MODEL", "gpt-5.6-luna"),
+            ("OPENAI_MODEL", "gpt-6-luna"),
+            ("OPENAI_REASONING_EFFORT", "max"),
         ] {
             let debug = format!(
                 "{:?}",

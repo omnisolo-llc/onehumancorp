@@ -1,34 +1,32 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
+import { db } from './db_utils';
 
 test.describe('Omni-Channel Payment & Ledger System', () => {
-  test('CUJ: Business owner creates a deposit request and it instantly updates revenue', async ({ page }) => {
-    // 1. Navigate to the payments dashboard (mobile view simulation)
+  test('records a pending deposit request without counting uncollected revenue', async ({ page, adminUser }) => {
     await page.setViewportSize({ width: 375, height: 812 });
+    const balance = await page.request.get('/api/v1/payments/ledger/balance');
+    expect(balance.status()).toBe(200);
+    const initialRevenue = (await balance.json()).total_revenue;
     await page.goto('/payments');
+    const revenue = page.getByTestId('total-revenue');
+    await expect(revenue).toHaveText(`$${Number(initialRevenue).toFixed(2)}`);
+    await page.getByTestId('payment-amount-input').fill('50');
 
-    // 2. Initial state: Revenue should be visible (e.g. $0.00 if brand new, or some initial value)
-    const revenueDisplay = page.getByTestId('total-revenue');
-    await expect(revenueDisplay).toBeVisible();
-
-    // 3. User requests a $50 payment
-    const amountInput = page.getByTestId('payment-amount-input');
-    await amountInput.fill('50');
-
-    // 4. Click the Request Payment button
-    const requestButton = page.getByTestId('request-payment-button');
-    await requestButton.click();
-
-    // 5. Verify the processing status
-    await expect(requestButton).toHaveText('Waiting for card...');
-
-    // 6. Verify successful completion
-    const statusText = page.getByTestId('payment-status');
-    await expect(statusText).toBeVisible({ timeout: 10000 });
-    await expect(statusText).toHaveText('Approved');
-
-    // 7. Verify the revenue counter updated instantly without page refresh
-    // Note: If initial revenue was 0, it should be 50. We just ensure it's not the old value and matches the format.
-    const revenueText = await revenueDisplay.textContent();
-    expect(revenueText).toContain('$');
+    const created = page.waitForResponse(response => response.url().endsWith('/api/v1/payments/ledger/intent') && response.request().method() === 'POST');
+    await page.getByTestId('request-payment-button').click();
+    const response = await created;
+    expect(response.status()).toBe(201);
+    const intent = await response.json();
+    expect(intent.status).toBe('pending');
+    expect(intent.payment_id).toBeTruthy();
+    const records = await db.query('SELECT status, amount, currency FROM payment_intents WHERE payment_id = $1 AND tenant_id = $2', [intent.payment_id, adminUser.organizationId]);
+    expect(records).toHaveLength(1);
+    expect(records[0].status).toBe('pending');
+    expect(Number(records[0].amount)).toBe(50);
+    expect(records[0].currency).toBe('USD');
+    await expect(page.getByTestId('payment-status')).toHaveText('Awaiting payment confirmation');
+    await expect(revenue).toHaveText(`$${Number(initialRevenue).toFixed(2)}`);
+    expect((await (await page.request.get('/api/v1/payments/ledger/balance')).json()).total_revenue).toBe(initialRevenue);
+    await expect(page.getByText('Approved', { exact: true })).toHaveCount(0);
   });
 });

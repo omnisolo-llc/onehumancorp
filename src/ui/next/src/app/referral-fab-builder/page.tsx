@@ -8,10 +8,11 @@ export default function ReferralFabBuilder() {
   const [reward, setReward] = useState("$10");
   const [themeColor, setThemeColor] = useState("#2563eb");
   const [tenantId, setTenantId] = useState("my-business");
-  const [removeBranding, setRemoveBranding] = useState(false);
+  const [requestedBrandingRemoval, setRemoveBranding] = useState(false);
   const [showPaywall, setShowPaywall] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const { hasPro } = useProPlan();
+  const removeBranding = requestedBrandingRemoval && hasPro;
 
   useEffect(() => {
     if (typeof localStorage !== "undefined") {
@@ -95,6 +96,7 @@ export default function ReferralFabBuilder() {
                     <button
                       key={c}
                       onClick={() => setThemeColor(c)}
+                      aria-pressed={themeColor === c}
                       className={`w-10 h-10 rounded-full border-2 ${themeColor === c ? 'border-gray-900' : 'border-transparent'}`}
                       style={{ backgroundColor: c }}
                       aria-label={`Select color ${c}`}

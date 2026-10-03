@@ -187,14 +187,7 @@ pub struct AppServer {
 impl AppServer {
     pub fn new(runner: Arc<Runner>) -> Self {
         let marketplace_url = std::env::var("AGENT_MARKETPLACE_URL").unwrap_or_default();
-        let provider: Box<dyn crate::tools::marketplace::MarketplaceProvider> =
-            if marketplace_url.is_empty() || marketplace_url.contains("example.com") {
-                Box::new(crate::tools::marketplace::test_utils::MockMarketplaceProvider)
-            } else {
-                Box::new(crate::tools::marketplace::HttpMarketplaceProvider::new(
-                    &marketplace_url,
-                ))
-            };
+        let provider = crate::tools::marketplace::configured_provider(&marketplace_url);
         let marketplace = Arc::new(crate::tools::marketplace::MarketplaceClient::new(provider));
         Self {
             runner,
@@ -340,32 +333,18 @@ impl AppServer {
             };
             return serde_json::to_string(&resp).unwrap_or_default();
         } else if req.method == "am_publish_agent" {
-            let name = req
-                .params
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let description = req
-                .params
-                .get("description")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-            let author = req
-                .params
-                .get("role")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string(); // mapping role to author
-
-            let new_agent = crate::tools::marketplace::MarketplaceAgent {
-                id: "".to_string(),
-                name,
-                description,
-                author,
-                version: "1.0.0".to_string(),
-                endpoint: "http://localhost".to_string(),
+            let new_agent = match serde_json::from_value::<
+                crate::tools::marketplace::MarketplaceAgent,
+            >(req.params.clone())
+            {
+                Ok(agent) => agent,
+                Err(_) => {
+                    let response = JsonRpcResponse {
+                        jsonrpc: "2.0".to_string(), id: req.id.clone(), result: None,
+                        error: Some(JsonRpcError { code: -32602, message: "A complete marketplace descriptor is required; role and system_prompt publication is unsupported".to_string() }), meta: None,
+                    };
+                    return serde_json::to_string(&response).unwrap_or_default();
+                }
             };
 
             let published = self.marketplace.publish_agent(new_agent).await;
@@ -1405,7 +1384,7 @@ mod tests {
         assert!(resp_am_fetch.error.is_none());
 
         // SOTA Harness Pattern: AutoGPT Agent Marketplace API distribution
-        let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "role": "Tester", "system_prompt": "Test"}}"#;
+        let req_json_am_publish = r#"{"jsonrpc": "2.0", "id": "15", "method": "am_publish_agent", "params": {"name": "New Agent", "description": "New", "author": "Tester", "version": "1.0.0", "endpoint": "https://registry.example.test/definitions/new"}}"#;
         let resp_json_am_publish = app_server.handle_request(req_json_am_publish).await;
         let resp_am_publish: JsonRpcResponse = serde_json::from_str(&resp_json_am_publish).unwrap();
         assert!(resp_am_publish.error.is_none());

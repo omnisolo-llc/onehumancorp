@@ -48,6 +48,8 @@ pub struct DraftAgentRequest {
 }
 
 const GET_PROPOSAL_SQL: &str = "SELECT * FROM proposals WHERE id = $1 AND tenant_id = $2";
+const LIST_PROPOSALS_SQL: &str =
+    "SELECT * FROM proposals WHERE tenant_id = $1 ORDER BY created_at DESC, id DESC LIMIT 100";
 const GET_LINE_ITEMS_SQL: &str = "SELECT pli.* FROM proposal_line_items pli JOIN proposals p ON p.id = pli.proposal_id WHERE pli.proposal_id = $1 AND p.tenant_id = $2";
 const APPROVE_PROPOSAL_SQL: &str = "UPDATE proposals SET status = 'ACCEPTED', updated_at = NOW() WHERE id = $1 AND tenant_id = $2 AND status = 'DRAFT' AND total_amount_cents > 0 RETURNING *";
 
@@ -140,6 +142,7 @@ where
     PgPool: axum::extract::FromRef<S>,
 {
     Router::new()
+        .route("/", get(list_proposals))
         .route("/draft", post(draft_narrative))
         .route("/intake", post(client_intake))
         .route("/draft_agent", post(draft_agent))
@@ -152,14 +155,18 @@ where
 async fn draft_narrative(
     Extension(llm): Extension<Arc<dyn ResearcherLlmClient>>,
     Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Extension(auditor): axum::extract::Extension<
+        std::sync::Arc<crate::services::billing::auditor::CostAuditor>,
+    >,
     Json(payload): Json<NarrativeDraftRequest>,
 ) -> axum::response::Response {
-    draft_narrative_with_llm(llm.as_ref(), &claims, payload).await
+    draft_narrative_with_llm(llm.as_ref(), &claims, auditor.as_ref(), payload).await
 }
 
 async fn draft_narrative_with_llm(
     llm: &dyn ResearcherLlmClient,
     claims: &::server_common::Claims,
+    auditor: &crate::services::billing::auditor::CostAuditor,
     payload: NarrativeDraftRequest,
 ) -> axum::response::Response {
     if claims
@@ -193,6 +200,20 @@ async fn draft_narrative_with_llm(
             return StatusCode::BAD_GATEWAY.into_response();
         }
     };
+
+    let tenant_id = claims.organization_id.clone().unwrap_or_default();
+    let cost = auditor.record_event(crate::services::billing::auditor::AuditEvent {
+        agent_id: "proposal_narrative".to_string(),
+        tenant_id,
+        input_tokens: response.usage.input_tokens as i64,
+        output_tokens: response.usage.output_tokens as i64,
+        cached_input_tokens: response.usage.cache_read_input_tokens as i64,
+        local_embedding_tokens: 0,
+    });
+    if cost == 0.0 {
+        tracing::warn!("CostAuditor failed to record event or event resulted in 0 cost.");
+    }
+
     let proposal = response.message.content.trim();
     if proposal.is_empty() {
         tracing::error!("Narrative proposal model returned an empty response");
@@ -211,6 +232,9 @@ async fn draft_narrative_with_llm(
 async fn draft_agent(
     State(pool): State<PgPool>,
     Extension(claims): Extension<::server_common::Claims>,
+    axum::extract::Extension(auditor): axum::extract::Extension<
+        std::sync::Arc<crate::services::billing::auditor::CostAuditor>,
+    >,
     Json(payload): Json<DraftAgentRequest>,
 ) -> impl IntoResponse {
     let tenant_id = match authenticated_tenant(&claims) {
@@ -236,6 +260,18 @@ async fn draft_agent(
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
+
+    let cost = auditor.record_event(crate::services::billing::auditor::AuditEvent {
+        agent_id: "draft_agent".to_string(),
+        tenant_id: tenant_id.clone(),
+        input_tokens: res.usage.input_tokens as i64,
+        output_tokens: res.usage.output_tokens as i64,
+        cached_input_tokens: res.usage.cache_read_input_tokens as i64,
+        local_embedding_tokens: 0,
+    });
+    if cost == 0.0 {
+        tracing::warn!("CostAuditor failed to record event or event resulted in 0 cost.");
+    }
 
     let json_str = res.message.content.trim();
     let json_str = json_str.strip_prefix("```json").unwrap_or(json_str);
@@ -313,6 +349,27 @@ async fn draft_agent(
     }
 
     (StatusCode::OK, Json(serde_json::json!({"id": proposal_id}))).into_response()
+}
+
+async fn list_proposals(
+    State(pool): State<PgPool>,
+    Extension(claims): Extension<::server_common::Claims>,
+) -> axum::response::Response {
+    let tenant_id = match authenticated_tenant(&claims) {
+        Ok(tenant_id) => tenant_id,
+        Err(status) => return status.into_response(),
+    };
+    match sqlx::query_as::<_, Proposal>(LIST_PROPOSALS_SQL)
+        .bind(tenant_id)
+        .fetch_all(&pool)
+        .await
+    {
+        Ok(proposals) => Json(serde_json::json!({ "proposals": proposals })).into_response(),
+        Err(error) => {
+            tracing::error!("Failed to list proposals: {}", error);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 async fn get_proposal(
@@ -588,6 +645,23 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test]
+    async fn proposal_collection_requires_a_non_blank_organization_before_database_access() {
+        for organization_id in [None, Some("  ")] {
+            let response = narrative_app(organization_id)
+                .oneshot(
+                    Request::builder()
+                        .method("GET")
+                        .uri("/?tenant_id=another-tenant")
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        }
+    }
+
+    #[tokio::test]
     async fn approval_requires_owner_authority_before_database_or_payment_access() {
         let response = narrative_app(Some("tenant-a"))
             .oneshot(
@@ -705,6 +779,9 @@ mod tests {
         router_with_narrative_llm(llm)
             .with_state(pool)
             .layer(Extension(claims(organization_id)))
+            .layer(Extension(Arc::new(
+                crate::services::billing::auditor::CostAuditor::new(Default::default()),
+            )))
     }
 
     #[tokio::test]

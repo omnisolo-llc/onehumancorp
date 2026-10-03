@@ -1,12 +1,15 @@
 import "@testing-library/jest-dom";
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 vi.mock("next/link", () => ({
   default: (props: import("react").AnchorHTMLAttributes<HTMLAnchorElement>) =>
     React.createElement("a", { href: props.href }, props.children),
 }));
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import HelpCenterPage from "./page";
+import type { Page } from "@playwright/test";
+import { createAuditNavigation } from "../../../../../e2e/support/ui_audit_navigation";
+import { AppShell } from "../components/AppShell";
 import { TooltipProvider } from "../../components/TooltipRegistry";
 import userEvent from "@testing-library/user-event";
 
@@ -92,6 +95,33 @@ describe("HelpCenterPage", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("keeps one page-level heading when rendered inside the product shell", async () => {
+    render(
+      <TooltipProvider>
+        <AppShell title="In-App Help Center"><HelpCenterPage /></AppShell>
+      </TooltipProvider>,
+    );
+
+    await screen.findByText("Getting Started");
+    expect(screen.getAllByRole("heading", { level: 1, name: "In-App Help Center" })).toHaveLength(1);
+  });
+
+  it("read navigation preserves Advanced instead of triggering an unrelated search", async () => {
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    await screen.findByRole("button", { name: "Advanced" });
+    const bounds = vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({ width: 100, height: 40 } as DOMRect);
+    const page = { context: () => ({ on: vi.fn() }), goto: async () => ({ status: () => 200 }),
+      url: () => "https://fixture.test/help", waitForLoadState: async () => undefined, waitForFunction: async () => ({ dispose: async () => undefined }),
+      waitForTimeout: async () => undefined, evaluate: async (callback: () => unknown) => callback() } as unknown as Page;
+    try {
+      await act(async () => { await createAuditNavigation("https://fixture.test", async () => undefined)(page, "/help"); });
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 400)); });
+      expect(screen.getByTestId("help-search-input")).toHaveValue("");
+      expect(screen.getByRole("button", { name: "Advanced" })).toBeVisible();
+      expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).includes("/help/search"))).toBe(false);
+    } finally { bounds.mockRestore(); }
   });
 
   it("renders articles loaded from API", async () => {

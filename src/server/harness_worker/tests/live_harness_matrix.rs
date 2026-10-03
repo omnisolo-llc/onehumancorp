@@ -799,7 +799,7 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
             1,
             "inference.model_binding",
             json!({
-                "model_id":"gpt-5.6-luna",
+                "model_id":"gpt-6-luna",
                 "reasoning_effort":"max",
                 "integration_mode":"native"
             }),
@@ -809,7 +809,7 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
     ];
     let evidence = validate_live_deliveries(
         "pi",
-        "gpt-5.6-luna",
+        "gpt-6-luna",
         "max",
         session_id,
         task_id,
@@ -835,7 +835,7 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
     ));
     let evidence = validate_live_deliveries(
         "openhands",
-        "gpt-5.6-luna",
+        "gpt-6-luna",
         "max",
         session_id,
         task_id,
@@ -891,7 +891,7 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
             5 => {
                 invalid[0].payload = serde_json::to_vec(&json!({
                     "event_type":"inference.model_binding", "payload":{
-                        "model_id":"gpt-5.6-luna", "reasoning_effort":"max",
+                        "model_id":"gpt-6-luna", "reasoning_effort":"max",
                         "integration_mode":"native", "prompt":MARKER
                     }
                 }))
@@ -918,7 +918,7 @@ fn live_evidence_requires_ordered_model_usage_terminal_and_secret_safe_events() 
         assert!(
             validate_live_deliveries(
                 "pi",
-                "gpt-5.6-luna",
+                "gpt-6-luna",
                 "max",
                 session_id,
                 task_id,

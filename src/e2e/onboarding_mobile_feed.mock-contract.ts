@@ -27,7 +27,7 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
         await route.fulfill({ contentType: 'application/json', body: JSON.stringify({ items: [] }) });
     });
     await page.addInitScript(() => {
-      window.__TAURI__ = {
+      Object.assign(window, { __TAURI__: {
         core: {
           invoke: async (cmd) => {
             if (cmd === 'start_onboarding') {
@@ -51,7 +51,7 @@ test.describe('Mobile Autonomous Onboarding & Feed CUJ', () => {
             throw new Error('Unhandled command: ' + cmd);
           }
         }
-      };
+      } });
     });
     await page.goto('http://mock/index.html');
 

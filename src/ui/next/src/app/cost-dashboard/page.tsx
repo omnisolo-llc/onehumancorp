@@ -263,16 +263,13 @@ export default function CostDashboardPage() {
                   >
                       Manage Billing
                   </button>
-                  <button
+                  <a
                       id="view-detailed-costs"
-                      onClick={() => {
-                        const elem = document.getElementById('cost-breakdown-section') || document.querySelector('.metrics-grid');
-                        elem?.scrollIntoView({ behavior: 'smooth' });
-                      }}
+                      href="#cost-breakdown-section"
                       className="min-h-[44px] px-6 py-2 glass-card glass-control shadow-sm text-gray-700 rounded-full text-sm font-semibold transition-all active:scale-[0.98] flex items-center justify-center cursor-pointer"
                   >
                       View Detailed Costs
-                  </button>
+                  </a>
                   {myPlanData?.current_plan !== 'Free' && (
                       <button
                           id="cancel-subscription-btn"
@@ -351,7 +348,7 @@ export default function CostDashboardPage() {
         )}
 
         {/* Breakdown Section */}
-        <section className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-2xl overflow-hidden">
+        <section id="cost-breakdown-section" className="app-panel glass-panel backdrop-blur-2xl bg-white/40 border border-white/40 shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-2xl overflow-hidden">
             <div className="app-panel-header glass-panel backdrop-blur-lg bg-white/20 px-6 py-4 border-b border-white/40 flex justify-between items-center">
                 <h2 className="app-panel-title text-xl font-bold font-outfit text-gray-900 ">Cost Breakdown</h2>
             </div>

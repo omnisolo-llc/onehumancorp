@@ -78,4 +78,5 @@ lint-backend:
 lint-node:
 	$(NPM) run lint:node
 	$(NPM) run typecheck:web
+	$(NPM) run typecheck:e2e
 	$(NPM) --prefix src/cli run typecheck

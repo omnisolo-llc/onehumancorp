@@ -7,6 +7,21 @@ use crate::orchestration::departments::types::{
 };
 use std::sync::Arc;
 
+const PRODUCT_SEO_UPDATE_SQL: &str = include_str!("product_seo_update.sql");
+
+fn product_seo_price_cents(payload: &serde_json::Value) -> Option<i64> {
+    if let Some(cents) = payload.get("price_cents") {
+        return cents
+            .as_i64()
+            .filter(|cents| (0..=1_000_000_000).contains(cents));
+    }
+    // Older producers supplied currency units. Normalize once to the same cents
+    // persisted by the catalog rather than putting fractional cents into SEO.
+    let price = payload.get("price")?.as_f64()?;
+    (price.is_finite() && (0.0..=10_000_000.0).contains(&price))
+        .then(|| (price * 100.0).round() as i64)
+}
+
 #[async_trait::async_trait]
 pub trait MarketingCopyClient: Send + Sync {
     async fn draft_caption(&self, prompt: &str, fallback: &str) -> String;
@@ -258,7 +273,7 @@ impl Department for MarketingAgent {
             "tenant.insight.trending".to_string(),
             "tenant.product.created".to_string(),
             "tenant.job.completed".to_string(),
-            "tenant.product.created".to_string(),
+            "tenant.product.updated".to_string(),
             "tenant.inventory.updated".to_string(),
             "tenant.website.updated".to_string(),
             "loyalty.points_awarded".to_string(),
@@ -289,36 +304,58 @@ impl Department for MarketingAgent {
                 .get("item_type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Product");
-            let price = event
-                .payload
-                .get("price")
-                .and_then(|v| v.as_f64())
-                .unwrap_or(0.0);
+            let price_cents = product_seo_price_cents(&event.payload);
 
-            if !product_id.is_empty()
+            if let Some(price_cents) = price_cents
+                && !product_id.is_empty()
                 && let Ok((seo_title, seo_desc, seo_schema)) = self
                     .seo_client
-                    .generate_seo_metadata(name, description, item_type, price)
+                    .generate_seo_metadata(name, description, item_type, price_cents as f64 / 100.0)
                     .await
                 && let Ok(orchestrator) = self.orchestrator()
             {
                 let pool = orchestrator.db().pool.clone();
                 let tenant_id_str = event.tenant_id.clone();
                 let product_id_str = product_id.to_string();
+                let snapshot_name = name.to_string();
+                let snapshot_description = description.to_string();
+                let snapshot_type = item_type.to_string();
 
                 // Spawn a task to update DB, invalidate cache, and enqueue publish job
                 let seo_schema_clone = seo_schema.clone();
                 tokio::spawn(async move {
                     if let Ok(tenant_id) = uuid::Uuid::parse_str(&tenant_id_str) {
-                        // Update DB
-                        let _ = sqlx::query("UPDATE products SET seo_title = $1, seo_description = $2, seo_schema_json = $3 WHERE tenant_id = $4 AND id = $5")
-                                    .bind(seo_title)
-                                    .bind(seo_desc)
-                                    .bind(seo_schema_clone)
-                                    .bind(tenant_id_str.clone())
-                                    .bind(product_id_str.clone())
-                                    .execute(&pool)
-                                    .await;
+                        // The provider result is valid only for the catalog snapshot
+                        // that generated it. A newer edit must win, including an ABA
+                        // price edit accompanied by a title/description/type change.
+                        let updated: Result<bool, sqlx::Error> = async {
+                            let mut tx = pool.begin().await?;
+                            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id_str)
+                                .await?;
+                            let result = sqlx::query(PRODUCT_SEO_UPDATE_SQL)
+                                .bind(seo_title)
+                                .bind(seo_desc)
+                                .bind(seo_schema_clone)
+                                .bind(&tenant_id_str)
+                                .bind(&product_id_str)
+                                .bind(snapshot_name)
+                                .bind(snapshot_description)
+                                .bind(snapshot_type)
+                                .bind(price_cents)
+                                .execute(&mut *tx)
+                                .await?;
+                            tx.commit().await?;
+                            Ok(result.rows_affected() == 1)
+                        }
+                        .await;
+                        match updated {
+                            Ok(true) => {}
+                            Ok(false) => return,
+                            Err(error) => {
+                                tracing::warn!(%error, "Product SEO snapshot did not commit");
+                                return;
+                            }
+                        }
 
                         // Invalidate cache
                         let invalidation_event = serde_json::json!({
@@ -758,6 +795,49 @@ mod tests {
     impl MarketingImageOptimizer for FixedImageOptimizer {
         async fn optimize_product_image(&self, image_url: &str) -> Result<String, String> {
             Ok(format!("{image_url}?vision=cropped"))
+        }
+    }
+
+    #[test]
+    fn product_seo_uses_exact_saved_cents_and_rejects_invalid_prices() {
+        assert_eq!(
+            product_seo_price_cents(&serde_json::json!({"price_cents": 4501, "price": 99.0})),
+            Some(4501)
+        );
+        assert_eq!(
+            product_seo_price_cents(&serde_json::json!({"price": 45.01})),
+            Some(4501)
+        );
+        assert_eq!(
+            product_seo_price_cents(&serde_json::json!({"price": 0})),
+            Some(0)
+        );
+        for payload in [
+            serde_json::json!({"price_cents": -1}),
+            serde_json::json!({"price_cents": 1_000_000_001_i64}),
+            serde_json::json!({"price_cents": 45.01}),
+            serde_json::json!({"price": "NaN"}),
+            serde_json::json!({"price": -0.01}),
+            serde_json::json!({"price": 1e100}),
+            serde_json::json!({}),
+        ] {
+            assert_eq!(product_seo_price_cents(&payload), None);
+        }
+    }
+
+    #[test]
+    fn marketing_agent_subscribes_once_to_product_creates_and_edits() {
+        let agent =
+            MarketingAgent::new_for_test(Arc::new(FixedCopyClient), Arc::new(RuntimeSeoClient));
+        let events = agent.subscribed_events();
+        for event in ["tenant.product.created", "tenant.product.updated"] {
+            assert_eq!(
+                events
+                    .iter()
+                    .filter(|value| value.as_str() == event)
+                    .count(),
+                1
+            );
         }
     }
 

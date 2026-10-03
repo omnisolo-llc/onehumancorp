@@ -12,11 +12,9 @@ export default function ViralStreakWidgetPage() {
   const [title, setTitle] = useState('Daily Login Streak');
   const [goal, setGoal] = useState('7');
   const [reward, setReward] = useState('Free Coffee');
-  const [copied, setCopied] = useState(false);
   const { hasPro } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [isClient, setIsClient] = useState(false);
-  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -32,15 +30,6 @@ export default function ViralStreakWidgetPage() {
       e.preventDefault();
       setShowPaywall(true);
     }
-  };
-
-  const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/viral-streak/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&goal=${encodeURIComponent(goal)}&reward=${encodeURIComponent(reward)}&branding=${!hasPro}`;
-  const embedCode = `<iframe src="${embedUrl}" width="100%" height="450" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>`;
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   if (!isClient) return null;
@@ -59,7 +48,7 @@ export default function ViralStreakWidgetPage() {
           </button>
 
           <h1 className="text-3xl font-bold font-outfit text-gray-900 mb-6">Viral Streak Widget 📅</h1>
-          <p className="text-sm text-gray-600 mb-6">Build customer habits by rewarding consecutive daily visits or actions. Watch retention soar.</p>
+          <p className="text-sm text-gray-600 mb-6">Configure a streak preview. Visit tracking and reward claims are unavailable.</p>
 
           <div className="space-y-4">
              <div>
@@ -100,8 +89,9 @@ export default function ViralStreakWidgetPage() {
           </div>
 
           <div className="mt-8">
+             <p id="streak-availability" className="text-sm text-gray-600 mb-3">Streak publishing is unavailable. No embed endpoint is configured.</p>
              <button
-                onClick={() => setShowModal(true)}
+                disabled aria-describedby="streak-availability"
                 className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors shadow-md"
              >
                 Get Embed Code
@@ -120,21 +110,21 @@ export default function ViralStreakWidgetPage() {
                           <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd"></path></svg>
                       </div>
                       <h3 className="text-2xl font-bold font-outfit">{title}</h3>
-                      <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Hit {goal} days to unlock {reward}</p>
+                      <p className={`text-sm mt-1 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>Configured goal: {goal} days. Configured reward: {reward}</p>
                   </div>
 
                   <div className="flex justify-between items-center mb-6">
                      {Array.from({ length: Math.min(parseInt(goal) || 7, 7) }).map((_, i) => (
                          <div key={i} className="flex flex-col items-center gap-1">
-                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${i < 3 ? 'bg-orange-500 text-white shadow-md shadow-orange-500/30' : i === 3 ? 'border-2 border-orange-500 text-orange-500' : theme === 'dark' ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
-                                 {i < 3 ? '✓' : i + 1}
+                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${theme === 'dark' ? 'bg-gray-800 text-gray-500' : 'bg-gray-100 text-gray-400'}`}>
+                                 {i + 1}
                              </div>
                              {i + 1 == parseInt(goal) && <div className="text-[10px] uppercase font-bold text-orange-500 mt-1">Reward</div>}
                          </div>
                      ))}
                   </div>
 
-                  <button className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition-colors">
+                  <button disabled className="w-full py-3 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-md transition-colors">
                       Claim Today's Streak
                   </button>
 
@@ -147,50 +137,6 @@ export default function ViralStreakWidgetPage() {
            </div>
         </div>
       </div>
-
-      {/* Embed Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-[30px] saturate-[210%]">
-            <div className="p-8 max-w-xl w-full shadow-2xl relative animate-in fade-in bg-white rounded-2xl">
-                <button
-                    aria-label="Close embed modal"
-                    onClick={() => setShowModal(false)}
-                    className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-
-                <h2 className="text-2xl font-bold font-outfit mb-2 text-gray-900">Embed Streak Widget</h2>
-                <p className="text-gray-600 mb-6 text-sm">Copy and paste this HTML snippet into your website to embed the widget.</p>
-
-                <div className="relative group">
-                    <textarea
-                        readOnly
-                        aria-label="Embed Streak Widget Code"
-                        value={embedCode}
-                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 font-mono text-sm text-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all rounded-xl"
-                    />
-                </div>
-
-                <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                    <button
-                        onClick={handleCopy}
-                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2"
-                    >
-                        {copied ? 'Copied!' : 'Copy Code'}
-                    </button>
-                    <button
-                        onClick={() => setShowModal(false)}
-                        className="flex-1 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-xl transition-colors"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
 
       {/* Soft Paywall Modal */}
       {showPaywall && (

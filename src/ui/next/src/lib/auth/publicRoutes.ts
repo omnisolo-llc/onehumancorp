@@ -1,7 +1,17 @@
+import { isPublicSiteDocumentPath } from './publicSitePath';
 import { canonicalRawPath } from "./url";
 import type { PublicRouteEntry, RequestDescriptor, RouteDecision } from "./types";
 
 export const PUBLIC_ROUTE_ENTRIES = [
+  {
+    method: "GET",
+    invocation: "route-handler",
+    matcher: { kind: "public-site-document", path: "/api/v1/public/sites/" },
+    reason: "read only a currently eligible reviewed publication document",
+    owner: "publication",
+    api: { bodyLimitBytes: 0, responseLimitBytes: 8388608, tenantSource: "current-publication", replayPolicy: "read-only", cachePolicy: "no-store" },
+  },
+
   {
     method: "GET",
     invocation: "page",
@@ -148,6 +158,7 @@ export function classifyRequest(input: RequestDescriptor): RouteDecision {
   const method = input.method.toUpperCase();
   const entry = PUBLIC_ROUTE_ENTRIES.find((candidate) => {
     if (candidate.method !== method || candidate.invocation !== input.invocation) return false;
+    if (candidate.matcher.kind === "public-site-document") return isPublicSiteDocumentPath(pathname);
     return candidate.matcher.kind === "exact"
       ? candidate.matcher.path === pathname
       : pathname.startsWith(candidate.matcher.path);

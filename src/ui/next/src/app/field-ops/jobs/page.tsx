@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { SyncManager } from "../../../lib/sync/SyncManager";
 import { useQuery } from "@powersync/react";
 import { PowerSyncProvider } from "../../../lib/powersync/PowerSyncProvider";
 
 type Appointment = {
+  version?: number;
+  base_version?: number;
+  updated_at?: string;
   id: string;
   customer_id: string;
   customer_name: string;
@@ -23,6 +26,8 @@ type Appointment = {
 function FieldOpsJobsPageContent() {
   const [isOffline, setIsOffline] = useState(false);
   const [jobs, setJobs] = useState<Appointment[]>([]);
+  const expectedNotes = useRef(new Map<string, string | null>());
+  const pendingJobs = useRef(new Set<string>());
   const { data: offlineJobs } = useQuery<Appointment>('SELECT * FROM appointments ORDER BY scheduled_start_time ASC');
   const [agentSuggestion, setAgentSuggestion] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +50,7 @@ function FieldOpsJobsPageContent() {
   useEffect(() => {
     if (isOffline && offlineJobs && offlineJobs.length > 0) {
        setJobs(offlineJobs);
+       for (const job of offlineJobs) if (!expectedNotes.current.has(job.id)) expectedNotes.current.set(job.id, job.notes ?? null);
     }
   }, [isOffline, offlineJobs]);
 
@@ -66,6 +72,7 @@ function FieldOpsJobsPageContent() {
         .then(async (data) => {
           if (data.appointments) {
             setJobs(data.appointments);
+            for (const job of data.appointments as Appointment[]) expectedNotes.current.set(job.id, job.notes ?? null);
             // Sync to local DB
             try {
                const { getPowerSyncDB } = await import('../../../lib/powersync/db');
@@ -97,6 +104,8 @@ function FieldOpsJobsPageContent() {
   }, []);
 
   const handleStatusChange = async (jobId: string, newStatus: string) => {
+    const jobToUpdate = jobs.find(job => job.id === jobId);
+    if (!jobToUpdate || pendingJobs.current.has(jobId)) return;
     const now = new Date().toISOString();
     setJobs((currentJobs) =>
       currentJobs.map((j) => {
@@ -110,15 +119,15 @@ function FieldOpsJobsPageContent() {
       }),
     );
 
-    const jobToUpdate = jobs.find(j => j.id === jobId);
-    if (!jobToUpdate) return;
-
     const updatedJob = { ...jobToUpdate, status: newStatus };
     if (newStatus === "In-Progress") updatedJob.actual_start_time = now;
     if (newStatus === "Completed") updatedJob.actual_end_time = now;
 
     if (isOffline) {
+      pendingJobs.current.add(jobId);
+      setLoadError(null);
       const eventId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+      try {
       await SyncManager.getInstance().enqueue({
         id: eventId,
         type: 'sync_event',
@@ -127,9 +136,12 @@ function FieldOpsJobsPageContent() {
           entity_type: 'appointment',
           entity_id: updatedJob.id,
           action_type: 'UpdateStatus',
-          base_version: 1, // simplified assumption for offline UI
+          base_version: jobToUpdate.base_version ?? jobToUpdate.version ?? 0, // Preserve observed versions; never rebase at send time.
           payload: {
             status: updatedJob.status,
+            expected_status: jobToUpdate.status,
+            expected_notes: expectedNotes.current.get(jobId),
+            ...(jobToUpdate.updated_at ? { expected_updated_at: jobToUpdate.updated_at } : {}),
             notes: updatedJob.notes,
             scheduled_start_time: updatedJob.scheduled_start_time,
             scheduled_end_time: updatedJob.scheduled_end_time,
@@ -137,6 +149,11 @@ function FieldOpsJobsPageContent() {
         },
         timestamp: Date.now()
       });
+      expectedNotes.current.set(jobId, updatedJob.notes ?? null);
+      } catch {
+        setJobs(current => current.map(job => job.id === jobId ? { ...job, status: jobToUpdate.status, actual_start_time: jobToUpdate.actual_start_time, actual_end_time: jobToUpdate.actual_end_time } : job));
+        setLoadError('This change could not be saved. Check your connection and local storage.');
+      } finally { pendingJobs.current.delete(jobId); }
       return;
     }
 

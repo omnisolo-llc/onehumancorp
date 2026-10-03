@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+#[cfg(unix)]
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::PathBuf;
-use std::sync::RwLock;
+use std::sync::{RwLock, RwLockWriteGuard};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiProvider {
@@ -68,6 +70,34 @@ pub struct Store {
     path: Option<PathBuf>,
 }
 
+/// Serializes voice transitions for one persistent settings path. Unrelated
+/// settings writers and distinct paths are outside this guard's scope.
+pub(crate) struct VoiceSettingsGuard<'a> {
+    store: &'a Store,
+    data: RwLockWriteGuard<'a, AppSettings>,
+    _file: std::fs::File,
+    pub value: AppSettings,
+    pub persisted: bool,
+}
+impl VoiceSettingsGuard<'_> {
+    pub fn persist(&mut self) -> Result<(), String> {
+        self.store.save_snapshot(&self.value)?;
+        #[cfg(unix)]
+        std::fs::File::open(
+            self.store
+                .path
+                .as_ref()
+                .and_then(|path| path.parent())
+                .ok_or("Invalid settings path")?,
+        )
+        .and_then(|directory| directory.sync_all())
+        .map_err(|error| error.to_string())?;
+        *self.data = self.value.clone();
+        self.persisted = true;
+        Ok(())
+    }
+}
+
 use std::sync::Arc;
 use std::sync::OnceLock;
 
@@ -118,25 +148,91 @@ impl Store {
 
     pub fn save(&self) -> Result<(), String> {
         let data = self.data.read().unwrap();
-        let path = match &self.path {
-            Some(p) => p,
-            None => return Ok(()), // In-memory only
+        self.save_snapshot(&data)
+    }
+
+    fn save_snapshot(&self, data: &AppSettings) -> Result<(), String> {
+        let Some(path) = &self.path else {
+            return Ok(()); // Explicitly in-memory settings, not persisted consent.
         };
-
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-        }
-
-        let content = serde_json::to_string_pretty(&*data).map_err(|e| e.to_string())?;
-
-        // Simple write for now, not atomic!
-        std::fs::write(path, content).map_err(|e| e.to_string())?;
-
-        Ok(())
+        let content = serde_json::to_vec_pretty(data).map_err(|e| e.to_string())?;
+        // The shared helper stages beside the destination, syncs the file and
+        // atomically replaces it. Readers never see truncated settings JSON.
+        crate::utils::fs::write_file_atomic(path, &content, 0o600).map_err(|e| e.to_string())
     }
 
     pub fn get(&self) -> AppSettings {
         self.data.read().unwrap().clone()
+    }
+
+    pub(crate) fn has_persistent_storage(&self) -> bool {
+        self.path.is_some()
+    }
+
+    pub(crate) fn voice_provisioning_path(&self) -> Result<PathBuf, String> {
+        let path = self
+            .path
+            .as_ref()
+            .ok_or("Persistent settings storage is unavailable")?;
+        let name = path
+            .file_name()
+            .ok_or("Invalid settings path")?
+            .to_string_lossy();
+        Ok(path.with_file_name(format!("{name}.voice-provisioning.json")))
+    }
+
+    pub(crate) fn lock_voice_settings(&self) -> Result<VoiceSettingsGuard<'_>, String> {
+        let path = self
+            .path
+            .as_ref()
+            .ok_or("Persistent settings storage is unavailable")?;
+        let name = path
+            .file_name()
+            .ok_or("Invalid settings path")?
+            .to_string_lossy();
+        let lock_path = path.with_file_name(format!("{name}.voice-settings.lock"));
+        std::fs::create_dir_all(path.parent().ok_or("Invalid settings path")?)
+            .map_err(|error| error.to_string())?;
+        if let Ok(metadata) = std::fs::symlink_metadata(&lock_path)
+            && (!metadata.is_file() || metadata.file_type().is_symlink())
+        {
+            return Err("Voice settings lock is unavailable".into());
+        }
+        let mut options = std::fs::OpenOptions::new();
+        options.read(true).write(true).create(true).truncate(false);
+        #[cfg(unix)]
+        options.mode(0o600);
+        let file = options
+            .open(&lock_path)
+            .map_err(|error| error.to_string())?;
+        file.try_lock().map_err(|error| error.to_string())?;
+        let data = self
+            .data
+            .write()
+            .map_err(|_| "Settings lock is unavailable")?;
+        let (value, persisted) = match std::fs::read(path) {
+            Ok(bytes) => (
+                serde_json::from_slice(&bytes).map_err(|error| error.to_string())?,
+                true,
+            ),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => (data.clone(), false),
+            Err(error) => return Err(error.to_string()),
+        };
+        Ok(VoiceSettingsGuard {
+            store: self,
+            data,
+            _file: file,
+            value,
+            persisted,
+        })
+    }
+
+    pub(crate) fn telemetry_snapshot(&self) -> (bool, bool) {
+        let data = self.data.read().unwrap();
+        (
+            data.product_telemetry_enabled,
+            ::server_config::DYNAMIC_TELEMETRY_ENABLED.load(std::sync::atomic::Ordering::Acquire),
+        )
     }
 
     pub fn set_extra(&self, key: String, value: String) -> Result<(), String> {
@@ -183,22 +279,36 @@ impl Store {
         persona: Option<String>,
         instructions: Option<String>,
     ) -> Result<(), String> {
+        if self.path.is_some() {
+            let mut guard = self.lock_voice_settings()?;
+            guard.value.voice_receptionist_enabled = enabled;
+            guard.value.voice_receptionist_number = number;
+            guard.value.voice_receptionist_persona = persona;
+            guard.value.voice_receptionist_instructions = instructions;
+            return guard.persist();
+        }
         let mut data = self.data.write().unwrap();
         data.voice_receptionist_enabled = enabled;
         data.voice_receptionist_number = number;
         data.voice_receptionist_persona = persona;
         data.voice_receptionist_instructions = instructions;
-        drop(data);
-        self.save()
+        Ok(())
     }
 
     pub fn set_product_telemetry(&self, enabled: bool) -> Result<(), String> {
+        if self.path.is_none() {
+            return Err("Persistent settings storage is unavailable".to_string());
+        }
+        // Keep the candidate private and serialize the entire persist/publish
+        // transition. A failed write must not change effective collection.
         let mut data = self.data.write().unwrap();
-        data.product_telemetry_enabled = enabled;
+        let mut candidate = data.clone();
+        candidate.product_telemetry_enabled = enabled;
+        self.save_snapshot(&candidate)?;
+        *data = candidate;
         ::server_config::DYNAMIC_TELEMETRY_ENABLED
-            .store(enabled, std::sync::atomic::Ordering::Relaxed);
-        drop(data);
-        self.save()
+            .store(enabled, std::sync::atomic::Ordering::Release);
+        Ok(())
     }
 }
 
@@ -209,11 +319,33 @@ impl Default for Store {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static TELEMETRY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    pub(crate) struct TelemetryTestGuard {
+        _lock: std::sync::MutexGuard<'static, ()>,
+        original: bool,
+    }
+    impl Drop for TelemetryTestGuard {
+        fn drop(&mut self) {
+            ::server_config::DYNAMIC_TELEMETRY_ENABLED.store(self.original, Ordering::Relaxed);
+        }
+    }
+    pub(crate) fn telemetry_guard() -> TelemetryTestGuard {
+        let lock = TELEMETRY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let original = ::server_config::DYNAMIC_TELEMETRY_ENABLED.swap(false, Ordering::Relaxed);
+        TelemetryTestGuard {
+            _lock: lock,
+            original,
+        }
+    }
 
     #[test]
     fn test_settings_default() {
+        let _guard = telemetry_guard();
         let settings = AppSettings::default();
         assert_eq!(settings.listen_addr, "0.0.0.0:18789");
         assert_eq!(settings.db_path, Some("ohc.db".to_string()));
@@ -228,6 +360,7 @@ mod tests {
 
     #[test]
     fn test_store_save_and_load() {
+        let _guard = telemetry_guard();
         let temp_dir = tempfile::tempdir().unwrap();
         let file_path = temp_dir.path().join("test_settings.json");
 
@@ -245,9 +378,10 @@ mod tests {
 
     #[test]
     fn test_store_from_file_errors() {
+        let _guard = telemetry_guard();
         // Bad JSON
-        let mut file_path = std::env::temp_dir();
-        file_path.push("bad_settings.json");
+        let temp_dir = tempfile::tempdir().unwrap();
+        let file_path = temp_dir.path().join("bad_settings.json");
         std::fs::write(&file_path, "{bad json").unwrap();
 
         let result = Store::from_file(file_path.clone());
@@ -256,7 +390,7 @@ mod tests {
         std::fs::remove_file(&file_path).unwrap();
 
         // Unreadable file (directory)
-        let dir_path = std::env::temp_dir().join("some_dir");
+        let dir_path = temp_dir.path().join("some_dir");
         std::fs::create_dir(&dir_path).unwrap();
         let result = Store::from_file(dir_path.clone());
         assert!(result.is_err());
@@ -265,11 +399,121 @@ mod tests {
 
     #[test]
     fn test_store_save_errors() {
+        let _guard = telemetry_guard();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let parent = temp_dir.path().join("not_a_directory");
+        std::fs::write(&parent, b"owned test fixture").unwrap();
         let store = Store {
             data: RwLock::new(AppSettings::default()),
-            path: Some(PathBuf::from("/root/unauthorized/file.json")),
+            path: Some(parent.join("settings.json")),
         };
         let result = store.save();
         assert!(result.is_err());
+    }
+    #[test]
+    fn failed_telemetry_enable_does_not_publish_memory_or_collection_flag() {
+        let _guard = telemetry_guard();
+        let directory = tempfile::tempdir().unwrap();
+        let blocked = directory.path().join("settings.json");
+        std::fs::create_dir(&blocked).unwrap();
+        let store = Store {
+            data: RwLock::new(AppSettings::default()),
+            path: Some(blocked.clone()),
+        };
+        assert!(store.set_product_telemetry(true).is_err());
+        assert!(!store.get().product_telemetry_enabled);
+        assert!(!::server_config::DYNAMIC_TELEMETRY_ENABLED.load(Ordering::Relaxed));
+        assert!(blocked.is_dir());
+        assert_eq!(
+            std::fs::read_dir(directory.path()).unwrap().count(),
+            1,
+            "failed staging must be cleaned up"
+        );
+    }
+
+    #[test]
+    fn failed_telemetry_disable_preserves_last_committed_choice() {
+        let _guard = telemetry_guard();
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("settings.json");
+        let backup = directory.path().join("committed.json");
+        let store = Store::from_file(path.clone()).unwrap();
+        store.set_product_telemetry(true).unwrap();
+        std::fs::rename(&path, &backup).unwrap();
+        std::fs::create_dir(&path).unwrap();
+        assert!(store.set_product_telemetry(false).is_err());
+        assert!(store.get().product_telemetry_enabled);
+        assert!(::server_config::DYNAMIC_TELEMETRY_ENABLED.load(Ordering::Relaxed));
+        let persisted: AppSettings =
+            serde_json::from_slice(&std::fs::read(backup).unwrap()).unwrap();
+        assert!(persisted.product_telemetry_enabled);
+    }
+
+    #[test]
+    fn concurrent_telemetry_transitions_leave_one_committed_choice_and_intact_json() {
+        let _guard = telemetry_guard();
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("settings.json");
+        let store = Arc::new(Store::from_file(path.clone()).unwrap());
+        store
+            .set_extra("preserved".into(), "x".repeat(64 * 1024))
+            .unwrap();
+        store.set_product_telemetry(false).unwrap();
+        let running = Arc::new(AtomicBool::new(true));
+        let reader_running = running.clone();
+        let reader_path = path.clone();
+        let reader = std::thread::spawn(move || {
+            let mut reads = 0;
+            while reader_running.load(Ordering::Acquire) {
+                let data = std::fs::read(&reader_path).unwrap();
+                let parsed: AppSettings = serde_json::from_slice(&data)
+                    .expect("settings writes must never expose partial JSON");
+                assert_eq!(parsed.extras["preserved"].len(), 64 * 1024);
+                reads += 1;
+            }
+            reads
+        });
+        let barrier = Arc::new(std::sync::Barrier::new(4));
+        let mut writers = Vec::new();
+        for thread in 0..4 {
+            let store = store.clone();
+            let barrier = barrier.clone();
+            writers.push(std::thread::spawn(move || {
+                barrier.wait();
+                for change in 0..20 {
+                    store
+                        .set_product_telemetry((thread + change) % 2 == 0)
+                        .unwrap();
+                }
+            }));
+        }
+        for writer in writers {
+            writer.join().unwrap();
+        }
+        running.store(false, Ordering::Release);
+        assert!(reader.join().unwrap() > 0);
+        let data = store.get();
+        let persisted: AppSettings = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(
+            data.product_telemetry_enabled,
+            persisted.product_telemetry_enabled
+        );
+        assert_eq!(
+            data.product_telemetry_enabled,
+            ::server_config::DYNAMIC_TELEMETRY_ENABLED.load(Ordering::Relaxed)
+        );
+        assert_eq!(
+            std::fs::read_dir(directory.path()).unwrap().count(),
+            1,
+            "successful staging must not leak files"
+        );
+    }
+    #[test]
+    fn telemetry_consent_requires_persistent_storage() {
+        let _guard = telemetry_guard();
+        let store = Store::new();
+        assert!(store.set_product_telemetry(true).is_err());
+        assert!(!store.get().product_telemetry_enabled);
+        assert!(!::server_config::DYNAMIC_TELEMETRY_ENABLED.load(Ordering::Relaxed));
     }
 }

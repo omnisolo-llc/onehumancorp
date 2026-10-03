@@ -9,6 +9,17 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('EventRSVPBuilderPage', () => {
+  it('exposes selected theme and keeps the preview URL stable on repeated choice', () => {
+    render(<EventRSVPBuilderPage />);
+    const light=screen.getByRole('button',{name:'Light'}); const dark=screen.getByRole('button',{name:'Dark'});
+    expect(light).toHaveAttribute('aria-pressed','true'); expect(dark).toHaveAttribute('aria-pressed','false');
+    fireEvent.click(dark);
+    expect(light).toHaveAttribute('aria-pressed','false'); expect(dark).toHaveAttribute('aria-pressed','true');
+    const iframe=document.querySelector('iframe')!; expect(iframe.src).toContain('theme=dark');
+    const source=iframe.src; fireEvent.click(dark); expect(iframe.src).toBe(source);
+    expect(dark).toHaveAttribute('aria-pressed','true');
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -1,7 +1,10 @@
-import { render,screen,fireEvent,waitFor } from '@testing-library/react';
+import { render,screen,fireEvent,waitFor,cleanup } from '@testing-library/react';
 import BuilderPage from './page';
 import { vi,describe,it,expect,beforeEach,afterEach } from 'vitest';
 import { useBuilderStore } from './store';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
+import { installBuilderLocks } from './testLocks';
+let generatedHeadline = 'Maya Cakes';
 
 // Mock TooltipRegistry and help components
 vi.mock('../../components/TooltipRegistry', () => ({
@@ -13,7 +16,10 @@ vi.mock('../../components/help', () => ({
 
 describe('BuilderPage V2', () => {
   beforeEach(() => {
+    localStorage.clear(); notifyQueueIdentityChange(); installBuilderLocks(); generatedHeadline = 'Maya Cakes';
     global.fetch = vi.fn().mockImplementation((url) => {
+      if (String(url).endsWith('/session-identity')) return Promise.resolve(Response.json({ userId: 'owner', tenantId: 'business', expiresAt: Date.now() + 60_000 }));
+      if (url === '/api/v1/builder/generate') return Promise.resolve(Response.json({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: generatedHeadline } }] }] }));
       if (url === "/api/v1/walkthrough/store-setup") {
          return Promise.resolve(Response.json([], { status: 200 }));
       }
@@ -35,13 +41,13 @@ describe('BuilderPage V2', () => {
   });
 
   afterEach(() => {
-    vi.resetAllMocks();
+    cleanup(); notifyQueueIdentityChange(); vi.resetAllMocks();
   });
 
   it('renders Screen 1 Onboarding and transitions to Idle', async () => {
     render(<BuilderPage />);
 
-    expect(screen.getByText('What are you building today?')).toBeTruthy();
+    expect(await screen.findByText('What are you building today?')).toBeTruthy();
 
     const productsBtn = screen.getByText('Selling Products');
     fireEvent.click(productsBtn);
@@ -51,11 +57,11 @@ describe('BuilderPage V2', () => {
     }, { timeout: 1000 });
   });
 
-  it('completes the wizard and shows AI Architect generating screen', async () => {
+  it('completes the wizard and shows the draft preparation screen', async () => {
     render(<BuilderPage />);
 
     // Onboarding
-    fireEvent.click(screen.getByText('Selling Products'));
+    fireEvent.click(await screen.findByText('Selling Products'));
     await waitFor(() => { screen.getByText('Business Name'); }, { timeout: 1000 });
 
     // Step 1
@@ -70,21 +76,12 @@ describe('BuilderPage V2', () => {
     // Step 3
     fireEvent.change(screen.getByPlaceholderText(/e\.g\. I run a mobile dog grooming service/i), { target: { value: 'I bake amazing custom cakes.' } });
 
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        pages: [{
-          blocks: [
-            { block_type: 'HeroBlock', content: { headline: 'Maya Cakes' } }
-          ]
-        }]
-      })
-    });
+    generatedHeadline = 'Maya Cakes';
 
     fireEvent.click(screen.getByText('Build Store'));
 
-    expect(screen.getByText('AI Architect')).toBeTruthy();
-    expect(screen.getByText('Designing your custom storefront...')).toBeTruthy();
+    expect(screen.getByText('Draft builder')).toBeTruthy();
+    expect(screen.getByText('Preparing your storefront draft...')).toBeTruthy();
 
     await waitFor(() => {
       expect(screen.getByText('Pick your draft')).toBeTruthy();
@@ -95,7 +92,7 @@ describe('BuilderPage V2', () => {
      // Mock state for selection
      render(<BuilderPage />);
      // Fast forward to selection (would be better with state injection if possible, but we'll follow the flow)
-     fireEvent.click(screen.getByText('Showcasing Work'));
+     fireEvent.click(await screen.findByText('Showcasing Work'));
      await waitFor(() => { screen.getByText('Business Name'); }, { timeout: 1000 });
 
      fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Testing' } });
@@ -103,10 +100,7 @@ describe('BuilderPage V2', () => {
      fireEvent.click(screen.getByText('Next: Choose Vibe'));
      fireEvent.click(screen.getByText('Minimalist'));
      fireEvent.click(screen.getByText('Next: Details'));
-     vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-       ok: true,
-       json: async () => ({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'T' } }] }] })
-     });
+     generatedHeadline = 'T';
      fireEvent.click(screen.getByText('Build Store'));
 
      await waitFor(() => {
@@ -122,7 +116,7 @@ describe('BuilderPage V2', () => {
   it('opens Action Sheet when a block is clicked', async () => {
     // We'll skip the full flow for brevity if we can, but let's just finish it.
     render(<BuilderPage />);
-    fireEvent.click(screen.getByText('Offering Services'));
+    fireEvent.click(await screen.findByText('Offering Services'));
     await waitFor(() => { screen.getByText('Business Name'); }, { timeout: 1000 });
 
     fireEvent.change(screen.getByPlaceholderText('e.g. Acme Corp'), { target: { value: 'Testing' } });
@@ -130,10 +124,7 @@ describe('BuilderPage V2', () => {
     fireEvent.click(screen.getByText('Next: Choose Vibe'));
     fireEvent.click(screen.getByText('Minimalist'));
     fireEvent.click(screen.getByText('Next: Details'));
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ pages: [{ blocks: [{ block_type: 'HeroBlock', content: { headline: 'Hero Headline' } }] }] })
-    });
+    generatedHeadline = 'Hero Headline';
     fireEvent.click(screen.getByText('Build Store'));
 
     await waitFor(() => {

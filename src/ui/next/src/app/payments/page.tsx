@@ -51,9 +51,11 @@ export default function PaymentLedger() {
 
       const intentData = await intentRes.json();
 
-      if (intentData.status === "succeeded" || intentData.client_secret) {
+      if (intentData.status === "succeeded") {
         setStatus("Approved");
         fetchBalance();
+      } else if (intentData.status === "pending" || intentData.client_secret) {
+        setStatus("Awaiting payment confirmation");
       } else {
         setStatus("Failed to initialize");
       }

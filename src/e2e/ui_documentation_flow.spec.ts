@@ -1,120 +1,152 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from './fixtures';
 
-test.describe("Documentation Features Flow", () => {
-  test("User can navigate the Help Center and view an article", async ({
-    page,
-  }) => {
-    // Navigate directly without mocking, allowing the real backend / fallback APIs to respond.
-    await page.goto("/help");
+function articleDestination(responseLink: string, currentUrl: string) {
+  const current = new URL(currentUrl);
+  const link = new URL(responseLink, current);
+  expect(link.origin).toBe(current.origin);
+  const id = link.pathname === '/help'
+    ? link.searchParams.get('article')
+    : link.pathname.match(/^\/help\/([A-Za-z0-9_-]+)$/)?.[1];
+  expect(id).toMatch(/^[A-Za-z0-9_-]+$/);
+  if (!id) throw new Error('The actual Help response must name an article');
+  // The server still emits these legacy chat IDs; its document API uses
+  // add-products and accept-payments. The test below reads that actual API.
+  const currentId = id === 'my-store-1' ? 'add-products'
+    : id === 'payments-1' ? 'accept-payments' : id;
+  return { id: currentId, href: `/help/${currentId}` };
+}
 
-    // Help Center Index
-    await expect(page).toHaveURL(/\/help/);
+test.describe('Documentation Features Flow', () => {
+  test('User can navigate the Help Center and view an article', async ({ page }) => {
+    await page.goto('/help');
+    await expect(page.getByTestId('help-center-title')).toHaveText('In-App Help Center');
 
-    // Wait until hydration finishes or layout settles before clicking
-    await page.waitForLoadState("networkidle");
-
-    // Check title using testid
-    await expect(
-      page.locator('[data-testid="help-center-title"]'),
-    ).toBeVisible();
-
-    // Since mock dummy data is removed, the link might not exist if the backend is empty.
-    // If there is an article, we click it. Otherwise, we just verify the empty state.
-    const articleLink = page
-      .locator('a[href="/help/getting-started-1"]')
-      .first();
-    const emptyState = page.locator(
-      "text=No help articles available right now.",
-    );
-
-    // We check if either the article link is visible or the empty state is visible
-    await expect(articleLink.or(emptyState)).toBeVisible();
-
-    // Since we can't use conditional logic in Playwright safely without flakiness per the code review,
-    // and since the backend should be seeded correctly, we will just expect the empty state
-    // to not be visible if we know there's data, but given we don't know the exact seed state,
-    // the .or() is the most robust way to check for 'either content or empty state'.
-    // However, the code reviewer noted: "The introduction of conditional logic in Playwright tests that masks potential application failures... The tests must be deterministic."
-    // Let's assume the seed data has "Getting Started" or at least one article.
-
-    // Actually, looking at the code reviewer notes: "If the backend is broken or database seeding fails, the UI will show an empty state, and these tests will silently pass."
-    // This implies we MUST expect data to be present and NOT accept the empty state.
-
-    // We will expect an article link to exist. The seed script should provide it.
-    await expect(articleLink).toBeVisible();
-    await articleLink.click({ force: true });
-
-    // Help Article Page
-    await expect(page).toHaveURL(/\/help\/getting-started-1/, {
-      timeout: 15000,
+    const article = page.getByRole('link').filter({
+      has: page.getByRole('heading', { name: 'Getting Started with Your Store', exact: true }),
     });
+    await expect(article).toHaveAttribute('href', '/help/getting-started-1');
+    await article.click();
+
+    await expect(page).toHaveURL(/\/help\/getting-started-1$/);
+    await expect(page.getByRole('heading', { name: 'Getting Started with Your Store', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '1. Tell us about your business', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '2. Add your first product', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '3. Start accepting payments', exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Back to Help Center', exact: true }).click();
+    await expect(page).toHaveURL(/\/help$/);
+    await expect(article).toBeVisible();
   });
 
-  test("User can search the Help Center and get no results", async ({
-    page,
-  }) => {
-    await page.goto("/help");
-    await page.waitForLoadState("networkidle");
+  test('User can search the Help Center and get no results', async ({ page }) => {
+    await page.goto('/help');
+    const article = page.getByRole('link').filter({
+      has: page.getByRole('heading', { name: 'Getting Started with Your Store', exact: true }),
+    });
+    await expect(article).toBeVisible();
 
-    const searchInput = page.locator('[data-testid="help-search-input"]');
-    await searchInput.fill("NonexistentQuery1234");
+    const query = 'NonexistentQuery1234';
+    const searchResponsePromise = page.waitForResponse(response => {
+      const url = new URL(response.url());
+      return url.pathname === '/api/v1/help/search' && url.searchParams.get('q') === query;
+    });
+    const search = page.getByTestId('help-search-input');
+    await search.fill(query);
+    const response = await searchResponsePromise;
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toEqual([]);
+    await expect(page.getByText(/No results found matching/)).toContainText(query);
+    await expect(article).not.toBeVisible();
 
-    // Wait for debounce and search to complete
-    await page.waitForTimeout(500);
-
-    // Verify empty state text
-    await expect(page.locator("text=No results found matching")).toBeVisible();
-    await expect(page.locator('text="NonexistentQuery1234"')).toBeVisible();
+    await search.clear();
+    await expect(article).toBeVisible();
+    await expect(page.getByText(/No results found matching/)).not.toBeVisible();
   });
 
-  test("User can open the AI Help Chat widget", async ({ page }) => {
-    await page.goto("/help");
-    await page.waitForLoadState("networkidle");
+  test('User can open the AI Help Chat widget', async ({ page }) => {
+    await page.goto('/help');
+    await page.getByRole('button', { name: 'Open help chat', exact: true }).click();
+    const widget = page.locator('#ai-chat-interface');
+    await expect(widget.getByRole('heading', { name: 'Help Center', exact: true })).toBeVisible();
+    await widget.getByRole('button', { name: 'Ask AI (Ask anything)', exact: true }).click();
 
-    // The Ask anything button at the bottom right
-    const aiButton = page
-      .locator(
-        'button[aria-label="Open help chat"], button:has-text("Ask anything")',
-      )
-      .first();
-    await expect(aiButton).toBeVisible();
+    const input = widget.getByPlaceholder('Ask anything...', { exact: true });
+    const send = widget.getByRole('button', { name: 'Send message', exact: true });
+    await expect(send).toBeDisabled();
+    const question = 'How do I add a product?';
+    await input.fill(question);
+    await expect(send).toBeEnabled();
 
-    // Click it to open the chat interface
-    await aiButton.click();
+    // The mounted authenticated chat API answers from Help Center knowledge.
+    // Require the real response and its displayed article link, not a fake bot reply.
+    const replyPromise = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/chat'
+      && response.request().method() === 'POST');
+    await send.click();
+    const response = await replyPromise;
+    expect(response.request().postDataJSON()).toEqual({ message: question });
+    expect(response.status()).toBe(200);
+    const answer = await response.json();
+    expect(typeof answer.reply).toBe('string');
+    expect(answer.reply.length).toBeGreaterThan(0);
+    const article = articleDestination(answer.link.url, page.url());
+    await expect(widget.getByText(question, { exact: true })).toBeVisible();
+    await expect(widget.getByText(answer.reply, { exact: true })).toBeVisible();
+    await expect(widget.getByRole('link', { name: answer.link.title, exact: true })).toHaveAttribute('href', article.href);
+    await expect(input).toHaveValue('');
+    await expect(send).toBeDisabled();
 
-    // Wait for the modal/dialog to appear
-    const chatModal = page.locator("#ai-chat-interface");
-    await expect(chatModal).toBeVisible();
-
-    // Type a message
-    const input = page.locator('input[placeholder="Ask anything..."]');
-    await input.fill("Hello AI");
-
-    const sendBtn = page.locator('button[aria-label="Send message"]');
-    await sendBtn.click();
-
-    await expect(page.locator("text=Hello AI").first()).toBeVisible();
+    await widget.getByRole('button', { name: 'Clear chat', exact: true }).click();
+    await expect(widget.getByText(question, { exact: true })).not.toBeVisible();
+    await expect(widget.getByText(answer.reply, { exact: true })).not.toBeVisible();
+    await widget.getByRole('button', { name: 'Close Help Widget', exact: true }).click();
+    await expect(widget).not.toBeVisible();
   });
 
-  test("User can access the Changelog", async ({ page }) => {
-    await page.goto("/changelog");
-    await page.waitForLoadState("networkidle");
-
-    // Verify title
-    await expect(
-      page
-        .locator('[data-testid="changelog-title"]')
-        .or(page.locator("text=Release Notes & Changelog"))
-        .first(),
-    ).toBeVisible();
+  test('The actual Help reply article link opens its acknowledged document', async ({ page }) => {
+    await page.goto('/help');
+    await page.getByRole('button', { name: 'Open help chat', exact: true }).click();
+    const widget = page.locator('#ai-chat-interface');
+    await widget.getByRole('button', { name: 'Ask AI (Ask anything)', exact: true }).click();
+    await widget.getByPlaceholder('Ask anything...', { exact: true }).fill('How do I add a product?');
+    const replyPromise = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/chat' && response.request().method() === 'POST');
+    await widget.getByRole('button', { name: 'Send message', exact: true }).click();
+    const reply = await replyPromise;
+    expect(reply.status()).toBe(200);
+    const answer = await reply.json();
+    const destination = articleDestination(answer.link.url, page.url());
+    const documentResponse = await page.request.get(`/api/v1/help/${destination.id}`);
+    expect(documentResponse.status()).toBe(200);
+    const document = await documentResponse.json() as { title: string; contentHtml: string };
+    expect(document.title.length).toBeGreaterThan(0);
+    expect(document.contentHtml.length).toBeGreaterThan(0);
+    const article = widget.getByRole('link', { name: answer.link.title, exact: true });
+    await expect(article).toHaveAttribute('href', destination.href);
+    await article.click();
+    await expect(page).toHaveURL(new RegExp(`${destination.href}$`));
+    await expect(page.getByRole('heading', { name: document.title, exact: true })).toBeVisible();
+    await expect(page.locator('.prose')).toContainText(/\S/);
   });
 
-  test("Advanced User can access API Documentation", async ({ page }) => {
-    await page.goto("/api-docs");
-    await page.waitForLoadState("networkidle");
+  test('User can access the Changelog', async ({ page }) => {
+    const changelogResponsePromise = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/changelog');
+    await page.goto('/changelog');
+    const response = await changelogResponsePromise;
+    expect(response.status()).toBe(200);
+    const sections = await response.json();
+    expect(sections.length).toBeGreaterThan(0);
+    await expect(page.getByTestId('changelog-title')).toHaveText('Changelog Updates');
+    await expect(page.getByRole('heading', { name: sections[0].version, exact: true })).toBeVisible();
+  });
 
-    // Verify the advanced disclaimer
-    await expect(page.locator('[data-testid="api-docs-title"]')).toBeVisible();
-    await expect(page.locator("text=Advanced:")).toBeVisible();
+  test('Advanced User can access API Documentation', async ({ page }) => {
+    await page.goto('/api-docs');
+    await expect(page.getByTestId('api-docs-title')).toContainText('Advanced:');
+    await expect(page.getByTestId('api-docs-title')).toContainText('Not required for normal use.');
+    const swagger = page.locator('.swagger-ui');
+    await expect(swagger.getByRole('heading', { name: /^API Documentation \(for Advanced Users\)/ })).toBeVisible();
+    await expect(swagger.locator('.opblock-summary-path').filter({ hasText: /^\/api\/v1\/help$/ })).toBeVisible();
+    await expect(swagger.locator('.opblock-summary-path').filter({ hasText: /^\/api\/v1\/tooltips$/ })).toBeVisible();
   });
 });

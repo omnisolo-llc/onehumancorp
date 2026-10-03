@@ -13,7 +13,8 @@ export default function PreOrderWidgetPage() {
 
   const router = useRouter();
   const [removeBranding, setRemoveBranding] = useState(false);
-  const { hasPro, confirmPro } = useProPlan();
+  const { hasPro, claimTrial, claimError } = useProPlan();
+  const brandingRemoved = removeBranding && hasPro;
   const [showSoftPaywall, setShowSoftPaywall] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [entitlementError, setEntitlementError] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export default function PreOrderWidgetPage() {
       setTenant(localStorage.getItem('business_display_name') || 'demo');
     }
   }, []);
+
 
   const handleBrandingToggle = () => {
     if (removeBranding) {
@@ -39,19 +41,9 @@ export default function PreOrderWidgetPage() {
 
   const handleShareToUnlock = async () => {
     setIsUnlocking(true);
-    setEntitlementError(null);
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I configured a pre-order widget with OmniSolo: ${window.location.origin}/onboarding?ref=${tenant}`)}`, '_blank');
-    try {
-      const response = await fetch('/api/v1/growth/trial-extension/claim', { method: 'POST' });
-      if (!response.ok) throw new Error('Trial activation is unavailable.');
-      setShowSoftPaywall(false);
-      confirmPro();
-      setRemoveBranding(true);
-    } catch {
-      setEntitlementError('Trial activation is unavailable.');
-    } finally {
-      setIsUnlocking(false);
-    }
+    try { await claimTrial(); }
+    catch { setEntitlementError('Trial activation is unavailable.'); }
+    finally { setIsUnlocking(false); }
   };
 
 
@@ -103,12 +95,14 @@ export default function PreOrderWidgetPage() {
               <div className="flex space-x-4">
                 <button
                   onClick={() => setTheme('light')}
+                  aria-pressed={theme === 'light'}
                   className={`px-4 py-2 rounded-lg border ${theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white dark:bg-black/20 dark:border-white/10'}`}
                 >
                   Light
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
+                  aria-pressed={theme === 'dark'}
                   className={`px-4 py-2 rounded-lg border ${theme === 'dark' ? 'bg-blue-900 border-blue-700 text-blue-100' : 'bg-white dark:bg-black/20 dark:border-white/10 text-black dark:text-white'}`}
                 >
                   Dark
@@ -121,7 +115,7 @@ export default function PreOrderWidgetPage() {
               <input
                 type="checkbox"
                 id="removeBranding"
-                checked={removeBranding}
+                checked={brandingRemoved}
                 onChange={handleBrandingToggle}
                 className="w-5 h-5 rounded border-gray-300 text-[#0071E3] focus:ring-[#0066FF]"
               />
@@ -169,16 +163,17 @@ export default function PreOrderWidgetPage() {
                   placeholder="Enter your email"
                   className={`flex-1 px-4 py-2 rounded-lg border ${theme === 'light' ? 'bg-white border-gray-300' : 'bg-gray-800 border-gray-700 text-white'}`}
                 />
-                <button className="px-6 py-2 bg-[#0071E3] text-white rounded-lg font-medium hover:bg-blue-700">
+                <button disabled aria-describedby="preorder-preview-unavailable" className="px-6 py-2 bg-[#0071E3] text-white rounded-lg font-medium hover:bg-blue-700">
                   Join
                 </button>
+                <p id="preorder-preview-unavailable">Preview only. This form does not submit a waitlist entry.</p>
               </div>
 
               <p className={`text-xs mt-4 ${theme === 'light' ? 'text-gray-500' : 'text-gray-500'}`}>
                 Waitlist signup preview
               </p>
 
-              {!removeBranding && (
+              {!brandingRemoved && (
                 <div style={{ fontFamily: 'sans-serif', textAlign: 'center', fontSize: '12px', marginTop: '16px' }}>
                     <a href={`/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}`} target="_blank" rel="noreferrer" style={{ color: '#6b7280', textDecoration: 'none', fontWeight: 600 }}>⚡ Powered by OmniSolo</a>
                 </div>
@@ -205,7 +200,7 @@ export default function PreOrderWidgetPage() {
                 {`<div id="omnisolo-pre-order-widget" data-product="${productName}" data-offer="${offerText}" data-theme="${theme}" data-tenant="${tenant}"></div>`}
                 <br/>
                 {`<script src="https://cloud.omnisolo.co/widgets/pre-order.js" async></script>`}
-                {!removeBranding && (
+                {!brandingRemoved && (
                   <>
                     <br/>
                     {`<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/onboarding?ref=${tenant}" target="_blank" rel="noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`}
@@ -255,9 +250,9 @@ export default function PreOrderWidgetPage() {
                 className="w-full py-4 min-h-[44px] min-w-[44px] font-bold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all flex items-center justify-center gap-2"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.008 5.94H5.078z"/></svg>
-                {isUnlocking ? 'Verifying Share...' : 'Share on X to Unlock'}
+                {isUnlocking ? 'Checking…' : 'Check trial availability'}
               </button>
-              {entitlementError && <p className="mt-3 text-sm text-red-600" role="status">{entitlementError}</p>}
+              {(claimError || entitlementError) && <p className="mt-3 text-sm text-red-600" role="status">{claimError || entitlementError}</p>}
             </div>
           </div>
         )}

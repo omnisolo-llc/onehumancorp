@@ -27,6 +27,7 @@ test.describe('Premium Aesthetics Verification', () => {
         backdropFilter: computed.backdropFilter,
         backgroundColor: computed.backgroundColor,
         border: computed.border,
+        borderRadius: computed.borderRadius,
       };
     });
 
@@ -51,6 +52,7 @@ test.describe('Premium Aesthetics Verification', () => {
         backdropFilter: computed.backdropFilter,
         backgroundColor: computed.backgroundColor,
         border: computed.border,
+        borderRadius: computed.borderRadius,
       };
     });
 
@@ -77,6 +79,7 @@ test.describe('Premium Aesthetics Verification', () => {
         backdropFilter: computed.backdropFilter,
         backgroundColor: computed.backgroundColor,
         border: computed.border,
+        borderRadius: computed.borderRadius,
       };
     });
 

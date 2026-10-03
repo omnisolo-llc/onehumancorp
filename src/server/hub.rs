@@ -203,6 +203,22 @@ impl Hub {
         self.invalidate_agent_cache().await;
     }
 
+    /// Retire only the still-existing registration owned by this tenant.
+    /// Completion of old work must not resurrect an agent removed meanwhile.
+    pub async fn update_agent_status(&self, id: &str, tenant_id: &str, status: &str) -> bool {
+        let mut agents = self.agents.write().await;
+        let Some(agent) = agents
+            .get_mut(id)
+            .filter(|agent| agent.organization_id == tenant_id)
+        else {
+            return false;
+        };
+        agent.status = status.to_owned();
+        drop(agents);
+        self.invalidate_agent_cache().await;
+        true
+    }
+
     pub async fn get_agent(&self, id: &str) -> Option<Agent> {
         let agents = self.agents.read().await;
         agents.get(id).cloned()

@@ -1,3 +1,4 @@
+import { createGrowthOwner } from './growth_owner';
 import { test, expect } from './fixtures';
 import { currentAppSmoke } from './current_app_smoke';
 
@@ -7,84 +8,51 @@ test('viral_ai_lead_magnet_builder_smoke', async ({ page, request, loginAs, admi
 });
 
 test.describe('Viral AI Lead Magnet Builder Loop', () => {
-  test('should display the lead magnet builder and handle soft paywall share bypass', async ({ page, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
-
-    // Navigate to dashboard
-    await page.goto('/dashboard');
-    await page.waitForLoadState('networkidle');
-
-    // 1. Verify the AI Lead Magnet Builder link is visible
+  test('links to the builder and keeps free branding while trial verification is unavailable', async ({ page, baseURL }) => {
+    const owner = await createGrowthOwner(page, baseURL);
+    const trialClaims: string[] = [];
+    page.on('request', request => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/growth/trial-extension/claim') trialClaims.push(request.url());
+    });
+    await page.goto('/dashboard.html');
     const leadMagnetLink = page.locator('a#ai-lead-magnet-link');
     await expect(leadMagnetLink).toBeVisible();
-
-    // 2. Click the link to go to the builder
     await leadMagnetLink.click();
-    await page.waitForLoadState('networkidle');
-
-    // 3. Verify the builder page loaded
-    const heading = page.getByRole('heading', { name: 'AI Lead Magnet Builder' });
-    await expect(heading).toBeVisible();
-
-    // 4. Fill in custom details
-    const titleInput = page.getByLabel('Offer Title');
-    await titleInput.fill('Free Security Audit');
-
-    const descInput = page.getByLabel('Description');
-    await descInput.fill('Get a free security score for your app.');
-
-    await page.waitForTimeout(500);
-
-    // Verify preview updated
-    const previewTitle = page.locator('#preview-title');
-    await expect(previewTitle).toHaveText('Free Security Audit');
-
-    // 5. Check 'Remove Branding' toggle behavior
-    const removeBrandingCheckbox = page.locator('input#remove-branding');
-    const brandingPreview = page.locator('#preview-branding');
-
-    await expect(brandingPreview).toBeVisible();
-
-    await page.evaluate(() => {
-        window.open = function() { return window; };
-    });
-
-    // Toggle to remove branding
+    await expect(page.getByRole('heading', { name: 'AI Lead Magnet Builder' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Generate Embed Code', exact: true })).toBeEnabled();
+    await page.getByLabel('Offer Title').fill('Free Security Audit');
+    await page.getByLabel('Description').fill('Get a free security score for your app.');
+    await expect(page.locator('#preview-title')).toHaveText('Free Security Audit');
     await page.locator('.slider').click();
-
-    // 6. Verify Paywall modal opens
-    const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Pro' });
+    const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Pro', exact: true });
     await expect(paywallHeading).toBeVisible();
+    await expect(page.getByText('Trial unlock is unavailable because this flow cannot verify sharing or a trial entitlement.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open X share draft', exact: true })).toBeVisible();
+    // A share draft is not a provider receipt. This CI journey does not open a
+    // social provider, override window.open, or request an entitlement grant.
+    await expect(page.locator('#remove-branding')).not.toBeChecked();
+    await expect(page.locator('#preview-branding')).toBeVisible();
+    expect(trialClaims).toEqual([]);
+    await page.locator('#close-paywall').click();
 
-    const shareButton = page.getByRole('button', { name: /Share on X to Unlock 7 Days/i });
-    await expect(shareButton).toBeVisible();
-
-    // 7. Click Share to bypass
-    await shareButton.click();
-
-    await expect(page.locator('#soft-paywall-status')).toContainText('Verifying Share...', { timeout: 2000 });
-    await expect(page.locator('#soft-paywall-status')).toContainText('Unlocked!', { timeout: 10000 });
-
-    await expect(paywallHeading).not.toBeVisible({ timeout: 5000 });
-    await expect(removeBrandingCheckbox).toBeChecked();
-    await expect(brandingPreview).not.toBeVisible();
-
-    // 8. Generate Embed Code
-    const generateBtn = page.getByRole('button', { name: 'Generate Embed Code' });
-    await generateBtn.click();
-
-    const embedHeading = page.getByRole('heading', { name: 'Embed Your Lead Magnet' });
+    await page.getByRole('button', { name: 'Generate Embed Code', exact: true }).click();
+    const embedHeading = page.getByRole('heading', { name: 'Embed Your Lead Magnet', exact: true });
     await expect(embedHeading).toBeVisible();
-
-    const embedTextarea = page.locator('#embed-code');
-    const codeValue = await embedTextarea.inputValue();
-    expect(codeValue).toContain('<iframe');
-    expect(codeValue).toContain('hide_branding=true');
-    expect(codeValue).toContain('title=Free%20Security%20Audit');
-
-    const closeEmbedBtn = page.getByRole('button', { name: 'Close' });
-    await closeEmbedBtn.click();
+    const snippet = await page.locator('#embed-code').inputValue();
+    const src = await page.evaluate(value => new DOMParser().parseFromString(value, 'text/html').querySelector('iframe')?.getAttribute('src'), snippet);
+    expect(src).toBeTruthy();
+    const url = new URL(src!);
+    expect(url.origin).toBe(new URL(page.url()).origin);
+    expect(url.pathname).toBe('/api/v1/growth/lead-magnet/embed');
+    expect(url.searchParams.get('tenant')).toBe(owner.tenantId);
+    expect(url.searchParams.get('title')).toBe('Free Security Audit');
+    expect(url.searchParams.get('hideBranding')).toBe('false');
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
     await expect(embedHeading).not.toBeVisible();
+    await page.goto(url.href);
+    await expect(page.getByText('Free Security Audit', { exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Powered by OmniSolo/ })).toBeVisible();
+    expect(trialClaims).toEqual([]);
   });
 
   test('should verify preview updates in real time', async ({ page, loginAs, adminUser }) => {
@@ -107,12 +75,13 @@ test.describe('Viral AI Lead Magnet Builder Loop', () => {
     await expect(previewBtnText).toHaveText('Start Now');
   });
 
-  test('should close the paywall modal when the close button is clicked', async ({ page, loginAs, adminUser }) => {
-    await loginAs(page, adminUser);
+  test('should close the paywall modal when the close button is clicked', async ({ page, baseURL }) => {
+    await createGrowthOwner(page, baseURL);
     await page.goto('/ai-lead-magnet-builder.html');
     await page.waitForLoadState('networkidle');
 
-    // Click slider to trigger paywall
+    // Wait for the real free-owner plan before exercising the gate.
+    await expect(page.getByRole('button', { name: 'Generate Embed Code', exact: true })).toBeEnabled();
     await page.locator('.slider').click();
 
     const paywallHeading = page.getByRole('heading', { name: 'Upgrade to Pro' });

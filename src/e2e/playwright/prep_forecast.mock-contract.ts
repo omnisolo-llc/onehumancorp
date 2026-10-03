@@ -95,8 +95,8 @@ test.describe('AI Agentic Inventory & Prep Forecasting Engine', () => {
       ORDER BY created_at DESC LIMIT 1
     `, [tenantId]);
 
-    expect(res.rows.length).toBeGreaterThan(0);
-    expect(res.rows[0].payload.product_id).toBe(productId);
-    expect(res.rows[0].payload.action).toBe('approve_prep_plan');
+    expect(res.length).toBeGreaterThan(0);
+    expect(res[0].payload.product_id).toBe(productId);
+    expect(res[0].payload.action).toBe('approve_prep_plan');
   });
 });

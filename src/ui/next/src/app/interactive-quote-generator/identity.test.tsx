@@ -1,0 +1,112 @@
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, afterEach, expect, it, vi } from 'vitest';
+import { notifyQueueIdentityChange, readQueueOwner } from '@/lib/sync/queueIdentity';
+import Page from './page';
+
+let identity: () => Promise<Response>;
+const owner = { userId: 'quote-owner', tenantId: 'verified-tenant', expiresAt: Date.now() + 60_000 };
+const writeText = vi.fn<(...args: string[]) => Promise<void>>();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+const embed = () => document.querySelector('textarea[readonly]') as HTMLTextAreaElement;
+beforeEach(() => {
+  localStorage.clear(); notifyQueueIdentityChange(); writeText.mockReset().mockResolvedValue();
+  identity = async () => Response.json({ ...owner, expiresAt: Date.now() + 60_000 });
+  vi.stubGlobal('fetch', vi.fn(async () => identity()));
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+});
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+it('cannot export a fallback or browser display name while signed identity is unresolved', async () => {
+  let finish!: (response: Response) => void;
+  identity = () => new Promise(resolve => { finish = resolve; });
+  localStorage.setItem('business_display_name', 'unverified-other-tenant');
+  render(<Page />);
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeDisabled();
+  expect(embed()).toHaveValue('');
+  fireEvent.click(screen.getByRole('button', { name: 'Copy Embed Code' }));
+  expect(writeText).not.toHaveBeenCalled();
+  await act(async () => finish(Response.json({ ...owner, expiresAt: Date.now() + 60_000 })));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled());
+  const document = new DOMParser().parseFromString(embed().value, 'text/html');
+  expect(new URL(document.querySelector('iframe')!.src).searchParams.get('tenant')).toBe(owner.tenantId);
+  expect(embed().value).not.toContain('unverified-other-tenant');
+});
+it('preserves hostile text as encoded data in the actual exported HTML', async () => {
+  const tenantId = 'tenant-"<&/雪';
+  identity = async () => Response.json({ ...owner, tenantId, expiresAt: Date.now() + 60_000 });
+  render(<Page />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled());
+  fireEvent.change(screen.getByPlaceholderText('e.g. Custom Cake Design'), { target: { value: '<svg onload="bad"> & service' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Copy Embed Code' }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+  expect(writeText.mock.calls[0][0]).toBe(embed().value);
+  const parsed = new DOMParser().parseFromString(embed().value, 'text/html');
+  expect(parsed.querySelectorAll('iframe')).toHaveLength(1); expect(parsed.querySelectorAll('a')).toHaveLength(1);
+  expect(parsed.querySelector('script,svg,[onload]')).toBeNull();
+  const source = new URL(parsed.querySelector('iframe')!.src);
+  expect(source.searchParams.get('tenant')).toBe(tenantId);
+  expect(source.searchParams.get('service')).toBe('<svg onload="bad"> & service');
+  expect(new URL(parsed.querySelector('a')!.href).searchParams.get('ref')).toBe(tenantId);
+});
+it.each(['unauthorized', 'malformed'])('keeps %s identity unavailable without a fallback export', async reason => {
+  identity = async () => reason === 'unauthorized' ? Response.json({ error: 'not_authenticated' }, { status: 401 }) : Response.json({ tenantId: 'unverified' });
+  render(<Page />);
+  expect(await screen.findByText(/Could not verify the account/)).toBeVisible();
+  expect(embed()).toHaveAttribute('aria-busy', 'false');
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeDisabled();
+  expect(embed()).toHaveValue(''); expect(writeText).not.toHaveBeenCalled();
+});
+it('an account change clears the prior quote and retires a pending copy acknowledgement', async () => {
+  let finishCopy!: () => void;
+  writeText.mockImplementation(() => new Promise(resolve => { finishCopy = resolve; }));
+  render(<Page />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled());
+  fireEvent.change(screen.getByPlaceholderText('e.g. Custom Cake Design'), { target: { value: 'Private old account proposal' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Copy Embed Code' }));
+  await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+  let finishIdentity!: (response: Response) => void;
+  identity = () => new Promise(resolve => { finishIdentity = resolve; });
+  await act(async () => notifyQueueIdentityChange());
+  expect(embed()).toHaveValue('');
+  expect(screen.getByPlaceholderText('e.g. Custom Cake Design')).toHaveValue('Custom Cake Design');
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeDisabled();
+  await act(async () => finishCopy());
+  expect(screen.queryByRole('button', { name: 'Code Copied!' })).not.toBeInTheDocument();
+  await act(async () => finishIdentity(Response.json({ userId: 'owner-b', tenantId: 'tenant-b', expiresAt: Date.now() + 60_000 })));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled());
+  const source = new DOMParser().parseFromString(embed().value, 'text/html').querySelector('iframe')!.src;
+  expect(new URL(source).searchParams.get('tenant')).toBe('tenant-b');
+  expect(embed().value).not.toContain('Private old account');
+  expect(writeText).toHaveBeenCalledOnce();
+});
+it('a late identity response cannot restore an account retired by pagehide', async () => {
+  let finish!: (response: Response) => void;
+  identity = () => new Promise(resolve => { finish = resolve; });
+  render(<Page />);
+  await waitFor(() => expect(finish).toBeDefined());
+  await act(async () => window.dispatchEvent(new Event('pagehide')));
+  await act(async () => finish(Response.json({ ...owner, expiresAt: Date.now() + 60_000 })));
+  expect(embed()).toHaveValue('');
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeDisabled();
+  expect(writeText).not.toHaveBeenCalled();
+});
+
+it('a separately verified different owner cannot re-enable the previous account embed', async () => {
+  render(<Page />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled());
+  fireEvent.change(screen.getByPlaceholderText('e.g. Custom Cake Design'), { target: { value: 'Private account A estimate' } });
+  identity = async () => Response.json({ userId: 'owner-b', tenantId: 'tenant-b', expiresAt: Date.now() + 60_000 });
+  await act(async () => { await readQueueOwner(); });
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeDisabled();
+  expect(embed()).toHaveValue('');
+  expect(screen.getByPlaceholderText('e.g. Custom Cake Design')).toHaveValue('Custom Cake Design');
+  fireEvent.click(screen.getByRole('button', { name: 'Copy Embed Code' }));
+  expect(writeText).not.toHaveBeenCalled();
+});
+it('a same-owner readiness refresh preserves the edited quote without rewriting storage', async () => {
+  render(<Page />);
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled());
+  fireEvent.change(screen.getByPlaceholderText('e.g. Custom Cake Design'), { target: { value: 'Retain this estimate' } });
+  await act(async () => { await readQueueOwner(); });
+  expect(screen.getByRole('button', { name: 'Copy Embed Code' })).toBeEnabled();
+  expect(screen.getByPlaceholderText('e.g. Custom Cake Design')).toHaveValue('Retain this estimate');
+});

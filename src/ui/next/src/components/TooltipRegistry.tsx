@@ -36,6 +36,7 @@ export const DEFAULT_TOOLTIPS: Record<string, string> = {
   "total-sales-tooltip": "Total gross revenue generated.",
   "recent-orders-tooltip": "Recent customer transactions.",
   "inbox-activity-tooltip": "Recent customer messages and inquiries.",
+  "help-search-tooltip": "Search for articles, videos, and guides",
 };
 
 export function TooltipProvider({ children }: { children: ReactNode }) {

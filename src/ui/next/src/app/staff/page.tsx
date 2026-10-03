@@ -9,7 +9,7 @@ export default function StaffPage() {
   const [tasks, setTasks] = useState<StaffTask[]>([]);
 
   useEffect(() => {
-    // In a real implementation, we would fetch the staff member's shifts and tasks
+    // Sample records for the preview; no live staff schedule is loaded here.
     setShifts([
       { id: '1', role: 'Baker', startTime: new Date().toISOString(), endTime: new Date(Date.now() + 8*3600000).toISOString(), status: 'Scheduled' }
     ]);
@@ -23,6 +23,7 @@ export default function StaffPage() {
       <div className="max-w-[375px] mx-auto min-h-screen bg-gray-50 pb-20">
         <header className="px-4 py-6 bg-white border-b border-gray-200">
           <h1 className="text-2xl font-bold text-gray-900">My Shifts & Tasks</h1>
+          <p id="staff-preview-unavailable">Sample schedule preview. Shift swaps are unavailable until a live schedule is connected.</p>
         </header>
 
         <main className="p-4 space-y-6">
@@ -39,7 +40,7 @@ export default function StaffPage() {
                     {new Date(shift.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} -
                     {new Date(shift.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </div>
-                  <button className="mt-3 w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 min-h-[44px]">
+                  <button disabled aria-describedby="staff-preview-unavailable" className="mt-3 w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 min-h-[44px]">
                     Request Swap
                   </button>
                 </div>

@@ -32,12 +32,10 @@ test.describe('Viral Certificate Generator', () => {
         const courseInput = page.locator('#course-name');
         await courseInput.fill('E2E Mastery Course');
 
-        // Wait for preview to update
-        await page.waitForTimeout(500);
-
         // Verify the live preview frame URL updated
         const previewFrame = page.locator('#preview-frame');
         await expect(previewFrame).toBeVisible();
+        await expect(previewFrame).toHaveAttribute('src', /recipient=John%20E2E%20Doe/);
         const frameSrc = await previewFrame.getAttribute('src');
         expect(frameSrc).toContain('title=Certificate%20of%20Achievement');
         expect(frameSrc).toContain('recipient=John%20E2E%20Doe');
@@ -59,6 +57,7 @@ test.describe('Viral Certificate Generator', () => {
         const srcMatch = embedCode.match(/src="([^"]+)"/);
         expect(srcMatch).not.toBeNull();
         const generatedUrl = srcMatch![1];
+        expect(new URL(generatedUrl).origin).toBe(new URL(page.url()).origin);
 
         // 6. Navigate to the generated public URL
         // Open a new page context to simulate a public user

@@ -10,13 +10,13 @@ test.describe('Help Center and Contextual Help (Tauri UI)', () => {
 
     // Check if HelpChat component is accessible
     // Check if Videos tab works in dashboard widget
-    const widgetBtn = page.locator('#omnisolo-floating-help-btn');
+    const widgetBtn = page.locator('#ohc-floating-help-btn');
     await expect(widgetBtn).toBeVisible();
-    await widgetBtn.dispatchEvent('click');
+    await widgetBtn.click();
 
     const videosTab = page.locator('button[data-target="tab-videos"]');
     await expect(videosTab).toBeVisible();
-    await videosTab.dispatchEvent('click');
+    await videosTab.click();
 
     // Verify we fetch and render videos
     await expect(page.locator('#video-list')).not.toContainText('Loading videos...', { timeout: 10000 });
