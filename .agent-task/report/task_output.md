@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Product Feature & Pain Point Analysis: Expanding OHC Capabilities for Small Business Owners"
+issue_description: "The proposed issue requests implementing new communication channels (Instagram DMs, WhatsApp) and a unified triage feed. However, according to RESEARCH.md, new channels and harness adapters require verified evidence and must pass the expansion gate before implementation. The task is blocked pending real owner interviews and evidence of business demand to authorize this new product scope. No changes were made."
+issue_priority: "P1"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
