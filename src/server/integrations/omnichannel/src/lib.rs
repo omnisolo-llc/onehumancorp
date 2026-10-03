@@ -337,3 +337,5 @@ mod tests {
         );
     }
 }
+pub mod web_widget_adapter;
+pub mod whatsapp_adapter;
