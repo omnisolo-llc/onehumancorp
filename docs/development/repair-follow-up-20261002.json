@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T01:55:00Z",
+  "updated_at": "2026-10-03T02:15:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
@@ -166,9 +166,9 @@
     {
       "id": "local-test-hang",
       "owner": "integration",
-      "status": "open",
+      "status": "repaired_pending_aggregate",
       "required_outcome": "Diagnose concurrent root Node invite-test stall without weakening assertions",
-      "evidence_and_limit": "Old concurrent Node invocation stalled near invitation tests and later result retrieval was denied; not claimed resolved. Fresh sequential and exact hosted801 scripts passed. Preserve denied-run uncertainty; do not retry that old poll."
+      "evidence_and_limit": "Full-dashboard JSDOM fixtures exposed real WebSocket transports despite stubbed fetch. The new offline helper denies network dispatch, subresources and default browser transports before scripts run; five boundary regressions and savings/trial/invitation61 cases pass with zero socket connects. All prior denied run outcomes remain unverified and inaccessible; no result was recovered through another route. Fresh aggregate on safeguarded source remains pending."
     },
     {
       "id": "operations-worker-spawn",
@@ -217,7 +217,7 @@
       "owner": "durable-workflow",
       "status": "repaired_pending_hosted",
       "required_outcome": "Reserve a checked monetary ceiling covering either all-cached or all-uncached input before dispatch",
-      "evidence_and_limit": "ec97410 uses max of existing RateCard.cost extremes, with real4864vs8960RED then workflow99. Two root lifecycle cases raise finalworkflow101/PG56/builder53. Workflow101/PG56 and strictClippy passed on component source; builder53/current fullhosted pending."
+      "evidence_and_limit": "ec97410 uses max of existing RateCard.cost extremes, with real 4864 vs 8960 RED then workflow99. Two genuine root lifecycle cases raise final workflow101/PG56/builder53; all three complete suites and strict Clippy passed on unchanged 98885c3 component source. Combined hosted acceptance remains open."
     },
     {
       "id": "legacy-dashboard-feed-clobber",

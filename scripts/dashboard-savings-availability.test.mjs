@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 
 const files = [
   'src/ui/next/public/dashboard.html',

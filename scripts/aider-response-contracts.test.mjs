@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 const roots = ['src/ui/tauri/src/ui', 'src/ui/next/public', 'src/ui/next/public/ui'];
 async function load(root, response) {
   const dom = new JSDOM(await readFile(new URL(`../${root}/aider.html`, import.meta.url), 'utf8'), {

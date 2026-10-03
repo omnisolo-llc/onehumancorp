@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { JSDOM, VirtualConsole } from 'jsdom';
+import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 import { build } from 'esbuild';
 
 const roots = ['src/ui/tauri/src/ui', 'src/ui/next/public', 'src/ui/next/public/ui', 'src/ui/next/public/api/ui', 'src/ui/next/public/api/v1/ui'];

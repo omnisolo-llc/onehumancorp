@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {JSDOM,VirtualConsole} from 'jsdom';
+import {JSDOM,VirtualConsole} from './test-support/offline-dom.mjs';
 const roots=['src/ui/next/public','src/ui/next/public/ui','src/ui/tauri/src/ui'];
 const unsafe=['javascript:alert(1)','JaVaScRiPt:alert(1)','data:text/html,<script>alert(1)</script>','blob:https://example.test/id','mailto:a@example.test','tel:+12025550123','/relative','//example.test','https:example.test','https://',' https://example.test','https://exa\nmple.test','https://example.test/white space','https://example.test/\u0000x','https:\\example.test'];
 const turn=()=>new Promise(r=>setImmediate(r));
