@@ -1,0 +1,10 @@
+outcome: blocked
+issue_title: "Native Rust Omnichannel Chat: Data Model & Agent Routing System Design"
+issue_description: |
+  The requested feature is currently blocked due to overlap with an already fully-implemented architecture. The issue instructions stated: "We are now replacing it with a native, high-performance, multi-tenant Rust architecture inside `onehumancorp/mono`. This research issue outlines the foundational data models and AI agent routing mechanisms needed to achieve full Chatwoot feature parity and beyond, focusing specifically on how The Ambassador agent interacts with this new native inbox."
+
+  However, my codebase exploration reveals that this `chat_*` architecture is already fully present in the codebase.
+
+  The native PostgreSQL data model is already fully implemented, including row-level security (`RLS`) and multi-tenancy rules (`tenant_id`), within `src/server/migrations/233_chat_omnichannel.sql` and `src/server/migrations/1009_native_omnichannel_chat.sql`. The models exactly match the PR's request and exist in `src/server/services/chat/models.rs`. The `chat_messages` table already contains a `status` field, and the legacy data is already structured to properly map over (e.g. `src/server/domain/repository/omnichannel_repo.rs` correctly joins `chat_conversations` and `chat_messages`). The `src/server/api/inbox/webhook.rs` file exists and already queues the `message_triage` job properly into the `ohc_job_queue` which is later handled by the `orchestrator` via `tenant.omnichannel.message.received`. The Ambassador agent has already been given capability to route to it.
+
+  Therefore, no actual code modifications are required for this step. The infrastructure requested in this issue is already in place. Attempting to create new migrations or modify the existing `chat_messages` / `webhook.rs` code would be redundant and break existing tests. I am reporting a 'blocked' status, with the evidence that the requested work has already been completed in previous PRs.
