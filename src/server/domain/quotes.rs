@@ -117,8 +117,12 @@ pub async fn handle_quote_action(
             .get("stripe_payment_link")
             .and_then(|v| v.as_str())
 <<<<<<< HEAD
+<<<<<<< HEAD
             .map(|s| s.to_string())
             .unwrap_or_else(|| "".to_string());
+=======
+            .map(|s| s.to_string());
+>>>>>>> origin/main
 =======
             .map(|s| s.to_string());
 >>>>>>> origin/main
@@ -126,6 +130,7 @@ pub async fn handle_quote_action(
         // Use idempotent safe checkout session instead of fake URL
         if payload.get("stripe_payment_link").is_none() {
             let amount_cents = (price * 100.0).round() as i64;
+<<<<<<< HEAD
 <<<<<<< HEAD
             let operation_id = format!("quote-deposit-{}", invoice_id);
             let mut metadata = std::collections::HashMap::new();
@@ -152,6 +157,8 @@ pub async fn handle_quote_action(
                     tracing::error!("Failed to generate idempotent Stripe checkout session link: {}", err); // pii-safe
                     // Still proceed with saving the invoice but log heavily without fabricating a link.
 =======
+=======
+>>>>>>> origin/main
             match stripe_client
                 .create_checkout_session_idempotent(
                     server_integrations_stripe::safe_checkout::CheckoutRequest {
@@ -173,6 +180,9 @@ pub async fn handle_quote_action(
                     tracing::error!("Failed to generate Stripe checkout session link: {}", err); // pii-safe
                     // Set explicitly to None if checkout fails instead of faking success
                     stripe_payment_link = None;
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
                 }
             }

@@ -208,6 +208,9 @@ pub async fn handle_autonomous_quote_action(
             tracing::error!("Failed to generate Stripe payment link for deposit: {}", e); // pii-safe
             // Empty means payment has not been configured; never invent a payable URL.
             stripe_payment_link = String::new();
+<<<<<<< HEAD
+>>>>>>> origin/main
+=======
 >>>>>>> origin/main
         }
         let checkout_req = crate::integrations::stripe::safe_checkout::CheckoutRequest {

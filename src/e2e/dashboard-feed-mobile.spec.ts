@@ -9,7 +9,11 @@ test.describe('Unified Agent Feed Mobile MVP', () => {
       INSERT INTO agent_feed_items (
         id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at
       )
+<<<<<<< HEAD
       VALUES
+=======
+      VALUES
+>>>>>>> origin/main
       (
         'e2e-feed-mobile-card-1',
         'e2e-tenant',
