@@ -1364,10 +1364,6 @@ pub struct StorefrontEmbedQuery {
     pub theme: Option<String>,
 }
 
-
-
-
-
 #[derive(Debug, Deserialize)]
 pub struct OneTapReferralEmbedQuery {
     pub tenant: Option<String>,
@@ -4111,8 +4107,12 @@ mod cloud_bridge_tests {
             hide_branding: Some("true".to_string()),
         };
         let response = crate::api::growth_previews::handle_customer_referral_embed(
-            Extension(pool), None, axum::extract::Query(query),
-        ).await.into_response();
+            Extension(pool),
+            None,
+            axum::extract::Query(query),
+        )
+        .await
+        .into_response();
         assert_eq!(response.status(), axum::http::StatusCode::UNAUTHORIZED);
     }
 

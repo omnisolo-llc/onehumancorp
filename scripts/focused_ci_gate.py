@@ -17,7 +17,7 @@ GATES = {
     'widget-chat-contract': (32, 'OHC_WIDGET_TEST_DATABASE_URL'),
     'order-milestones': (13, 'OHC_MILESTONE_TEST_DATABASE_URL'),
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
-    'agent-definition-contract': (49, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
+    'agent-definition-contract': (63, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
 
     'chat-tenant-isolation': (13, 'OHC_CHAT_TEST_DATABASE_URL'),
     'bootstrap-portable-roles': (9, 'OHC_SETUP_TEST_DATABASE_URL'),
