@@ -311,7 +311,7 @@ impl OmniChannelRepo {
         });
 
         if let Some(client) = crate::redis_pool::get_redis_client() {
-            if let Ok(mut rconn) = client.get_async_connection().await {
+            if let Ok(mut rconn) = client.get_multiplexed_async_connection().await {
                 let publish_res: Result<(), redis::RedisError> = redis::AsyncCommands::publish(&mut rconn, &topic, payload.to_string()).await;
                 if let Err(e) = publish_res {
                     tracing::warn!("Failed to publish to redis: {}", e);
@@ -328,7 +328,7 @@ impl OmniChannelRepo {
             let outbox_job_id = Uuid::new_v4().to_string();
             let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'publish_chat_event', $3, 'PENDING')")
                 .bind(&outbox_job_id)
-                .bind(&tenant_id.to_string())
+                .bind(tenant_id.to_string())
                 .bind(payload.to_string())
                 .execute(&mut *tx)
                 .await?;

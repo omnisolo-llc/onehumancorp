@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Durable receipt contract for admitted text-only work on the configured ORM.
 //! This module is not mounted while its storage contract is being implemented.
 use super::{AdmittedAnalysis, Authority};
