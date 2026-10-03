@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-10-03T03:43:00Z",
+  "updated_at": "2026-10-03T04:35:00Z",
   "scope": "Every issue found remains tracked until repaired and verified. Containment is interim. Merge is not production-readiness certification.",
   "items": [
     {
@@ -7,7 +7,7 @@
       "owner": "integration",
       "status": "failed_pending_repair_verification",
       "required_outcome": "Full locked make lint/test and actual browser acceptance on merged checkpoint",
-      "evidence_and_limit": "Exact2d835ca CI37089725232 ended naturally:1740 browser passed,28 failed,6 configured acceptance skipped. Rust/Node/Next/backend/Tauri/images/Docker/Kind/audit passed. PostgreSQL failed compiling one registration ActiveModel fixture; reviewed87366c9 fixes both nullable owner fields and actual52 cases/Clippy passed. Other executed component gates passed at combined104workflow/59PG/56builder, staff8 andpublication81. Next candidate remains unverified by full hosted acceptance."
+      "evidence_and_limit": "Exact5c3d564 CI37094202140 ended naturally:1748 browser passed,22 failed,7 configured acceptance skipped. All build/Rust/Node/Next/Tauri/images/Docker/Kind/audit jobs passed. PostgreSQL failed only the builder cloned-database fixture70/71; reviewed53f4c9d fixes a real SQLx max1 close/return race and distinguishes autovacuum from retained clients, with74 cases twice andstrictClippy. Browser failures remain3 integration,5 entitlement and14 runtime-related assertions. Next candidate requires fresh hosted acceptance."
     },
     {
       "id": "legacy-agent-rpc",
@@ -133,7 +133,7 @@
       "owner": "integration",
       "status": "open",
       "required_outcome": "Use supported provider quote/service-area result instead of invented ETA/fee",
-      "evidence_and_limit": "No genuine quote acceptance evidence yet."
+      "evidence_and_limit": "Legacy mutable product/domain handlers accept path/Host tenant selections without local current-owner fencing; shared response cache keys only URI, and invalidation accepts arbitrary tags. Global auth blocks anonymous requests but does not establish private tenant ownership. Complete source-linked cache/router RED harness is prepared; first compile stopped before tests on900MiB disk floor. Public journeys must use owner-reviewed immutable publication receipts."
     },
     {
       "id": "integration-connectivity",
@@ -210,7 +210,7 @@
       "owner": "entitlement",
       "status": "repaired_pending_hosted",
       "required_outcome": "Actual PostgreSQL ticket/OIDC registration atomically creates its fresh Free tenant namespace, account, roles and source binding while preserving paid invitations and collision rollback",
-      "evidence_and_limit": "Reviewedf5d8a84 fixes actual canonical FK failure by creating the fresh Free namespace atomically for ticket/OIDC registration; complete backend schemas preserve bootstrap order and paid invitations. Auth18, realPG/portable/schema13 and actualdefinition55 plusstrictClippy passed on component source; full combined hosted pending. MySQL has definition parity only, not live runtime acceptance."
+      "evidence_and_limit": "Reviewedf5d8a84 fixes actual canonical FK failure by creating the fresh Free namespace atomically for ticket/OIDC registration; complete backend schemas preserve bootstrap order and paid invitations. Auth18, realPG/portable/schema13 and actualdefinition55 plusstrictClippy passed on component source; full combined hosted pending. MySQL has definition parity only, not live runtime acceptance. Exact5c hosted agent-definition55 and full native Rust gates pass after integration; no MySQL runtime claim."
     },
     {
       "id": "worst-case-cached-tariff",
@@ -222,9 +222,9 @@
     {
       "id": "legacy-dashboard-feed-clobber",
       "owner": "entitlement",
-      "status": "repaired_pending_hosted",
+      "status": "verified_hosted",
       "required_outcome": "Only the actual feed endpoint may replace recorded agent feed state; unrelated referral/metric reads cannot erase it",
-      "evidence_and_limit": "Reviewed7ab3aff removes13 unrelated feed assignments per mirror, repairs renderer locals and preserves the real feed refresh. Fifteen actualDOM regressions, safeguarded860root tests and103focused pass on component source; final combined browser pending."
+      "evidence_and_limit": "Reviewed7ab3aff removes unrelated feed writers and missing renderer locals. Both dashboard savings/DOM journeys now pass on exact5c hosted run. Other dashboard capabilities, cache races and fabricated memory are separately tracked."
     },
     {
       "id": "builder-paid-request-recovery",
@@ -245,7 +245,7 @@
       "owner": "integration",
       "status": "investigation_open",
       "required_outcome": "Determine why a freshly stored owned Ambassador item was absent in one hosted feed snapshot and verify stable read-after-mutation behavior",
-      "evidence_and_limit": "c8 screenshot omitted the newly seeded Ambassador item while showing the same-test earlier operations item;2d passed unchanged. Shared cache permits a fetch to finish after invalidation, but exact causality is not yet reproduced. Do not call an unchanged subsequent pass a verified repair."
+      "evidence_and_limit": "Ambassador failedc8 then passed2d/5c without a source repair. CustomerSuccess failed5c after shared-tenant SQL insertion following feed cache population. New fixture uses a unique signed owner and persists/verifies the row before first feed read, preserving real approval/DB assertions. Actual in-flight fetch versus invalidation behavior remains a separate unresolved investigation."
     },
     {
       "id": "dashboard-memory-interaction",
