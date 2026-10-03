@@ -246,6 +246,13 @@
       "status": "investigation_open",
       "required_outcome": "Determine why a freshly stored owned Ambassador item was absent in one hosted feed snapshot and verify stable read-after-mutation behavior",
       "evidence_and_limit": "c8 screenshot omitted the newly seeded Ambassador item while showing the same-test earlier operations item;2d passed unchanged. Shared cache permits a fetch to finish after invalidation, but exact causality is not yet reproduced. Do not call an unchanged subsequent pass a verified repair."
+    },
+    {
+      "id": "dashboard-memory-interaction",
+      "owner": "integration",
+      "status": "contained_implementation_open",
+      "required_outcome": "Implement durable current-actor/tenant-bound exact memory records and honest recorded/empty/error states; model consolidation requires actual execution evidence",
+      "evidence_and_limit": "Reachable dashboard substring replies and ownerless user_favorite_cake recall removed. Unsent input is retained and explicit session invalidation clears it. Seven actual rendered RED cases now pass; the former memory-consolidation browser test only exercised invented chocolate/localStorage behavior and is replaced by explicit negative safety coverage. Genuine persistence/recall acceptance remains open."
     }
   ],
   "required_configured_acceptance": [

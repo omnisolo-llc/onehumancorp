@@ -1,6 +1,7 @@
 "use client";
 
 
+import { subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
 import GrowthReferralWidget from "../components/GrowthReferralWidget";
@@ -34,35 +35,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   );
   const [activities, setActivities] = useState<ActivityItem[]>(initialData?.activity || []);
   const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<{ role: "user" | "agent"; text: string }[]>([]);
+  const [chatNotice, setChatNotice] = useState('');
 
-  const handleSendChatMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => subscribeOnboardingInvalidation(() => {
+    setChatInput(''); setChatNotice('');
+  }), []);
+
+  const handleSendChatMessage = (event: React.FormEvent) => {
+    event.preventDefault();
     if (!chatInput.trim()) return;
-    const text = chatInput.trim();
-    setChatInput("");
-    setChatMessages((prev) => [...prev, { role: "user" as const, text }]);
-
-    let responseText = "Understood.";
-    const lower = text.toLowerCase();
-    if (lower.includes("favorite")) {
-      if (lower.includes("chocolate")) {
-        try { localStorage.setItem("user_favorite_cake", "chocolate"); } catch (err) { void err; }
-        responseText = "I'll remember that your favorite cake is chocolate.";
-      } else {
-        let saved = "chocolate";
-        try { saved = localStorage.getItem("user_favorite_cake") || "chocolate"; } catch (err) { void err; }
-        responseText = `Based on consolidated memory, your favorite cake is ${saved}.`;
-      }
-    } else if (lower.includes("chocolate")) {
-      try { localStorage.setItem("user_favorite_cake", "chocolate"); } catch (err) { void err; }
-      responseText = "Noted! Your preference for chocolate has been remembered.";
-    }
-
-    setChatMessages((prev) => [
-      ...prev,
-      { role: "agent" as const, text: responseText },
-    ]);
+    setChatNotice('Memory chat is unavailable. Your draft has not been sent or saved.');
   };
 
   const groupedProposals = useMemo(() => {
@@ -578,28 +560,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
       {/* Agent Chat & Memory Box */}
       <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/40 rounded-lg border border-gray-100 dark:border-gray-800">
-        {chatMessages.length > 0 && (
-          <div className="space-y-2 mb-3 max-h-48 overflow-y-auto">
-            {chatMessages.map((msg, i) => (
-              <div
-                key={i}
-                className={
-                  msg.role === "user"
-                    ? "text-right"
-                    : "text-left agent-message text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 p-2.5 rounded-lg"
-                }
-              >
-                {msg.role === "user" ? (
-                  <span className="inline-block bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg">
-                    {msg.text}
-                  </span>
-                ) : (
-                  <span>{msg.text}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <p className="mb-2 text-sm text-gray-600 dark:text-gray-300">Memory chat is not configured.</p>
+        {chatNotice && <p role="alert" className="mb-2 text-sm text-gray-600 dark:text-gray-300">{chatNotice}</p>}
         <form onSubmit={handleSendChatMessage} className="flex gap-2">
           <input
             type="text"
