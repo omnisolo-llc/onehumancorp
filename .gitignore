@@ -151,3 +151,5 @@ dummy_*
 /*.patch
 *.pid
 *.tsbuildinfo
+.agent-scratch
+.agent-task
