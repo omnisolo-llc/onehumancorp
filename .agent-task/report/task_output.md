@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Replace External Chatwoot with Custom Rust Omnichannel Engine"
+issue_description: "The task requests the implementation of a Custom Rust Omnichannel Chat System to replace Chatwoot, integrating Meta webhooks (WhatsApp/Instagram) and Twilio (SMS). However, per the current operating contract and RESEARCH.md, new epics need an explicit evidence-backed decision, and new verticals, channels, and harness adapters require evidence and the expansion gate in RESEARCH.md. As there is no such authorization, the task is blocked."
+issue_priority: "P0"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
