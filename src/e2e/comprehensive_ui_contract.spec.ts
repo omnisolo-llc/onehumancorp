@@ -93,6 +93,20 @@ function isFakeOmniSoloUrl(href: string) {
   }
 }
 
+function visiblePageErrors(bodyText: string): string[] {
+  // Generated embed/share URLs, customer IDs and recorded amounts can contain
+  // 404 (the hosted crawler used port 44041). They are not HTTP error pages.
+  // Keep the complete matching line for diagnosis, while requiring error text
+  // or an explicit status marker. Real response statuses are checked separately.
+  const errorMessage = /\b(?:not found|could not be found|application error|failed to load|internal server error)\b|\b(?:http(?:\s+error)?|error(?:\s+code)?|status(?:\s+code)?)\s*[:=]?\s*(?:404|500)\b/i;
+  const matches = bodyText.split(/\r?\n/).filter(line => {
+    const prose = line.replace(/https?:\/\/[^\s<>"']+/gi, '');
+    return errorMessage.test(prose);
+  });
+  if (matches.length === 0 && /^(?:404|500)$/.test(bodyText.trim())) return [bodyText];
+  return matches;
+}
+
 async function visibleText(page: Page) {
   return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
 }
@@ -348,8 +362,9 @@ test.describe('comprehensive UI contract', () => {
         await expect(page.getByText('e2e-seeded-record', { exact: true })).toBeVisible();
       }
       const bodyText = await visibleText(page);
-      if (/404|not found|application error|failed to load/i.test(bodyText)) {
-        failures.push(`${routeLabel(route)}: visible error text found`);
+      const visibleErrors = visiblePageErrors(bodyText);
+      if (visibleErrors.length > 0) {
+        failures.push(`${routeLabel(route)}: visible error text found: ${JSON.stringify(visibleErrors)}`);
       }
     }
 
