@@ -1,3 +1,8 @@
-outcome: no_work
-issue_title: Implement Custom Rust Omnichannel Chat System to Replace Chatwoot
-issue_description: The functionality requested in issue #35648 is already fully implemented. The basic models (UnifiedThread, UnifiedMessage, UnifiedTriageAction) and their schemas exist in src/server/services/inbox/service.rs with tenant_id RLS applied via unified_threads and unified_messages migrations. Basic CRUD operations are covered, and a WebSocket handler stub is already in src/server/api/unified_ws.rs that accepts connections and broadcasts mock messages.
+outcome: blocked
+issue_title: "🔗 Link: [blocked no-work finding: GitHub Issue #35628]"
+issue_description: |
+  The requested task to build a Native Rust Omnichannel Chat System (Issue #35628) for new channels (Instagram DMs, WhatsApp, Website Chat, Emails) is blocked.
+  According to the OHC operating contract and `RESEARCH.md`:
+  - New channels require explicit evidence and an expansion gate in `RESEARCH.md`.
+  - The "Gated expansion" section specifies that "Additional channels" require "retained-customer need, measurable value and explicit strategy approval".
+  Since `RESEARCH.md` lacks this required explicit evidence and expansion gate for these new channels, the implementation is blocked.
