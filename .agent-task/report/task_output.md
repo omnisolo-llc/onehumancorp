@@ -1,3 +1,3 @@
-outcome: no_work
-issue_title: Implement Custom Rust Omnichannel Chat System to Replace Chatwoot
-issue_description: The functionality requested in issue #35648 is already fully implemented. The basic models (UnifiedThread, UnifiedMessage, UnifiedTriageAction) and their schemas exist in src/server/services/inbox/service.rs with tenant_id RLS applied via unified_threads and unified_messages migrations. Basic CRUD operations are covered, and a WebSocket handler stub is already in src/server/api/unified_ws.rs that accepts connections and broadcasts mock messages.
+outcome: blocked
+issue_title: "Market Research: AI Agentic Workflows & Native Omnichannel Solutions"
+issue_description: "The issue #35608 is a market research and competitor deep-dive analysis. As a research-only issue, it does not contain actionable implementation tasks that can be fulfilled by the development agent within this scope. Based on the OHC operating contract and evidence-first requirements, there are no code changes to be made. The research findings regarding omnichannel and agentic workflows are acknowledged, but implementation requires a specific, bounded slice based on retained-customer need, which is currently absent. The issue acts as a documentation of market gaps rather than a feature implementation request."
