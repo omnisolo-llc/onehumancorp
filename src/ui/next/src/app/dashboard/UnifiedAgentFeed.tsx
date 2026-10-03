@@ -1,7 +1,7 @@
 "use client";
 
 
-import { currentVerifiedQueueOwner, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { currentVerifiedQueueOwner, currentVerifiedQueueLease, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '@/lib/sync/queueIdentity';
 import { subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -37,20 +37,22 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   const [activities, setActivities] = useState<ActivityItem[]>(initialData?.activity || []);
   const [chatInput, setChatInput] = useState("");
   const [chatNotice, setChatNotice] = useState('');
-  const [chatReady, setChatReady] = useState(true);
-  const chatScope = useRef<{ owner: QueueOwner | null; storageEpoch: string | null } | null>(null);
+  const [chatReady, setChatReady] = useState(() => currentVerifiedQueueOwner() !== null);
+  const chatScope = useRef<{ owner: QueueOwner | null; storageEpoch: string | null; expiresAt: number } | null>(null);
+  const chatExpiry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const retireChat = () => {
-    chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(true);
+    clearTimeout(chatExpiry.current); chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(currentVerifiedQueueOwner() !== null);
   };
   useEffect(() => {
     const retire = () => {
-      chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(true);
+      clearTimeout(chatExpiry.current); chatScope.current = null; setChatInput(''); setChatNotice(''); setChatReady(currentVerifiedQueueOwner() !== null);
     };
     const unsubscribe = subscribeOnboardingInvalidation(retire);
     const unsubscribeReadiness = subscribeQueueIdentityReadiness(() => {
       const binding = chatScope.current;
-      if (!binding) return;
+      if (!binding) { setChatReady(currentVerifiedQueueOwner() !== null); return; }
+      if (binding.expiresAt <= Date.now()) { retire(); setChatNotice('Your unsent draft expired. Enter a new draft after verifying your session.'); return; }
       try { if (binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)) { retire(); return; } }
       catch { retire(); return; }
       const current = currentVerifiedQueueOwner();
@@ -60,17 +62,27 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       if (!binding.owner || !sameOwner(binding.owner, current)) retire();
       else setChatReady(true);
     });
-    return () => { unsubscribe(); unsubscribeReadiness(); };
+    // This editor must establish its own lease before accepting private text;
+    // it cannot depend on another dashboard widget finishing verification first.
+    if (!currentVerifiedQueueOwner()) void readQueueOwner().catch(() => {});
+    return () => { clearTimeout(chatExpiry.current); unsubscribe(); unsubscribeReadiness(); };
   }, []);
 
   const editChat = (value: string) => {
-    const current = currentVerifiedQueueOwner();
+    const lease = currentVerifiedQueueLease();
+    const current = lease?.owner;
+    if (!current) { setChatReady(false); return; }
     const previous = chatScope.current;
     if (previous?.owner && (!current || !sameOwner(previous.owner, current))) { retireChat(); return; }
     try {
       const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
-      if (previous && previous.storageEpoch !== storageEpoch) { retireChat(); return; }
-      chatScope.current = { owner: current, storageEpoch };
+      if (previous && (previous.expiresAt <= Date.now() || previous.storageEpoch !== storageEpoch)) { retireChat(); return; }
+      const binding = previous ?? { owner: current, storageEpoch, expiresAt: lease!.expiresAt };
+      chatScope.current = binding;
+      clearTimeout(chatExpiry.current);
+      chatExpiry.current = setTimeout(() => {
+        if (chatScope.current === binding) { retireChat(); setChatNotice('Your unsent draft expired. Enter a new draft after verifying your session.'); }
+      }, Math.min(binding.expiresAt - Date.now(), 2_147_483_647));
       setChatInput(value); setChatNotice(''); setChatReady(true);
     } catch { retireChat(); }
   };
@@ -79,8 +91,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     if (!chatInput.trim()) return;
     const binding = chatScope.current;
     try {
-      if (!binding || !chatReady || binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)
-        || (binding.owner ? !hasVerifiedOfflineQueueOwner(binding.owner) : currentVerifiedQueueOwner() !== null)) {
+      if (!binding?.owner || !chatReady || binding.expiresAt <= Date.now() || binding.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)
+        || !hasVerifiedOfflineQueueOwner(binding.owner)) {
         retireChat(); return;
       }
     } catch { retireChat(); return; }

@@ -2,8 +2,9 @@ import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { UnifiedAgentFeed } from './UnifiedAgentFeed';
 import { QUEUE_IDENTITY_EPOCH_KEY, invalidateQueueOwner, readQueueOwner } from '@/lib/sync/queueIdentity';
+import { invalidateOnboardingSession } from '../onboarding/draftSession';
 vi.mock('../utils/offlineQueue', () => ({ getActions: vi.fn().mockResolvedValue([]), enqueueAction: vi.fn(), removeAction: vi.fn() }));
-beforeEach(async () => { localStorage.clear(); invalidateQueueOwner(); vi.stubGlobal('fetch', vi.fn(async (url:string) => url.endsWith('/session-identity') ? memoryOwner() : Response.json({items:[]}))); await readQueueOwner(); });
+beforeEach(async () => { localStorage.clear(); invalidateOnboardingSession(false); invalidateQueueOwner(); vi.stubGlobal('fetch', vi.fn(async (url:string) => url.endsWith('/session-identity') ? memoryOwner() : Response.json({items:[]}))); await readQueueOwner(); });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 for (const text of ['What is my favorite cake?', 'My favorite cake is chocolate', 'Please remember this private note']) {
  test(`does not manufacture a memory answer or saved receipt for ${text}`, async () => {
@@ -50,7 +51,7 @@ test('hides a draft while its owner is reverified and restores only that same ow
  fireEvent.change(input,{target:{value:'Same owner unsent draft'}});
  let release!: (response:Response)=>void;
  const response = new Promise<Response>(resolve => { release=resolve; });
- vi.mocked(fetch).mockImplementation(() => response);
+ vi.mocked(fetch).mockImplementation((url) => String(url).endsWith('/session-identity') ? response.then(value => value.clone()) : Promise.resolve(Response.json({items:[]})));
  let verification!:ReturnType<typeof readQueueOwner>;
  await act(async () => { verification=readQueueOwner(); });
  try { expect(input).toHaveValue(''); expect(input).toBeDisabled(); }
@@ -73,4 +74,55 @@ test('same-owner verification in a silently replaced session does not adopt the 
  localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY,'new-session-same-owner');
  await act(async () => { await readQueueOwner(); });
  expect(screen.getByPlaceholderText('Message...')).toHaveValue('');
+});
+
+test('does not accept an ownerless draft before initial canonical identity is verified', async () => {
+ invalidateQueueOwner();
+ let release!: (response:Response) => void;
+ const response = new Promise<Response>(resolve => { release=resolve; });
+ vi.mocked(fetch).mockImplementation((url) => String(url).endsWith('/session-identity') ? response.then(value => value.clone()) : Promise.resolve(Response.json({items:[]})));
+ render(<UnifiedAgentFeed initialData={{items:[],activity:[]}} />);
+ const input = screen.getByPlaceholderText('Message...');
+ expect(input).toBeDisabled();
+ fireEvent.change(input,{target:{value:'Text without a verified owner'}});
+ expect(input).toHaveValue('');
+ await act(async () => { release(memoryOwner()); });
+ expect(input).toBeEnabled();
+ fireEvent.change(input,{target:{value:'Verified owner draft'}});
+ fireEvent.click(screen.getByRole('button',{name:'Send'}));
+ expect(input).toHaveValue('Verified owner draft');
+ expect(screen.getByRole('alert')).toHaveTextContent('Your draft has not been sent or saved');
+});
+
+test('an empty editor also follows canonical identity revalidation before accepting text', async () => {
+ render(<UnifiedAgentFeed initialData={{items:[],activity:[]}} />);
+ const input = screen.getByPlaceholderText('Message...');
+ let release!: (response:Response) => void;
+ const response = new Promise<Response>(resolve => { release=resolve; });
+ vi.mocked(fetch).mockImplementation((url) => String(url).endsWith('/session-identity') ? response.then(value => value.clone()) : Promise.resolve(Response.json({items:[]})));
+ let verification!: ReturnType<typeof readQueueOwner>;
+ await act(async () => { verification=readQueueOwner(); });
+ expect(input).toBeDisabled();
+ await act(async () => { release(memoryOwner()); await verification; });
+ expect(input).toBeEnabled();
+});
+
+test('retires the original draft lease before a late same-owner verification can restore it', async () => {
+ const expiresAt = Date.now() + 1500;
+ vi.mocked(fetch).mockImplementation(async (url) => String(url).endsWith('/session-identity') ? Response.json({userId:'owner-a',tenantId:'tenant-a',expiresAt}) : Response.json({items:[]}));
+ await readQueueOwner();
+ render(<UnifiedAgentFeed initialData={{items:[],activity:[]}} />);
+ const input = screen.getByPlaceholderText('Message...');
+ fireEvent.change(input,{target:{value:'Expiring private draft'}});
+ let release!: (response:Response)=>void;
+ const response = new Promise<Response>(resolve => { release=resolve; });
+ vi.mocked(fetch).mockImplementation((url) => String(url).endsWith('/session-identity') ? response.then(value=>value.clone()) : Promise.resolve(Response.json({items:[]})));
+ let verification!: ReturnType<typeof readQueueOwner>;
+ await act(async()=>{ verification=readQueueOwner(); });
+ try {
+  expect(input).toBeDisabled();
+  expect(await screen.findByText('Your unsent draft expired. Enter a new draft after verifying your session.', {}, {timeout:2500})).toBeVisible();
+ } finally { await act(async()=>{ release(memoryOwner()); await verification; }); }
+ expect(input).toHaveValue('');
+ expect(input).toBeEnabled();
 });

@@ -1,6 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { afterEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { UnifiedAgentFeed } from './UnifiedAgentFeed';
+import { invalidateQueueOwner, readQueueOwner } from '@/lib/sync/queueIdentity';
+beforeEach(async () => {
+  invalidateQueueOwner();
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ userId: 'user-1', tenantId: 'tenant-1', expiresAt: Date.now() + 60_000 })));
+  await readQueueOwner();
+});
 vi.mock('../utils/offlineQueue', () => ({ getActions: vi.fn().mockResolvedValue([]), enqueueAction: vi.fn(), removeAction: vi.fn() }));
 afterEach(() => vi.unstubAllGlobals());
 it.each(['', '   '])('does not offer Send for an empty dashboard message: %j', value => {
