@@ -49,12 +49,13 @@ for section in ['dependencies', 'dev-dependencies']:
             spec['path'] = os.path.relpath(dependency, BUILD)
         lines.append(f'{name} = {value(spec)}')
 lines += ['[[test]]', 'name = "portable_migration"', 'path = "../migration_test.rs"']
+lines += ['[[test]]', 'name = "postgres_registration"', 'path = "../postgres_registration_test.rs"']
 lines += ['[profile.dev]', 'debug = 0', 'incremental = false']
 (BUILD / 'Cargo.toml').write_text('\n'.join(lines) + '\n')
-inputs = [ROOT / 'Cargo.toml', ROOT / 'Cargo.lock', ROOT / 'src/server/persistence/migration.rs',
+inputs = [ROOT / 'Cargo.toml', ROOT / 'Cargo.lock', ROOT / 'src/server/db.rs', ROOT / 'src/server/persistence/migration.rs',
           ROOT / 'src/server/persistence/commands.rs', ROOT / 'src/server/lib.rs',
           ROOT / 'src/ui/next/src/lib/auth/authLimits.json',
-          HERE / 'prepare.py', HERE / 'run.sh', HERE / 'README.md', HERE / 'migration_test.rs']
+          HERE / 'prepare.py', HERE / 'run.sh', HERE / 'README.md', HERE / 'migration_test.rs', HERE / 'postgres_registration_test.rs']
 inputs += [p for p in (ROOT / 'src/server/persistence').rglob('*') if p.is_file() and p.suffix in {'.rs', '.sql'}]
 for name in ['auth', 'common', 'config', 'oidc', 'omnisolo', 'telemetry']:
     inputs += [p for p in (ROOT / 'src/server' / name).rglob('*')

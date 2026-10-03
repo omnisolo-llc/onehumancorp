@@ -11,6 +11,30 @@ use crate::{User, user_repository::UserRepository};
 pub mod entities {
     use sea_orm::entity::prelude::*;
 
+    /// The canonical namespace fields used by registration on every database.
+    /// Other tenant settings keep their schema defaults until explicitly configured.
+    pub mod tenant {
+        use super::*;
+
+        #[derive(Clone, Debug, PartialEq, DeriveEntityModel)]
+        #[sea_orm(table_name = "tenants")]
+        pub struct Model {
+            #[sea_orm(primary_key, auto_increment = false)]
+            pub id: String,
+            pub name: String,
+            #[sea_orm(default_value = "free")]
+            pub tier: String,
+            #[sea_orm(default_expr = "Expr::current_timestamp()")]
+            pub created_at: DateTimeUtc,
+            #[sea_orm(default_expr = "Expr::current_timestamp()")]
+            pub updated_at: DateTimeUtc,
+        }
+
+        #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+        pub enum Relation {}
+        impl ActiveModelBehavior for ActiveModel {}
+    }
+
     pub mod user {
         use super::*;
 
@@ -295,6 +319,34 @@ async fn invitation_creator_tenant(
         return Err("invitation unavailable".to_string());
     }
     Ok(creator.tenant_id)
+}
+
+/// Only open registration creates a namespace. A collision aborts the whole
+/// account transaction; it must never turn registration into access to an
+/// existing workspace or change that workspace's paid plan.
+async fn create_registration_namespace(
+    transaction: &DatabaseTransaction,
+    user: &User,
+    tenant_id: &str,
+    mode: RegistrationMode,
+) -> Result<(), String> {
+    if mode != RegistrationMode::Open {
+        return Ok(());
+    }
+    if tenant_id.trim().is_empty() || tenant_id.eq_ignore_ascii_case("system") {
+        return Err("registration namespace unavailable".to_string());
+    }
+    entities::tenant::ActiveModel {
+        id: Set(tenant_id.to_owned()),
+        name: Set(user.username.clone()),
+        tier: Set("free".to_owned()),
+        created_at: Set(user.created_at),
+        updated_at: Set(user.updated_at),
+    }
+    .insert(transaction)
+    .await
+    .map_err(db_error)?;
+    Ok(())
 }
 
 async fn claim_identity_email(
@@ -818,6 +870,7 @@ impl SeaOrmAuthRepository {
             }
         };
         user.organization_id = Some(tenant_id.clone());
+        create_registration_namespace(&transaction, &user, &tenant_id, mode).await?;
         claim_identity_email(
             &transaction,
             &normalized_email,
@@ -1203,6 +1256,7 @@ impl SeaOrmAuthRepository {
             }
         };
         user.organization_id = Some(tenant_id.clone());
+        create_registration_namespace(&transaction, &user, &tenant_id, mode).await?;
         user.oidc_subject = Some(format!("{issuer}|{subject}"));
         claim_identity_email(
             &transaction,
@@ -1597,6 +1651,7 @@ mod atomic_registration_tests {
         let first = connect(url.clone()).await;
         let schema = Schema::new(first.get_database_backend());
         for statement in [
+            schema.create_table_from_entity(entities::tenant::Entity),
             schema.create_table_from_entity(entities::user::Entity),
             schema.create_table_from_entity(entities::application_setting::Entity),
             schema.create_table_from_entity(entities::email_challenge::Entity),

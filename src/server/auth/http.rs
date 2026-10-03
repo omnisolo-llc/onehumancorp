@@ -2726,6 +2726,7 @@ mod tests {
         let connection = Database::connect("sqlite::memory:").await.unwrap();
         let schema = Schema::new(connection.get_database_backend());
         for statement in [
+            schema.create_table_from_entity(entities::tenant::Entity),
             schema.create_table_from_entity(entities::user::Entity),
             schema.create_table_from_entity(entities::application_setting::Entity),
             schema.create_table_from_entity(entities::email_challenge::Entity),
@@ -3019,6 +3020,13 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+        assert_eq!(
+            entities::tenant::Entity::find()
+                .count(repository.connection())
+                .await
+                .unwrap(),
+            0
+        );
         assert_eq!(
             entities::user::Entity::find()
                 .count(repository.connection())

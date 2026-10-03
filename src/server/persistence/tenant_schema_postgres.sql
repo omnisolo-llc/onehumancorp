@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS tenants (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    industry TEXT DEFAULT '',
+    tier TEXT DEFAULT 'free',
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    version BIGINT DEFAULT 1
+);

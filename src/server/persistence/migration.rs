@@ -53,6 +53,16 @@ where
     versions.if_not_exists();
     connection.execute(backend.build(&versions)).await?;
 
+    // Registration must not create a reduced table that prevents the canonical
+    // bootstrap from installing currency, plan and subscription defaults later.
+    // Existing tables and their paid data remain untouched.
+    let tenant_schema = match backend {
+        sea_orm::DatabaseBackend::Sqlite => include_str!("tenant_schema_sqlite.sql"),
+        sea_orm::DatabaseBackend::MySql => include_str!("tenant_schema_mysql.sql"),
+        sea_orm::DatabaseBackend::Postgres => include_str!("tenant_schema_postgres.sql"),
+    };
+    connection.execute_unprepared(tenant_schema).await?;
+
     let mut users = schema.create_table_from_entity(entities::user::Entity);
     users.if_not_exists();
     connection.execute(backend.build(&users)).await?;
@@ -700,8 +710,9 @@ async fn mysql_column_exists<C: ConnectionTrait>(
 mod registration_source_tests {
     use super::AppDatabase;
     use chrono::Utc;
-    use sea_orm::{ConnectionTrait, DatabaseBackend, Statement};
+    use sea_orm::{ConnectionTrait, DatabaseBackend, EntityTrait, Statement};
     use server_auth::seaorm_store::SeaOrmAuthRepository;
+    use server_auth::seaorm_store::entities as auth_entities;
 
     async fn execute(db: &AppDatabase, sql: &str) {
         db.connection().execute_unprepared(sql).await.unwrap();
@@ -741,6 +752,146 @@ mod registration_source_tests {
             row.try_get("", "consumed_by_tenant_id").unwrap(),
         )
     }
+    fn canonical_tenant_sql(backend: DatabaseBackend) -> &'static str {
+        let source = match backend {
+            DatabaseBackend::Postgres => include_str!("../migrations/001_initial.sql"),
+            _ => include_str!("../db.rs"),
+        };
+        let index = usize::from(backend == DatabaseBackend::MySql);
+        let start = source
+            .match_indices("CREATE TABLE IF NOT EXISTS tenants (")
+            .nth(index)
+            .expect("canonical tenant schema must exist")
+            .0;
+        let end = start + source[start..].find(");").unwrap() + 2;
+        &source[start..end]
+    }
+
+    async fn tenant_columns(db: &AppDatabase) -> Vec<(String, String, i64, Option<String>, i64)> {
+        let rows = db
+            .connection()
+            .query_all(Statement::from_string(
+                DatabaseBackend::Sqlite,
+                "PRAGMA table_info(tenants)".to_owned(),
+            ))
+            .await
+            .unwrap();
+        let mut columns: Vec<_> = rows
+            .into_iter()
+            .map(|row| {
+                (
+                    row.try_get("", "name").unwrap(),
+                    row.try_get("", "type").unwrap(),
+                    row.try_get("", "notnull").unwrap(),
+                    row.try_get("", "dflt_value").unwrap(),
+                    row.try_get("", "pk").unwrap(),
+                )
+            })
+            .collect();
+        columns.sort();
+        columns
+    }
+
+    #[tokio::test]
+    async fn portable_first_initialization_preserves_the_complete_canonical_tenant_schema() {
+        let reference = AppDatabase::connect("sqlite::memory:").await.unwrap();
+        execute(&reference, canonical_tenant_sql(DatabaseBackend::Sqlite)).await;
+        let expected = tenant_columns(&reference).await;
+        let db = AppDatabase::connect("sqlite::memory:").await.unwrap();
+        super::migrate(&db).await.unwrap();
+        // This is the unchanged DB::run_migrations statement, applied afterwards.
+        // CREATE IF NOT EXISTS must not leave a reduced portable-first table.
+        execute(&db, canonical_tenant_sql(DatabaseBackend::Sqlite)).await;
+        assert_eq!(tenant_columns(&db).await, expected);
+        execute(
+            &db,
+            "INSERT INTO tenants(id,name) VALUES('schema-defaults','Schema defaults')",
+        )
+        .await;
+        let row=db.connection().query_one(Statement::from_string(DatabaseBackend::Sqlite,
+            "SELECT owner_id, tier, plan_tier, has_claimed_trial_extension, default_currency, is_subscribable, subscription_frequency, subscription_discount_percent, _sync_status, version FROM tenants WHERE id='schema-defaults'".to_owned())).await.unwrap().unwrap();
+        assert_eq!(row.try_get::<Option<String>>("", "owner_id").unwrap(), None);
+        assert_eq!(row.try_get::<String>("", "tier").unwrap(), "free");
+        assert_eq!(row.try_get::<String>("", "plan_tier").unwrap(), "free");
+        assert!(
+            !row.try_get::<bool>("", "has_claimed_trial_extension")
+                .unwrap()
+        );
+        assert_eq!(
+            row.try_get::<String>("", "default_currency").unwrap(),
+            "USD"
+        );
+        assert!(!row.try_get::<bool>("", "is_subscribable").unwrap());
+        assert_eq!(
+            row.try_get::<Option<String>>("", "subscription_frequency")
+                .unwrap(),
+            None
+        );
+        assert_eq!(
+            row.try_get::<i64>("", "subscription_discount_percent")
+                .unwrap(),
+            0
+        );
+        assert_eq!(
+            row.try_get::<String>("", "_sync_status").unwrap(),
+            "pending"
+        );
+        assert_eq!(row.try_get::<i64>("", "version").unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn canonical_first_initialization_preserves_existing_paid_tenant_settings() {
+        let db = AppDatabase::connect("sqlite::memory:").await.unwrap();
+        execute(&db, canonical_tenant_sql(DatabaseBackend::Sqlite)).await;
+        execute(&db, "INSERT INTO tenants(id,owner_id,name,tier,plan_tier,default_currency,has_claimed_trial_extension,subscription_frequency) VALUES('existing','existing-owner','Existing business','pro','business','EUR',true,'month')").await;
+        let columns = tenant_columns(&db).await;
+        super::migrate(&db).await.unwrap();
+        super::migrate(&db).await.unwrap();
+        assert_eq!(tenant_columns(&db).await, columns);
+        let row=db.connection().query_one(Statement::from_string(DatabaseBackend::Sqlite,
+            "SELECT owner_id,name,tier,plan_tier,default_currency,has_claimed_trial_extension,subscription_frequency FROM tenants WHERE id='existing'".to_owned())).await.unwrap().unwrap();
+        for (key, value) in [
+            ("owner_id", "existing-owner"),
+            ("name", "Existing business"),
+            ("tier", "pro"),
+            ("plan_tier", "business"),
+            ("default_currency", "EUR"),
+            ("subscription_frequency", "month"),
+        ] {
+            assert_eq!(row.try_get::<String>("", key).unwrap(), value);
+        }
+        assert!(
+            row.try_get::<bool>("", "has_claimed_trial_extension")
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn portable_tenant_definitions_match_each_complete_canonical_bootstrap() {
+        for (backend, portable) in [
+            (
+                DatabaseBackend::Sqlite,
+                include_str!("tenant_schema_sqlite.sql"),
+            ),
+            (
+                DatabaseBackend::MySql,
+                include_str!("tenant_schema_mysql.sql"),
+            ),
+            (
+                DatabaseBackend::Postgres,
+                include_str!("tenant_schema_postgres.sql"),
+            ),
+        ] {
+            assert_eq!(
+                portable.split_whitespace().collect::<Vec<_>>(),
+                canonical_tenant_sql(backend)
+                    .split_whitespace()
+                    .collect::<Vec<_>>(),
+                "portable tenant columns/defaults must track the actual backend bootstrap"
+            );
+        }
+    }
+
     #[tokio::test]
     async fn upgrading_old_tickets_preserves_history_without_inventing_source_owners() {
         let db = AppDatabase::connect("sqlite::memory:").await.unwrap();
@@ -777,6 +928,14 @@ mod registration_source_tests {
             .consume_ticket_and_create_user("ticket-hash", Utc::now(), user())
             .await
             .unwrap();
+        let tenant =
+            auth_entities::tenant::Entity::find_by_id(created.organization_id.clone().unwrap())
+                .one(db.connection())
+                .await
+                .unwrap()
+                .unwrap();
+        assert_eq!(tenant.name, created.username);
+        assert_eq!(tenant.tier, "free");
         assert_eq!(
             receipt(&db, "new-ticket").await,
             (Some(created.id), created.organization_id)
@@ -794,7 +953,12 @@ mod registration_source_tests {
                 .is_err(),
             "source identity must be part of the actual registration transaction"
         );
-        for table in ["users", "identity_user_roles", "identity_email_claims"] {
+        for table in [
+            "tenants",
+            "users",
+            "identity_user_roles",
+            "identity_email_claims",
+        ] {
             let row = db
                 .connection()
                 .query_one(Statement::from_string(

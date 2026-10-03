@@ -40,6 +40,7 @@ inputs = list(paths.values()) + [ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'.gi
 inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','run.sh','verify_lock.py','test.rs','authority_test.rs','lifecycle_test.rs','writer_test.rs','database_guard.py','test_database_guard.py','README.md']]
 for name in ['auth', 'common', 'config', 'oidc', 'omnisolo', 'telemetry']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix == '.rs' or p.name == 'Cargo.toml')]
+inputs += list((ROOT/'src/server/persistence').glob('*.sql'))
 inputs += list((ROOT/'src/proto').rglob('*.proto'))
 inputs += [p for p in [ROOT/'.cargo/config.toml', ROOT/'src/ui/next/src/lib/auth/authLimits.json'] if p.is_file()]
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))},indent=2)+'\n')

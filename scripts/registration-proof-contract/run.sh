@@ -2,6 +2,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
+# Test-owned repositories and a public fixture signer must never fall back to
+# inherited databases, Redis, secret files or a user's persisted auth keys.
+unset DATABASE_URL DATABASE_URL_FILE OMNISOLO_DATABASE_URL OMNISOLO_DATABASE_URL_FILE
+unset REDIS_URL REDIS_URL_FILE OMNISOLO_REDIS_URL JWT_SECRET_FILE OMNISOLO_SQLITE_KEY
+unset ADMIN_USERNAME ADMIN_PASSWORD ADMIN_EMAIL
+export JWT_SECRET=public-local-registration-regression-signing-key-only
 export TEST_WORKSPACE="$PWD"
 export TEST_TMPDIR="$(mktemp -d /tmp/ohc-registration-proof.XXXXXX)"
 trap 'rm -rf -- "$TEST_TMPDIR"' EXIT
