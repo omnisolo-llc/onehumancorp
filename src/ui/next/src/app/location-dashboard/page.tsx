@@ -1,5 +1,17 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { fetchForOwnedBusinessAction, fetchForOwnedBusinessRead, onboardingOwner, onboardingSessionEpoch, openOnboardingSession, subscribeOnboardingInvalidation } from '../onboarding/draftSession';
+import { hasVerifiedOfflineQueueOwner, QUEUE_IDENTITY_EPOCH_KEY, sameOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '@/lib/sync/queueIdentity';
+
+type LocationScope = { owner: QueueOwner; epoch: number; storageEpoch: string | null };
+function locationScopeActive(scope: LocationScope | null, requireFreshIdentity = true): scope is LocationScope {
+  const owner = onboardingOwner();
+  try {
+    return !!scope && !!owner && scope.epoch === onboardingSessionEpoch() && sameOwner(scope.owner, owner)
+      && scope.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)
+      && (!requireFreshIdentity || hasVerifiedOfflineQueueOwner(scope.owner));
+  } catch { return false; }
+}
 
 interface Task {
   id: string;
@@ -37,12 +49,40 @@ export default function LocationManagerDashboard() {
   const requestEpoch = useRef(0);
   const pending = useRef<AbortController | null>(null);
   const submitLock = useRef(false);
+  const scope = useRef<LocationScope | null>(null);
+  const [identityReady, setIdentityReady] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const verificationLock = useRef(false);
+
+  const retireView = useCallback(() => {
+    scope.current = null; ++requestEpoch.current; pending.current?.abort(); pending.current = null; submitLock.current = false;
+    setIdentityReady(false); setTasks([]); setAlerts([]); setStaff([]); setLoaded(false);
+    setSelectedAlert(null); setShowEscalationModal(false); setEscalationDraft('');
+    setIsDrafting(false); setIsSubmitting(false); setEscalationError(''); setVerifying(false);
+    setDataError('Your session changed. Reload the location dashboard to verify access.');
+  }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let active = true;
+    let retired = false;
+    const retire = () => {
+      retired = true; scope.current = null;
+      if (active) retireView();
+    };
+    const unsubscribeSession = subscribeOnboardingInvalidation(retire);
+    const unsubscribeIdentity = subscribeQueueIdentityReadiness(() => {
+      const current = scope.current;
+      if (current && hasVerifiedOfflineQueueOwner() && !hasVerifiedOfflineQueueOwner(current.owner)) retire();
+      else if (active) setIdentityReady(locationScopeActive(current));
+    });
     const read = async () => {
+      let current: LocationScope | null = null;
       try {
-        const response = await fetch('/api/v1/location/dashboard', { signal: controller.signal });
+        const owner = await openOnboardingSession();
+        if (!active || retired) return;
+        current = { owner, epoch: onboardingSessionEpoch(), storageEpoch: localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) };
+        scope.current = current; setIdentityReady(locationScopeActive(current));
+        const response = await fetchForOwnedBusinessRead('/api/v1/location/dashboard', owner);
         if (response.status !== 200) throw new Error('unavailable');
         const data = await response.json();
         const rows = (value: unknown, fields: string[]) => Array.isArray(value) && value.length <= 1000
@@ -50,14 +90,39 @@ export default function LocationManagerDashboard() {
         if (!data || data.error != null || data.success !== undefined && data.success !== true
           || !rows(data.tasks, ['id','title','status']) || !rows(data.alerts, ['id','message','severity'])
           || !rows(data.staff, ['id','name','role'])) throw new Error('invalid data');
-        if (!controller.signal.aborted) { setTasks(data.tasks); setAlerts(data.alerts); setStaff(data.staff); setLoaded(true); }
+        if (!active || retired || scope.current !== current) return;
+        if (!locationScopeActive(current)) { retire(); return; }
+        setTasks(data.tasks); setAlerts(data.alerts); setStaff(data.staff); setLoaded(true);
       } catch {
-        if (!controller.signal.aborted) setDataError('Location information could not be loaded. No staff, tasks or summaries were inferred.');
+        if (active && !retired) {
+          if (current && !locationScopeActive(current, false)) retire();
+          else setDataError('Location information could not be loaded. No staff, tasks or summaries were inferred.');
+        }
       }
     };
     void read();
-    return () => { controller.abort(); ++requestEpoch.current; pending.current?.abort(); };
-  }, []);
+    return () => {
+      active = false; scope.current = null; ++requestEpoch.current; pending.current?.abort();
+      unsubscribeSession(); unsubscribeIdentity();
+    };
+  }, [retireView]);
+
+  const reverifyAccess = async () => {
+    const current = scope.current;
+    if (verificationLock.current || !locationScopeActive(current, false)) return;
+    verificationLock.current = true; setVerifying(true);
+    try {
+      const verified = await openOnboardingSession();
+      if (scope.current !== current) return;
+      if (!sameOwner(current.owner, verified) || !locationScopeActive(current)) retireView();
+      else setIdentityReady(true);
+    } catch {
+      if (scope.current === current) retireView();
+    } finally {
+      verificationLock.current = false;
+      if (scope.current === current) setVerifying(false);
+    }
+  };
 
   const closeEscalation = () => {
     ++requestEpoch.current; pending.current?.abort(); pending.current = null;
@@ -66,48 +131,64 @@ export default function LocationManagerDashboard() {
   };
 
   const handleEscalateClick = (alert: Alert) => {
+    const current = scope.current;
+    if (!locationScopeActive(current, false)) return;
+    const active = () => {
+      const valid = scope.current === current && locationScopeActive(current);
+      if (!valid && scope.current === current && !locationScopeActive(current, false)) retireView();
+      return valid;
+    };
     pending.current?.abort(); const epoch = ++requestEpoch.current;
     const controller = new AbortController(); pending.current = controller;
     setSelectedAlert(alert); setEscalationDraft(''); setEscalationError(''); setShowEscalationModal(true); setIsDrafting(true);
     const draft = async () => {
       try {
-        const response = await fetch('/api/v1/agent/draft-escalation', {
+        const response = await fetchForOwnedBusinessAction('/api/v1/agent/draft-escalation', {
           method:'POST', signal:controller.signal, headers:{'Content-Type':'application/json'},
           body:JSON.stringify({alertId:alert.id,context:alert.message}),
-        });
+        }, current.owner, () => { if (!active() || requestEpoch.current !== epoch || controller.signal.aborted) throw new Error('Location view changed'); });
         if (response.status !== 200) throw new Error('unavailable');
         const data=await response.json();
         if (!data || data.error != null || data.success !== undefined && data.success !== true
           || typeof data.draft !== 'string' || !data.draft.trim() || data.draft.length > 200_000) throw new Error('invalid draft');
-        if (requestEpoch.current === epoch && !controller.signal.aborted) setEscalationDraft(data.draft);
+        if (active() && requestEpoch.current === epoch && !controller.signal.aborted) setEscalationDraft(data.draft);
       } catch {
-        if (requestEpoch.current === epoch && !controller.signal.aborted) setEscalationError('No escalation draft was confirmed. The recorded summary remains unchanged.');
+        if (active() && requestEpoch.current === epoch && !controller.signal.aborted) setEscalationError('No escalation draft was confirmed. The recorded summary remains unchanged.');
       } finally {
-        if (requestEpoch.current === epoch && !controller.signal.aborted) setIsDrafting(false);
+        if (scope.current === current && locationScopeActive(current, false) && requestEpoch.current === epoch && !controller.signal.aborted) setIsDrafting(false);
       }
     };
     void draft();
   };
 
   const submitEscalation = async () => {
+    const current = scope.current;
+    if (!locationScopeActive(current, false)) return;
+    const active = () => {
+      const valid = scope.current === current && locationScopeActive(current);
+      if (!valid && scope.current === current && !locationScopeActive(current, false)) retireView();
+      return valid;
+    };
     if (!selectedAlert || isDrafting || !escalationDraft.trim() || submitLock.current) return;
     submitLock.current=true; setIsSubmitting(true); setEscalationError('');
     const epoch=requestEpoch.current; const controller=new AbortController();pending.current=controller;
     try {
-      const response=await fetch('/api/v1/location/escalate', {
+      const response=await fetchForOwnedBusinessAction('/api/v1/location/escalate', {
         method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},
         body:JSON.stringify({alertId:selectedAlert.id,draft:escalationDraft}),
-      });
+      }, current.owner, () => { if (!active() || requestEpoch.current !== epoch || controller.signal.aborted) throw new Error('Location view changed'); });
       // The current backend explicitly reports this capability unavailable.
       // A transport success alone cannot prove a durable escalation or delivery.
       if (!response.ok) throw new Error('unavailable');
       throw new Error('A verified durable escalation receipt is required');
     } catch {
-      if (requestEpoch.current === epoch && !controller.signal.aborted) setEscalationError('No escalation was confirmed. Your draft and the recorded summary are retained.');
+      if (active() && requestEpoch.current === epoch && !controller.signal.aborted) setEscalationError('No escalation was confirmed. Your draft and the recorded summary are retained.');
     } finally {
-      if (requestEpoch.current === epoch) {submitLock.current=false;setIsSubmitting(false);}
+      if (scope.current === current && locationScopeActive(current, false) && requestEpoch.current === epoch) {submitLock.current=false;setIsSubmitting(false);}
     }
   };
+
+  const privateReady = identityReady && locationScopeActive(scope.current);
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans">
@@ -116,10 +197,13 @@ export default function LocationManagerDashboard() {
         <p className="text-sm text-gray-500">Recorded staff and task information</p>
       </header>
 
-      <main className="p-4 max-w-[375px] mx-auto md:max-w-2xl lg:max-w-4xl space-y-6">
+      <main aria-busy={(!loaded && !dataError) || verifying} className="p-4 max-w-[375px] mx-auto md:max-w-2xl lg:max-w-4xl space-y-6">
+        <button type="button" onClick={reverifyAccess} disabled={!scope.current || verifying}>Reverify access</button>
         {dataError && <p role="alert">{dataError}</p>}
+        {!privateReady && loaded && !dataError && <p role="status">Verify your session to view recorded location information.</p>}
         {!loaded && !dataError && <p role="status">Loading recorded location information…</p>}
 
+        {privateReady && <>
         {/* Active Alerts */}
         <section>
           <h2 className="text-lg font-medium mb-3">Staff Summaries</h2>
@@ -181,10 +265,11 @@ export default function LocationManagerDashboard() {
             ))}
           </div>
         </section>
+        </>}
       </main>
 
       {/* Escalation Modal */}
-      {showEscalationModal && (
+      {privateReady && showEscalationModal && (
         <div role="dialog" aria-modal="true" aria-label="Escalate Issue" className="fixed inset-0 bg-black/50 backdrop-blur-[30px] saturate-[210%] z-[100] flex items-end md:items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 w-full max-w-md rounded-3xl p-6 shadow-2xl animate-in slide-in-from-bottom-4 md:slide-in-from-bottom-0 md:zoom-in-95">
             <h3 className="text-xl font-semibold mb-2">Escalate Issue</h3>

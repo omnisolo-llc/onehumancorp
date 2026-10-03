@@ -2,14 +2,21 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import Page from './page';
+import { invalidateOnboardingSession } from '../onboarding/draftSession';
+import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
 const fetcher=vi.fn();
 const empty={tasks:[],alerts:[],staff:[]};
 const actual={tasks:[{id:'t',title:'Recorded task',status:'PENDING'}],alerts:[{id:'a',message:'Recorded manager summary',severity:'info'}],staff:[{id:'s',name:'Recorded staff member',role:'Manager'}]};
-beforeEach(()=>{fetcher.mockReset();vi.stubGlobal('fetch',fetcher);});
+beforeEach(()=>{
+ localStorage.clear();invalidateQueueOwner();invalidateOnboardingSession();fetcher.mockReset();
+ vi.stubGlobal('fetch',(url:string, options:RequestInit)=>url==='/api/v1/auth/session-identity'
+  ? Promise.resolve(Response.json({userId:'owner',tenantId:'tenant',expiresAt:Date.now()+60000}))
+  : fetcher(url, options));
+});
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 test.each([401,503])('failed read%s stays unavailable and never inserts sample business facts',async status=>{
  fetcher.mockResolvedValue(Response.json({error:'unavailable'},{status}));render(<Page/>);
- await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent('Location information could not be loaded'));
+ await waitFor(()=>expect(screen.getByRole('alert')).toHaveTextContent(status===401?'Your session changed':'Location information could not be loaded'));
  for(const text of ['Alice','Restock coffee beans','Fix receipt printer','3 customer complaints','Location A'])expect(screen.queryByText(text,{exact:false})).not.toBeInTheDocument();
 });
 test('verified empty data stays empty with no invented active staff or tasks',async()=>{
@@ -33,6 +40,6 @@ test('unavailable send never removes the summary or discards a reviewed draft',a
 test('cancelled generation cannot reopen a modal or install its late draft',async()=>{
  let complete!:(value:Response)=>void;const pending=new Promise<Response>(r=>{complete=r;});
  fetcher.mockResolvedValueOnce(Response.json(actual)).mockReturnValueOnce(pending);render(<Page/>);fireEvent.click(await screen.findByRole('button',{name:'Escalate to Owner'}));
- fireEvent.click(screen.getByRole('button',{name:'Cancel'}));await act(async()=>complete(Response.json({draft:'Late unwanted draft'})));
+ fireEvent.click(await screen.findByRole('button',{name:'Cancel'}));await act(async()=>complete(Response.json({draft:'Late unwanted draft'})));
  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();expect(screen.queryByText('Late unwanted draft')).not.toBeInTheDocument();
 });

@@ -81,14 +81,14 @@ function workflowReadDestination(url: string): boolean {
     (before === null || new RegExp(`^[0-9]{1,12}:${uuid}$`).test(before) && !before.endsWith('00000000-0000-0000-0000-000000000000'));
 }
 export async function fetchForOwnedBusinessRead(url: string, expected: DraftOwner | null): Promise<Response> {
-  if (!['/api/v1/billing/my-plan', '/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity', '/api/v1/walkthrough/store-setup'].includes(url) && !workflowReadDestination(url)) throw new Error('Invalid business read destination');
+  if (!['/api/v1/location/dashboard', '/api/v1/billing/my-plan', '/api/v1/pos/orders', '/api/v1/pos/inventory', '/api/v1/agents/execution-policy', '/api/v1/agents/workflows', '/api/v1/agents/approvals', '/api/v1/agents/approvals/activity', '/api/v1/walkthrough/store-setup'].includes(url) && !workflowReadDestination(url)) throw new Error('Invalid business read destination');
   const intended = expected ? { ...expected } : null;
   if (!intended || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. Please reopen this view.');
   return authenticatedOnboardingFetch(url, { method: 'GET' }, intended, epoch);
 }
 /** Existing business mutations share session authority, not draft-write queuing. */
 export async function fetchForOwnedBusinessAction(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
-  if (!['/api/v1/billing/create-checkout-session', '/api/v1/billing/create-billing-portal-session', '/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/brand_toolbox/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'].includes(url)) throw new Error('Invalid business action destination');
+  if (!['/api/v1/agent/draft-escalation', '/api/v1/location/escalate', '/api/v1/billing/create-checkout-session', '/api/v1/billing/create-billing-portal-session', '/api/v1/booking/services', '/api/v1/builder/generate', '/api/v1/builder/brand_toolbox/generate', '/api/v1/builder/geo_score', '/api/v1/builder/auto_seo', '/api/v1/builder/publish_draft', '/api/v1/agents/hire'].includes(url)) throw new Error('Invalid business action destination');
   if ((options.method ?? 'GET').toUpperCase() !== 'POST') throw new Error('Owned business actions require POST');
   if (!expected || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. Please reopen setup.');
   const before = epoch;
