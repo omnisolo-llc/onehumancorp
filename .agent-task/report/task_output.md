@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "[research] Implement Centralized Inventory & Distributed POS Architecture"
+issue_description: "The issue requests the implementation of a distributed POS system and centralized inventory architecture. However, RESEARCH.md explicitly states that new verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines, and harness adapters require evidence and the expansion gate in RESEARCH.md; otherwise, they mandate a blocked or no-work finding. The prerequisite evidence is not present."
+issue_priority: "P1"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
