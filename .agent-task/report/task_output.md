@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Agentic Quote Generator & Service Booking Flow for Field Services"
+issue_description: "New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines, and harness adapters are blocked by default and require explicit evidence and passing the expansion gate in RESEARCH.md. The requested field services booking flow represents an unvalidated new vertical without the required evidence."
