@@ -17,6 +17,7 @@ tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "serde"] }
 server_auth = { path = "../../src/server/auth" }
+server_telemetry = { path = "../../src/server/telemetry" }
 server_common = { path = "../../src/server/common" }
 server_integrations_shippo = { path = "../../src/server/integrations/shippo" }
 tower = { version = "0.5", features = ["util"] }

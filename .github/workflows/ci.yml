@@ -927,6 +927,14 @@ jobs:
         env:
           CARGO_TARGET_DIR: target
         run: python3 scripts/focused_ci_gate.py mesh-startup-contract
+      - name: Fetch locked NATS metadata dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/nats-metadata-contract/fetch.sh
+      - name: Verify NATS metadata and handshake redaction
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py nats-metadata-contract
       - name: Verify approval read-after-write consistency
         if: ${{ !cancelled() }}
         env:

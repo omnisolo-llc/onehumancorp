@@ -157,3 +157,44 @@ for (const route of ['/onboarding', '/share-card']) {
     } finally { await first.close(); }
   });
 }
+
+for (const route of ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view']) {
+  test(`a persisted quote action on ${route} cannot erase the next owned case's inventory`, async ({ browser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated app base URL is required');
+    const first = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+    try {
+      const initial = await first.navigate(route);
+      const id = initial.quoteFixture!.quoteId;
+      const baseline = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
+      let editing: string[] | undefined;
+      if (route === '/quotes/e2e-id') {
+        await prepareClickAuditState(first.page, route, 'editing');
+        editing = (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key);
+        await expect(first.page.getByRole('button', { name: 'Save Changes', exact: true })).toBeVisible();
+        expect(editing.some(key => !baseline.includes(key))).toBe(true);
+        await first.page.getByRole('button', { name: 'Cancel edits', exact: true }).click();
+        assertSameClickInventory(baseline, (await tagClickTargets(first.page, first.actor.namespace, first.actor.canonicalIds)).map(target => target.key));
+      }
+      const customer = route === '/quote/e2e-id' || route === '/proposals/customer-view';
+      await first.page.getByRole('button', { name: customer ? 'Accept quote' : 'Approve quote', exact: true }).click();
+      await expect.poll(async () => {
+        const response = await first.page.request.get(`/api/v1/quotes/${id}`);
+        expect(response.status()).toBe(200);
+        return (await response.json()).quote.status;
+      }).toBe(customer ? 'ACCEPTED' : 'SENT');
+      const second = await createDashboardAuditCase(browser, baseURL, { width: 1280, height: 720 });
+      try {
+        const restored = await second.navigate(route);
+        expect(restored.quoteFixture!.quoteId).not.toBe(id);
+        expect(second.actor.tenantId).not.toBe(first.actor.tenantId);
+        assertSameClickInventory(baseline, (await tagClickTargets(second.page, second.actor.namespace, second.actor.canonicalIds)).map(target => target.key));
+        if (editing) {
+          await prepareClickAuditState(second.page, route, 'editing');
+          assertSameClickInventory(editing, (await tagClickTargets(second.page, second.actor.namespace, second.actor.canonicalIds)).map(target => target.key));
+        }
+        const rows = await e2eDbQuery('SELECT status FROM quotes WHERE id=$1 AND tenant_id=$2', [id, first.actor.tenantId]);
+        expect(rows).toEqual([{ status: customer ? 'ACCEPTED' : 'SENT' }]);
+      } finally { await second.close(); }
+    } finally { await first.close(); }
+  });
+}

@@ -45,6 +45,7 @@ pub mod recovery;
 pub mod search;
 pub mod settings;
 pub mod shipping;
+pub mod ui_orders;
 pub mod subscription;
 
 pub mod assistant;

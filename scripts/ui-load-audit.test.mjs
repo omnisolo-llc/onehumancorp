@@ -29,6 +29,8 @@ async function auditPages(pages) {
     toBeGreaterThan: minimum => assert.ok(value > minimum),
     toEqual: expected => { assert.equal(expected.length, 0); failures = Array.from(value); },
   });
+  const quoteRoutes = ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view'];
+  const preparedQuotes = [];
   const dependencies = {
     './fixtures': { test: register, expect },
     '../../scripts/ui-click-audit.cjs': { discoverAppRoutes: () => pages.map(page => page.route) },
@@ -42,6 +44,10 @@ async function auditPages(pages) {
       return { finalUrl: `http://127.0.0.1:44041${route}` };
     } },
     './support/dashboard_audit_fixture': {},
+    './support/quote_audit_fixture': { quoteAuditRoutes: new Set(quoteRoutes), prepareQuoteAudit: async (_page, _baseURL, route) => {
+      preparedQuotes.push(route); visited.push(route);
+      return { finalUrl: `http://127.0.0.1:44041${pages.find(page => page.route === route).recordRoute}` };
+    } },
     '../../scripts/ui-audit-fixture.cjs': {},
     '../../scripts/ui-audit-inventory.cjs': {},
   };
@@ -58,7 +64,8 @@ async function auditPages(pages) {
     locator: () => ({ innerText: async () => current().text }),
   } });
   assert.deepEqual(visited, pages.map(page => page.route), 'every discovered route must still be audited');
-  assert.deepEqual(requestUrls, pages.map(page => `http://127.0.0.1:44041${page.route}`));
+  assert.deepEqual(requestUrls, pages.map(page => `http://127.0.0.1:44041${page.recordRoute ?? page.route}`));
+  assert.deepEqual(preparedQuotes, pages.filter(page => quoteRoutes.includes(page.route)).map(page => page.route));
   return failures;
 }
 
@@ -105,3 +112,13 @@ test('real load audit retains HTTP errors and uncaught exceptions independently 
   ]);
   assert.deepEqual(failures, ['/missing: HTTP 404', '/failed: HTTP 500', 'uncaught page error: Cannot read properties of undefined']);
 });
+
+for (const route of ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view']) {
+  test(`the global load audit prepares and inspects the actual record document for ${route}`, async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const recordRoute = route.endsWith('/e2e-id') ? route.replace('e2e-id', id) : `${route}?id=${id}`;
+    assert.deepEqual(await auditPages([{ route, recordRoute, text: 'Actual persisted quote' }]), []);
+    const failed = await auditPages([{ route, recordRoute, text: 'Not Found\nQuote not found' }]);
+    assert.equal(failed.length, 1, 'preparation must never whitelist a broken quote page');
+  });
+}

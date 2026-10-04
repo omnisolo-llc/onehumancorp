@@ -9,6 +9,7 @@ import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
 import { createDashboardAuditCase, isolatedClickAuditRoutes, clickAuditStates, prepareClickAuditState } from './support/dashboard_audit_fixture';
+import { prepareQuoteAudit, quoteAuditRoutes } from './support/quote_audit_fixture';
 import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
 import { runFiniteClickInventory, runDynamicClickInventory, scopeClickInventory, FINITE_CLICK_CASE_BUDGET } from '../../scripts/ui-audit-inventory.cjs';
 
@@ -112,7 +113,7 @@ async function visibleText(page: Page) {
 }
 
 const auditBaseURL = process.env.BASE_URL || 'http://127.0.0.1:18789';
-const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
+const navigateApp = createAuditNavigation(auditBaseURL, async (page) => {
   await authenticateRequest(page.request, {
     username: E2E_ADMIN_USER.email,
     password: E2E_ADMIN_USER.password,
@@ -121,6 +122,13 @@ const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
 });
 
 
+// Every read-only sweep also needs a real quote, including query-based pages.
+// API-backed creation starts from a verified same-origin authenticated document.
+async function gotoReady(page: Page, route: string): Promise<AuditNavigationReceipt> {
+  return quoteAuditRoutes.has(route)
+    ? prepareQuoteAudit(page, auditBaseURL, route, navigateApp)
+    : navigateApp(page, route);
+}
 
 async function auditInteractivePurposeForRoute(page: Page, route: string) {
   await gotoReady(page, route);

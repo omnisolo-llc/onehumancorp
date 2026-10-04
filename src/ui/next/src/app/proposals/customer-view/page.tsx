@@ -10,7 +10,7 @@ function CustomerProposalViewContent() {
 }
 
 export default function CustomerProposalView() {
-  return <Suspense fallback={<p role="status">Loading quote...</p>}>
+  return <Suspense fallback={<p role="status" aria-busy="true">Loading quote...</p>}>
     <CustomerProposalViewContent />
   </Suspense>;
 }

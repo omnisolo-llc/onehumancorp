@@ -6329,73 +6329,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    async fn load_ui_orders_from_db(
-        db: &crate::db::DB,
-        tenant_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-        match &db.store {
-            crate::db::DbStore::Postgres => {
-                let mut tx = db.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                let res = if mobile_optimized {
-                    sqlx::query("SELECT o.id, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status FROM orders o WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&mut *tx)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }).collect())
-                } else {
-                    sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&mut *tx)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-                };
-                tx.commit().await?;
-                res
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                if mobile_optimized {
-                    sqlx::query("SELECT o.id, CAST(COALESCE(o.total_amount, 0.0) AS REAL) AS total_amount, COALESCE(o.status, '') AS status FROM orders o WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }).collect())
-                } else {
-                    sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS REAL) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(CAST(o.created_at AS TEXT), '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-                }
-            }
-        }
-    }
-
     async fn ui_dashboard_analytics_briefing_handler(
         axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
         axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -7660,7 +7593,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             &o_key_clone,
                             std::time::Duration::from_secs(5),
                             move || async move {
-                                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized)
+                                api::ui_orders::load(&db_clone, &t_clone, mobile_optimized, None)
                                     .await
                                     .ok()
                             },
@@ -8135,49 +8068,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }
             None => {
                 tracing::error!("Failed to fetch UI priority tasks");
-                (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    axum::Json(serde_json::json!([])),
-                )
-                    .into_response()
-            }
-        }
-    }
-
-    async fn list_ui_orders_handler(
-        axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-        axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-        axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
-    ) -> axum::response::Response {
-        use axum::response::IntoResponse;
-        let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
-            return axum::http::StatusCode::UNAUTHORIZED.into_response();
-        };
-        let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-
-        let cache_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
-        let cache = UI_ORDERS_CACHE
-            .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-        let items_opt = cache
-            .get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
-                let db = db.clone();
-                let t = tenant_id.clone();
-                move || async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await.ok() }
-            })
-            .await;
-
-        match items_opt {
-            Some(orders) => {
-                let fields = query.fields.as_deref();
-                let shaped = ::server_utils::payload_shaper::shape_payload(
-                    serde_json::to_value(orders).unwrap_or_default(),
-                    fields,
-                );
-                (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
-            }
-            None => {
-                ::server_telemetry::record_error_signal("[bug] Failed to fetch UI orders");
-                tracing::error!("Failed to fetch UI orders");
                 (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     axum::Json(serde_json::json!([])),
@@ -9024,7 +8914,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/v1/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
                 .route("/api/v1/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
                 .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
-                .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+                .merge(api::ui_orders::router(db.clone()))
                 .route(
                     "/api/v1/ui/inventory",
                     axum::routing::get(api::pos::get_inventory_handler)

@@ -152,8 +152,9 @@ function QuotingContent() {
                   </div>
                   <div className="flex items-center gap-4 self-end sm:self-auto">
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Qty</label>
+                      <label htmlFor={`quote-item-quantity-${item.id}`} className="text-xs text-gray-500 font-medium uppercase tracking-wider">Qty{' '}<span className="sr-only">for {item.description}</span></label>
                       <input
+                        id={`quote-item-quantity-${item.id}`}
                         type="number"
                         min="1"
                         value={item.quantity}
@@ -164,8 +165,9 @@ function QuotingContent() {
                       />
                     </div>
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-gray-500 font-medium uppercase tracking-wider">Price ($)</label>
+                      <label htmlFor={`quote-item-price-${item.id}`} className="text-xs text-gray-500 font-medium uppercase tracking-wider">Price ($){' '}<span className="sr-only">for {item.description}</span></label>
                       <input
+                        id={`quote-item-price-${item.id}`}
                         type="number"
                         min="0"
                         step="0.01"

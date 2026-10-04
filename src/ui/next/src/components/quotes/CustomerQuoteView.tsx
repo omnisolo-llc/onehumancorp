@@ -72,10 +72,12 @@ export function CustomerQuoteView({ id }: { id: string }) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [refresh, setRefresh] = useState(0);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reconcile, setReconcile] = useState(false);
   const operation = useRef(0);
   const busyRef = useRef(false);
+  const validReference = QUOTE_ID_PATTERN.test(id);
 
   useEffect(() => {
     const current = ++operation.current;
@@ -84,18 +86,24 @@ export function CustomerQuoteView({ id }: { id: string }) {
     setQuote(null);
     setLoadError(null);
     setActionError(null);
+    setRefreshNotice(null);
     setReconcile(false);
     if (!QUOTE_ID_PATTERN.test(id)) {
       setLoadError('Quote not found.');
+      setRefreshNotice('The quote reference is invalid. Open a valid quote link.');
       setLoading(false);
       return () => { ++operation.current; controller.abort(); };
     }
     readQuote(id, controller.signal).then(value => {
       if (current !== operation.current) return;
       setQuote(value);
+      if (refresh > 0) setRefreshNotice(value ? 'Quote refreshed from saved data.' : 'Refresh complete. Quote not found.');
       if (!value) setLoadError('Quote not found.');
     }).catch(() => {
-      if (current === operation.current) setLoadError('This quote is unavailable.');
+      if (current === operation.current) {
+        setLoadError('This quote is unavailable.');
+        if (refresh > 0) setRefreshNotice('Refresh failed. Quote could not be loaded.');
+      }
     }).finally(() => {
       if (current === operation.current) setLoading(false);
     });
@@ -154,10 +162,11 @@ export function CustomerQuoteView({ id }: { id: string }) {
     }
   }
 
-  const refreshButton = <button className={buttonClass} disabled={busy} onClick={() => setRefresh(value => value + 1)} type="button">Refresh quote</button>;
-  if (loading) return <p className="py-10 text-sm text-gray-600" role="status">Loading quote...</p>;
+  const refreshButton = <button className={buttonClass} disabled={busy || !validReference} onClick={() => setRefresh(value => value + 1)} type="button">Refresh quote</button>;
+  if (loading) return <p className="py-10 text-sm text-gray-600" role="status" aria-busy="true">Loading quote...</p>;
   if (!quote) return <section className="app-panel max-w-lg space-y-4 rounded-lg p-5">
     <p role="alert">{loadError ?? 'Quote not found.'}</p>
+    {refreshNotice && <p role="status">{refreshNotice}</p>}
     {refreshButton}
   </section>;
 
@@ -202,6 +211,7 @@ export function CustomerQuoteView({ id }: { id: string }) {
       </button>}
     </>}
     {actionError && <p role="alert">{actionError}</p>}
+    {refreshNotice && <p role="status">{refreshNotice}</p>}
     {refreshButton}
   </div>;
 }

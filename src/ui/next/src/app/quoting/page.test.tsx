@@ -17,6 +17,24 @@ beforeEach(() => { mock.id = '11111111-1111-4111-8111-111111111111'; mock.enqueu
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const clickApprove = async () => { const button = await screen.findByTestId('quote-approve-btn'); fireEvent.click(button); return button; };
 describe('quote owner approval acknowledgement', () => {
+  it('associates each editable quantity and price with its visible line-item label', async () => {
+    setup();
+    const detail = quote();
+    detail.line_items.push({ ...detail.line_items[0], id: 'line-b', description: 'Additional work' });
+    transport.mockResolvedValueOnce(Response.json(detail));
+    render(<Page />);
+    await screen.findByText('Additional work');
+    const controls = ['Reviewed work', 'Additional work'].flatMap(description => [
+      screen.getByRole('spinbutton', { name: `Qty for ${description}` }),
+      screen.getByRole('spinbutton', { name: `Price ($) for ${description}` }),
+    ]);
+    expect(new Set(controls.map(control => control.id)).size).toBe(4);
+    for (const control of controls) {
+      expect(control).toBeEnabled();
+      expect((control as HTMLInputElement).labels).toHaveLength(1);
+      expect((control as HTMLInputElement).labels![0].htmlFor).toBe(control.id);
+    }
+  });
   it('does not claim customer acceptance while either write is pending and prevents duplicate clicks', async () => {
     const pending = deferred<Response>(); setup(async () => pending.promise); render(<Page />);
     const button = await clickApprove(); fireEvent.click(button);

@@ -3,10 +3,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InteractiveQuotePage from './page';
 import CustomerProposalView from '../../proposals/customer-view/page';
 
-const route = vi.hoisted(() => ({ id: '' }));
+const route = vi.hoisted(() => ({ id: '', pendingSearchParams: null as Promise<void> | null }));
 vi.mock('next/navigation', () => ({
   useParams: () => ({ id: route.id }),
-  useSearchParams: () => new URLSearchParams(route.id ? { id: route.id } : {}),
+  useSearchParams: () => {
+    if (route.pendingSearchParams) throw route.pendingSearchParams;
+    return new URLSearchParams(route.id ? { id: route.id } : {});
+  },
 }));
 
 const id = '11111111-1111-4111-8111-111111111111';
@@ -40,6 +43,7 @@ const successfulRead = () => Response.json(accepted());
 
 beforeEach(() => {
   route.id = id;
+  route.pendingSearchParams = null;
   fetcher.mockReset();
 });
 afterEach(cleanup);
@@ -57,6 +61,62 @@ describe.each([
     await ready();
     fireEvent.click(acceptButton());
   }
+
+  it('marks the real read as pending until its result is rendered', async () => {
+    const pending = deferred<Response>();
+    fetcher.mockReturnValueOnce(pending.promise);
+    render(<Page />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading quote...');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByRole('button', { name: 'Accept quote' })).toBeNull();
+    await act(async () => pending.resolve(Response.json(detail())));
+    await screen.findByText('Site visit x1');
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('explains why an invalid reference cannot be refreshed', async () => {
+    route.id = 'e2e-id';
+    render(<Page />);
+    await screen.findByText('Quote not found.');
+    expect(screen.getByText('The quote reference is invalid. Open a valid quote link.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Refresh quote' })).toBeDisabled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('reports the completed missing result after manual refresh', async () => {
+    fetcher.mockImplementation(async () => new Response(null, { status: 404 }));
+    render(<Page />);
+    await screen.findByText('Quote not found.');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Refresh complete. Quote not found.');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(posts()).toHaveLength(0);
+    const repeated = deferred<Response>();
+    fetcher.mockReturnValueOnce(repeated.promise);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    expect(screen.queryByText('Refresh complete. Quote not found.')).toBeNull();
+    await act(async () => repeated.resolve(new Response(null, { status: 404 })));
+    await screen.findByText('Refresh complete. Quote not found.');
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('reports refreshing the same saved terms without attempting acceptance', async () => {
+    fetcher.mockImplementation(async () => Response.json(detail()));
+    await ready();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Quote refreshed from saved data.');
+    expect(screen.getByText('Site visit x1')).toBeVisible();
+    expect(posts()).toHaveLength(0);
+  });
+
+  it('distinguishes a failed refresh from a completed saved read', async () => {
+    fetcher.mockImplementation(async () => new Response(null, { status: 500 }));
+    render(<Page />);
+    await screen.findByText('This quote is unavailable.');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Refresh failed. Quote could not be loaded.');
+    expect(screen.queryByText('Quote refreshed from saved data.')).toBeNull();
+  });
 
   it('reads the real owned envelope with actual line, total and deposit amounts', async () => {
     fetcher.mockResolvedValueOnce(Response.json(detail()));
@@ -369,4 +429,19 @@ describe.each([
     expect(screen.queryByRole('heading', { name: 'Quote accepted' })).toBeNull();
     expect(screen.queryByText(/Site visit/)).toBeNull();
   });
+});
+
+it('marks the proposal query suspense fallback as pending before a quote read exists', async () => {
+  const pending = deferred<void>();
+  route.pendingSearchParams = pending.promise;
+  fetcher.mockResolvedValueOnce(Response.json(detail()));
+  render(<CustomerProposalView />);
+  expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+  expect(fetcher).not.toHaveBeenCalled();
+  await act(async () => {
+    route.pendingSearchParams = null;
+    pending.resolve();
+  });
+  await screen.findByText('Site visit x1');
+  expect(document.querySelector('[aria-busy="true"]')).toBeNull();
 });

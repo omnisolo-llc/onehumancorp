@@ -49,6 +49,57 @@ describe('Quote detail truthfulness', () => {
     expect(screen.queryByText(/Sink Repair/)).not.toBeInTheDocument();
   });
 
+  it('explains why an invalid reference cannot be refreshed', async () => {
+    vi.mocked(useParams).mockReturnValue({ id: 'e2e-id' });
+    render(<QuoteReviewPage />);
+    await screen.findByText('Quote not found');
+    expect(screen.getByText('The quote reference is invalid. Open a valid quote link.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Refresh quote' })).toBeDisabled();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('reports a completed refresh when an owned lookup still returns missing', async () => {
+    fetcher.mockImplementation(async () => new Response(null, { status: 404 }));
+    render(<QuoteReviewPage />);
+    await screen.findByText('Quote not found');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Refresh complete. Quote not found.');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole('button', { name: /Approve/ })).not.toBeInTheDocument();
+    const repeated = deferred<Response>();
+    fetcher.mockReturnValueOnce(repeated.promise);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    expect(screen.queryByText('Refresh complete. Quote not found.')).not.toBeInTheDocument();
+    await act(async () => repeated.resolve(new Response(null, { status: 404 })));
+    await screen.findByText('Refresh complete. Quote not found.');
+    expect(fetcher).toHaveBeenCalledTimes(3);
+  });
+
+  it('reports a refreshed unchanged real quote without claiming a mutation', async () => {
+    await ready();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Quote refreshed from saved data.');
+    expect(screen.getByText('Reviewed service (x1)')).toBeVisible();
+    expect(fetcher.mock.calls.every(([, request]) => !request?.method)).toBe(true);
+  });
+
+  it('keeps delivery unconfirmed after refreshing a recorded SENT status', async () => {
+    fetcher.mockImplementation(async () => Response.json(detail({ status: 'SENT' })));
+    await ready();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Quote refreshed from saved data.');
+    expect(screen.getByText(/Message delivery to the customer is not confirmed/)).toBeVisible();
+  });
+
+  it('reports a failed refresh without inventing a completed read', async () => {
+    fetcher.mockImplementation(async () => new Response(null, { status: 500 }));
+    render(<QuoteReviewPage />);
+    await screen.findByText(/Unable to load quote/);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quote' }));
+    await screen.findByText('Refresh failed. Quote could not be loaded.');
+    expect(screen.queryByText('Quote refreshed from saved data.')).not.toBeInTheDocument();
+  });
+
   it('reads the persisted envelope without changing its amounts', async () => {
     await ready();
     expect(screen.getAllByText('$100.00')).toHaveLength(2);
@@ -90,10 +141,12 @@ describe('Quote detail truthfulness', () => {
     const pending = deferred<Response>();
     fetcher.mockReturnValue(pending.promise);
     render(<QuoteReviewPage />);
-    expect(screen.getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Loading...');
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByRole('button', { name: /Approve/ })).not.toBeInTheDocument();
     await act(async () => pending.resolve(Response.json(detail())));
     await screen.findByText('Reviewed service (x1)');
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it.each([404, 500, 403])('never fabricates fixture data after HTTP %s', async status => {

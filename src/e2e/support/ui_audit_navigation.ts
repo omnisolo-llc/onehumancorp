@@ -1,7 +1,11 @@
 import type { BrowserContext, Page } from '@playwright/test';
 import { expectedAuditPath } from '../../../scripts/ui-click-audit.cjs';
 
-export type AuditNavigationReceipt = { requestedUrl: string; finalUrl: string; redirected: boolean };
+export type AuditNavigationReceipt = {
+  requestedUrl: string; finalUrl: string; redirected: boolean;
+  sourceRoute?: string;
+  quoteFixture?: { namespace?: string; tenantId: string; quoteId: string; customerId: string; detailUrl: string; method: 'GET'; status: 200 };
+};
 
 // A test session is isolated from the suite's shared JWT because the crawler
 // also exercises Log out. All authentication still uses the real login endpoint.

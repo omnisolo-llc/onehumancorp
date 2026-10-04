@@ -80,27 +80,37 @@ export default function OrderDetailsPage() {
   const [label, setLabel] = useState<ShippingLabel | null>(null);
   const [reconciliationRequired, setReconciliationRequired] = useState(false);
   const purchaseInFlight = useRef(false);
+  const orderGeneration = useRef(0);
 
   useEffect(() => {
-    fetch("/api/v1/ui/orders")
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then((data) => {
-        if (!Array.isArray(data)) {
-          setStatus("error");
+    orderGeneration.current += 1;
+    const controller = new AbortController();
+    let current = true;
+    setOrder(null);
+    setStatus("loading");
+    setRates([]);
+    setSelectedRate("");
+    setLabel(null);
+    setShippingError("");
+    setReconciliationRequired(false);
+    setShippingPending(false);
+    purchaseInFlight.current = false;
+    fetch(`/api/v1/ui/orders/${encodeURIComponent(orderId)}`, { cache: "no-store", signal: controller.signal })
+      .then(async (res) => {
+        if (res.status === 404) {
+          if (current) setStatus("missing");
           return;
         }
-        const match = data.map(parseOrder).find((candidate) => candidate?.id === orderId) || null;
-        if (match) {
-          setOrder(match);
+        if (!res.ok) throw new Error();
+        const record = parseOrder(await res.json());
+        if (!record || record.id !== orderId) throw new Error();
+        if (current) {
+          setOrder(record);
           setStatus("ready");
-        } else {
-          setStatus("missing");
         }
       })
-      .catch(() => setStatus("error"));
+      .catch(() => { if (current) setStatus("error"); });
+    return () => { current = false; controller.abort(); orderGeneration.current += 1; };
   }, [orderId]);
 
   const fetchRates = async () => {
@@ -115,6 +125,7 @@ export default function OrderDetailsPage() {
       return;
     }
     setShippingPending(true);
+    const generation = orderGeneration.current;
     try {
       const response = await fetch("/api/v1/shipping/rates", {
         method: "POST",
@@ -123,6 +134,7 @@ export default function OrderDetailsPage() {
       });
       if (response.ok) {
         const parsed = parseRates(await response.json());
+        if (generation !== orderGeneration.current) return;
         if (parsed && parsed.length > 0) {
           setRates(parsed);
           setSelectedRate(parsed[0].id);
@@ -131,9 +143,9 @@ export default function OrderDetailsPage() {
       }
       throw new Error();
     } catch {
-      setShippingError("Shipping rates are unavailable.");
+      if (generation === orderGeneration.current) setShippingError("Shipping rates are unavailable.");
     } finally {
-      setShippingPending(false);
+      if (generation === orderGeneration.current) setShippingPending(false);
     }
   };
 
@@ -143,6 +155,7 @@ export default function OrderDetailsPage() {
     setReconciliationRequired(true);
     setShippingError("");
     setShippingPending(true);
+    const generation = orderGeneration.current;
     try {
       const response = await fetch("/api/v1/shipping/label", {
         method: "POST",
@@ -150,6 +163,7 @@ export default function OrderDetailsPage() {
         body: JSON.stringify({ orderId, rateId: selectedRate }),
       });
       const body: unknown = await response.json();
+      if (generation !== orderGeneration.current) return;
       if (response.ok) {
         const parsed = parseLabel(body);
         if (parsed) {
@@ -162,10 +176,12 @@ export default function OrderDetailsPage() {
         ? nonEmptyString(body.error) || "The purchase outcome is unknown. Reconcile before retrying."
         : "The shipping label could not be confirmed.");
     } catch {
-      setShippingError("The shipping label could not be confirmed.");
+      if (generation === orderGeneration.current) setShippingError("The shipping label could not be confirmed.");
     } finally {
-      setShippingPending(false);
-      purchaseInFlight.current = false;
+      if (generation === orderGeneration.current) {
+        setShippingPending(false);
+        purchaseInFlight.current = false;
+      }
     }
   };
 

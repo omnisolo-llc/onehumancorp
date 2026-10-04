@@ -28,7 +28,7 @@ startup certification.
 Registry versions/checksums are checked against root Cargo.lock. Every run
 records all touched runtime, auth/integration dependency, route, fixture, CI and
 script inputs, and rejects a changed source fingerprint after execution. The
-CI inventory floor is83 executed tests (63 mounted/storage tests plus20 Shippo
+CI inventory floor is92 executed tests (70 mounted/storage tests, two payload-shaper tests, plus20 Shippo
 client/provider tests); ignored or filtered cases cannot pass.
 `make lint` and `make test` remain aggregate implementation acceptance gates.
 
@@ -44,3 +44,13 @@ The same source-bound runner executes the Shippo client/provider unit tests,
 including bounded pagination, exact identity, redirects and retry suppression.
 Admission linearizes dispatch permission; revocation cannot undo an already
 in-flight external request. No live provider purchase is performed.
+
+Order reads compile the complete production order module and its exact parent
+router merge under strict current-user bearer authentication. Seven additional
+PostgreSQL/SQLite regressions cover primed-list read-after-write, exact detail
+beyond the newest fifty, tenant/customer-join isolation, current-access revocation,
+committed storage failure and private/no-store responses. The shipping browser
+journeys prime the list before their isolated write, require immediate readback,
+and load the exact detail before their unchanged loopback purchase assertions.
+Dashboard unified-feed summaries retain their existing aggregate cache; this
+checkpoint claims authoritative reads only for the dedicated list/detail APIs.

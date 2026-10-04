@@ -8,8 +8,8 @@ db_source=(ROOT/'src/server/db.rs').read_text()
 sqlite='\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\s{20}\);',db_source,re.S).group() for name in ['orders','delivery_tasks'])
 (HERE/'sqlite_schema.sql').write_text(sqlite+'\n')
 (HERE/'schema.sql').write_text(schema+'\n'+(ROOT/'src/server/migrations/102_delivery_task_provider_tracking.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1029_delivery_provider_bindings.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1031_shipping_purchase_intents.sql').read_text())
-modules={'fulfillment':'src/server/api/fulfillment.rs','shipping':'src/server/api/shipping.rs'}
-lines=['pub use server_common as common;','pub mod api { pub use crate::{fulfillment,shipping}; }','pub mod integrations { pub use server_integrations_shippo as shippo; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore } }']
+modules={'fulfillment':'src/server/api/fulfillment.rs','shipping':'src/server/api/shipping.rs','ui_orders':'src/server/api/ui_orders.rs'}
+lines=['pub use server_common as common;','pub mod api { pub use crate::{fulfillment,shipping,ui_orders}; }','pub mod integrations { pub use server_integrations_shippo as shippo; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore } }']
 for name,path in modules.items(): lines.append(f'#[path={json.dumps(str(ROOT/path))}]pub mod {name};')
 parent=(ROOT/'src/server/lib.rs').read_text()
 start=parent.index('        .nest(\n            "/api/v1/fulfillment",')
@@ -18,6 +18,12 @@ mount=parent[start:end]
 shipping_start=parent.index('        .nest(\n            "/api/v1/shipping",')
 shipping_end=parent.index('        .nest("/api/v1/checkout"',shipping_start)
 mount+=parent[shipping_start:shipping_end]
+# Include the exact order router merge under the parent's actual strict layer.
+order_merge = '.merge(api::ui_orders::router(db.clone()))'
+order_start = parent.index(order_merge)
+order_auth = re.search(r'\.route_layer\(axum::middleware::from_fn_with_state\(\s+http_auth_store.clone\(\),\s+::server_auth::strict_bearer_auth_middleware,\s+\)\)', parent[order_start:]).group()
+mount += '\n.merge(axum::Router::new()'+order_merge+order_auth+')'
+lines.append(f'#[path={json.dumps(str(ROOT/"src/server/utils/payload_shaper.rs"))}]pub mod payload_shaper;')
 helper_start=parent.index('async fn protected_bearer_auth_middleware(')
 helper=parent[helper_start:parent.index('\n}\n',helper_start)+3]
 tenant_source=(ROOT/'src/server/utils/tenant_middleware.rs').read_text()
@@ -40,7 +46,7 @@ assert startup in db_source, 'SQLite bootstrap must invoke the real shipping sch
 lines.append('pub async fn actual_sqlite_shipping_startup(sqlite_pool:&sqlx::SqlitePool)->Result<(),sqlx::Error>{'+startup+'Ok(())}')
 lines.append('#[cfg(test)]#[path="test.rs"]mod contract;')
 (HERE/'generated.rs').write_text('\n'.join(lines)+'\n')
-paths=[ROOT/p for p in [*modules.values(),'src/server/lib.rs','src/server/utils/tenant_middleware.rs','src/server/db.rs','Cargo.toml','Cargo.lock','.github/workflows/ci.yml','scripts/focused_ci_gate.py','src/server/migrations/001_initial.sql','src/server/migrations/102_delivery_task_provider_tracking.sql','src/server/migrations/1029_delivery_provider_bindings.sql','src/server/migrations/1031_shipping_purchase_intents.sql']]
+paths=[ROOT/p for p in [*modules.values(),'src/server/lib.rs','src/server/utils/tenant_middleware.rs','src/server/utils/payload_shaper.rs','src/server/db.rs','Cargo.toml','Cargo.lock','.github/workflows/ci.yml','scripts/focused_ci_gate.py','src/server/migrations/001_initial.sql','src/server/migrations/102_delivery_task_provider_tracking.sql','src/server/migrations/1029_delivery_provider_bindings.sql','src/server/migrations/1031_shipping_purchase_intents.sql']]
 for folder in ['src/server/api/fulfillment','src/server/api/shipping','src/server/integrations/shippo','src/server/common','src/server/config','src/server/auth','src/server/oidc','src/server/omnisolo','src/server/telemetry','src/server/integrations/core','src/server/integrations/omnichannel']:
  paths += [p for p in (ROOT/folder).rglob('*') if p.is_file() and (p.suffix in ('.rs','.sql') or p.name=='Cargo.toml')]
 paths += [p for p in HERE.iterdir() if p.is_file() and p.name not in ['Cargo.lock','source-manifest.json']]

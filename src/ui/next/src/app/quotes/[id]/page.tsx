@@ -37,9 +37,11 @@ function QuoteReview({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
   const [reconcile, setReconcile] = useState(false);
   const operation = useRef(0);
   const busyRef = useRef(false);
+  const validReference = QUOTE_ID_PATTERN.test(id);
 
   useEffect(() => {
     const current = ++operation.current;
@@ -50,15 +52,23 @@ function QuoteReview({ id }: { id: string }) {
     setEdits(null);
     setActionError(null);
     setNotice(null);
+    setRefreshNotice(null);
     setReconcile(false);
     if (!QUOTE_ID_PATTERN.test(id)) {
+      setRefreshNotice('The quote reference is invalid. Open a valid quote link.');
       setLoading(false);
       return;
     }
     readQuote(id, controller.signal).then(value => {
-      if (current === operation.current) setQuote(value);
+      if (current === operation.current) {
+        setQuote(value);
+        if (refresh > 0) setRefreshNotice(value ? 'Quote refreshed from saved data.' : 'Refresh complete. Quote not found.');
+      }
     }).catch(() => {
-      if (current === operation.current) setLoadError(true);
+      if (current === operation.current) {
+        setLoadError(true);
+        if (refresh > 0) setRefreshNotice('Refresh failed. Quote could not be loaded.');
+      }
     }).finally(() => {
       if (current === operation.current) setLoading(false);
     });
@@ -138,12 +148,12 @@ function QuoteReview({ id }: { id: string }) {
   };
 
   const navigation = <>
-    <button onClick={() => setRefresh(value => value + 1)} disabled={busy} className={secondaryClass}>Refresh quote</button>
+    <button onClick={() => setRefresh(value => value + 1)} disabled={busy || !validReference} className={secondaryClass}>Refresh quote</button>
     <button onClick={() => router.back()} className={secondaryClass}>Back to Feed</button>
   </>;
-  if (loading) return <AppShell title="Loading Quote..."><div className="p-4 text-center">Loading...</div></AppShell>;
-  if (loadError) return <AppShell title="Quote unavailable"><div className="p-4 space-y-4"><p role="alert">Unable to load quote. Please refresh to try again.</p>{navigation}</div></AppShell>;
-  if (!quote) return <AppShell title="Not Found"><div className="p-4 space-y-4"><p>Quote not found</p>{navigation}</div></AppShell>;
+  if (loading) return <AppShell title="Loading Quote..."><div role="status" aria-busy="true" className="p-4 text-center">Loading...</div></AppShell>;
+  if (loadError) return <AppShell title="Quote unavailable"><div className="p-4 space-y-4"><p role="alert">Unable to load quote. Please refresh to try again.</p>{refreshNotice && <p role="status">{refreshNotice}</p>}{navigation}</div></AppShell>;
+  if (!quote) return <AppShell title="Not Found"><div className="p-4 space-y-4"><p>Quote not found</p>{refreshNotice && <p role="status">{refreshNotice}</p>}{navigation}</div></AppShell>;
 
   const paymentLink = safePaymentLink(quote.stripe_payment_link);
   return (
@@ -189,6 +199,7 @@ function QuoteReview({ id }: { id: string }) {
           </>}
         </div>
         {notice && <p role="status">{notice}</p>}
+        {refreshNotice && <p role="status">{refreshNotice}</p>}
         {!notice && status === 'SENT' && <p>Recorded status: SENT. Message delivery to the customer is not confirmed.</p>}
         {actionError && <p role="alert" className="text-[#FF3B30]">{actionError}</p>}
         {edits ? <>

@@ -1897,3 +1897,6 @@ async fn purchase_parallel_requests_admit_one_provider_dispatch() {
 
 #[path = "purchase_tests.rs"]
 mod purchase_tests;
+
+#[path = "orders_read_test.rs"]
+mod orders_read;

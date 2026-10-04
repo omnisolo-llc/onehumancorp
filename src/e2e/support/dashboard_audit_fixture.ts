@@ -2,17 +2,20 @@ import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { Browser, Page } from '@playwright/test';
-import { createOwnedAuditSeed } from '../../../scripts/ui-audit-fixture.cjs';
+import { createOwnedAuditSeed, ownedQuoteAuditRecord } from '../../../scripts/ui-audit-fixture.cjs';
 import { e2eDbTransaction } from '../db_utils';
 import { authenticateRequest } from '../authenticate';
 import { createAuditNavigation, type AuditNavigationReceipt } from './ui_audit_navigation';
 import { observeAuditRequests } from './audit_request_lifecycle';
+import { navigateQuoteAudit, quoteAuditRoutes } from './quote_audit_fixture';
 
 export const isolatedClickAuditRoutes = new Set([
+  ...quoteAuditRoutes,
   '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder', '/onboarding', '/share-card',
 ]);
 
 export function clickAuditStates(route: string): string[] {
+  if (route === '/quotes/e2e-id') return ['entry', 'editing'];
   if (route === '/onboarding' || route === '/share-card') return ['entry', 'intro', 'instant-draft', 'manual-draft'];
   return route === '/builder' || route === '/website-builder' ? ['entry', 'started-draft'] : ['entry'];
 }
@@ -21,6 +24,11 @@ export function clickAuditStates(route: string): string[] {
 // dispatch provider work. Recreate them in a new owner before observation.
 export async function prepareClickAuditState(page: Page, route: string, state: string) {
   if (state === 'entry') return;
+  if (route === '/quotes/e2e-id' && state === 'editing') {
+    await page.getByRole('button', { name: 'Edit quote', exact: true }).click();
+    await page.getByRole('button', { name: 'Save Changes', exact: true }).waitFor({ state: 'visible' });
+    return;
+  }
   if (route === '/onboarding' || route === '/share-card') {
     if (!['intro', 'instant-draft', 'manual-draft'].includes(state)) throw new Error(`Unknown click audit state: ${state}`);
     const select = async (name: string, step: number) => {
@@ -98,8 +106,10 @@ export async function seedDashboardAuditOwner(baseURL: string) {
       (SELECT count(*)::int FROM omni_inbox_messages WHERE tenant_id=$2) AS inbox,
       (SELECT count(*)::int FROM products WHERE tenant_id=$2) AS products,
       (SELECT count(*)::int FROM opportunities WHERE tenant_id=$2) AS opportunities,
-      (SELECT count(*)::int FROM onboarding_state WHERE tenant_id=$2) AS onboarding`, [`${seed.namespace}-%`, seed.tenantId]);
-    if (JSON.stringify(graph[0]) !== JSON.stringify({ tenants: 5, feed: 8, approvals: 2, inbox: 1, products: 2, opportunities: 2, onboarding: 0 })) {
+      (SELECT count(*)::int FROM onboarding_state WHERE tenant_id=$2) AS onboarding,
+      (SELECT count(*)::int FROM quotes WHERE tenant_id=$2) AS quotes,
+      (SELECT count(*)::int FROM quote_line_items WHERE tenant_id=$2) AS quote_lines`, [`${seed.namespace}-%`, seed.tenantId]);
+    if (JSON.stringify(graph[0]) !== JSON.stringify({ tenants: 5, feed: 8, approvals: 2, inbox: 1, products: 2, opportunities: 2, onboarding: 0, quotes: 1, quote_lines: 1 })) {
       throw new Error(`Canonical case-owned dashboard graph was not persisted: ${JSON.stringify(graph[0])}`);
     }
   });
@@ -130,10 +140,15 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
     });
     return { actor, page, close: () => context.close(), navigate: async (route = '/dashboard'): Promise<AuditNavigationReceipt> => {
       if (!isolatedClickAuditRoutes.has(route)) throw new Error(`No isolated click fixture exists for ${route}`);
-      const initialReads = initialRouteReads[route].map(path => page.waitForResponse(response =>
+      const quoteRoute = quoteAuditRoutes.has(route);
+      // Give Back to Feed a real app history entry in this new cookie/storage context.
+      if (quoteRoute) await navigate(page, '/dashboard');
+      const initialReads = (quoteRoute ? [] : initialRouteReads[route]).map(path => page.waitForResponse(response =>
         new URL(response.url()).origin === new URL(baseURL).origin && new URL(response.url()).pathname === path && response.request().method() === 'GET'));
       // Complete the real initial reads before discovery; no API substitution.
-      const [receipt, responses] = await Promise.all([navigate(page, route), Promise.all(initialReads)]);
+      const [receipt, responses] = await Promise.all([quoteRoute
+        ? navigateQuoteAudit(page, baseURL, route, ownedQuoteAuditRecord(actor), navigate)
+        : navigate(page, route), Promise.all(initialReads)]);
       for (const response of responses) {
         if (response.status() !== 200) throw new Error(`${route} baseline read failed: HTTP ${response.status()}`);
         await response.finished();

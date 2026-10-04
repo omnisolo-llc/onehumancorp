@@ -46,6 +46,8 @@ async function prepareOrder(page: Page, baseURL: string | undefined) {
 
   // Both parallel tests and every retry own fresh rows. Never reset a shared
   // order, reuse its paid lifecycle, or rely on the retired production fallback.
+  const beforeWrite = await page.request.get('/api/v1/ui/orders');
+  expect(beforeWrite.status()).toBe(200);
   const suffix = randomUUID();
   const orderId = `shipping-order-${suffix}`, customerId = `shipping-customer-${suffix}`;
   const customerName = `Shipping customer ${suffix}`;
@@ -53,11 +55,15 @@ async function prepareOrder(page: Page, baseURL: string | undefined) {
     await query('INSERT INTO customers(id,tenant_id,name) VALUES($1,$2,$3)', [customerId, provider.tenantId, customerName]);
     await query("INSERT INTO orders(id,tenant_id,customer_id,total_amount,status) VALUES($1,$2,$3,42.50,'pending')", [orderId, provider.tenantId, customerId]);
   });
-  const receivedOrders = page.waitForResponse(response => response.url() === `${origin.origin}/api/v1/ui/orders` && response.request().method() === 'GET');
+  const afterWrite = await page.request.get('/api/v1/ui/orders');
+  expect(afterWrite.status()).toBe(200);
+  expect(await afterWrite.json()).toEqual(expect.arrayContaining([{ id: orderId, customer_name: customerName, total_amount: 42.5, status: 'pending', created_at: expect.any(String) }]));
+  const receivedOrders = page.waitForResponse(response => response.url() === `${origin.origin}/api/v1/ui/orders/${orderId}` && response.request().method() === 'GET');
   await page.goto(`/orders/${orderId}`);
   const orderResponse = await receivedOrders;
   expect(orderResponse.status()).toBe(200);
-  expect(await orderResponse.json()).toEqual(expect.arrayContaining([{ id: orderId, customer_name: customerName, total_amount: 42.5, status: 'pending', created_at: expect.any(String) }]));
+  expect(await orderResponse.json()).toEqual({ id: orderId, customer_name: customerName, total_amount: 42.5, status: 'pending', created_at: expect.any(String) });
+  expect(orderResponse.headers()['cache-control']).toBe('private, no-store');
   await expect(page.getByRole('heading', { name: `Order ${orderId}`, exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Fulfillment', exact: true })).toBeVisible();
   await expect(page.getByText(customerName, { exact: true })).toBeVisible();

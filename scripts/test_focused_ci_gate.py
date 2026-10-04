@@ -12,6 +12,20 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_nats_metadata_fetch_precedes_required_offline_gate(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/nats-metadata-contract/fetch.sh')
+        run = next(i for i, step in enumerate(steps) if step.get('run') == 'python3 scripts/focused_ci_gate.py nats-metadata-contract')
+        self.assertLess(fetch, run)
+        self.assertEqual(gate.GATES['nats-metadata-contract'], (16, None))
+        script = (root/'scripts/nats-metadata-contract/fetch.sh').read_text()
+        self.assertNotIn('metadata --no-deps', script)
+        self.assertLess(script.index('cargo metadata '), script.index('verify_lock.py'))
+        self.assertLess(script.index('verify_lock.py'), script.index('cargo fetch --locked'))
+        self.assertIn('--locked --offline', (root/'scripts/nats-metadata-contract/run.sh').read_text())
+
     def test_mesh_startup_fetch_precedes_required_offline_gate(self):
         import yaml
         root = Path(__file__).resolve().parents[1]
