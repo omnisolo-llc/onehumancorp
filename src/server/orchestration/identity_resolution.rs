@@ -21,6 +21,50 @@ impl IdentityResolver {
     ) -> Result<String, String> {
         let pool = &self.db.pool;
 
+        // First check ohc_customer_aliases
+        match &self.db.store {
+            DbStore::Postgres => {
+                let row = sqlx::query(
+                    r#"
+                    SELECT customer_id FROM ohc_customer_aliases
+                    WHERE tenant_id = $1
+                    AND channel = $2
+                    AND external_id = $3
+                    LIMIT 1
+                    "#,
+                )
+                .bind(tenant_id)
+                .bind(source)
+                .bind(sender_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let id: String = r.get("customer_id");
+                    return Ok(id);
+                }
+            }
+            DbStore::Sqlite(sqlite_pool) => {
+                let row = sqlx::query(
+                    "SELECT customer_id FROM ohc_customer_aliases WHERE tenant_id = ? AND channel = ? AND external_id = ? LIMIT 1"
+                )
+                .bind(tenant_id)
+                .bind(source)
+                .bind(sender_id)
+                .fetch_optional(sqlite_pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                if let Some(r) = row {
+                    use sqlx::Row;
+                    let id: String = r.get("customer_id");
+                    return Ok(id);
+                }
+            }
+        }
+
+
         // Try to find a customer by email, phone, or preferences (social handle)
         match &self.db.store {
             DbStore::Postgres => {
@@ -44,7 +88,21 @@ impl IdentityResolver {
                 if let Some(r) = row {
                     use sqlx::Row;
                     let id: String = r.get("id");
+
+                    // Backfill alias if we found via fallback
+                    let alias_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT INTO ohc_customer_aliases (id, tenant_id, customer_id, channel, external_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING"
+                    )
+                    .bind(&alias_id)
+                    .bind(tenant_id)
+                    .bind(&id)
+                    .bind(source)
+                    .bind(sender_id)
+                    .execute(pool)
+                    .await;
                     return Ok(id);
+
                 }
             }
             DbStore::Sqlite(sqlite_pool) => {
@@ -70,7 +128,21 @@ impl IdentityResolver {
                 if let Some(r) = row {
                     use sqlx::Row;
                     let id: String = r.get("id");
+
+                    // Backfill alias if we found via fallback
+                    let alias_id = Uuid::new_v4().to_string();
+                    let _ = sqlx::query(
+                        "INSERT OR IGNORE INTO ohc_customer_aliases (id, tenant_id, customer_id, channel, external_id) VALUES (?, ?, ?, ?, ?)"
+                    )
+                    .bind(&alias_id)
+                    .bind(tenant_id)
+                    .bind(&id)
+                    .bind(source)
+                    .bind(sender_id)
+                    .execute(sqlite_pool)
+                    .await;
                     return Ok(id);
+
                 }
             }
         }
@@ -111,6 +183,19 @@ impl IdentityResolver {
                     .execute(pool)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                let alias_id = Uuid::new_v4().to_string();
+                let _ = sqlx::query(
+                    "INSERT INTO ohc_customer_aliases (id, tenant_id, customer_id, channel, external_id) VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING"
+                )
+                .bind(&alias_id)
+                .bind(tenant_id)
+                .bind(&new_id)
+                .bind(source)
+                .bind(sender_id)
+                .execute(pool)
+                .await;
+
             }
             DbStore::Sqlite(sqlite_pool) => {
                 sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone, preferences) VALUES (?, ?, ?, ?, ?, ?)")
@@ -123,6 +208,19 @@ impl IdentityResolver {
                     .execute(sqlite_pool)
                     .await
                     .map_err(|e| e.to_string())?;
+
+                let alias_id = Uuid::new_v4().to_string();
+                let _ = sqlx::query(
+                    "INSERT OR IGNORE INTO ohc_customer_aliases (id, tenant_id, customer_id, channel, external_id) VALUES (?, ?, ?, ?, ?)"
+                )
+                .bind(&alias_id)
+                .bind(tenant_id)
+                .bind(&new_id)
+                .bind(source)
+                .bind(sender_id)
+                .execute(sqlite_pool)
+                .await;
+
             }
         }
 

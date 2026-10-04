@@ -94,3 +94,34 @@ async fn test_create_and_resolve_social_customer() {
     assert!(!lead_id.is_empty());
     assert_eq!(lead_id, resolved_id);
 }
+
+#[tokio::test]
+async fn test_create_and_resolve_alias() {
+    let tenant_id = format!("test_tenant_{}", Uuid::new_v4());
+    let temp_db_path = format!("file:test_create_and_resolve_alias_{}.db?mode=memory&cache=shared", Uuid::new_v4());
+    std::env::set_var("OMNISOLO_DATABASE_URL", &temp_db_path);
+    let db = Arc::new(DB::new().await.unwrap());
+
+    crate::migrations::run_migrations(&db.pool).await.unwrap();
+
+    let resolver = IdentityResolver::new(db.clone());
+    let sender_id = "test_alias_123";
+    let source = "whatsapp";
+
+    sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
+        .bind(&tenant_id)
+        .execute(&db.pool)
+        .await.unwrap();
+
+    let lead_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
+    let resolved_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
+
+    assert!(!lead_id.is_empty());
+    assert_eq!(lead_id, resolved_id);
+
+    // Test alternative channel
+    let alt_sender = "alt_channel_id";
+    let alt_source = "instagram";
+    let alt_lead_id = resolver.resolve_or_create_customer(&tenant_id, alt_sender, alt_source).await.unwrap_or_default();
+    assert_ne!(lead_id, alt_lead_id);
+}
