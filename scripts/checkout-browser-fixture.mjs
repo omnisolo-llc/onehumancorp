@@ -10,6 +10,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
+import { gunzipSync, inflateSync, brotliDecompressSync } from 'node:zlib';
 import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
 import { validateWebArtifact } from './package-web.mjs';
 import { verifyNativeBinaryProof } from './native-binary-proof.mjs';
@@ -123,6 +124,76 @@ export async function startCheckoutProvider({ runId, appOrigin }) {
 export async function startCheckoutEgressProxy({ appOrigin }) {
   const ownedApp = requireCheckoutLoopbackOrigin(appOrigin);
   const connects = [], blockedHttp = [], forwardedHttp = [];
+  const checkoutResponses = [], registeredCheckoutProducts = new Set(), captures = new Set();
+  let checkoutCaptureError = null;
+  // Observe only this fixture's registered checkout requests. Browser response
+  // bodies may be evicted as soon as the real app navigates to provider checkout.
+  // These copies come from the single existing upstream request, before forwarding
+  // finishes; forwarding stays streaming, with no replacement or replay.
+  const captureCheckout = (request, url) => {
+    if (request.method !== 'POST' || url.pathname !== '/api/v1/billing/create-checkout-session' || url.search) return null;
+    if (checkoutResponses.length >= 100) { checkoutCaptureError = 'Checkout observation limit reached'; return null; }
+    const row = { method: request.method, path: url.pathname, requestBody: null,
+      status: null, bodyBase64: null, complete: false, error: null };
+    checkoutResponses.push(row);
+    let requestBytes = 0, responseBytes = 0, requestEnded = false, responseEnded = false, encoding;
+    let requestChunks = [], responseChunks = [];
+    const fail = reason => {
+      row.error ??= reason; row.complete = false; row.bodyBase64 = null;
+      requestChunks = []; responseChunks = []; captures.delete(capture);
+    };
+    const finish = () => {
+      if (!requestEnded || !responseEnded || row.error) return;
+      try {
+        let bytes = Buffer.concat(responseChunks);
+        const options = { maxOutputLength: 65536 };
+        if (encoding === 'gzip') bytes = gunzipSync(bytes, options);
+        else if (encoding === 'deflate') bytes = inflateSync(bytes, options);
+        else if (encoding === 'br') bytes = brotliDecompressSync(bytes, options);
+        else if (encoding && encoding !== 'identity') throw new Error('Unsupported encoding');
+        row.bodyBase64 = bytes.toString('base64'); row.complete = true;
+        responseChunks = []; captures.delete(capture);
+      } catch { fail('Checkout response body could not be decoded within its limit'); }
+    };
+    const capture = { fail, response(incoming) {
+      row.status = incoming.statusCode;
+      encoding = incoming.headers['content-encoding'];
+      incoming.on('data', chunk => {
+        if (row.error) return;
+        responseBytes += chunk.length;
+        if (responseBytes > 65536) fail('Checkout response body exceeded its limit');
+        else responseChunks.push(Buffer.from(chunk));
+      });
+      incoming.once('end', () => {
+        if (!incoming.complete) return fail('Checkout response body was incomplete');
+        responseEnded = true; finish();
+      });
+      incoming.once('aborted', () => fail('Checkout response body was aborted'));
+      incoming.once('error', () => fail('Checkout response body failed'));
+    } };
+    captures.add(capture);
+    request.on('data', chunk => {
+      if (row.error) return;
+      requestBytes += chunk.length;
+      if (requestBytes > 4096) fail('Checkout request body exceeded its limit');
+      else requestChunks.push(Buffer.from(chunk));
+    });
+    request.once('end', () => {
+      requestEnded = true;
+      if (row.error) return;
+      const body = Buffer.concat(requestChunks).toString('utf8'); requestChunks = [];
+      let parsed;
+      try { parsed = JSON.parse(body); } catch { /* fails the owned request match */ }
+      if (!parsed || !registeredCheckoutProducts.has(parsed.product_id)
+          || !isDeepStrictEqual(parsed, { is_subscription: false, product_id: parsed.product_id, quantity: 1 })) {
+        return fail('Checkout request does not match an owned registration');
+      }
+      row.requestBody = body; finish();
+    });
+    request.once('aborted', () => fail('Checkout request body was aborted'));
+    request.once('error', () => fail('Checkout request body failed'));
+    return capture;
+  };
   const upstreams = new Set();
   const server = createServer((request, response) => {
     let url;
@@ -133,14 +204,20 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
       return json(response, 403, { error: 'Browser egress is restricted to the exact owned application origin' });
     }
     forwardedHttp.push({ method: request.method, path: `${url.pathname}${url.search}` });
+    const capture = captureCheckout(request, url);
     const headers = { ...request.headers, host: url.host };
     delete headers['proxy-authorization']; delete headers['proxy-connection'];
     const upstream = httpRequest(url, { method: request.method, headers, agent: false, timeout: 5000 }, incoming => {
+      capture?.response(incoming);
       response.writeHead(incoming.statusCode, incoming.headers); incoming.pipe(response);
+      incoming.on('error', () => response.destroy());
     });
     upstreams.add(upstream); upstream.once('close', () => upstreams.delete(upstream));
     upstream.on('timeout', () => upstream.destroy(new Error('Owned application proxy timeout')));
-    upstream.on('error', () => { if (!response.headersSent) json(response, 502, { error: 'Owned application request failed' }); else response.destroy(); });
+    upstream.on('error', () => { capture?.fail('Checkout upstream request failed'); if (!response.headersSent) json(response, 502, { error: 'Owned application request failed' }); else response.destroy(); });
+    response.once('close', () => {
+      if (!response.writableFinished) { capture?.fail('Checkout client closed before forwarding finished'); upstream.destroy(); }
+    });
     request.on('aborted', () => upstream.destroy()); request.pipe(upstream);
   });
   server.on('connect', (request, socket, head) => {
@@ -182,8 +259,19 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
   });
   const stop = closer(server), origin = await listen(server);
   return { server: origin, bypass: '<-loopback>',
-    evidence: () => structuredClone({ connects, blockedHttp, forwardedHttp }),
-    async close() { for (const request of upstreams) request.destroy(); await stop(); },
+    registerCheckout(product) {
+      if (!product || !/^e2e-[a-zA-Z0-9-]{1,180}$/.test(product.tenantId ?? '')
+          || !/^[a-zA-Z0-9_-]{1,200}$/.test(product.productId ?? '')
+          || registeredCheckoutProducts.size >= 100 || registeredCheckoutProducts.has(product.productId)) {
+        throw new Error('A unique bounded owned checkout registration is required');
+      }
+      registeredCheckoutProducts.add(product.productId);
+    },
+    evidence: () => structuredClone({ connects, blockedHttp, forwardedHttp, checkoutResponses, checkoutCaptureError }),
+    async close() {
+      for (const capture of captures) capture.fail('Checkout proxy closed before observation completed');
+      for (const request of upstreams) request.destroy(); await stop();
+    },
   };
 }
 
@@ -317,7 +405,7 @@ export async function startConfiguredCheckoutFixture({ environment = process.env
     const frontend = start(process.execPath, [runtime.web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitReady(`${origin}/login`, frontend);
     return { origin, apiOrigin, proxy: { server: proxy.server, bypass: proxy.bypass },
-      register: provider.register,
+      register(product) { provider.register(product); proxy.registerCheckout(product); },
       evidence,
       close,
     };

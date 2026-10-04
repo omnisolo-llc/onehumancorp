@@ -1,6 +1,5 @@
 import { test, expect } from './fixtures';
 import type { Response } from '@playwright/test';
-import { captureResponseBody, type CapturedResponse } from '../../scripts/playwright/response-body.mjs';
 import { startConfiguredCheckoutFixture } from './support/configured_checkout_fixture';
 import {
   CASH_COMMIT_PATH, CHECKOUT_SESSION_PATH, withOwnedCheckoutActors, prepareCashCart, prepareOnlineCart,
@@ -50,23 +49,40 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
         await fixture.register(actors.stock);
         await prepareCashCart(actors.first, actors.stock, actors.firstUserId);
         await prepareOnlineCart(actors.second, actors.stock);
-        const onlineResult = captureResponseBody(waitForCheckoutPost(actors.second, CHECKOUT_SESSION_PATH));
+        const previousCheckoutResponses = fixture.evidence().checkoutResponses.length;
+        const onlineResult = waitForCheckoutPost(actors.second, CHECKOUT_SESSION_PATH);
+        const observedBody = async (response: Response) => {
+          const expectedBody = { is_subscription: false, product_id: actors.stock.productId, quantity: 1 };
+          expect(response.request().method()).toBe('POST');
+          expect(response.request().postDataJSON()).toEqual(expectedBody);
+          await expect.poll(() => fixture.evidence().checkoutResponses.slice(previousCheckoutResponses)
+            .map(record => record.complete || Boolean(record.error))).toEqual([true]);
+          const evidence = fixture.evidence();
+          expect(evidence.checkoutCaptureError).toBeNull();
+          const records = evidence.checkoutResponses.slice(previousCheckoutResponses);
+          expect(records).toHaveLength(1);
+          expect(records[0]).toMatchObject({ method: 'POST', path: CHECKOUT_SESSION_PATH,
+            requestBody: response.request().postData(), status: response.status(), complete: true, error: null });
+          expect(JSON.parse(records[0].requestBody)).toEqual(expectedBody);
+          return Buffer.from(records[0].bodyBase64, 'base64');
+        };
         let cash: Response;
-        let capturedOnline: CapturedResponse<Response>;
+        let online: Response;
+        let onlineBody: Buffer;
         if (ordering === 'online-first') {
-          [capturedOnline] = await Promise.all([
+          [online] = await Promise.all([
             onlineResult,
             actors.second.getByRole('button', { name: 'Pay', exact: true }).click(),
           ]);
-          expect(capturedOnline.response.status()).toBe(200);
-          await capturedOnline.body();
+          expect(online.status()).toBe(200);
+          onlineBody = await observedBody(online);
           await assertPersistedStockOutcome(actors.stock, null);
           [cash] = await Promise.all([
             waitForCheckoutPost(actors.first, CASH_COMMIT_PATH),
             actors.first.locator('#cash-btn-offline').click(),
           ]);
         } else {
-          [cash, capturedOnline] = await Promise.all([
+          [cash, online] = await Promise.all([
             waitForCheckoutPost(actors.first, CASH_COMMIT_PATH),
             onlineResult,
             Promise.all([
@@ -74,8 +90,8 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
               actors.second.getByRole('button', { name: 'Pay', exact: true }).click(),
             ]),
           ]);
+          onlineBody = await observedBody(online);
         }
-        const online = capturedOnline.response;
         expect([cash.status(), online.status()].sort()).toEqual([200, 409]);
         const requestBody = online.request().postDataJSON();
         expect(requestBody).toEqual({ is_subscription: false, product_id: actors.stock.productId, quantity: 1 });
@@ -83,7 +99,6 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
         if (cash.status() === 200) {
           const receipt = await assertCashReceipt(cash, actors.first, actors.stock);
           expect(online.status()).toBe(409);
-          await capturedOnline.body();
           await expect(actors.second.getByText('The selected product just sold out.', { exact: true })).toBeVisible();
           expect(providerRequests).toEqual([]);
           expect(redirects).toEqual([]);
@@ -98,7 +113,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
             receipt: { payment_status: 'unpaid', amount_total: actors.stock.amountCents, currency: 'usd' } });
           expect(issued.receipt.id).toMatch(/^cs_test_[a-f0-9_]+$/);
           const checkoutUrl = `https://checkout.stripe.com/c/pay/${issued.receipt.id}`;
-          expect(JSON.parse((await capturedOnline.body()).toString('utf8'))).toEqual({ checkout_url: checkoutUrl });
+          expect(JSON.parse(onlineBody.toString('utf8'))).toEqual({ checkout_url: checkoutUrl });
           await expect.poll(() => redirects).toContain(checkoutUrl);
           await expect.poll(() => fixture.evidence().connects.filter(request => request.authority === 'checkout.stripe.com:443').length).toBeGreaterThan(previousCheckoutConnects);
           const appAuthority = new URL(fixture.origin).host;
@@ -106,6 +121,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
           expect(fixture.evidence().connects.every(request => request.status === (request.authority === appAuthority ? 200 : 403))).toBe(true);
           await assertPersistedStockOutcome(actors.stock, null);
         }
+        expect(fixture.evidence().checkoutResponses.slice(previousCheckoutResponses)).toHaveLength(1);
       });
     });
   }
