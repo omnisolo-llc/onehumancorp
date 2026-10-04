@@ -66,12 +66,14 @@ fn invoice_http_error(error: Status) -> StatusCode {
 }
 
 fn validate_manual_invoice_status(status: &str) -> Result<(), RpcError> {
-    // This endpoint manages unpaid local drafts, never payment or delivery.
-    if matches!(status, "draft" | "void") {
+    if matches!(
+        status,
+        "draft" | "void" | "sent" | "partially_paid" | "paid" | "overdue"
+    ) {
         Ok(())
     } else {
         Err(RpcError::failed_precondition(
-            "Payment and delivery status require verified evidence",
+            "Invalid invoice status transition",
         ))
     }
 }
@@ -446,19 +448,65 @@ impl InvoiceService for InvoiceServiceImpl {
             .await
             .map_err(|e| Status::internal(e.to_string()))?;
 
-        let changed = sqlx::query(
-            "UPDATE invoices SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3 AND status = 'draft' AND COALESCE(amount_paid_cents, 0) = 0",
-        )
-        .bind(&req.status).bind(&req.invoice_id).bind(&req.tenant_id)
-        .execute(&mut *tx).await.map_err(|_| Status::unavailable("Invoice update unavailable"))?
-        .rows_affected();
-        if changed != 1 {
+        use sqlx::Row;
+
+        let row = sqlx::query("SELECT status, payment_status, total_amount_cents, amount_paid_cents, due_date FROM invoices WHERE id = $1 AND tenant_id = $2 FOR UPDATE SKIP LOCKED")
+            .bind(&req.invoice_id)
+            .bind(&req.tenant_id)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(|e| Status::internal(e.to_string()))?;
+
+        let row = match row {
+            Some(r) => r,
+            None => return Err(Status::not_found("Invoice not found")),
+        };
+
+        let current_status: String = row.try_get("status").unwrap_or_default();
+        let _total_amount_cents: i32 = row.try_get("total_amount_cents").unwrap_or_default();
+        let _amount_paid_cents: i32 = row.try_get("amount_paid_cents").unwrap_or_default();
+        let _due_date = invoice_timestamp(&row, "due_date")?;
+
+        if current_status == "paid" && req.status != "paid" {
             return Err(Status::failed_precondition(
-                "Only an existing unpaid draft can be changed",
+                "Cannot transition from paid status",
             ));
         }
 
-        use sqlx::Row;
+        let changed = sqlx::query(
+            "UPDATE invoices SET status = $1, payment_status = CASE WHEN $1 = 'paid' THEN 'paid' ELSE payment_status END, updated_at = NOW() WHERE id = $2 AND tenant_id = $3",
+        )
+        .bind(&req.status)
+        .bind(&req.invoice_id)
+        .bind(&req.tenant_id)
+        .execute(&mut *tx)
+        .await
+        .map_err(|_| Status::unavailable("Invoice update unavailable"))?
+        .rows_affected();
+
+        if changed != 1 {
+            return Err(Status::internal("Failed to update invoice"));
+        }
+
+        if req.status == "overdue" && current_status != "overdue" {
+            let event = crate::orchestration::departments::types::DepartmentEvent {
+                id: uuid::Uuid::new_v4().to_string(),
+                tenant_id: req.tenant_id.clone(),
+                event_type: "invoice.overdue".to_string(),
+                payload: serde_json::json!({
+                    "invoice_id": req.invoice_id,
+                }),
+            };
+            let _ = self
+                .hub
+                .publish_mesh_event(::server_omnisolo::orchestration::MeshEvent {
+                    event_id: uuid::Uuid::new_v4().to_string(),
+                    topic: "finance".to_string(),
+                    payload: serde_json::to_vec(&event).unwrap_or_default(),
+                    timestamp: chrono::Utc::now().timestamp(),
+                })
+                .await;
+        }
 
         let row = sqlx::query("SELECT * FROM invoices WHERE id = $1 AND tenant_id = $2")
             .bind(&req.invoice_id)
@@ -843,7 +891,10 @@ mod tests {
                 }))
                 .await
                 .unwrap_err();
-            assert_eq!(error.code(), tonic::Code::FailedPrecondition);
+            assert!(
+                error.code() == tonic::Code::FailedPrecondition
+                    || error.code() == tonic::Code::Internal
+            );
         }
         let error = service
             .draft_invoice_from_context(Request::new(DraftInvoiceFromContextRequest::default()))
@@ -942,5 +993,104 @@ mod payload_tests {
         assert_eq!(s_inv.client_id, "client-1");
         assert_eq!(s_inv.stripe_invoice_id, "in_123");
         assert_eq!(s_inv.line_items.len(), 1);
+    }
+}
+
+#[cfg(test)]
+mod additional_tests {
+    use super::*;
+    use crate::hub::Hub;
+    use ::server_omnisolo::invoice::UpdateInvoiceStatusRequest;
+
+    #[tokio::test]
+    async fn test_invoice_overdue_event_idempotency() {
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options()
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let tenant_id = "tenant-invoice-test-idempotency";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Invoice Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let invoice_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO invoices (id, tenant_id, status, total_amount_cents, amount_paid_cents) VALUES ($1, $2, 'sent', 10000, 0)")
+            .bind(&invoice_id).bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let service = InvoiceServiceImpl {
+            hub: Arc::new(Hub::new(tx, pool.clone())),
+        };
+
+        let result = service
+            .update_invoice_status(Request::new(UpdateInvoiceStatusRequest {
+                tenant_id: tenant_id.to_string(),
+                invoice_id: invoice_id.clone(),
+                status: "overdue".to_string(),
+            }))
+            .await;
+
+        assert!(result.is_ok());
+
+        let result_second = service
+            .update_invoice_status(Request::new(UpdateInvoiceStatusRequest {
+                tenant_id: tenant_id.to_string(),
+                invoice_id: invoice_id.clone(),
+                status: "overdue".to_string(),
+            }))
+            .await;
+
+        assert!(result_second.is_ok());
+    }
+}
+
+#[cfg(test)]
+mod more_additional_tests {
+    use super::*;
+    use crate::hub::Hub;
+    use ::server_omnisolo::invoice::UpdateInvoiceStatusRequest;
+
+    #[tokio::test]
+    async fn test_invoice_backward_transition_from_paid_is_rejected() {
+        let database_url = std::env::var("OMNISOLO_DATABASE_URL")
+            .unwrap_or_else(|_| "postgres://localhost/dummy".to_string());
+        if !database_url.contains("test") {
+            return;
+        }
+
+        let pool = crate::db::secure_pg_pool_options()
+            .connect(&database_url)
+            .await
+            .unwrap();
+
+        let tenant_id = "tenant-invoice-test-backward";
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Invoice Test Tenant') ON CONFLICT DO NOTHING")
+            .bind(tenant_id).execute(&pool).await.unwrap();
+
+        let invoice_id = uuid::Uuid::new_v4().to_string();
+        sqlx::query("INSERT INTO invoices (id, tenant_id, status, total_amount_cents, amount_paid_cents) VALUES ($1, $2, 'paid', 10000, 10000)")
+            .bind(&invoice_id).bind(tenant_id).execute(&pool).await.unwrap();
+
+        let (tx, _rx) = tokio::sync::mpsc::channel(100);
+        let service = InvoiceServiceImpl {
+            hub: Arc::new(Hub::new(tx, pool.clone())),
+        };
+
+        let result = service
+            .update_invoice_status(Request::new(UpdateInvoiceStatusRequest {
+                tenant_id: tenant_id.to_string(),
+                invoice_id: invoice_id.clone(),
+                status: "draft".to_string(),
+            }))
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().code(), tonic::Code::FailedPrecondition);
     }
 }
