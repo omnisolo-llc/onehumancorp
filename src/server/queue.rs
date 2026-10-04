@@ -798,7 +798,7 @@ impl QueueManager {
                 Err(e) => {
                     retry_count += 1;
                     if retry_count > 3 {
-                        ::server_telemetry::record_task_claim_contention("generic");
+                        ::server_telemetry::record_task_claim_contention("postgres");
                         return Err(e);
                     }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -807,9 +807,7 @@ impl QueueManager {
         };
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
-            ::server_telemetry::record_task_claim_contention(
-                "generic",
-            );
+            ::server_telemetry::record_task_claim_contention("postgres");
         }
 
         tx.commit().await?;
@@ -825,7 +823,7 @@ impl QueueManager {
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_sub_agent_queue_delay(
                 latency,
-                ::server_telemetry::get_deployment_mode(),
+                "postgres",
             );
 
             ::server_telemetry::record_queue_length_sync(
@@ -969,11 +967,11 @@ impl QueueManager {
                                     Ok(Err(e)) => {
                                         ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                         Err(e)
-                                    }
+                                    },
                                     Err(_) => {
                                         ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                         Err("Timeout executing job".to_string())
-                                    }
+                                    },
                                 };
                                 match handler_res {
                                     Ok(_) => {
@@ -982,6 +980,7 @@ impl QueueManager {
                                     }
                                     Err(e) => {
                                         tracing::trace!("Job handler failed: {}, error: {}", job.id, e);
+                                        ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);
