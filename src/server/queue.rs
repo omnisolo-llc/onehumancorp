@@ -821,10 +821,7 @@ impl QueueManager {
                 .unwrap_or_else(|_| chrono::Utc::now());
 
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(
-                latency,
-                "postgres",
-            );
+            ::server_telemetry::record_sub_agent_queue_delay(latency, "postgres");
 
             ::server_telemetry::record_queue_length_sync(
                 -1,
