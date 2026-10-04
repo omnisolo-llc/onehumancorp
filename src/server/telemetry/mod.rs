@@ -455,6 +455,27 @@ pub fn get_task_claim_contention_total() -> &'static UpDownCounter<i64> {
     })
 }
 
+pub static SUB_AGENT_SPAWN_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
+
+pub fn get_sub_agent_spawn_errors_total() -> &'static Counter<u64> {
+    SUB_AGENT_SPAWN_ERRORS_TOTAL.get_or_init(|| {
+        let meter = global::meter("ohc.sub_agent");
+        meter
+            .u64_counter("ohc_sub_agent_spawn_errors_total")
+            .with_description("Tracks spawn and execution failures")
+            .build()
+    })
+}
+
+pub fn record_sub_agent_spawn_error(mode: &str) {
+    if !::server_config::is_telemetry_enabled() {
+        return;
+    }
+
+    let counter = get_sub_agent_spawn_errors_total();
+    counter.add(1, &[opentelemetry::KeyValue::new("mode", mode.to_string())]);
+}
+
 pub fn record_mcp_tool_call(tool_name: &str, status: &str) {
     if !::server_config::is_telemetry_enabled() {
         return;
