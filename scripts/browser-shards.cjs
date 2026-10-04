@@ -5,9 +5,9 @@ const path = require('node:path');
 const os = require('node:os');
 
 // Whole Playwright logical shards preserve its serial-suite grouping. These
-// bins use run 37209169837's observed two-worker execution durations, not a
+// bins use run 37212397293's observed two-worker execution durations, not a
 // test allowlist. Every run rediscovers all tests and all twelve logical units.
-const GROUPS = [[1, 2, 10], [3, 5, 7, 8, 11], [4, 6, 9, 12]];
+const GROUPS = [[1, 2, 6], [3, 7, 8, 11, 12], [4, 5, 9, 10]];
 const identity = ({ id, title, file }) => ({ id, title, file });
 function inventory(items) {
   assert.ok(Array.isArray(items) && items.length, 'missing complete browser inventory');

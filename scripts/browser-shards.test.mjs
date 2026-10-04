@@ -11,6 +11,14 @@ test('complete CI accepts only owned three-way grouping, never a caller test lis
 
 import shards from './browser-shards.cjs';
 const source = { commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64) };
+test('groups fit the 15–20 minute testing target using observed logical work and scheduling overhead', () => {
+  // Run 37212397293: exact identities mapped back to their logical units.
+  const seconds = [823.252,1157.768,1092.200,1451.816,361.203,337.050,321.986,282.902,354.014,145.234,196.248,404.513];
+  for (const group of shards.GROUPS) {
+    const estimate = group.reduce((sum,index) => sum + seconds[index-1],0) / 2 + 32;
+    assert.ok(estimate >= 15*60 && estimate <= 20*60, `group ${group}: ${estimate/60} modeled minutes`);
+  }
+});
 function fixture() {
   const slices = Array.from({length:12}, (_,i) => [{id:`id-${i}`,title:`test ${i}`,file:`src/${i}.spec.ts`}]);
   const full = slices.flat();
