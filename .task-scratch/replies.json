@@ -1,6 +1,0 @@
-[
-    {
-        "comment_id": "5982860715",
-        "reply": "Understood. The patch does not implement the requested feature because doing so would require integrating with unsupported channels (Instagram DMs, WhatsApp, SMS). According to the `RESEARCH.md` contract, 'Additional channels... require retained-customer need, measurable value and explicit strategy approval' (Gated expansion). Because this approval and the expansion gate is missing in `RESEARCH.md`, the task is explicitly 'blocked' as a 'no-work finding'. The task instructions require me to 'return an explicit no_work or blocked outcome. Do not invent follow-up features or dummy changes.', and to commit this finding with an empty commit, which I have done. Please refer to `RESEARCH.md` for the explicit policy forbidding adding channels without explicit approval."
-    }
-]
