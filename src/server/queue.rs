@@ -976,6 +976,7 @@ impl QueueManager {
                                     }
                                     Err(e) => {
                                         tracing::trace!("Job handler failed: {}, error: {}", job.id, e);
+                                        ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);

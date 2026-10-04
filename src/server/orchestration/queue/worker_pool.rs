@@ -72,6 +72,7 @@ impl WorkerPool {
                                         }
                                         Ok(Ok(Err(e))) => {
                                             ::server_telemetry::record_error_signal("[bug] Job handler returned error for ");
+                                            ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                             tracing::trace!("Job handler returned error for {}: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3, &e).await {
                                                 ::server_telemetry::record_error_signal("[bug] Failed to register fail for job ");
@@ -80,6 +81,7 @@ impl WorkerPool {
                                         }
                                         Ok(Err(e)) => {
                                             ::server_telemetry::record_error_signal("[bug] Job panicked/join error");
+                                            ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                             tracing::trace!("Job {} panicked/join error: {}", job_id, e);
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3, &e.to_string()).await {
                                                 ::server_telemetry::record_error_signal("[bug] Failed to register fail for job ");
@@ -88,6 +90,7 @@ impl WorkerPool {
                                         }
                                         Err(_) => {
                                             ::server_telemetry::record_error_signal("[bug] Job timed out after ms");
+                                            ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                             tracing::trace!("Job {} timed out after {} ms", job_id, timeout_ms);
                                             join_handle.abort();
                                             if let Err(fail_err) = queue_clone.fail(&job_id, 3, "Agent execution exceeded 60-second ML-Resilience timeout rule").await {

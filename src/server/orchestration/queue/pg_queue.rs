@@ -19,10 +19,7 @@ impl TaskQueue for PgTaskQueue {
         if jobs.is_empty() {
             return Ok(());
         }
-        ::server_telemetry::record_queue_length_sync(
-            jobs.len() as i32,
-            ::server_telemetry::get_deployment_mode(),
-        );
+        ::server_telemetry::record_queue_length_sync(jobs.len() as i32, "postgres");
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
         ::server_common::auth_utils::set_system_context(&mut *tx)
             .await
@@ -73,7 +70,7 @@ impl TaskQueue for PgTaskQueue {
         ::server_common::auth_utils::set_org_context(&mut *tx, &job.tenant_id)
             .await
             .map_err(|e| e.to_string())?;
-        ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
+        ::server_telemetry::record_queue_length_sync(1, "postgres");
         let payload_json: serde_json::Value =
             serde_json::from_str(&job.payload).unwrap_or(serde_json::Value::Null);
 
@@ -143,16 +140,11 @@ impl TaskQueue for PgTaskQueue {
         .map_err(|e| e.to_string())?;
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
-            ::server_telemetry::record_task_claim_contention(
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_task_claim_contention("postgres");
         }
 
         if let Some(row) = job_opt {
-            ::server_telemetry::record_queue_length_sync(
-                -1,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_queue_length_sync(-1, "postgres");
             let payload_val: serde_json::Value =
                 row.try_get("payload").unwrap_or(serde_json::Value::Null);
             let payload_str = serde_json::to_string(&payload_val).unwrap_or_default();
@@ -161,10 +153,7 @@ impl TaskQueue for PgTaskQueue {
                 .try_get("created_at")
                 .unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(
-                latency,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_sub_agent_queue_delay(latency, "postgres");
 
             let job = Job {
                 id: row.get("id"),
@@ -205,10 +194,7 @@ impl TaskQueue for PgTaskQueue {
             .map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
-            ::server_telemetry::record_queue_length_sync(
-                -1,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_queue_length_sync(-1, "postgres");
             use sqlx::Row;
             let updated: chrono::DateTime<chrono::Utc> = r
                 .try_get("updated_at")
@@ -217,10 +203,7 @@ impl TaskQueue for PgTaskQueue {
                 .try_get("next_retry_at")
                 .unwrap_or_else(|_| chrono::Utc::now());
             let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_task_processing_latency(
-                ::server_telemetry::get_deployment_mode(),
-                latency,
-            );
+            ::server_telemetry::record_task_processing_latency("postgres", latency);
         }
         tx.commit().await.map_err(|e| e.to_string())?;
         Ok(())
