@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement Autonomous AI Estimate & Invoicing Agent"
+issue_description: "Building a new Estimate and Invoicing Agent is blocked because it conflicts with the current research audit constraints. The audit identifies gaps in existing proposal and invoice features (e.g., fixed $5000 proposals and invented checkout URLs) but explicitly states: 'These are concrete gaps in existing features, not reasons to commission a new proposal or payment subsystem.' Additionally, establishing whether an inquiry can become a usable payment request is a decision prerequisite requiring owner evidence, not an approved feature backlog. New verticals, agent marketplaces, and expansion scopes mandate a blocked finding lacking such evidence."
