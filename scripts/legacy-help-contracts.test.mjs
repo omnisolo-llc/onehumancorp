@@ -43,7 +43,7 @@ for (const root of roots) {
       assert.ok(tab); tab.click();
       const content = widget.querySelector('#tab-changelog');
       assert.ok(content.classList.contains('active'));
-      assert.equal(new URL(content.querySelector('a').href).pathname, '/api/v1/ui/changelog.html');
+      assert.equal(new URL(content.querySelector('a').href).pathname, root === 'src/ui/tauri/src/ui' ? '/api/v1/ui/changelog.html' : '/changelog');
     } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
   });
   test(`${root}: widget tutorials open the real shared video player`, async () => {

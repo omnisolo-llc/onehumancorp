@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { access, readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 
@@ -14,11 +14,15 @@ test('the mounted conversion RPC cannot issue an unverified permanent plan or le
   assert.match(server, /add_service\(GrowthServiceServer::with_interceptor\(growth_service, SpiffeInterceptor\)\)/);
 });
 
-for (const file of [
-  'src/ui/next/public/trial-extension.html',
-  'src/ui/next/public/ui/trial-extension.html',
-  'src/ui/tauri/src/ui/trial-extension.html',
-]) {
+for (const file of ['src/ui/next/public/trial-extension.html', 'src/ui/next/public/ui/trial-extension.html']) {
+  test(`${file}: the web release no longer ships the plan interstitial`, async () => {
+    await assert.rejects(access(file), { code: 'ENOENT' });
+  });
+}
+
+// Preserve standalone compatibility; the web aliases are covered by the real
+// canonical-page and redirect browser tests instead of loading deleted assets.
+for (const file of ['src/ui/tauri/src/ui/trial-extension.html']) {
   test(`${file}: directs owners to verified plan reads without a share-to-grant claim`, async () => {
     const requests = [];
     const dom = new JSDOM(await readFile(file, 'utf8'), {

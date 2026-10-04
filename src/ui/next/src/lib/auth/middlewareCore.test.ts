@@ -18,6 +18,14 @@ const retiredPages = [
   ["/ui/api-docs.html", "/api-docs"],
   ["/api/ui/api-docs.html", "/api-docs"],
   ["/api/v1/ui/api-docs.html", "/api-docs"],
+  ["/trial-extension.html", "/trial-extension"],
+  ["/ui/trial-extension.html", "/trial-extension"],
+  ["/changelog.html", "/changelog"],
+  ["/ui/changelog.html", "/changelog"],
+  ["/api/ui/changelog.html", "/changelog"],
+  ["/api/v1/ui/changelog.html", "/changelog"],
+  ["/unified-feed.html", "/unified-feed"],
+  ["/ui/unified-feed.html", "/unified-feed"],
 ] as const;
 const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
