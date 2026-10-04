@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Agentic B2B Supply Chain & Autonomous Procurement Engine"
+issue_description: "The issue requests implementing a new B2B supply chain, autonomous procurement engine, and MRP capabilities. According to RESEARCH.md, new verticals, channels, agent marketplaces, and payroll/tax/MRP/POS engines require evidence and the expansion gate. New feature epics lacking an explicit evidence-backed decision are considered blockers to new scope and must result in a blocked finding."
+issue_priority: "P1"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
