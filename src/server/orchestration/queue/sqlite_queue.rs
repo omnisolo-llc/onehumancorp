@@ -23,10 +23,7 @@ impl TaskQueue for SQLiteTaskQueue {
         if jobs.is_empty() {
             return Ok(());
         }
-        ::server_telemetry::record_queue_length_sync(
-            jobs.len() as i32,
-            ::server_telemetry::get_deployment_mode(),
-        );
+        ::server_telemetry::record_queue_length_sync(jobs.len() as i32, "sqlite");
         let mut tx = self.pool.begin().await.map_err(|e| e.to_string())?;
 
         let mut current_depths = std::collections::HashMap::new();
@@ -94,7 +91,7 @@ impl TaskQueue for SQLiteTaskQueue {
     }
 
     async fn enqueue(&self, job: Job) -> Result<(), String> {
-        ::server_telemetry::record_queue_length_sync(1, ::server_telemetry::get_deployment_mode());
+        ::server_telemetry::record_queue_length_sync(1, "sqlite");
         let count_row: (i64,) = sqlx::query_as(
             "SELECT COUNT(*) FROM ohc_job_queue WHERE tenant_id = ? AND status = 'PENDING'",
         )
@@ -180,10 +177,7 @@ impl TaskQueue for SQLiteTaskQueue {
         }
 
         if let Some(row) = job_opt {
-            ::server_telemetry::record_queue_length_sync(
-                -1,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_queue_length_sync(-1, "sqlite");
             let created_at: chrono::DateTime<chrono::Utc> =
                 match row.try_get::<String, _>("created_at") {
                     Ok(s) => {
@@ -246,10 +240,7 @@ impl TaskQueue for SQLiteTaskQueue {
             .map_err(|e| e.to_string())?;
 
         if let Some(r) = row {
-            ::server_telemetry::record_queue_length_sync(
-                -1,
-                ::server_telemetry::get_deployment_mode(),
-            );
+            ::server_telemetry::record_queue_length_sync(-1, "sqlite");
             use sqlx::Row;
             let updated: chrono::DateTime<chrono::Utc> = match r.try_get::<String, _>("updated_at")
             {
@@ -270,10 +261,7 @@ impl TaskQueue for SQLiteTaskQueue {
                         .unwrap_or_else(|_| chrono::Utc::now()),
                 };
             let latency = (updated - next_retry_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_task_processing_latency(
-                ::server_telemetry::get_deployment_mode(),
-                latency,
-            );
+            ::server_telemetry::record_task_processing_latency("sqlite", latency);
         }
         Ok(())
     }

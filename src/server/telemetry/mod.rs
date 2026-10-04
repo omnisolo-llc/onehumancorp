@@ -652,7 +652,7 @@ pub fn record_sub_agent_queue_delay(delay: f64, deployment_mode: &str) {
     histogram.record(
         delay,
         &[opentelemetry::KeyValue::new(
-            "deployment_mode",
+            "mode",
             deployment_mode.to_string(),
         )],
     );
