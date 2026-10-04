@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: Implement AI Unified Inbox Differentiation & Omnichannel Customer Memory
+issue_description: The request asks to implement an AI Unified Inbox with omnichannel customer memory, integrating multiple channels (Instagram DMs, WhatsApp, SMS, Email) and new agents (Customer Success Agent/The Ambassador). This is blocked by repository constraints because new verticals, channels, agent marketplaces, and harness adapters require explicit evidence and must pass the expansion gate in RESEARCH.md. Since there is no explicit evidence and expansion gate approval in RESEARCH.md for these new channels and agents, this task is blocked.
