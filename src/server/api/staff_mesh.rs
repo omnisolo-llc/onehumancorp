@@ -1,4 +1,4 @@
-use crate::api::staff_timecards::sync_timecard_handler;
+use crate::api::staff_timecards::{sync_timecard_handler, timecard_receipt_handler};
 use crate::db::DB;
 use axum::{
     Json, Router,
@@ -1045,6 +1045,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
         .route(
             "/timecard",
             post(sync_timecard_handler).get(get_timecard_handler),
+        )
+        .route(
+            "/timecard/receipts/{id}",
+            axum::routing::get(timecard_receipt_handler),
         )
         .route("/tasks", post(create_task_handler).get(get_tasks_handler))
         .route(

@@ -116,3 +116,64 @@ async fn actual_parent_mount_commits_a_verified_clock_receipt() {
     );
     assert_eq!(count, 1);
 }
+
+#[tokio::test]
+async fn actual_parent_receipt_mount_requires_authentication() {
+    use crate::api::staff_timecards_test::fixture::{Backend, Fixture, ROUTE, assert_ack, clock};
+    use tower::ServiceExt;
+    let f = Fixture::new(Backend::Sqlite).await;
+    assert_ack(
+        &f.post(vec![clock("parent-receipt")]).await,
+        &["parent-receipt"],
+    );
+    let app = crate::actual_parent_timecard_app(f.db.clone(), f.auth.clone()).await;
+    let response = app
+        .oneshot(
+            axum::http::Request::builder()
+                .method("GET")
+                .uri(format!("{ROUTE}/receipts/parent-receipt"))
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let status = response.status();
+    let count = f.count().await;
+    f.finish().await;
+    assert_eq!(status, axum::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(count, 1);
+}
+#[tokio::test]
+async fn actual_parent_receipt_mount_returns_the_verified_identity() {
+    use crate::api::staff_timecards_test::fixture::{
+        Backend, Fixture, OWNER, ROUTE, assert_ack, clock, identity,
+    };
+    use tower::ServiceExt;
+    let f = Fixture::new(Backend::Sqlite).await;
+    let event = clock("parent-receipt");
+    assert_ack(&f.post(vec![event.clone()]).await, &["parent-receipt"]);
+    let app = crate::actual_parent_timecard_app(f.db.clone(), f.auth.clone()).await;
+    let response = app
+        .oneshot(
+            axum::http::Request::builder()
+                .method("GET")
+                .uri(format!("{ROUTE}/receipts/parent-receipt"))
+                .header("authorization", format!("Bearer {}", f.token))
+                .body(axum::body::Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let status = response.status();
+    let cache = response.headers().get("cache-control").cloned();
+    let body = axum::body::to_bytes(response.into_body(), 1024 * 1024)
+        .await
+        .unwrap();
+    let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let count = f.count().await;
+    f.finish().await;
+    assert_eq!(cache.unwrap(), "private, no-store");
+    assert_eq!(body["receipt"], identity(&event, OWNER));
+    assert_ack(&(status, body), &["parent-receipt"]);
+    assert_eq!(count, 1);
+}

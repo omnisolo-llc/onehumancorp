@@ -293,6 +293,33 @@ impl Fixture {
             ))
     }
 
+    pub async fn receipt(&self, id: &str) -> (StatusCode, Value) {
+        self.receipt_token(id, &self.token).await
+    }
+    pub async fn receipt_token(&self, id: &str, token: &str) -> (StatusCode, Value) {
+        let response = self
+            .app()
+            .await
+            .oneshot(
+                Request::builder()
+                    .method("GET")
+                    .uri(format!("{ROUTE}/receipts/{id}"))
+                    .header("authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        if status.is_success() {
+            assert_eq!(
+                response.headers().get("cache-control").unwrap(),
+                "private, no-store"
+            );
+        }
+        let body = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        (status, serde_json::from_slice(&body).unwrap_or(Value::Null))
+    }
     pub async fn post(&self, events: Vec<Value>) -> (StatusCode, Value) {
         self.post_token(events, &self.token).await
     }

@@ -75,7 +75,7 @@ class FocusedGateTests(unittest.TestCase):
         import yaml
         root = Path(__file__).resolve().parents[1]
         minimum, database = gate.GATES['staff-timecard-contract']
-        self.assertGreaterEqual(minimum, 74)
+        self.assertGreaterEqual(minimum, 96)
         self.assertEqual(database, 'OHC_CLOCK_TEST_DATABASE_URL')
         steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
         fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/staff-timecard-contract/fetch.sh')
@@ -154,7 +154,7 @@ class FocusedGateTests(unittest.TestCase):
         manifest = json.loads((folder/'source-manifest.json').read_text())
         fragments = {item['label']: item for item in manifest['production_fragments']}
         for label in ['whole module: staff_timecards', 'whole module: sync_transaction',
-                      'whole module: staff_timecards_test', 'timecard method route',
+                      'whole module: staff_timecards_test', 'timecard method route', 'receipt recovery method route',
                       'canonical access configuration', 'actual staff parent mount',
                       'actual global protected bearer layer',
                       'actual SQLite ohc_timecard_event bootstrap',

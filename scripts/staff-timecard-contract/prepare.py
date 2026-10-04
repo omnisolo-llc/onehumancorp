@@ -79,11 +79,12 @@ def prepare():
 
     unique(modules, r'^pub mod staff_timecards;$', 'production clock module registration', re.M)
     unique(modules, r'^#\[cfg\(test\)\]\nmod staff_timecards_test;$', 'native clock test registration', re.M)
-    handler_import = unique(staff, r'^use crate::api::staff_timecards::sync_timecard_handler;$', 'real POST handler import', re.M)
+    handler_import = unique(staff, r'^use crate::api::staff_timecards::\{\s*sync_timecard_handler,\s*timecard_receipt_handler,?\s*\};$', 'real POST handler import', re.M)
     response = top_level_item(staff, '#[derive(Serialize)]\npub struct GetTimecardResponse', 'GET response DTO')
     tenant = between(staff, 'fn get_tenant_id(', 'pub async fn create_staff_handler(', 'GET signed tenant helper')
     get_handler = between(staff, 'pub async fn get_timecard_handler(', 'pub async fn create_task_handler(', 'whole mounted GET handler')
     route = unique(staff, r'        \.route\(\s*"/timecard",\s*post\(sync_timecard_handler\)\.get\(get_timecard_handler\),\s*\)', 'timecard method route')
+    receipt_route = unique(staff, r'        \.route\(\s*"/timecard/receipts/\{id\}",\s*axum::routing::get\(timecard_receipt_handler\),\s*\)', 'receipt recovery method route')
     router_signature = unique(staff, r"pub fn router<S: Clone \+ Send \+ Sync \+ 'static>\(db: Arc<DB>\) -> Router<S> \{", 'staff router signature')
     router_state = unique(staff, r'^        \.with_state\(db\)$', 'staff router state', re.M)
     secure_pool = top_level_item(db, 'pub fn secure_pg_pool_options()', 'real pooled tenant reset hooks')
@@ -125,7 +126,7 @@ def prepare():
         whole_module('src/server/api/sync_transaction.rs', 'sync_transaction', 'pub(crate)'),
         'pub mod staff_mesh { use crate::db::DB; use axum::{Json,Router,extract::{Extension,State},response::IntoResponse,routing::post}; use serde::Serialize; use std::sync::Arc;',
         handler_import, response, tenant, get_handler,
-        router_signature + 'Router::new()' + route + router_state + '}',
+        router_signature + 'Router::new()' + route + receipt_route + router_state + '}',
         '}',
         '#[cfg(test)]' + whole_module('src/server/api/staff_timecards_test.rs', 'staff_timecards_test', 'pub(crate)'),
         '}',

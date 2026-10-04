@@ -771,3 +771,220 @@ async fn postgres_deferred_effect_change_cannot_be_acknowledged() {
     );
     assert_eq!(count, 0);
 }
+
+// Receipt recovery reads the already committed effect; it never resends a clock.
+async fn committed_clock_has_read_only_receipt(f: &Fixture) {
+    let action = event(
+        "receipt-clock",
+        OWNER,
+        "CLOCK_OUT",
+        "2026-10-04T11:30:00.123456+05:30",
+    );
+    assert_ack(&f.post(vec![action.clone()]).await, &["receipt-clock"]);
+    f.execute(match f.backend {
+        Backend::Sqlite=>"CREATE TRIGGER receipt_no_insert BEFORE INSERT ON ohc_timecard_event BEGIN SELECT RAISE(ABORT,'receipt must not insert'); END; CREATE TRIGGER receipt_no_update BEFORE UPDATE ON ohc_timecard_event BEGIN SELECT RAISE(ABORT,'receipt must not update'); END; CREATE TRIGGER receipt_no_delete BEFORE DELETE ON ohc_timecard_event BEGIN SELECT RAISE(ABORT,'receipt must not delete'); END",
+        Backend::Postgres=>"CREATE FUNCTION receipt_no_write() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'receipt must not mutate' USING ERRCODE='23514'; END $$; CREATE TRIGGER receipt_no_write BEFORE INSERT OR UPDATE OR DELETE ON ohc_timecard_event FOR EACH ROW EXECUTE FUNCTION receipt_no_write()",
+    }).await;
+    for _ in 0..2 {
+        let response = f.receipt("receipt-clock").await;
+        assert_ack(&response, &["receipt-clock"]);
+        assert_eq!(response.1["receipt"], identity(&action, OWNER));
+    }
+    assert_eq!(f.count().await, 1);
+}
+on_both_stores!(
+    sqlite_receipt_lookup_confirms_without_writes,
+    postgres_receipt_lookup_confirms_without_writes,
+    committed_clock_has_read_only_receipt
+);
+
+async fn missing_and_legacy_receipts_are_unconfirmed(f: &Fixture) {
+    let missing = f.receipt("missing-receipt").await;
+    assert_eq!(missing.0, StatusCode::NOT_FOUND);
+    assert_ack(
+        &f.post(vec![clock("legacy-receipt")]).await,
+        &["legacy-receipt"],
+    );
+    f.execute("UPDATE ohc_timecard_event SET request_identity=NULL WHERE id='legacy-receipt'")
+        .await;
+    let legacy = f.receipt("legacy-receipt").await;
+    assert_eq!(legacy.0, StatusCode::NOT_FOUND);
+    assert_ne!(legacy.1["success"], json!(true));
+    assert_eq!(f.saved().await[0].identity, None);
+}
+on_both_stores!(
+    sqlite_missing_or_legacy_receipt_cannot_ack,
+    postgres_missing_or_legacy_receipt_cannot_ack,
+    missing_and_legacy_receipts_are_unconfirmed
+);
+
+async fn receipt_is_tenant_and_issuing_actor_scoped(f: &Fixture) {
+    assert_ack(
+        &f.post(vec![clock("private-receipt")]).await,
+        &["private-receipt"],
+    );
+    for (actor, tenant, role) in [
+        ("other-owner", TENANT, "ADMIN"),
+        ("foreign-owner", "foreign-tenant", "OWNER"),
+    ] {
+        let response = f
+            .receipt_token("private-receipt", &f.token_for(actor, tenant, role))
+            .await;
+        assert_eq!(response.0, StatusCode::NOT_FOUND, "{response:?}");
+        assert!(response.1.get("receipt").is_none());
+    }
+    assert_eq!(f.count().await, 1);
+}
+on_both_stores!(
+    sqlite_receipt_requires_current_tenant_and_issuer,
+    postgres_receipt_requires_current_tenant_and_issuer,
+    receipt_is_tenant_and_issuing_actor_scoped
+);
+
+async fn receipt_verifies_all_persisted_effect_fields(f: &Fixture) {
+    for (index, assignment) in [
+        "staff_id='owned-staff'",
+        "event_type='CLOCK_OUT'",
+        "event_time='2026-10-04T06:00:01.123456Z'",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let id = format!("receipt-tamper-{index}");
+        assert_ack(&f.post(vec![clock(&id)]).await, &[&id]);
+        f.execute(&format!(
+            "UPDATE ohc_timecard_event SET {assignment} WHERE id='{id}'"
+        ))
+        .await;
+        let response = f.receipt(&id).await;
+        assert_eq!(response.0, StatusCode::CONFLICT, "{response:?}");
+        assert!(response.1.get("receipt").is_none());
+    }
+    assert_eq!(f.count().await, 3);
+}
+on_both_stores!(
+    sqlite_receipt_checks_persisted_effect,
+    postgres_receipt_checks_persisted_effect,
+    receipt_verifies_all_persisted_effect_fields
+);
+
+async fn receipt_identity_must_match_lookup_id_and_schema(f: &Fixture) {
+    assert_ack(&f.post(vec![clock("lookup-id")]).await, &["lookup-id"]);
+    for mutate in ["id", "version", "extra"] {
+        let mut value = identity(&clock("lookup-id"), OWNER);
+        match mutate {
+            "id" => value["id"] = json!("different-id"),
+            "version" => value["version"] = json!(2),
+            "extra" => value["unexpected"] = json!(true),
+            _ => unreachable!(),
+        }
+        f.execute(&format!(
+            "UPDATE ohc_timecard_event SET request_identity='{}' WHERE id='lookup-id'",
+            value.to_string().replace('\'', "''")
+        ))
+        .await;
+        let response = f.receipt("lookup-id").await;
+        assert!(!response.0.is_success(), "{response:?}");
+        assert!(response.1.get("receipt").is_none());
+    }
+    assert_eq!(f.count().await, 1);
+}
+on_both_stores!(
+    sqlite_receipt_rejects_mismatched_or_unversioned_identity,
+    postgres_receipt_rejects_mismatched_or_unversioned_identity,
+    receipt_identity_must_match_lookup_id_and_schema
+);
+
+async fn stale_owner_cannot_read_receipt(f: &Fixture) {
+    assert_ack(
+        &f.post(vec![clock("role-receipt")]).await,
+        &["role-receipt"],
+    );
+    f.execute("UPDATE identity_user_roles SET role_name='MEMBER' WHERE user_id='clock-owner'")
+        .await;
+    let response = f.receipt("role-receipt").await;
+    assert_eq!(response.0, StatusCode::FORBIDDEN, "{response:?}");
+    assert!(response.1.get("receipt").is_none());
+    assert_eq!(f.count().await, 1);
+}
+on_both_stores!(
+    sqlite_receipt_requires_current_owner_role,
+    postgres_receipt_requires_current_owner_role,
+    stale_owner_cannot_read_receipt
+);
+
+async fn revoked_owner_cannot_read_receipt(f: &Fixture) {
+    assert_ack(
+        &f.post(vec![clock("revoked-receipt")]).await,
+        &["revoked-receipt"],
+    );
+    let claims = f.auth.validate_token(&f.token).await.unwrap();
+    f.auth
+        .revoke_token(
+            claims.jti,
+            DateTime::from_timestamp(claims.exp, 0).unwrap(),
+            TENANT,
+        )
+        .await
+        .unwrap();
+    let response = f.receipt("revoked-receipt").await;
+    assert_eq!(response.0, StatusCode::UNAUTHORIZED, "{response:?}");
+    assert_eq!(f.count().await, 1);
+}
+on_both_stores!(
+    sqlite_revoked_session_cannot_get_receipt,
+    postgres_revoked_session_cannot_get_receipt,
+    revoked_owner_cannot_read_receipt
+);
+
+async fn receipt_storage_failure_is_explicit(f: &Fixture) {
+    f.execute("DROP TABLE ohc_timecard_event").await;
+    let response = f.receipt("unavailable-receipt").await;
+    assert_eq!(response.0, StatusCode::SERVICE_UNAVAILABLE, "{response:?}");
+    assert!(response.1.get("receipt").is_none());
+}
+on_both_stores!(
+    sqlite_unavailable_receipt_storage_cannot_ack,
+    postgres_unavailable_receipt_storage_cannot_ack,
+    receipt_storage_failure_is_explicit
+);
+
+async fn receipt_ids_keep_canonical_path_rules(f: &Fixture) {
+    for id in [".", "..", "a%2Fb", "a%25b", "a%20b", "a%5Cb"] {
+        let response = f.receipt(id).await;
+        assert!(
+            matches!(response.0, StatusCode::BAD_REQUEST | StatusCode::NOT_FOUND),
+            "{id}: {response:?}"
+        );
+        assert_ne!(response.1["success"], json!(true));
+    }
+    assert_eq!(f.count().await, 0);
+}
+on_both_stores!(
+    sqlite_receipt_ids_are_unambiguous,
+    postgres_receipt_ids_are_unambiguous,
+    receipt_ids_keep_canonical_path_rules
+);
+
+async fn receipt_rejects_encoded_alias_of_safe_id(f: &Fixture) {
+    assert_ack(
+        &f.post(vec![clock("receipt-clock"), clock("receipt_clock")])
+            .await,
+        &["receipt-clock", "receipt_clock"],
+    );
+    for alias in ["%72eceipt-clock", "receipt%2Dclock", "receipt%5Fclock"] {
+        let response = f.receipt(alias).await;
+        assert_eq!(
+            response.0,
+            StatusCode::BAD_REQUEST,
+            "raw path aliases cannot acknowledge a canonical receipt: {alias}: {response:?}"
+        );
+        assert!(response.1.get("receipt").is_none());
+    }
+    assert_eq!(f.count().await, 2);
+}
+on_both_stores!(
+    sqlite_receipt_rejects_percent_encoded_safe_ids,
+    postgres_receipt_rejects_percent_encoded_safe_ids,
+    receipt_rejects_encoded_alias_of_safe_id
+);

@@ -3,7 +3,7 @@
 use crate::db::{DB, DbStore};
 use axum::{
     Json,
-    extract::Extension,
+    extract::{Extension, OriginalUri, Path},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
@@ -358,6 +358,7 @@ fn insert_error(error: sqlx::Error) -> Error {
 enum Error {
     Invalid(&'static str),
     Conflict,
+    NotFound,
     Authority(AuthorityError),
     Database(sqlx::Error),
     Commit(SyncError),
@@ -375,6 +376,7 @@ impl From<sqlx::Error> for Error {
 fn failure(error: Error, ids: &[String]) -> Response {
     let (code, status, reason) = match error {
         Error::Invalid(reason) => (StatusCode::BAD_REQUEST, "blocked", reason),
+        Error::NotFound => (StatusCode::NOT_FOUND, "blocked", "clock_receipt_not_found"),
         Error::Conflict => (
             StatusCode::CONFLICT,
             "blocked",
@@ -429,13 +431,95 @@ pub async fn sync_timecard_handler(
         persist(owner, &events).await
     }
     .await;
-    let mut response = match result {
+    let response = match result {
         Ok(()) => (StatusCode::OK, Json(serde_json::json!({"success":true,"outcomes":ids.iter().map(|id| serde_json::json!({"id":id,"route":ROUTE,"status":"acknowledged"})).collect::<Vec<_>>()}))).into_response(),
         Err(error) => failure(error, &ids),
     };
+    private_response(response)
+}
+fn private_response(mut response: Response) -> Response {
     response.headers_mut().insert(
         axum::http::header::CACHE_CONTROL,
         axum::http::HeaderValue::from_static("private, no-store"),
     );
     response
+}
+
+fn verified_receipt(row: &PersistedEvent, actor: &str, id: &str) -> Result<ReceiptIdentity, Error> {
+    // NULL and unreadable historical identities cannot establish an issuer.
+    // Do not disclose another actor's clock receipt, even to a tenant owner.
+    let identity: ReceiptIdentity = row
+        .request_identity
+        .as_deref()
+        .and_then(|raw| serde_json::from_str(raw).ok())
+        .ok_or(Error::NotFound)?;
+    if identity.actor_id != actor {
+        return Err(Error::NotFound);
+    }
+    if identity.id != id {
+        return Err(Error::Conflict);
+    }
+    verify_effect(row, &identity)?;
+    Ok(identity)
+}
+async fn read_receipt(owner: Owner, id: &str) -> Result<ReceiptIdentity, Error> {
+    let actor = owner.actor_id().to_owned();
+    match owner {
+        Owner::Postgres(owner) => {
+            let tenant = owner.tenant_id().to_owned();
+            let mut tx = owner.begin().await?;
+            let row = pg_event(tx.connection(), &tenant, id)
+                .await?
+                .ok_or(Error::NotFound)?;
+            let receipt = verified_receipt(&row, &actor, id)?;
+            // A read cannot confirm a receipt after losing current authority.
+            commit_owner(tx).await.map_err(Error::Commit)?;
+            Ok(receipt)
+        }
+        Owner::Sqlite(owner) => {
+            let tenant = owner.tenant_id().to_owned();
+            let mut tx = owner.begin().await?;
+            let row = sqlite_event(tx.connection(), &tenant, id)
+                .await?
+                .ok_or(Error::NotFound)?;
+            let receipt = verified_receipt(&row, &actor, id)?;
+            commit_sqlite_owner(tx).await.map_err(Error::Commit)?;
+            Ok(receipt)
+        }
+    }
+}
+/// Recovery only: this endpoint never inserts, updates, backfills or resends an
+/// event. The same verifier certifies the actual effect for POST and GET.
+pub async fn timecard_receipt_handler(
+    access: Option<Extension<TimecardAccess>>,
+    claims: Option<Extension<server_common::Claims>>,
+    headers: HeaderMap,
+    OriginalUri(uri): OriginalUri,
+    Path(id): Path<String>,
+) -> Response {
+    let result = async {
+        let access = access.ok_or(Error::Authority(AuthorityError::Unavailable))?;
+        let claims = claims.ok_or(Error::Authority(AuthorityError::Forbidden))?;
+        let owner = access.authorize(&claims, &headers).await?;
+        // Path<String> is decoded by Axum. Preserve the canonical raw spelling
+        // too: an encoded alias of an otherwise safe ID is not a receipt URL.
+        if !safe_event_id(&id) || uri.path() != format!("{ROUTE}/receipts/{id}") {
+            return Err(Error::Invalid("invalid_clock_id"));
+        }
+        read_receipt(owner, &id).await
+    }
+    .await;
+    let response = match result {
+        Ok(receipt) => (
+            StatusCode::OK,
+            Json(serde_json::json!({
+                "success":true,
+                "outcomes":[{"id":id,"route":ROUTE,"status":"acknowledged"}],
+                "receipt":receipt,
+            })),
+        )
+            .into_response(),
+        Err(error) => failure(error, &[id]),
+    };
+    private_response(response)
 }
