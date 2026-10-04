@@ -1,3 +1,0 @@
-outcome: no_work
-issue_title: Implement 'Zero-Click' Autonomous Onboarding Agent to Solve SMB Setup Paralysis
-issue_description: "The 'Zero-Click' Autonomous Onboarding flow is already implemented. Extensive implementation across the stack exists in `src/server/api/onboarding/mod.rs` (which exposes the backend endpoints like `start_zero_click` taking natural language), `src/ui/next/src/app/onboarding/zero-click/` (frontend React views for chat flow and storefront generation), `src/ui/next/src/app/dashboard/page.tsx` (exposing Zero-Click Builder via Dashboard), and numerous tests (e.g. `src/e2e/playwright/zero_click_onboarding.spec.ts`, `src/e2e/tests/zero_click_onboarding.spec.ts`). The required feature is already fully present in the codebase."
