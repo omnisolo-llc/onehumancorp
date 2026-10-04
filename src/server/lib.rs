@@ -4400,34 +4400,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Mesh API server
     let is_cloud = !crate::is_standalone_runtime();
-    const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
-    let mut attempt = 1;
-    let mesh_transport = loop {
-        match omnisolo_builtin_agent::mesh::transport::create_transport(
-            redis_url.as_deref(),
-            is_cloud,
-        )
-        .await
-        {
-            Ok(transport) => break transport,
-            Err(error) if is_cloud && attempt < MESH_TRANSPORT_STARTUP_ATTEMPTS => {
-                tracing::warn!(
-                    attempt,
-                    max_attempts = MESH_TRANSPORT_STARTUP_ATTEMPTS,
-                    error = %error,
-                    "Mesh transport is not ready; retrying startup"
-                );
-                attempt += 1;
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-            Err(error) => {
-                return Err(std::io::Error::other(format!(
-                    "Failed to create MeshTransport after {attempt} attempt(s): {error}"
-                ))
-                .into());
-            }
-        }
-    };
+    let mesh_transport = omnisolo_builtin_agent::mesh::transport::create_transport_for_startup(
+        redis_url.as_deref(),
+        is_cloud,
+    )
+    .await
+    .map_err(std::io::Error::other)?;
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(

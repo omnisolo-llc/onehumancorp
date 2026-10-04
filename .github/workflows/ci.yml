@@ -919,6 +919,14 @@ jobs:
         env:
           CARGO_TARGET_DIR: target
         run: python3 scripts/focused_ci_gate.py redis-startup-contract
+      - name: Fetch locked mesh startup dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/mesh-startup-contract/fetch.sh
+      - name: Verify bounded mesh transport startup and cancellation
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py mesh-startup-contract
       - name: Verify approval read-after-write consistency
         if: ${{ !cancelled() }}
         env:

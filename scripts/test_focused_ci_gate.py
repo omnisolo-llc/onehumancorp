@@ -12,6 +12,20 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_mesh_startup_fetch_precedes_required_offline_gate(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/mesh-startup-contract/fetch.sh')
+        run = next(i for i, step in enumerate(steps) if step.get('run') == 'python3 scripts/focused_ci_gate.py mesh-startup-contract')
+        self.assertLess(fetch, run)
+        self.assertEqual(gate.GATES['mesh-startup-contract'], (13, None))
+        script = (root/'scripts/mesh-startup-contract/fetch.sh').read_text()
+        self.assertNotIn('metadata --no-deps', script)
+        self.assertLess(script.index('cargo metadata '), script.index('verify_lock.py'))
+        self.assertLess(script.index('verify_lock.py'), script.index('cargo fetch --locked'))
+        self.assertIn('--locked --offline', (root/'scripts/mesh-startup-contract/run.sh').read_text())
+
     def test_quote_acceptance_requires_complete_owner_version_inventory(self):
         minimum, database = gate.GATES['quote-acceptance']
         self.assertGreaterEqual(minimum, 36)
