@@ -157,3 +157,16 @@ test('duplicate scheduling identities cannot produce timing evidence', async () 
   const input = browserOverlapFixture(); input[0].jobs.push(job(100, 'PostgreSQL tenant isolation', '00', '16')); input[0].total_count++;
   assert.equal((await run(input)).status, 1);
 });
+
+test('three grouped runners retain complete timing and reject inconsistent denominators', async () => {
+  const pages=browserOverlapFixture();
+  pages[0].jobs=pages[0].jobs.filter(row=>!row.name.startsWith('Native real-stack Playwright ') || row.id<13);
+  for(const row of pages[0].jobs) row.name=row.name.replace(/\/12$/, '/3');
+  pages[0].total_count=pages[0].jobs.length;
+  const result=await run(pages);
+  assert.equal(result.status,0,result.stderr);
+  assert.equal(result.report.browser_postgres.measurement_complete,true);
+  assert.equal(result.report.browser_postgres.browser_shards,3);
+  pages[0].jobs.find(row=>row.id===12).name='Native real-stack Playwright 3/4';
+  assert.equal((await run(pages)).status,1);
+});

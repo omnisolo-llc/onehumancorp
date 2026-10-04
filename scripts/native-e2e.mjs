@@ -11,6 +11,7 @@ import os from 'node:os';
 import { validateWebArtifact } from './package-web.mjs';
 import { runNativeCommand } from './native-process.mjs';
 import clickCoverage from './ui-click-audit.cjs';
+import browserShards from './browser-shards.cjs';
 import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
 import { verifyProductionFixtureBoundary } from './verify-production-fixture-boundary.mjs';
 import { startShippoBrowserFixture } from './shippo-browser-fixture.mjs';
@@ -88,7 +89,7 @@ export async function finishShippoBrowserFixture(fixture, cleanup, runFailed) {
 
 export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const ciSelection = inputArgs.includes('--ci');
-  const args = inputArgs.filter((arg) => arg !== '--ci');
+  let args = inputArgs.filter((arg) => arg !== '--ci');
   if (args.some((arg) => arg === '--pass-with-no-tests')) throw new Error('Zero-test success is not allowed');
   const completeSelection = clickCoverage.completeSelection(args);
   if (ciSelection && !completeSelection) throw new Error('Required CI cannot narrow or override the complete browser selection');
@@ -97,6 +98,20 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   env.PLAYWRIGHT_LIST_REPORTER = '1';
   if (ciSelection) env.CI = 'true';
   const playwright = require.resolve('@playwright/test/cli');
+  let grouped;
+  const groupFlag = args.find(arg => arg.startsWith('--grouped-shard='));
+  if (args.includes('--grouped-shard')) throw new Error('Use --grouped-shard=N/3');
+  if (groupFlag) {
+    if (!completeSelection) throw new Error('Grouped browser runs require the complete selection');
+    const index = Number(groupFlag.match(/^--grouped-shard=([1-3])\/3$/)?.[1]);
+    args = args.filter(arg => arg !== groupFlag);
+    grouped = await browserShards.prepareGroupedShard({ root, index, source: clickCoverage.sourceIdentity(root),
+      list: async selection => JSON.parse(await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
+        '--list', '--reporter', './scripts/browser-inventory-reporter.cjs', ...args, ...selection], { env, quiet: true })),
+    });
+    args.push(...grouped.args);
+  }
+
   // Fail on broken imports, invalid fixtures or zero selection BEFORE spending
   // time starting Docker, applying migrations or launching either application.
   const listed = await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
@@ -220,13 +235,13 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     // Execute exactly the complete/sharded selection checked by preflight.
     const coverage = completeSelection ? clickCoverage.makeRunContext(root, process.env) : undefined;
     const receiptDirectory = path.join(root, 'test-results/click-receipts', coverage ? `${coverage.runId}-${coverage.attempt}` : 'partial');
-    const browserEnv = coverage ? { ...env, OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(coverage), OHC_CLICK_AUDIT_DIRECTORY: receiptDirectory } : env;
+    const browserEnv = coverage ? { ...env, ...(grouped ? { OHC_BROWSER_GROUP_INVENTORY: grouped.proofFile } : {}), OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(coverage), OHC_CLICK_AUDIT_DIRECTORY: receiptDirectory } : env;
     await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
       env: browserEnv, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
     });
     if (coverage) {
       clickCoverage.assertSource(root, coverage);
-      if (!args.some(arg => arg === '--shard' || arg.startsWith('--shard='))) {
+      if (!grouped && !args.some(arg => arg === '--shard' || arg.startsWith('--shard='))) {
         console.log('Complete click coverage:', clickCoverage.validateReceipts(clickCoverage.readReceipts(receiptDirectory), coverage, 1));
       }
     }
@@ -252,6 +267,7 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     const closeError = await finishShippoBrowserFixture(shippoFixture, async () => {
       await command('docker', ['rm', '-f', pg, cache], { env, quiet: true }).catch(() => {});
       await rm(temp, { recursive: true, force: true });
+      if (grouped) await rm(grouped.directory, { recursive: true, force: true });
       process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
     }, runFailed);
     if (closeError) console.error('Shippo fixture shutdown also failed; owned-container and temporary-file cleanup was attempted.');

@@ -433,23 +433,22 @@ jobs:
         run: cargo test --locked -p app
 
   native-e2e:
-    name: Native real-stack Playwright ${{ matrix.shard }}/12
+    name: Native real-stack Playwright ${{ matrix.shard }}/3
     strategy:
       fail-fast: false
-      # Keep all twelve shards and two workers per isolated runner. Six slots
-      # reduce queued browser waves without adding jobs or repeated builds.
-      # Desktop and Docker's Node fence bound other overlap to four runners
-      # (exhaustive DAG-tested workflow total: ten).
-      max-parallel: 6
+      # Three duration-balanced runners combine complete logical shard units.
+      # Each starts one isolated stack and two workers; exact discovery unions
+      # are checked before execution and again in the final receipt gate.
+      max-parallel: 3
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        shard: [1, 2, 3]
     needs: [check-changes, native-build, native-web, dependency-audit, native-desktop]
     # Browser setup owns its database; PostgreSQL correctness remains mandatory
     # in CI Required and can run concurrently. Desktop releases its runner first.
     # A quality failure must not conceal browser results for successfully built code.
     if: ${{ !cancelled() && needs.check-changes.outputs.markdown-only == 'false' && needs.native-build.result == 'success' && needs.native-web.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-native
@@ -470,7 +469,7 @@ jobs:
           chmod +x target/debug/server target/debug/omnisolo-builtin-agent target/debug/grpc-mtls-probe
           npx --no-install playwright install --with-deps chromium
       - name: Execute complete real-stack suite shard
-        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}/12 --workers=2 --retries=0
+        run: npm run test:e2e -- --ci --grouped-shard=${{ matrix.shard }}/3 --workers=2 --retries=0
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -510,7 +509,7 @@ jobs:
       - name: Require every actual route and target assertion
         run: |
           set -euo pipefail
-          node scripts/ui-click-audit.cjs target/click-receipts 12 | tee click-coverage-result.json
+          node scripts/ui-click-audit.cjs target/click-receipts 3 --grouped | tee click-coverage-result.json
       - uses: actions/upload-artifact@v6
         if: always()
         with:
