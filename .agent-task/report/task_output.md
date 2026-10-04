@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "[Architecture] Autonomous Agentic Booking and Quoting Engine"
+issue_description: "The requested 'Autonomous Agentic Booking and Quoting Engine' introduces new verticals and channels (Instagram DM, AI triage, automated quotes and external calendar sync), which are blocked by default. Per the repository memory and RESEARCH.md final OHC scope check, new verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines, and harness adapters require explicit evidence and passing the expansion gate. No explicit applicable authorization was provided for these new features in the prompt."
