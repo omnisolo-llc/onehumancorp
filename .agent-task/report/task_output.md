@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "AI-Driven Offline-Tolerant Sync Protocol for Low-Bandwidth Mobile Environments"
+issue_description: "Research and evaluation of the repository stack reveals that the Flutter mobile application described in the issue ('Flutter Mobile App - Offline First', 'Flutter App', 'Local SQLite/Isar Cache') does not exist. As stated in README.md: 'The old Slint/Flutter UI is also removed; the maintained UI is Next.js inside the Tauri shell or a Node web deployment.' Because the target platform (Flutter) has been completely removed and superseded by Next.js/Tauri, implementing an offline-tolerant sync engine specifically for Flutter is blocked/no-work. The issue must be re-evaluated for the current web/Tauri architecture."
