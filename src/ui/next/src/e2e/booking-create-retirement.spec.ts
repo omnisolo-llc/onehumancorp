@@ -219,26 +219,34 @@ for (const alias of aliases) {
       expect(foreign.status()).toBe(403);
       expect(foreign.headers().location).toBeUndefined();
     }
-    // Next 16's render-layer validation should normalize a header-only RSC
-    // request to the same alias with an empty _rsc key. These diagnostic checks
-    // remain failing while the proxy adapter strips RSC markers and the alias
-    // incorrectly migrates to /services/new before that validation is reached.
+    // Next's dedicated 404 render path skips malformed RSC hash normalization.
+    // Otherwise its normalization must stay on this alias with an empty _rsc
+    // key; neither path may migrate to the maintained service form.
     const malformed = await page.request.get(alias, { headers: { rsc: '1' }, maxRedirects: 0 });
     const malformedBody = await malformed.text();
-    expect(malformed.status(), JSON.stringify({ alias, headers: { rsc: '1' },
-      status: malformed.status(), location: malformed.headers().location, body: malformedBody.slice(0, 200) })).toBe(307);
-    const normalized = new URL(malformed.headers().location, origin);
+    const malformedLocation = malformed.headers().location;
     const protocolResults: Array<{ path: string; headers: Record<string, string | undefined>; status: number; location: string | undefined; query: [string, string][] | null }> = [{
-      path: alias, headers: { rsc: '1' }, status: malformed.status(), location: malformed.headers().location,
-      query: Array.from(normalized.searchParams.entries()),
+      path: alias, headers: { rsc: '1' }, status: malformed.status(), location: malformedLocation,
+      query: malformedLocation === undefined ? null : Array.from(new URL(malformedLocation, origin).searchParams.entries()),
     }];
     // Soft assertions collect every variant but still fail this test when any
     // boundary is violated. Do not accept a canonical migration as normalization.
-    expect.soft(normalized.origin).toBe(origin);
-    expect.soft(normalized.pathname).toBe(alias);
-    expect.soft(normalized.hash).toBe('');
-    expect.soft(Array.from(normalized.searchParams.entries())).toEqual([['_rsc', '']]);
-    expect.soft(malformedBody).toBe('');
+    expect.soft(malformed.headers()['x-nextjs-redirect']).toBeUndefined();
+    if (malformed.status() === 404) {
+      expect.soft(malformedLocation).toBeUndefined();
+    } else {
+      expect(malformed.status(), JSON.stringify({ alias, headers: { rsc: '1' },
+        status: malformed.status(), location: malformedLocation, body: malformedBody.slice(0, 200) })).toBe(307);
+      expect(malformedLocation).toBeDefined();
+      const normalized = new URL(malformedLocation, origin);
+      expect.soft(normalized.origin).toBe(origin);
+      expect.soft(normalized.pathname).toBe(alias);
+      expect.soft(normalized.hash).toBe('');
+      expect.soft(Array.from(normalized.searchParams.entries())).toEqual([['_rsc', '']]);
+      expect.soft(malformedBody).toBe('');
+    }
+    // The independently constructed valid RSC request below must end at 404,
+    // including after a malformed request received a normalization redirect.
     // No redirects are followed and no page scripts execute in these API
     // requests; none can dispatch the service form's POST.
     for (const { path, headers } of [

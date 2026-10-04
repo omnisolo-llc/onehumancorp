@@ -58,16 +58,30 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         expect(refreshed.status(), `Refresh owned feed fixture: ${await refreshed.text()}`).toBe(200);
         expect(await refreshed.json()).toMatchObject({ id: cacheRefreshId, tenant_id: tenantId, lifecycle_state: 'PENDING_APPROVAL', dispatch: { status: 'NOT_REQUESTED', job_id: null } });
         const suffix = `?audit=unified-retirement&ref=first&ref=second&tenant_id=${encodeURIComponent(foreignTenantId)}#decision`;
-        const redirected = page.waitForResponse(response => new URL(response.url()).pathname === legacy);
-        const loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/agent-feed' && response.request().method() === 'GET');
-        await page.goto(`${legacy}${suffix}`, { waitUntil: 'domcontentloaded' });
-        await expect(page).toHaveURL(new URL(`/unified-feed${suffix}`, baseURL).href);
-        const redirect = await redirected;
+        const canonical = new URL(`/unified-feed${suffix}`, baseURL);
+        const referringDocument = new URL(canonical);
+        referringDocument.hash = '';
+        const redirected = page.waitForResponse(response => new URL(response.url()).origin === base.origin
+          && new URL(response.url()).pathname === legacy && response.request().isNavigationRequest());
+        // loginAs can leave dashboard feed reads in flight. Bind this capture to
+        // the new document's immutable Referer, not the frame's changing URL,
+        // and consume its body immediately while that document is active.
+        const loaded = page.waitForResponse(response => {
+          const request = response.request();
+          const url = new URL(response.url());
+          return url.origin === base.origin && url.pathname === '/api/v1/agent-feed'
+            && request.method() === 'GET' && request.frame() === page.mainFrame()
+            && request.headers().referer === referringDocument.href;
+        }).then(async response => ({ status: response.status(), headers: response.request().headers(), body: await response.json() }));
+        const [, redirect, list] = await Promise.all([
+          page.goto(`${legacy}${suffix}`, { waitUntil: 'domcontentloaded' }), redirected, loaded,
+        ]);
+        await expect(page).toHaveURL(canonical.href);
         expect(redirect.status()).toBe(307);
         expect(redirect.headers()['cache-control']).toContain('no-store');
-        const list = await loaded;
-        expect(list.status()).toBe(200);
-        const body = await list.json();
+        expect(list.status).toBe(200);
+        expect(list.headers).toMatchObject({ 'x-ohc-expected-user': owners[0].id, 'x-ohc-expected-tenant': tenantId });
+        const body = list.body;
         expect(body.items.some((item: { id: string }) => item.id === id)).toBe(true);
         expect(body.items.every((item: { tenant_id: string }) => item.tenant_id === tenantId)).toBe(true);
         const foreignQuery = await page.request.get(`/api/v1/agent-feed?tenant_id=${encodeURIComponent(foreignTenantId)}`);
