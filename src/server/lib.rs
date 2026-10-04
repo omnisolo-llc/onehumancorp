@@ -4065,6 +4065,26 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
+    // Validate Redis startup before spawning workers. Standalone and absent
+    // Redis configurations keep their existing database-backed task queue.
+    // The rate limiter still requires a valid client configuration in all modes.
+    let redis_url = std::env::var("REDIS_URL").ok();
+    let rate_limit_redis_client = redis::Client::open(
+        redis_url.as_deref().unwrap_or("redis://127.0.0.1/"),
+    )
+    .map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid REDIS_URL for the Redis rate limiter",
+        )
+    })?;
+    let configured_redis_queue = match (standalone, redis_url.as_deref()) {
+        (false, Some(url)) => {
+            Some(crate::queue::RedisTaskQueue::connect_for_startup(url, "ohc_job_queue").await?)
+        }
+        _ => None,
+    };
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     let portable_database = match &db.store {
@@ -4380,7 +4400,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Mesh API server
     let is_cloud = !crate::is_standalone_runtime();
-    let redis_url = std::env::var("REDIS_URL").ok();
     const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
     let mut attempt = 1;
     let mesh_transport = loop {
@@ -4682,22 +4701,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
+    let rate_limiter = {
         let tracker = std::sync::Arc::new(::server_pricing::token_tracking::TokenTracking::new(
             &opentelemetry::global::meter("ohc_server"),
         ));
         let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
         std::sync::Arc::new(
-            ::server_pricing::rate_limit::RedisRateLimiter::new(client)
+            ::server_pricing::rate_limit::RedisRateLimiter::new(rate_limit_redis_client)
                 .with_token_tracking(tracker)
                 .with_telemetry(store),
         )
-    } else {
-        panic!(
-            "Failed to initialize Redis client for RateLimiter at {}",
-            redis_url
-        );
     };
 
     let webhook_state = crate::api::billing_webhook::WebhookState {
@@ -8743,25 +8756,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let db_for_sales = db.clone();
     let settings_store = crate::settings::Store::global();
-    let is_standalone = crate::is_standalone_runtime();
     let omnisolo_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> =
-        if !is_standalone && std::env::var("REDIS_URL").is_ok() {
-            std::sync::Arc::new(
-                crate::queue::RedisTaskQueue::new(
-                    &std::env::var("REDIS_URL").unwrap(),
-                    "ohc_job_queue",
-                )
-                .unwrap(),
-            )
-        } else {
-            match &db.store {
+        match configured_redis_queue {
+            Some(queue) => std::sync::Arc::new(queue),
+            None => match &db.store {
                 crate::db::DbStore::Postgres => {
                     std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
                 }
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone()))
                 }
-            }
+            },
         };
 
     let omnisolo_job_queue_clone = omnisolo_job_queue.clone();
@@ -9905,26 +9910,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
-    let is_standalone_prune = crate::is_standalone_runtime();
-    let omnisolo_job_queue_prune: std::sync::Arc<dyn crate::queue::TaskQueue> =
-        if !is_standalone_prune && std::env::var("REDIS_URL").is_ok() {
-            std::sync::Arc::new(
-                crate::queue::RedisTaskQueue::new(
-                    &std::env::var("REDIS_URL").unwrap(),
-                    "ohc_job_queue",
-                )
-                .unwrap(),
-            )
-        } else {
-            match &db.store {
-                crate::db::DbStore::Postgres => std::sync::Arc::new(
-                    crate::queue::PostgresTaskQueue::new(hub_for_sched.pool.clone()),
-                ),
-                crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone()))
-                }
-            }
-        };
+    let omnisolo_job_queue_prune = omnisolo_job_queue.clone();
 
     if legacy_sqlx_background_enabled {
         tokio::spawn(async move {

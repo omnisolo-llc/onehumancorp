@@ -804,7 +804,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler
+          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server
 
       - name: Provision and verify non-superuser application role
         run: |
@@ -911,6 +911,14 @@ jobs:
           python3 -m unittest scripts/test_focused_ci_gate.py
       # These source-bound gates use only disposable databases and loopback
       # provider fixtures. Each runs even if an independent earlier check fails.
+      - name: Fetch locked Redis startup dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/redis-startup-contract/fetch.sh
+      - name: Verify bounded credential-safe Redis startup
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py redis-startup-contract
       - name: Verify approval read-after-write consistency
         if: ${{ !cancelled() }}
         env:

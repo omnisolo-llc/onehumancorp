@@ -12,6 +12,21 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_redis_startup_fetch_precedes_offline_gate(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/redis-startup-contract/fetch.sh')
+        gate_step = next(i for i, step in enumerate(steps) if step.get('run') == 'python3 scripts/focused_ci_gate.py redis-startup-contract')
+        self.assertLess(fetch, gate_step)
+        self.assertEqual(gate.GATES['redis-startup-contract'], (23, None))
+        script = (root/'scripts/redis-startup-contract/fetch.sh').read_text()
+        self.assertIn('cp Cargo.lock scripts/redis-startup-contract/Cargo.lock', script)
+        self.assertNotIn('metadata --no-deps', script)
+        self.assertLess(script.index('cargo metadata '), script.index('verify_lock.py'))
+        self.assertLess(script.index('verify_lock.py'), script.index('cargo fetch --locked'))
+        self.assertIn('--locked --offline', (root/'scripts/redis-startup-contract/run.sh').read_text())
+
     def test_memory_jsonb_requires_actual_repository_and_pgvector_schema(self):
         import runpy
         root = Path(__file__).resolve().parents[1]

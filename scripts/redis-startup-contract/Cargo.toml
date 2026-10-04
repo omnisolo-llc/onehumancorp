@@ -1,0 +1,27 @@
+[package]
+name = "ohc-redis-startup-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "5"
+prost = "0.13"
+redis = { version = "=0.27.6", features = ["tokio-comp", "connection-manager"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+uuid = { version = "1", features = ["v4"] }
+server_config = { path = "../../src/server/config" }
+server_common = { path = "../../src/server/common" }
+server_omnisolo = { path = "../../src/server/omnisolo" }
+server_telemetry = { path = "../../src/server/telemetry" }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false
