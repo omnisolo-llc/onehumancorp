@@ -1,0 +1,4 @@
+outcome: blocked
+issue_title: "[Architectural Design] Customer Identity Resolution & Omnichannel Memory Architecture"
+issue_description: |
+  The issue requests implementing a new Customer Identity Resolution engine for channels like Instagram DM and WhatsApp. However, the business capability audit explicitly states: "Customer connection UI/API... This surface is incomplete but fails honestly... Other directly configured integration paths must be checked separately." and "Existing connector code is a real reuse asset. End-user authorization, secure credential lifecycle, refresh/revocation and complete UI-to-provider flows need separate proof." Since the underlying channel verification and provider connections are explicitly unverified and blocked, I cannot proceed with implementing a complex omnichannel routing logic over missing integrations without inventing follow-up features or dummy changes, which violates the strict instructions.
