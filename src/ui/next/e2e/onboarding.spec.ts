@@ -104,9 +104,14 @@ test.describe('Onboarding Flow E2E', () => {
     // Eventually transition to Step 5 (Live)
     // The delay might take a few seconds
     await expect(page.getByText("Setup complete", { exact: true })).toBeVisible({ timeout: 15000 });
-    const state = await page.request.get('/api/v1/onboarding/state');
-    expect(state.status()).toBe(200);
-    expect((await state.json()).preparation).toMatchObject({ status: 'launched', preparation_id: prepared.preparation_id, organization_id: identity.tenantId, user_id: identity.userId });
+    // Read through the authenticated browser that just launched setup. The
+    // separate Node request connection has been idle throughout the UI flow.
+    const state = await page.evaluate(async () => {
+      const response = await fetch('/api/v1/onboarding/state', { cache: 'no-store' });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(state.status).toBe(200);
+    expect(state.body.preparation).toMatchObject({ status: 'launched', preparation_id: prepared.preparation_id, organization_id: identity.tenantId, user_id: identity.userId });
 
     // Ensure final dashboard links exist
     await expect(page.getByRole('link', { name: 'Open Assistant' })).toBeVisible();
