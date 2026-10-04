@@ -475,7 +475,7 @@ impl IntegrationsRegistry {
             category: metadata.category,
             status: "configured".to_string(),
             base_url: if integration_id == "nats" {
-                base_url.to_string()
+                crate::integrations::nats::client::public_nats_endpoint(base_url)
             } else {
                 metadata.base_url
             },

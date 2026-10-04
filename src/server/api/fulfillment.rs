@@ -1,134 +1,97 @@
+//! Persisted fulfillment and authenticated provider tracking.
+use super::shipping::authority::{self, ShippingAccess};
 use ::server_common::Claims;
 use axum::{
     Json, Router,
-    extract::{Extension, Path, State},
+    extract::{DefaultBodyLimit, Extension, Path, State},
     http::{HeaderMap, StatusCode},
-    response::IntoResponse,
+    response::{IntoResponse, Response},
     routing::{get, post},
 };
-use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use sha2::Sha256;
+use serde_json::{Value, json};
+use server_auth::commit_authority::AuthorizedPgOwner;
+use sha2::{Digest, Sha256};
+use sqlx::Row;
 use std::sync::Arc;
-use std::sync::RwLock;
+
+#[path = "fulfillment/authentication.rs"]
+pub(crate) mod authentication;
+#[path = "fulfillment/storage.rs"]
+pub(crate) mod storage;
+#[path = "fulfillment/tracking.rs"]
+pub(crate) mod tracking;
+use authentication::{
+    MAX_BODY_BYTES, ProviderScope, verify_doordash_authorization, verify_shippo_signature,
+};
+pub use tracking::TrackingUpdate as ShippoTrackingUpdate;
+pub use tracking::TrackingUpdate as DoorDashTrackingUpdate;
+pub use tracking::parse_doordash as parse_doordash_tracking_webhook;
+pub use tracking::parse_shippo as parse_shippo_tracking_webhook;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Order {
     pub id: String,
-    pub fulfillment_mode: String, // Shipping, LocalDelivery, Pickup
-    pub status: String,           // Preparing, ReadyForPickup, Shipped, Delivered
-    pub customer_name: String,
+    pub delivery_task_id: String,
+    pub fulfillment_mode: Option<String>,
+    pub status: String,
+    pub customer_name: Option<String>,
     pub items: Vec<String>,
     pub organization_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub driver_status: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub driver_id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub driver_lat: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub driver_lng: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub provider_delivery_id: Option<String>,
+    pub binding_status: String,
+    pub label_url: Option<String>,
 }
-
 #[derive(Serialize)]
 pub struct QueueResponse {
     pub to_pack: Vec<Order>,
     pub awaiting_pickup: Vec<Order>,
 }
-
 #[derive(Deserialize)]
 pub struct ExecuteActionRequest {
-    pub action: String, // e.g. "print_label", "mark_ready", "hand_off"
+    pub action: String,
 }
-
 pub struct AppState {
-    orders: RwLock<Vec<Order>>,
     pool: sqlx::PgPool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct ShippoTrackingUpdate {
-    pub tracking_number: String,
-    pub tracking_status: String,
+/// Private routes. The parent mount applies canonical bearer authentication and
+/// merges the existing shipping router as the legacy /rates and /label aliases.
+pub fn router<S: Clone + Send + Sync + 'static>(access: Arc<ShippingAccess>) -> Router<S> {
+    Router::new()
+        .route("/", get(get_queue))
+        .route("/execute/{id}", post(execute_action))
+        .with_state(access)
 }
-
-pub fn parse_shippo_tracking_webhook(payload: &Value) -> Result<ShippoTrackingUpdate, String> {
-    let event = find_string_by_key(payload, &["event"])
-        .ok_or_else(|| "Shippo webhook missing event".to_string())?;
-
-    if event != "track_updated" {
-        return Err(format!("Ignoring Shippo webhook event: {}", event));
-    }
-
-    let data = payload
-        .get("data")
-        .ok_or_else(|| "Shippo webhook missing data".to_string())?;
-
-    let tracking_number = find_string_by_key(data, &["tracking_number"])
-        .ok_or_else(|| "Shippo webhook missing tracking_number".to_string())?;
-
-    let tracking_status = find_nested_object_string(data, &["tracking_status"], &["status"])
-        .or_else(|| find_string_by_key(data, &["tracking_status"]))
-        .ok_or_else(|| "Shippo webhook missing tracking_status".to_string())?;
-
-    Ok(ShippoTrackingUpdate {
-        tracking_number,
-        tracking_status,
-    })
+/// Provider authentication is independent of owner bearer authentication.
+pub fn webhook_router<S: Clone + Send + Sync + 'static>(pool: sqlx::PgPool) -> Router<S> {
+    Router::new()
+        .route("/webhook/shippo", post(shippo_webhook))
+        .route("/webhook/doordash", post(doordash_webhook))
+        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
+        .with_state(Arc::new(AppState { pool }))
 }
-
-pub async fn persist_shippo_tracking_update(
-    pool: &sqlx::PgPool,
-    tenant_id: &str,
-    update: &ShippoTrackingUpdate,
-) -> Result<u64, String> {
-    let mut tx = pool.begin().await.map_err(|err| err.to_string())?;
-    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
-        .await
-        .map_err(|err| err.to_string())?;
-
-    let result = sqlx::query(
-        "UPDATE delivery_tasks
-         SET provider = 'shippo',
-             status = $2,
-             updated_at = CURRENT_TIMESTAMP
-         WHERE organization_id = $1
-           AND (provider_delivery_id = $3 OR order_id = $3)",
-    )
-    .bind(tenant_id)
-    .bind(&update.tracking_status)
-    .bind(&update.tracking_number)
-    .execute(&mut *tx)
-    .await
-    .map_err(|err| err.to_string())?;
-
-    tx.commit().await.map_err(|err| err.to_string())?;
-    Ok(result.rows_affected())
+fn error(status: StatusCode, message: &str) -> Response {
+    (status, Json(json!({"success":false,"error":message}))).into_response()
 }
-
-fn apply_shippo_tracking_update_to_queue(
-    state: &Arc<AppState>,
-    tenant_id: &str,
-    update: &ShippoTrackingUpdate,
-) {
-    if let Ok(mut orders) = state.orders.write() {
-        for order in orders.iter_mut() {
-            if order.organization_id == tenant_id
-                && (order.id == update.tracking_number
-                    || order.provider_delivery_id.as_deref()
-                        == Some(update.tracking_number.as_str()))
-            {
-                order.status = if update.tracking_status == "DELIVERED" {
-                    "Delivered".to_string()
-                } else if update.tracking_status == "TRANSIT" {
-                    "Shipped".to_string()
-                } else {
-                    order.status.clone()
-                };
-            }
+fn tracking_result(result: Result<storage::Outcome, storage::Error>) -> Response {
+    match result {
+        Ok(outcome) => (
+            StatusCode::OK,
+            Json(json!({"success":true,"applied":outcome==storage::Outcome::Applied})),
+        )
+            .into_response(),
+        Err(storage::Error::Conflict(message)) => error(StatusCode::CONFLICT, message),
+        Err(storage::Error::Database(cause)) => {
+            tracing::error!("fulfillment persistence failed: {cause}");
+            error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "fulfillment storage is unavailable",
+            )
         }
     }
 }
@@ -137,722 +100,296 @@ pub async fn shippo_webhook(
     State(state): State<Arc<AppState>>,
     headers: HeaderMap,
     body: axum::body::Bytes,
-) -> impl IntoResponse {
-    let secret = std::env::var("SHIPPO_WEBHOOK_SECRET").unwrap_or_default();
-    if !secret.is_empty() {
-        let sig = headers
-            .get("x-shippo-signature")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or_default();
-        type HmacSha256 = Hmac<Sha256>;
-        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
-        mac.update(&body);
-        if mac
-            .verify_slice(hex::decode(sig).unwrap_or_default().as_slice())
-            .is_err()
-        {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "invalid signature"})),
-            )
-                .into_response();
-        }
-    }
-
-    let payload: Value = match serde_json::from_slice(&body) {
-        Ok(v) => v,
-        Err(_) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({"error": "invalid json"})),
-            )
-                .into_response();
+) -> Response {
+    let secret = match std::env::var("SHIPPO_WEBHOOK_SECRET") {
+        Ok(secret) if !secret.trim().is_empty() => secret,
+        _ => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Shippo webhook authentication is not configured",
+            );
         }
     };
-
+    let scope = match ProviderScope::from_environment("SHIPPO") {
+        Ok(scope) => scope,
+        Err(message) => return error(StatusCode::SERVICE_UNAVAILABLE, message),
+    };
+    if verify_shippo_signature(&secret, &headers, &body, chrono::Utc::now().timestamp()).is_err() {
+        return error(StatusCode::UNAUTHORIZED, "invalid Shippo signature");
+    }
+    let payload: Value = match serde_json::from_slice(&body) {
+        Ok(payload) => payload,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid JSON"),
+    };
     let update = match parse_shippo_tracking_webhook(&payload) {
         Ok(update) => update,
-        Err(err) => {
-            if err.starts_with("Ignoring") {
-                return (
-                    StatusCode::OK,
-                    Json(serde_json::json!({"success": true, "message": err})),
-                )
-                    .into_response();
-            }
+        Err(message) if message.starts_with("Ignoring Shippo webhook event:") => {
             return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({"error": err})),
+                StatusCode::OK,
+                Json(json!({"success":true,"applied":false,"message":message})),
             )
                 .into_response();
         }
+        Err(message) => return error(StatusCode::BAD_REQUEST, &message),
     };
-
-    let tenant_id = match sqlx::query("SELECT organization_id FROM delivery_tasks WHERE provider = 'shippo' AND (provider_delivery_id = $1 OR order_id = $1)")
-        .bind(&update.tracking_number)
-        .fetch_optional(&state.pool)
-        .await
-    {
-        Ok(Some(row)) => {
-            use sqlx::Row;
-            row.get::<String, _>("organization_id")
-        },
-        _ => {
-            return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error": "order not found"}))).into_response();
-        }
-    };
-
-    match persist_shippo_tracking_update(&state.pool, &tenant_id, &update).await {
-        Ok(_) => {
-            apply_shippo_tracking_update_to_queue(&state, &tenant_id, &update);
-            (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
-        }
-        Err(err) => (
-            StatusCode::BAD_GATEWAY,
-            Json(serde_json::json!({"error": err})),
+    tracking_result(
+        storage::apply_tracking(
+            &state.pool,
+            &scope,
+            &update,
+            &hex::encode(Sha256::digest(&body)),
         )
-            .into_response(),
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct DoorDashTrackingUpdate {
-    pub external_delivery_id: String,
-    pub status: String,
-    pub driver_id: Option<String>,
-    pub latitude: Option<f64>,
-    pub longitude: Option<f64>,
-}
-
-#[derive(Deserialize)]
-pub struct FetchRatesRequest {
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    pub weight: String,
-    pub dimensions: String,
-}
-
-#[derive(Serialize)]
-pub struct Rate {
-    pub id: String,
-    pub carrier: String,
-    pub service: String,
-    pub amount: String,
-    pub days: u32,
-}
-
-#[derive(Serialize)]
-pub struct FetchRatesResponse {
-    pub rates: Vec<Rate>,
-}
-
-#[derive(Deserialize)]
-pub struct PurchaseLabelRequest {
-    #[serde(rename = "orderId")]
-    pub order_id: String,
-    #[serde(rename = "rateId")]
-    pub rate_id: String,
-}
-
-#[derive(Serialize)]
-pub struct PurchaseLabelResponse {
-    pub success: bool,
-    #[serde(rename = "labelUrl")]
-    pub label_url: String,
-    #[serde(rename = "trackingNumber")]
-    pub tracking_number: String,
-    pub carrier: String,
-}
-
-pub fn router<S>(pool: sqlx::PgPool) -> Router<S>
-where
-    S: Clone + Send + Sync + 'static,
-{
-    let initial_orders = vec![
-        Order {
-            id: "ord-1".to_string(),
-            fulfillment_mode: "Shipping".to_string(),
-            status: "Preparing".to_string(),
-            customer_name: "John Doe".to_string(),
-            items: vec!["2 Summer Dresses".to_string()],
-            organization_id: "default".to_string(),
-            driver_status: None,
-            driver_id: None,
-            driver_lat: None,
-            driver_lng: None,
-            provider_delivery_id: None,
-        },
-        Order {
-            id: "ord-2".to_string(),
-            fulfillment_mode: "LocalDelivery".to_string(),
-            status: "Preparing".to_string(),
-            customer_name: "Jane Smith".to_string(),
-            items: vec!["Chocolate Cake".to_string()],
-            organization_id: "default".to_string(),
-            driver_status: None,
-            driver_id: None,
-            driver_lat: None,
-            driver_lng: None,
-            provider_delivery_id: None,
-        },
-        Order {
-            id: "ord-3".to_string(),
-            fulfillment_mode: "Pickup".to_string(),
-            status: "ReadyForPickup".to_string(),
-            customer_name: "Alice Johnson".to_string(),
-            items: vec!["Coffee and Bagel".to_string()],
-            organization_id: "default".to_string(),
-            driver_status: None,
-            driver_id: None,
-            driver_lat: None,
-            driver_lng: None,
-            provider_delivery_id: None,
-        },
-    ];
-
-    let state = Arc::new(AppState {
-        orders: RwLock::new(initial_orders),
-        pool,
-    });
-
-    Router::new()
-        .route("/", get(get_queue))
-        .route("/execute/{id}", post(execute_action))
-        .route("/rates", post(fetch_rates))
-        .route("/label", post(purchase_label))
-        .route("/webhook/doordash", post(doordash_webhook))
-        .route("/webhook/shippo", post(shippo_webhook))
-        .with_state(state)
-}
-
-async fn fetch_rates(
-    Extension(_claims): Extension<Claims>,
-    Json(payload): Json<FetchRatesRequest>,
-) -> impl IntoResponse {
-    let weight: f64 = payload.weight.parse().unwrap_or(16.0);
-
-    let api_key = match std::env::var("SHIPPO_API_TOKEN") {
-        Ok(value) if !value.trim().is_empty() => value,
-        _ => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({"error": "SHIPPO_API_TOKEN is required"})),
-            )
-                .into_response();
-        }
-    };
-    let client = crate::integrations::shippo::provider::ShippoProvider::new(api_key);
-    let rates = match client.fetch_rates(weight, &payload.dimensions).await {
-        Ok(rates) => rates,
-        Err(err) => {
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(serde_json::json!({"error": err})),
-            )
-                .into_response();
-        }
-    };
-    let rates = rates
-        .into_iter()
-        .map(|rate| Rate {
-            id: rate.id,
-            carrier: rate.carrier,
-            service: rate.service,
-            amount: rate.amount,
-            days: rate.days,
-        })
-        .collect();
-
-    (StatusCode::OK, Json(FetchRatesResponse { rates })).into_response()
-}
-
-async fn purchase_label(
-    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
-    Extension(claims): Extension<Claims>,
-    Json(payload): Json<PurchaseLabelRequest>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => "default".to_string(),
-    };
-
-    let api_key = match std::env::var("SHIPPO_API_TOKEN") {
-        Ok(value) if !value.trim().is_empty() => value,
-        _ => {
-            return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({"error": "SHIPPO_API_TOKEN is required"})),
-            )
-                .into_response();
-        }
-    };
-    let client = crate::integrations::shippo::provider::ShippoProvider::new(api_key);
-    let label = match client.purchase_label(&payload.rate_id).await {
-        Ok(label) => label,
-        Err(err) => {
-            return (
-                StatusCode::BAD_GATEWAY,
-                Json(serde_json::json!({"error": err})),
-            )
-                .into_response();
-        }
-    };
-
-    let mut orders = state.orders.write().unwrap();
-    for order in orders.iter_mut() {
-        if order.id == payload.order_id && order.organization_id == tenant_id {
-            if order.fulfillment_mode == "Shipping" {
-                order.status = "Shipped".to_string();
-                order.provider_delivery_id = Some(label.tracking_number.clone());
-            }
-            break;
-        }
-    }
-
-    (
-        StatusCode::OK,
-        Json(PurchaseLabelResponse {
-            success: true,
-            label_url: label.label_url,
-            tracking_number: label.tracking_number,
-            carrier: label.carrier,
-        }),
+        .await,
     )
-        .into_response()
+}
+async fn doordash_webhook(
+    State(state): State<Arc<AppState>>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
+    let expected = match std::env::var("DOORDASH_WEBHOOK_AUTHORIZATION") {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => {
+            return error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "DoorDash webhook authentication is not configured",
+            );
+        }
+    };
+    let scope = match ProviderScope::from_environment("DOORDASH") {
+        Ok(scope) => scope,
+        Err(message) => return error(StatusCode::SERVICE_UNAVAILABLE, message),
+    };
+    if verify_doordash_authorization(&expected, &headers).is_err() {
+        return error(StatusCode::UNAUTHORIZED, "invalid DoorDash authorization");
+    }
+    let payload: Value = match serde_json::from_slice(&body) {
+        Ok(payload) => payload,
+        Err(_) => return error(StatusCode::BAD_REQUEST, "invalid JSON"),
+    };
+    let update = match parse_doordash_tracking_webhook(&payload) {
+        Ok(update) => update,
+        Err(message) => return error(StatusCode::BAD_REQUEST, &message),
+    };
+    tracking_result(
+        storage::apply_tracking(
+            &state.pool,
+            &scope,
+            &update,
+            &hex::encode(Sha256::digest(&body)),
+        )
+        .await,
+    )
 }
 
 async fn get_queue(
-    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    State(access): State<Arc<ShippingAccess>>,
     Extension(claims): Extension<Claims>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => "default".to_string(), // fallback for testing if claims are empty or mock
+    headers: HeaderMap,
+) -> Response {
+    if server_common::auth_utils::signed_tenant_id(&claims).is_none() {
+        return error(StatusCode::UNAUTHORIZED, "a signed tenant is required");
+    }
+    let owner = match access.authorize_postgres(&claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority::response(error),
     };
-
-    let orders = state.orders.read().unwrap();
-    let mut to_pack = Vec::new();
-    let mut awaiting_pickup = Vec::new();
-
-    for order in orders.iter() {
-        if order.organization_id != tenant_id {
-            continue;
-        }
-
-        match order.status.as_str() {
-            "Preparing" => {
-                to_pack.push(order.clone());
+    match read_queue(owner).await {
+        Ok(queue) => (StatusCode::OK, Json(queue)).into_response(),
+        Err(error) => authority::response(error),
+    }
+}
+async fn read_queue(owner: AuthorizedPgOwner) -> Result<QueueResponse, authority::Error> {
+    let tenant = owner.tenant_id().to_owned();
+    let mut tx = owner.begin().await?;
+    let rows=sqlx::query(
+        "SELECT d.id,d.order_id,d.provider,d.status,d.provider_delivery_id,d.driver_id,d.delivery_location_lat,d.delivery_location_lng,c.name AS customer_name,
+         b.delivery_task_id IS NOT NULL AS is_bound,b.label_url,
+         ARRAY(SELECT p.title FROM order_items i JOIN products p ON p.id=i.product_id AND p.tenant_id=i.tenant_id WHERE i.order_id=o.id AND i.tenant_id=o.tenant_id ORDER BY i.id) AS items
+         FROM delivery_tasks d JOIN orders o ON o.id=d.order_id AND o.tenant_id=d.organization_id
+         LEFT JOIN customers c ON c.id=o.customer_id AND c.tenant_id=o.tenant_id
+         LEFT JOIN delivery_provider_bindings b ON b.delivery_task_id=d.id AND b.organization_id=d.organization_id
+         WHERE d.organization_id=$1 AND lower(COALESCE(o.status,'')) NOT IN ('cancelled','canceled','fulfilled','returned')
+           AND upper(d.status) NOT IN ('DELIVERED','RETURNED','CANCELLED','CANCELED')
+         ORDER BY d.updated_at DESC,d.id LIMIT 100")
+        .bind(&tenant).fetch_all(tx.connection()).await?;
+    let mut queue = QueueResponse {
+        to_pack: Vec::new(),
+        awaiting_pickup: Vec::new(),
+    };
+    for row in rows {
+        let provider: Option<String> = row.try_get("provider")?;
+        let status: String = row.try_get("status")?;
+        let order = Order {
+            id: row.try_get("order_id")?,
+            delivery_task_id: row.try_get::<uuid::Uuid, _>("id")?.to_string(),
+            fulfillment_mode: match provider.as_deref() {
+                Some("shippo") => Some("Shipping".into()),
+                Some("doordash") => Some("LocalDelivery".into()),
+                _ => None,
+            },
+            customer_name: row.try_get("customer_name")?,
+            items: row.try_get("items")?,
+            organization_id: tenant.clone(),
+            driver_status: (provider.as_deref() == Some("doordash")).then(|| status.clone()),
+            status: status.clone(),
+            driver_id: row.try_get("driver_id")?,
+            driver_lat: row.try_get("delivery_location_lat")?,
+            driver_lng: row.try_get("delivery_location_lng")?,
+            provider_delivery_id: row.try_get("provider_delivery_id")?,
+            label_url: row.try_get("label_url")?,
+            binding_status: if row.try_get::<bool, _>("is_bound")? {
+                "bound"
+            } else {
+                "reconciliation_required"
             }
-            "ReadyForPickup" | "DriverRequested" | "DriverTracking" => {
-                awaiting_pickup.push(order.clone());
-            }
-            _ => {}
+            .into(),
+        };
+        if matches!(
+            status.to_ascii_uppercase().as_str(),
+            "PENDING" | "PREPARING"
+        ) {
+            queue.to_pack.push(order);
+        } else {
+            queue.awaiting_pickup.push(order);
         }
     }
-
-    (
-        StatusCode::OK,
-        Json(QueueResponse {
-            to_pack,
-            awaiting_pickup,
-        }),
-    )
-        .into_response()
+    tx.commit().await?;
+    Ok(queue)
 }
 
 async fn execute_action(
-    axum::extract::State(state): axum::extract::State<Arc<AppState>>,
+    State(access): State<Arc<ShippingAccess>>,
     Path(id): Path<String>,
     Extension(claims): Extension<Claims>,
-    Json(payload): Json<ExecuteActionRequest>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.organization_id.as_deref() {
-        Some(org_id) => org_id.to_string(),
-        None => "default".to_string(),
-    };
-
-    let mut orders = state.orders.write().unwrap();
-    let mut found = false;
-
-    for order in orders.iter_mut() {
-        if order.id == id && order.organization_id == tenant_id {
-            found = true;
-            match payload.action.as_str() {
-                "print_label" if order.fulfillment_mode == "Shipping" => {
-                    order.status = "Shipped".to_string();
-                }
-                "mark_ready"
-                    if (order.fulfillment_mode == "LocalDelivery"
-                        || order.fulfillment_mode == "Pickup") =>
-                {
-                    order.status = "ReadyForPickup".to_string();
-                }
-                "request_driver" if order.fulfillment_mode == "LocalDelivery" => {
-                    order.status = "DriverRequested".to_string();
-                }
-                "hand_off"
-                    if (order.status == "ReadyForPickup" || order.status == "DriverRequested") =>
-                {
-                    order.status = "Delivered".to_string();
-                }
-                _ => {}
-            }
-            break;
-        }
-    }
-
-    if found {
-        (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
-    } else {
-        (
-            StatusCode::NOT_FOUND,
-            Json(serde_json::json!({"error": "Order not found or unauthorized"})),
-        )
-            .into_response()
-    }
-}
-
-async fn doordash_webhook(
-    State(state): State<Arc<AppState>>,
-    claims: Option<Extension<Claims>>,
     headers: HeaderMap,
-    Json(payload): Json<Value>,
-) -> impl IntoResponse {
-    let update = match parse_doordash_tracking_webhook(&payload) {
-        Ok(update) => update,
-        Err(err) => {
-            return (
-                StatusCode::BAD_REQUEST,
-                Json(serde_json::json!({"error": err})),
-            )
-                .into_response();
-        }
+    Json(payload): Json<ExecuteActionRequest>,
+) -> Response {
+    if server_common::auth_utils::signed_tenant_id(&claims).is_none() {
+        return error(StatusCode::UNAUTHORIZED, "a signed tenant is required");
+    }
+    let owner = match access.authorize_postgres(&claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority::response(error),
     };
-    let tenant_id = match claims
-        .and_then(|Extension(claims)| claims.organization_id)
-        .or_else(|| {
-            headers
-                .get("x-tenant-id")
-                .and_then(|value| value.to_str().ok())
-                .map(|value| value.to_string())
-        })
-        .or_else(|| find_string_by_key(&payload, &["organization_id", "tenant_id"]))
-    {
-        Some(id) if !id.trim().is_empty() => id,
-        _ => {
-            return (
-                StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "unauthorized"})),
-            )
-                .into_response();
-        }
-    };
-
-    match persist_doordash_tracking_update(&state.pool, &tenant_id, &update).await {
-        Ok(_) => {
-            apply_doordash_tracking_update_to_queue(&state, &tenant_id, &update);
-            (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
-        }
-        Err(err) => (
-            StatusCode::BAD_GATEWAY,
-            Json(serde_json::json!({"error": err})),
+    if payload.action == "print_label" {
+        return error(
+            StatusCode::CONFLICT,
+            "Purchase or view the actual shipping label on the order page; printing does not ship an order",
+        );
+    }
+    if payload.action == "request_driver" {
+        return error(
+            StatusCode::NOT_IMPLEMENTED,
+            "Driver dispatch is not connected; no driver was requested",
+        );
+    }
+    if !matches!(payload.action.as_str(), "mark_ready" | "hand_off") {
+        return error(StatusCode::BAD_REQUEST, "unsupported fulfillment action");
+    }
+    match record_manual_action(owner, &id, &payload.action).await {
+        Ok(status) => (
+            StatusCode::OK,
+            Json(json!({"success":true,"status":status})),
         )
             .into_response(),
+        Err(error) => authority::response(error),
     }
 }
-
-pub fn parse_doordash_tracking_webhook(payload: &Value) -> Result<DoorDashTrackingUpdate, String> {
-    let external_delivery_id = find_string_by_key(payload, &["external_delivery_id"])
-        .ok_or_else(|| "DoorDash webhook missing external_delivery_id".to_string())?;
-    let status = find_string_by_key(payload, &["delivery_status", "status"])
-        .or_else(|| find_string_by_key(payload, &["event_type"]))
-        .ok_or_else(|| "DoorDash webhook missing delivery status".to_string())?;
-    let driver_id = find_string_by_key(payload, &["dasher_id", "driver_id"])
-        .or_else(|| find_nested_object_string(payload, &["dasher", "driver"], &["id"]));
-    let (latitude, longitude) = find_location(payload)?;
-
-    Ok(DoorDashTrackingUpdate {
-        external_delivery_id,
-        status,
-        driver_id,
-        latitude,
-        longitude,
-    })
-}
-
-pub async fn persist_doordash_tracking_update(
-    pool: &sqlx::PgPool,
-    tenant_id: &str,
-    update: &DoorDashTrackingUpdate,
-) -> Result<u64, String> {
-    let mut tx = pool.begin().await.map_err(|err| err.to_string())?;
-    ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id)
-        .await
-        .map_err(|err| err.to_string())?;
-
-    let result = if let (Some(latitude), Some(longitude)) = (update.latitude, update.longitude) {
-        sqlx::query(
-            "UPDATE delivery_tasks
-             SET provider = 'doordash',
-                 provider_delivery_id = COALESCE(provider_delivery_id, $2),
-                 status = $3,
-                 driver_id = COALESCE($4, driver_id),
-                 delivery_location_lat = $5,
-                 delivery_location_lng = $6,
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE organization_id = $1
-               AND ((provider = 'doordash' AND provider_delivery_id = $2) OR order_id = $2)",
-        )
-        .bind(tenant_id)
-        .bind(&update.external_delivery_id)
-        .bind(&update.status)
-        .bind(&update.driver_id)
-        .bind(latitude)
-        .bind(longitude)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| err.to_string())?
-    } else {
-        sqlx::query(
-            "UPDATE delivery_tasks
-             SET provider = 'doordash',
-                 provider_delivery_id = COALESCE(provider_delivery_id, $2),
-                 status = $3,
-                 driver_id = COALESCE($4, driver_id),
-                 updated_at = CURRENT_TIMESTAMP
-             WHERE organization_id = $1
-               AND ((provider = 'doordash' AND provider_delivery_id = $2) OR order_id = $2)",
-        )
-        .bind(tenant_id)
-        .bind(&update.external_delivery_id)
-        .bind(&update.status)
-        .bind(&update.driver_id)
-        .execute(&mut *tx)
-        .await
-        .map_err(|err| err.to_string())?
+async fn record_manual_action(
+    owner: AuthorizedPgOwner,
+    order: &str,
+    action: &str,
+) -> Result<&'static str, authority::Error> {
+    let tenant = owner.tenant_id().to_owned();
+    let mut tx = owner.begin().await?;
+    let rows=sqlx::query("SELECT d.id,d.provider,d.status FROM delivery_tasks d JOIN orders o ON o.id=d.order_id AND o.tenant_id=d.organization_id WHERE d.organization_id=$1 AND d.order_id=$2 AND lower(COALESCE(o.status,'')) NOT IN ('canceled','cancelled','fulfilled','returned') LIMIT 2 FOR UPDATE OF d,o")
+        .bind(&tenant).bind(order).fetch_all(tx.connection()).await?;
+    if rows.len() != 1 {
+        return Err(authority::Error::Conflict(
+            "a unique active fulfillment task is required",
+        ));
+    }
+    let row = &rows[0];
+    let provider: Option<String> = row.try_get("provider")?;
+    if provider.as_deref() != Some("doordash") {
+        return Err(authority::Error::Conflict(
+            "this action requires a recorded local-delivery task",
+        ));
+    }
+    let prior: String = row.try_get("status")?;
+    let status = match action {
+        "mark_ready"
+            if matches!(
+                prior.to_ascii_uppercase().as_str(),
+                "PENDING" | "PREPARING" | "READYFORPICKUP"
+            ) =>
+        {
+            "ReadyForPickup"
+        }
+        "hand_off"
+            if matches!(
+                prior.to_ascii_uppercase().as_str(),
+                "READYFORPICKUP" | "DRIVER_CONFIRMED" | "DRIVER_ENROUTE_TO_PICKUP" | "HANDED_OFF"
+            ) =>
+        {
+            "HANDED_OFF"
+        }
+        _ => {
+            return Err(authority::Error::Conflict(
+                "the recorded fulfillment state does not permit this action",
+            ));
+        }
     };
-
-    tx.commit().await.map_err(|err| err.to_string())?;
-    Ok(result.rows_affected())
-}
-
-fn apply_doordash_tracking_update_to_queue(
-    state: &Arc<AppState>,
-    tenant_id: &str,
-    update: &DoorDashTrackingUpdate,
-) {
-    if let Ok(mut orders) = state.orders.write() {
-        for order in orders.iter_mut() {
-            if order.organization_id == tenant_id
-                && (order.id == update.external_delivery_id
-                    || order.provider_delivery_id.as_deref()
-                        == Some(update.external_delivery_id.as_str()))
-            {
-                order.driver_status = Some(update.status.clone());
-                order.driver_id = update.driver_id.clone().or_else(|| order.driver_id.clone());
-                order.driver_lat = update.latitude.or(order.driver_lat);
-                order.driver_lng = update.longitude.or(order.driver_lng);
-                order.provider_delivery_id = Some(update.external_delivery_id.clone());
-                if order.status == "DriverRequested" || order.status == "ReadyForPickup" {
-                    order.status = "DriverTracking".to_string();
-                }
-            }
-        }
-    }
-}
-
-fn find_string_by_key(value: &Value, keys: &[&str]) -> Option<String> {
-    match value {
-        Value::Object(map) => {
-            for key in keys {
-                if let Some(found) = map.get(*key).and_then(|value| value.as_str()) {
-                    let trimmed = found.trim();
-                    if !trimmed.is_empty() {
-                        return Some(trimmed.to_string());
-                    }
-                }
-            }
-            for nested in map.values() {
-                if let Some(found) = find_string_by_key(nested, keys) {
-                    return Some(found);
-                }
-            }
-            None
-        }
-        Value::Array(values) => values
-            .iter()
-            .find_map(|nested| find_string_by_key(nested, keys)),
-        _ => None,
-    }
-}
-
-fn find_nested_object_string(
-    value: &Value,
-    object_keys: &[&str],
-    field_keys: &[&str],
-) -> Option<String> {
-    match value {
-        Value::Object(map) => {
-            for object_key in object_keys {
-                if let Some(found) = map
-                    .get(*object_key)
-                    .and_then(|nested| find_string_by_key(nested, field_keys))
-                {
-                    return Some(found);
-                }
-            }
-            for nested in map.values() {
-                if let Some(found) = find_nested_object_string(nested, object_keys, field_keys) {
-                    return Some(found);
-                }
-            }
-            None
-        }
-        Value::Array(values) => values
-            .iter()
-            .find_map(|nested| find_nested_object_string(nested, object_keys, field_keys)),
-        _ => None,
-    }
-}
-
-fn find_location(value: &Value) -> Result<(Option<f64>, Option<f64>), String> {
-    match value {
-        Value::Object(map) => {
-            let latitude = map
-                .get("lat")
-                .or_else(|| map.get("latitude"))
-                .and_then(|value| value.as_f64());
-            let longitude = map
-                .get("lng")
-                .or_else(|| map.get("longitude"))
-                .and_then(|value| value.as_f64());
-            if latitude.is_some() || longitude.is_some() {
-                let latitude =
-                    latitude.ok_or_else(|| "DoorDash location missing latitude".to_string())?;
-                let longitude =
-                    longitude.ok_or_else(|| "DoorDash location missing longitude".to_string())?;
-                if !(-90.0..=90.0).contains(&latitude) {
-                    return Err("DoorDash latitude is out of range".to_string());
-                }
-                if !(-180.0..=180.0).contains(&longitude) {
-                    return Err("DoorDash longitude is out of range".to_string());
-                }
-                return Ok((Some(latitude), Some(longitude)));
-            }
-            for nested in map.values() {
-                let found = find_location(nested)?;
-                if found.0.is_some() || found.1.is_some() {
-                    return Ok(found);
-                }
-            }
-            Ok((None, None))
-        }
-        Value::Array(values) => {
-            for nested in values {
-                let found = find_location(nested)?;
-                if found.0.is_some() || found.1.is_some() {
-                    return Ok(found);
-                }
-            }
-            Ok((None, None))
-        }
-        _ => Ok((None, None)),
-    }
+    sqlx::query("UPDATE delivery_tasks SET status=$3,updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND organization_id=$2")
+        .bind(row.try_get::<uuid::Uuid,_>("id")?).bind(&tenant).bind(status).execute(tx.connection()).await?;
+    tx.commit().await?;
+    Ok(status)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
-
     #[test]
     fn parses_shippo_tracking_webhook_with_valid_data() {
-        let payload = json!({
-            "event": "track_updated",
-            "data": {
-                "tracking_number": "9499907123456123456781",
-                "tracking_status": {
-                    "status": "DELIVERED"
-                }
-            }
-        });
-
-        let update =
-            parse_shippo_tracking_webhook(&payload).expect("valid Shippo tracking payload");
-
-        assert_eq!(update.tracking_number, "9499907123456123456781");
-        assert_eq!(update.tracking_status, "DELIVERED");
+        let update=parse_shippo_tracking_webhook(&json!({"event":"track_updated","test":true,"data":{"tracking_number":"9499907123456123456781","carrier":"usps","tracking_status":{"status":"DELIVERED","status_date":"2026-10-03T00:00:00Z"}}})).unwrap();
+        assert_eq!(
+            update.tracking_number.as_deref(),
+            Some("9499907123456123456781")
+        );
+        assert_eq!(update.status, "DELIVERED");
+        assert_eq!(update.provider_object_id, None);
     }
-
     #[test]
     fn rejects_shippo_tracking_webhook_without_tracking_number() {
-        let payload = json!({
-            "event": "track_updated",
-            "data": {
-                "tracking_status": {
-                    "status": "DELIVERED"
-                }
-            }
-        });
-
-        let err = parse_shippo_tracking_webhook(&payload).unwrap_err();
-
-        assert!(err.contains("tracking_number"));
+        let error = parse_shippo_tracking_webhook(
+            &json!({"event":"track_updated","data":{"tracking_status":{"status":"DELIVERED"}}}),
+        )
+        .unwrap_err();
+        assert!(error.contains("tracking_number"));
     }
-
     #[test]
     fn ignores_shippo_webhook_wrong_event() {
-        let payload = json!({
-            "event": "transaction_created",
-            "data": {
-                "tracking_number": "123"
-            }
-        });
-
-        let err = parse_shippo_tracking_webhook(&payload).unwrap_err();
-
-        assert!(err.starts_with("Ignoring Shippo webhook event: transaction_created"));
+        let error = parse_shippo_tracking_webhook(
+            &json!({"event":"transaction_created","data":{"tracking_number":"123"}}),
+        )
+        .unwrap_err();
+        assert!(error.starts_with("Ignoring Shippo webhook event: transaction_created"));
     }
-
     #[test]
     fn parses_doordash_tracking_webhook_with_dasher_coordinates() {
-        let payload = json!({
-            "event_type": "DASHER_CONFIRMED",
-            "data": {
-                "external_delivery_id": "ord-2",
-                "delivery_status": "dasher_confirmed",
-                "dasher": {
-                    "id": "dasher-42"
-                },
-                "dasher_location": {
-                    "lat": 37.7864,
-                    "lng": -122.4051
-                }
-            }
-        });
-
-        let update =
-            parse_doordash_tracking_webhook(&payload).expect("valid DoorDash tracking payload");
-
-        assert_eq!(update.external_delivery_id, "ord-2");
-        assert_eq!(update.status, "dasher_confirmed");
+        let update=parse_doordash_tracking_webhook(&json!({"event_name":"DASHER_CONFIRMED","created_at":"2026-10-03T00:00:00Z","data":{"external_delivery_id":"delivery-2","dasher":{"id":"dasher-42"},"dasher_location":{"lat":37.7864,"lng":-122.4051}}})).unwrap();
+        assert_eq!(update.provider_object_id.as_deref(), Some("delivery-2"));
+        assert_eq!(update.status, "DRIVER_CONFIRMED");
         assert_eq!(update.driver_id.as_deref(), Some("dasher-42"));
         assert_eq!(update.latitude, Some(37.7864));
         assert_eq!(update.longitude, Some(-122.4051));
     }
-
     #[test]
     fn rejects_doordash_tracking_webhook_without_external_delivery_id() {
-        let payload = json!({
-            "delivery_status": "enroute_to_dropoff",
-            "dasher_location": {
-                "latitude": 37.7864,
-                "longitude": -122.4051
-            }
-        });
-
-        let err = parse_doordash_tracking_webhook(&payload).unwrap_err();
-
-        assert!(err.contains("external_delivery_id"));
+        let error =
+            parse_doordash_tracking_webhook(&json!({"delivery_status":"enroute_to_dropoff"}))
+                .unwrap_err();
+        assert!(error.contains("external_delivery_id"));
     }
 }

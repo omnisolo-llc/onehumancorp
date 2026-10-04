@@ -6,6 +6,9 @@ use tracing::info;
 #[path = "terminal_offline_sync.rs"]
 mod offline_sync;
 
+#[path = "terminal_cash_receipts.rs"]
+mod cash_receipts;
+
 #[derive(serde::Serialize)]
 pub struct TerminalTokenResponse {
     pub token: String,
@@ -75,6 +78,10 @@ pub fn router(
         )
         .route("/reserve", axum::routing::post(reserve_inventory_handler))
         .route("/commit", axum::routing::post(commit_inventory_handler))
+        .route(
+            "/commit/{operation_id}",
+            axum::routing::get(read_cash_receipt_handler),
+        )
         .route(
             "/session/start",
             axum::routing::post(start_terminal_session_handler),
@@ -333,9 +340,14 @@ pub struct ReserveInventoryRequest {
 
 #[derive(serde::Deserialize)]
 pub struct CommitInventoryRequest {
+    pub operation_id: Option<String>,
     pub tenant_id: String,
+    pub items: Option<Vec<cash_receipts::CashItem>>,
+    #[serde(default)]
     pub product_id: String,
+    #[serde(default)]
     pub quantity: i32,
+    #[serde(default)]
     pub lock_id: String,
     pub customer_id: Option<String>,
     pub amount_cents: Option<i64>,
@@ -636,124 +648,22 @@ pub async fn commit_inventory_handler(
     req_data: axum::extract::Json<CommitInventoryRequest>,
 ) -> axum::response::Response {
     let tenant_id = match auth_info {
-        Some(info) => info.org_id.clone(),
-        None => {
-            let spiffe_id_str = _headers
-                .get("x-spiffe-id")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("");
-            // WARNING: SECURITY FIX
-            // Only allow tenant override for internal test agents, do not bypass spiffe id auth in prod!
-            if let Some(tenant_override) = _headers
-                .get("x-tenant-id")
-                .and_then(|v| v.to_str().ok())
-                .filter(|_| {
-                    spiffe_id_str.starts_with("spiffe://ohc/org/")
-                        && spiffe_id_str.contains("/agent/")
-                })
-            {
-                tenant_override.to_string()
-            } else if let Ok((id, _)) = ::server_auth::parse_spiffe_id(spiffe_id_str) {
-                id
-            } else {
-                return (
-                    axum::http::StatusCode::UNAUTHORIZED,
-                    Json(serde_json::json!({ "error": "unauthenticated" })),
-                )
-                    .into_response();
-            }
-        }
+        Some(info) if !info.org_id.trim().is_empty() => info.org_id.clone(),
+        _ => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"success":false,"status":"rejected","error_message":"Unauthenticated"}))).into_response(),
     };
+    cash_receipts::commit(&hub, &tenant_id, &req_data).await
+}
 
-    let service = crate::services::inventory::InventoryService::new(hub.redis_client());
-
-    match service
-        .commit_inventory(
-            &tenant_id,
-            &req_data.product_id,
-            req_data.quantity,
-            &req_data.lock_id,
-        )
-        .await
-    {
-        Ok(result) => {
-            if result.success {
-                let pool = crate::db::get_pool();
-                if let Ok(mut tx) = pool.begin().await {
-                    if crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                        .await
-                        .is_ok()
-                    {
-                        let order_id = uuid::Uuid::new_v4().to_string();
-                        let total_amount = (req_data.amount_cents.unwrap_or(0) as f64) / 100.0;
-                        let _ = sqlx::query("INSERT INTO orders (id, tenant_id, customer_id, total_amount, status) VALUES ($1, $2, $3, $4, 'completed')")
-                            .bind(&order_id).bind(&tenant_id).bind(&req_data.customer_id).bind(total_amount).execute(&mut *tx).await;
-
-                        let item_id = uuid::Uuid::new_v4().to_string();
-                        let _ = sqlx::query("INSERT INTO order_items (id, tenant_id, order_id, product_id, quantity, price) VALUES ($1, $2, $3, $4, $5, $6)")
-                            .bind(&item_id).bind(&tenant_id).bind(&order_id).bind(&req_data.product_id).bind(req_data.quantity).bind(total_amount).execute(&mut *tx).await;
-
-                        let event_payload = serde_json::json!({
-                            "order_id": order_id,
-                            "tenant_id": tenant_id,
-                            "customer_id": req_data.customer_id,
-                            "amount": total_amount,
-                            "source": "in_person_pos",
-                        });
-
-                        let event = crate::orchestration::departments::types::DepartmentEvent {
-                            id: uuid::Uuid::new_v4().to_string(),
-                            tenant_id: tenant_id.clone(),
-                            event_type: "POS_SALE_COMPLETED".to_string(),
-                            payload: event_payload,
-                        };
-                        let _ = hub
-                            .publish_mesh_event(::server_omnisolo::orchestration::MeshEvent {
-                                event_id: uuid::Uuid::new_v4().to_string(),
-                                topic: "pos_sales".to_string(),
-                                payload: serde_json::to_vec(&event).unwrap_or_default(),
-                                timestamp: chrono::Utc::now().timestamp(),
-                            })
-                            .await;
-
-                        // Create an agent action request for the Operations Agent
-                        let action_req_id = uuid::Uuid::new_v4().to_string();
-                        let payload = serde_json::json!({
-                            "source": "pos",
-                            "order_id": order_id,
-                            "quantity": req_data.quantity,
-                            "reason": "in_person_sale_inventory_check"
-                        });
-                        let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, product_id, payload) VALUES ($1, $2, 'InventoryCheck', 'Pending', $3, $4)")
-                            .bind(&action_req_id)
-                            .bind(&tenant_id)
-                            .bind(&req_data.product_id)
-                            .bind(&payload)
-                            .execute(&mut *tx)
-                            .await;
-                    }
-                    let _ = tx.commit().await;
-                }
-            }
-
-            (
-                axum::http::StatusCode::OK,
-                Json(serde_json::json!({
-                    "success": result.success,
-                    "error_message": result.error_message
-                })),
-            )
-                .into_response()
-        }
-        Err(e) => (
-            axum::http::StatusCode::OK,
-            Json(serde_json::json!({
-                "success": false,
-                "error_message": e
-            })),
-        )
-            .into_response(),
-    }
+pub async fn read_cash_receipt_handler(
+    State(hub): State<Arc<Hub>>,
+    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    axum::extract::Path(operation_id): axum::extract::Path<String>,
+) -> axum::response::Response {
+    let tenant_id = match auth_info {
+        Some(info) if !info.org_id.trim().is_empty() => info.org_id.clone(),
+        _ => return (axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"success":false,"status":"rejected","error_message":"Unauthenticated"}))).into_response(),
+    };
+    cash_receipts::read(&hub, &tenant_id, &operation_id).await
 }
 
 pub async fn create_payment_intent_handler(
@@ -979,18 +889,20 @@ mod tests {
         let tenant_id = "tenant-terminal-test-low";
         sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'Terminal Test Tenant') ON CONFLICT DO NOTHING")
             .bind(tenant_id).execute(&pool).await.unwrap();
-        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-terminal-test-2', $1, 'Test Prod Terminal', 6) ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO products (id, tenant_id, title, price_cents, inventory_count, available_quantity) VALUES ('prod-terminal-test-2', $1, 'Test Prod Terminal', 100, 6, 6) ON CONFLICT (id) DO UPDATE SET price_cents=100,inventory_count=6,available_quantity=6,locked_quantity=0")
             .bind(tenant_id).execute(&pool).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pool.clone()));
         let req_data = axum::extract::Json(CommitInventoryRequest {
+            operation_id: Some(uuid::Uuid::new_v4().to_string()),
+            items: None,
             tenant_id: tenant_id.to_string(),
             product_id: "prod-terminal-test-2".to_string(),
             quantity: 2,
             lock_id: "".to_string(),
             customer_id: None,
-            amount_cents: None,
+            amount_cents: Some(200),
         });
         let auth_info = Some(axum::extract::Extension(
             ::server_auth::orchestration::AuthInfo {
@@ -1001,8 +913,9 @@ mod tests {
         ));
         let headers = axum::http::HeaderMap::new();
 
-        let _resp =
+        let resp =
             commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(resp.status(), axum::http::StatusCode::OK);
         // Verify action request count
         let action_request_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM agent_action_requests WHERE tenant_id = $1 AND product_id = 'prod-terminal-test-2' AND action_type = 'Reorder'")
             .bind(tenant_id)
@@ -1031,12 +944,14 @@ mod tests {
         .execute(&pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO products (id, tenant_id, title, inventory_count) VALUES ('prod-pos-test', $1, 'POS Test Prod', 10) ON CONFLICT DO NOTHING")
+        sqlx::query("INSERT INTO products (id, tenant_id, title, price_cents, inventory_count, available_quantity) VALUES ('prod-pos-test', $1, 'POS Test Prod', 1999, 10, 10) ON CONFLICT (id) DO UPDATE SET price_cents=1999,inventory_count=10,available_quantity=10,locked_quantity=0")
             .bind(tenant_id).execute(&pool).await.unwrap();
 
         let (tx, _rx) = tokio::sync::mpsc::channel(100);
         let hub = Arc::new(Hub::new(tx, pool.clone()));
         let req_data = axum::extract::Json(CommitInventoryRequest {
+            operation_id: Some(uuid::Uuid::new_v4().to_string()),
+            items: None,
             tenant_id: tenant_id.to_string(),
             product_id: "prod-pos-test".to_string(),
             quantity: 1,
@@ -1053,7 +968,9 @@ mod tests {
         ));
         let headers = axum::http::HeaderMap::new();
 
-        commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        let response =
+            commit_inventory_handler(headers, axum::extract::State(hub), auth_info, req_data).await;
+        assert_eq!(response.status(), axum::http::StatusCode::OK);
 
         // Verify order count
         let order_count: (i64,) =

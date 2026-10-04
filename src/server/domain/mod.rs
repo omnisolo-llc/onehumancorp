@@ -13,6 +13,7 @@ pub mod unified_tenant_test;
 
 pub mod action_router;
 pub mod agent_approvals;
+pub mod agent_feed_decisions;
 pub mod booking;
 pub mod estimator;
 pub mod inbox;

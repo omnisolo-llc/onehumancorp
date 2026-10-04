@@ -119,13 +119,14 @@ impl Fixture {
             "job_templates",
             "appointments",
             "job_locations",
+            "service_routes",
         ] {
             sqlx::query(&format!("ALTER TABLE {table} FORCE ROW LEVEL SECURITY"))
                 .execute(&admin)
                 .await
                 .unwrap();
         }
-        sqlx::raw_sql(&format!("GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT SELECT ON customers,job_templates,appointments,job_locations TO {role}")).execute(&admin).await.unwrap();
+        sqlx::raw_sql(&format!("GRANT USAGE ON SCHEMA {schema} TO {role}; GRANT SELECT ON customers,job_templates,appointments,job_locations,service_routes TO {role}")).execute(&admin).await.unwrap();
         let scoped = sqlx::postgres::PgPoolOptions::new()
             .max_connections(1)
             .connect_with(options.username(&role).password(&password))

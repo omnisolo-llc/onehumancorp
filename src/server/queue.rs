@@ -1362,6 +1362,9 @@ pub struct RedisTaskQueue {
     client: redis::Client,
     queue_name: String,
     connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    // Redis serializes commands on a connection. BLPOP must not delay enqueue
+    // or pruning when callers share this queue.
+    blocking_connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
 }
 
 impl RedisTaskQueue {
@@ -1371,12 +1374,54 @@ impl RedisTaskQueue {
             client,
             queue_name: queue_name.to_string(),
             connection: tokio::sync::OnceCell::new(),
+            blocking_connection: tokio::sync::OnceCell::new(),
         })
+    }
+
+    /// Check the configured durable queue before workers start. Parsing a URL
+    /// alone does not establish Redis availability. Never expose the URL or a
+    /// nested provider error because either may contain credentials.
+    pub async fn connect_for_startup(redis_url: &str, queue_name: &str) -> std::io::Result<Self> {
+        let queue = Self::new(redis_url, queue_name).map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Invalid REDIS_URL for the Redis task queue",
+            )
+        })?;
+        let readiness = async {
+            let mut connection = queue.get_connection().await?;
+            // Both required sockets share the same startup deadline. Do not
+            // defer an unbounded second connection to the first dequeue.
+            queue.get_blocking_connection().await?;
+            redis::cmd("PING")
+                .query_async::<String>(&mut connection)
+                .await
+                .map_err(|_| "Redis readiness check failed".to_string())
+        };
+        match tokio::time::timeout(Duration::from_secs(5), readiness).await {
+            Ok(Ok(reply)) if reply == "PONG" => Ok(queue),
+            Ok(_) => Err(std::io::Error::other(
+                "Configured Redis task queue is unavailable; check REDIS_URL and the Redis service",
+            )),
+            Err(_) => Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Configured Redis task queue startup timed out after 5 seconds",
+            )),
+        }
     }
 
     async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
         let conn = self
             .connection
+            .get_or_try_init(|| async { self.client.get_multiplexed_tokio_connection().await })
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(conn.clone())
+    }
+
+    async fn get_blocking_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+        let conn = self
+            .blocking_connection
             .get_or_try_init(|| async { self.client.get_multiplexed_tokio_connection().await })
             .await
             .map_err(|e| e.to_string())?;
@@ -1452,7 +1497,7 @@ impl TaskQueue for RedisTaskQueue {
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
-        let mut conn = self.get_connection().await?;
+        let mut conn = self.get_blocking_connection().await?;
 
         // Use BLPOP with 1 second timeout to avoid busy loop
         let result: Option<(String, Vec<u8>)> = redis::cmd("BLPOP")

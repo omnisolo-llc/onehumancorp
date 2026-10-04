@@ -19,7 +19,7 @@ test.describe('Agent Protocol Git Checkpointing', () => {
     const response = await pending;
     expect(response.status()).toBe(503);
     expect(await response.json()).toEqual({ error: 'Agent runtime is not configured; no work was dispatched' });
-    await expect(page.getByRole('alert')).toHaveText('Workspace runtime task history could not be verified.');
+    await expect(page.getByRole('alert').filter({ hasText: 'Workspace runtime task history could not be verified.' })).toHaveText('Workspace runtime task history could not be verified.');
     await expect(page.getByText('No tasks found.', { exact: true })).toHaveCount(0);
     await expect(page.getByText('No checkpoints saved.', { exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Restore Checkpoint' })).toHaveCount(0);

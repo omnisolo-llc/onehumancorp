@@ -154,8 +154,16 @@ jobs:
           role: backend-debug
           node: 'false'
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Snapshot native producer source
+        run: node scripts/native-binary-proof.mjs snapshot target/debug/native-source-snapshot.json
       - name: Build Cargo binaries
         run: cargo build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins --timings
+      - name: Bind native artifact to producer source
+        run: node scripts/native-binary-proof.mjs record target/debug/native-source-snapshot.json target/debug/native-binary-proof.json
       - name: Preserve actual compiler timing evidence
         if: always()
         uses: actions/upload-artifact@v6
@@ -172,6 +180,7 @@ jobs:
             target/debug/grpc-mtls-probe
             target/debug/omnisolo-builtin-agent
             target/debug/omnisolo-harness-worker
+            target/debug/native-binary-proof.json
           if-no-files-found: error
           retention-days: 3
 
@@ -249,11 +258,23 @@ jobs:
         env:
           PGPASSWORD: ignored_fixture
         run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_checkpoint_test
+      - name: Create the isolated database required by approval decision tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_approval_test
+      - name: Create the isolated database required by native timecard tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_clock_timecard_test
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         env:
           OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
           OHC_CHECKPOINT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_checkpoint_test
+          OHC_APPROVAL_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_approval_test
+          OHC_CLOCK_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_clock_timecard_test
         run: make test-backend
 
       - name: Verify task-scoped checkpoint restore safety
@@ -415,12 +436,14 @@ jobs:
     name: Native real-stack Playwright ${{ matrix.shard }}/12
     strategy:
       fail-fast: false
-      # Keep all twelve shards; the desktop fence leaves at most four other
-      # runners for Rust, PostgreSQL, Kind and Compose (DAG-tested total: eight).
-      max-parallel: 4
+      # Keep all twelve shards and two workers per isolated runner. Six slots
+      # reduce queued browser waves without adding jobs or repeated builds.
+      # Desktop and Docker's Node fence bound other overlap to four runners
+      # (exhaustive DAG-tested workflow total: ten).
+      max-parallel: 6
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    needs: [check-changes, native-build, native-web, dependency-audit, native-node, native-desktop]
+    needs: [check-changes, native-build, native-web, dependency-audit, native-desktop]
     # Browser setup owns its database; PostgreSQL correctness remains mandatory
     # in CI Required and can run concurrently. Desktop releases its runner first.
     # A quality failure must not conceal browser results for successfully built code.
@@ -675,7 +698,10 @@ jobs:
       - check-changes
       - native-images
       - native-build
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+      - native-node
+    # Node releases one runner before Compose starts; a quality failure must
+    # not hide deployment results for this run's successfully built artifacts.
+    if: ${{ !cancelled() && needs.check-changes.result == 'success' && needs.check-changes.outputs.markdown-only == 'false' && needs.native-images.result == 'success' && needs.native-build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -798,7 +824,7 @@ jobs:
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler
+          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server
 
       - name: Provision and verify non-superuser application role
         run: |
@@ -905,6 +931,38 @@ jobs:
           python3 -m unittest scripts/test_focused_ci_gate.py
       # These source-bound gates use only disposable databases and loopback
       # provider fixtures. Each runs even if an independent earlier check fails.
+      - name: Fetch locked Redis startup dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/redis-startup-contract/fetch.sh
+      - name: Verify bounded credential-safe Redis startup
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py redis-startup-contract
+      - name: Fetch locked mesh startup dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/mesh-startup-contract/fetch.sh
+      - name: Verify bounded mesh transport startup and cancellation
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py mesh-startup-contract
+      - name: Fetch locked NATS metadata dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/nats-metadata-contract/fetch.sh
+      - name: Verify NATS metadata and handshake redaction
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py nats-metadata-contract
+      - name: Verify approval read-after-write consistency
+        if: ${{ !cancelled() }}
+        env:
+          OHC_APPROVAL_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_approval_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_approval_test
+          python3 scripts/focused_ci_gate.py approvals-read-contract
       - name: Verify durable onboarding and session recovery
         if: ${{ !cancelled() }}
         env:
@@ -955,6 +1013,15 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_chat_tenant_test
           python3 scripts/focused_ci_gate.py chat-tenant-isolation
 
+      - name: Verify native memory JSONB persistence and tenant authority
+        if: ${{ !cancelled() }}
+        env:
+          OHC_MEMORY_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_memory_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_memory_test
+          python3 scripts/focused_ci_gate.py memory-jsonb-contract
+
       - name: Verify authenticated widget chat and canonical tenant storage
         if: ${{ !cancelled() }}
         env:
@@ -964,6 +1031,52 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_widget_chat_test
           python3 scripts/focused_ci_gate.py widget-chat-contract
+
+      - name: Verify atomic agent-feed decisions and single-attempt dispatch
+        if: ${{ !cancelled() }}
+        env:
+          OHC_FEED_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_feed_decision_test
+          OHC_FEED_TEST_REDIS_URL: redis://127.0.0.1:${{ job.services.widget_redis.ports[6379] }}/0
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_feed_decision_test
+          python3 scripts/focused_ci_gate.py agent-feed-decision-contract
+
+      - name: Fetch locked cash receipt dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/cash-receipts/fetch.sh
+
+      - name: Verify atomic cash sale receipts and inventory exclusion
+        if: ${{ !cancelled() }}
+        env:
+          OHC_CASH_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_cash_receipts_test
+          OHC_CASH_TEST_REDIS_URL: redis://127.0.0.1:${{ job.services.widget_redis.ports[6379] }}/0
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_cash_receipts_test
+          python3 scripts/focused_ci_gate.py cash-receipts
+
+      - name: Verify authenticated shipping and persisted fulfillment
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SHIPPING_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_shipping_integrity_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_shipping_integrity_test
+          python3 scripts/focused_ci_gate.py shipping-integrity-contract
+
+      - name: Fetch locked staff timecard dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/staff-timecard-contract/fetch.sh
+
+      - name: Verify atomic staff timecards on PostgreSQL and SQLite
+        if: ${{ !cancelled() }}
+        env:
+          OHC_CLOCK_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_clock_timecard_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_clock_timecard_test
+          python3 scripts/focused_ci_gate.py staff-timecard-contract
 
       - name: Verify recorded staff reads and native staff migrations
         if: ${{ !cancelled() }}
@@ -982,6 +1095,15 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_appointments_test
           python3 scripts/focused_ci_gate.py operations-appointments
+
+      - name: Verify canonical field mutations and committed route receipts
+        if: ${{ !cancelled() }}
+        env:
+          OHC_FIELD_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_field_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_field_test
+          python3 scripts/focused_ci_gate.py field-boundary-contract
 
       - name: Verify recorded-order milestone isolation
         if: ${{ !cancelled() }}
@@ -1209,7 +1331,7 @@ jobs:
           fi
       - uses: actions/checkout@v6
         if: always()
-      - name: Measure complete CI critical path against the 30-minute budget
+      - name: Measure complete CI critical path against the 35-minute budget
         if: always()
         env:
           CI_PERFORMANCE_PREFIX: ${{ inputs.performance_prefix || '' }}
@@ -1225,7 +1347,7 @@ jobs:
           python3 scripts/ci-performance.py --jobs target/ci-performance/jobs.json \
             --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
             --job-prefix "$CI_PERFORMANCE_PREFIX" \
-            --budget-minutes 30 --output target/ci-performance "${args[@]}" || status=$?
+            --budget-minutes 35 --output target/ci-performance "${args[@]}" || status=$?
           if [[ -f target/ci-performance/performance.md ]]; then
             cat target/ci-performance/performance.md >> "$GITHUB_STEP_SUMMARY"
           fi

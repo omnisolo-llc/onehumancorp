@@ -329,6 +329,48 @@ async fn commit_failure_never_exposes_acknowledgment_or_cache_invalidation() {
 #[ignore = "requires OHC_SYNC_TEST_DATABASE_URL"]
 async fn appointment_notes_require_frozen_expected_state_and_support_explicit_clear() {
     let (pool, _) = fixture().await;
+    use sea_orm::{ConnectionTrait, Schema};
+    let orm = sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone());
+    let backend = sea_orm::DatabaseBackend::Postgres;
+    for statement in [
+        Schema::new(backend)
+            .create_table_from_entity(server_auth::seaorm_store::entities::user::Entity),
+        Schema::new(backend).create_table_from_entity(
+            server_auth::seaorm_store::entities::identity_user_role::Entity,
+        ),
+        Schema::new(backend)
+            .create_table_from_entity(server_auth::seaorm_store::entities::revoked_token::Entity),
+    ] {
+        orm.execute(backend.build(&statement)).await.unwrap();
+    }
+    let store = std::sync::Arc::new(server_auth::Store::with_portable_repo(std::sync::Arc::new(
+        server_auth::seaorm_store::SeaOrmAuthRepository::new(orm),
+    )));
+    let user = server_auth::User {
+        id: "owner".into(),
+        username: "owner".into(),
+        email: "owner@example.test".into(),
+        password_hash: String::new(),
+        roles: vec!["ADMIN".into()],
+        active: true,
+        organization_id: Some("tenant-a".into()),
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        oidc_subject: None,
+    };
+    sqlx::query("INSERT INTO users(id,username,email,password_hash,active,tenant_id,created_at,updated_at)VALUES('owner','owner','owner@example.test','',true,'tenant-a',now(),now())").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO identity_user_roles(user_id,role_name,tenant_id,position)VALUES('owner','ADMIN','tenant-a',0)").execute(&pool).await.unwrap();
+    let token = store.issue_token(&user).unwrap();
+    let claims = store.validate_token(&token).await.unwrap();
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert("authorization", format!("Bearer {token}").parse().unwrap());
+    let state = super::super::SyncEventsState {
+        pool: pool.clone(),
+        access: crate::api::field_ops::records::FieldAccess {
+            pool: Some(pool.clone()),
+            store,
+        },
+    };
     sqlx::query("INSERT INTO appointments (id,tenant_id,status,notes) VALUES ('a','tenant-a','Scheduled','original')").execute(&pool).await.unwrap();
     let stale = event(
         "stale",
@@ -338,7 +380,10 @@ async fn appointment_notes_require_frozen_expected_state_and_support_explicit_cl
         json!({"status":"Completed","expected_status":"Scheduled","notes":null,"expected_notes":"old"}),
     );
     assert_eq!(
-        sync_events(&pool, "tenant-a", &[stale]).await.outcomes[0].status,
+        sync_authorized_events(&state, &claims, &headers, "tenant-a", &[stale])
+            .await
+            .outcomes[0]
+            .status,
         "reconciliation"
     );
     let clear = event(
@@ -349,7 +394,10 @@ async fn appointment_notes_require_frozen_expected_state_and_support_explicit_cl
         json!({"status":"Completed","expected_status":"Scheduled","notes":null,"expected_notes":"original"}),
     );
     assert_eq!(
-        sync_events(&pool, "tenant-a", &[clear]).await.outcomes[0].status,
+        sync_authorized_events(&state, &claims, &headers, "tenant-a", &[clear])
+            .await
+            .outcomes[0]
+            .status,
         "acknowledged"
     );
     let notes: Option<String> = sqlx::query_scalar("SELECT notes FROM appointments WHERE id='a'")

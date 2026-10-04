@@ -1,6 +1,6 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 import {installOnboardingLocks} from './testLocks';
-import {serializeOnboardingDraftWrite,onboardingWriteFenceKey,onboardingDraftWriteProblem} from './draftWriteGate';
+import {serializeOnboardingDraftWrite,onboardingWriteFenceKey,onboardingDraftWriteProblem,onboardingDraftWritesBusy,subscribeOnboardingWriteState} from './draftWriteGate';
 const owner={userId:'owner',tenantId:'tenant'};
 beforeEach(()=>{localStorage.clear();installOnboardingLocks();});
 afterEach(()=>vi.unstubAllGlobals());
@@ -41,4 +41,47 @@ it('allows a corrected request after an explicit client rejection without acknow
  const response=await serializeOnboardingDraftWrite(owner,()=>true,async dispatched=>{dispatched();return Response.json({error:'invalid draft'},{status:400});});
  expect(response.status).toBe(400);expect(localStorage.getItem(onboardingWriteFenceKey(owner))).toBeNull();
  await serializeOnboardingDraftWrite(owner,()=>true,async dispatched=>{dispatched();return new Response(null,{status:204});});
+});
+
+it('reports every admitted write before lock acquisition and stays busy until the final queued write settles', async () => {
+ const grants: (() => Promise<void>)[] = [];
+ Object.defineProperty(navigator, 'locks', {value:{request: (_key:string, _options:unknown, run:()=>Promise<Response>) => new Promise<Response>((resolve, reject) => grants.push(async () => {try {resolve(await run());} catch (error) {reject(error);}}))}});
+ const states: boolean[] = [];
+ const stop = subscribeOnboardingWriteState(() => states.push(onboardingDraftWritesBusy(owner)));
+ try {
+  const send = vi.fn(async dispatched => {dispatched();return new Response(null,{status:204});});
+  const first = serializeOnboardingDraftWrite(owner,()=>true,send);
+  const second = serializeOnboardingDraftWrite(owner,()=>true,send);
+  expect(onboardingDraftWritesBusy(owner)).toBe(true);
+  expect(onboardingDraftWritesBusy({userId:'other',tenantId:'other'})).toBe(false);
+  expect(send).not.toHaveBeenCalled();
+  await grants[0]();await first;
+  expect(onboardingDraftWritesBusy(owner)).toBe(true);
+  expect(states).not.toContain(false);
+  await grants[1]();await second;
+  expect(onboardingDraftWritesBusy(owner)).toBe(false);
+  expect(states.at(-1)).toBe(false);
+  expect(send).toHaveBeenCalledTimes(2);
+ } finally {stop();}
+});
+
+it('clears admitted readiness when lock acquisition fails or an unknown write blocks the queued successor', async () => {
+ const brokenLocks = {request: vi.fn(async () => {throw new Error('lock unavailable');})};
+ Object.defineProperty(navigator, 'locks', {value:brokenLocks});
+ await expect(serializeOnboardingDraftWrite(owner,()=>true,vi.fn())).rejects.toThrow('lock unavailable');
+ expect(onboardingDraftWritesBusy(owner)).toBe(false);
+ installOnboardingLocks();
+ let fail!: (error:Error) => void;
+ const first = serializeOnboardingDraftWrite(owner,()=>true,async dispatched=>{dispatched();return new Promise((_resolve,reject)=>{fail=reject;});});
+ const firstRejected = expect(first).rejects.toThrow('reply lost');
+ const nextSend = vi.fn();
+ const second = serializeOnboardingDraftWrite(owner,()=>true,nextSend);
+ const secondRejected = expect(second).rejects.toThrow('reconciliation');
+ await vi.waitFor(()=>expect(fail).toBeDefined());
+ expect(onboardingDraftWritesBusy(owner)).toBe(true);
+ fail(new Error('reply lost'));await Promise.all([firstRejected,secondRejected]);
+ expect(onboardingDraftWritesBusy(owner)).toBe(false);
+ expect(nextSend).not.toHaveBeenCalled();
+ expect(onboardingDraftWriteProblem(owner)).toMatch(/reconciliation/);
+ expect(localStorage.getItem(onboardingWriteFenceKey(owner))).not.toBeNull();
 });

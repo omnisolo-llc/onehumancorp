@@ -3,6 +3,34 @@ use async_trait::async_trait;
 use opentelemetry::metrics::Counter;
 use opentelemetry::{KeyValue, global};
 
+/// Remove URL userinfo from public metadata without changing the connection
+/// input. Preserve nonsecret endpoint details and ordinary URL configurations.
+/// This is not an authentication parser or a general query-string scrubber.
+pub fn public_nats_endpoint(value: &str) -> String {
+    if !value.contains('@') {
+        return value.to_string();
+    }
+    let Ok(address) = value.parse::<async_nats::ServerAddr>() else {
+        // An invalid credential-bearing address cannot safely be echoed.
+        return "[invalid NATS endpoint]".to_string();
+    };
+    let mut url = address.into_inner();
+    if url.username().is_empty() && url.password().is_none() {
+        return value.to_string();
+    }
+    if url.set_username("").is_err() || url.set_password(None).is_err() {
+        return "[invalid NATS endpoint]".to_string();
+    }
+    if value.contains("://") {
+        url.to_string()
+    } else {
+        url.as_str()
+            .strip_prefix("nats://")
+            .unwrap_or(url.as_str())
+            .to_string()
+    }
+}
+
 #[async_trait]
 pub trait NatsClientWrapper: Send + Sync {
     async fn publish(&self, subject: &str, data: Vec<u8>) -> Result<(), String>;
@@ -20,7 +48,14 @@ pub struct RealNatsClient {
 
 impl RealNatsClient {
     pub async fn new(url: &str) -> Result<Self, async_nats::ConnectError> {
-        let client = async_nats::connect(url).await?;
+        use tracing::instrument::WithSubscriber;
+        // The dependency logs credential-bearing addresses and server errors.
+        // Scope suppression to this handshake's polls; preserve other tasks'
+        // logs and return the useful error kind without its unsafe source text.
+        let client = async_nats::connect(url)
+            .with_subscriber(tracing::subscriber::NoSubscriber::default())
+            .await
+            .map_err(|error| async_nats::ConnectError::new(error.kind()))?;
         let meter = global::meter("ohc.nats");
         let publish_counter = meter.u64_counter("ohc.nats.messages_published").build();
         Ok(Self {

@@ -1,0 +1,7 @@
+/Cargo.lock
+/generated.rs
+/source-manifest.json
+/active.sql
+/legacy.sql
+/target/
+/__pycache__/

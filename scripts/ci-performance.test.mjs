@@ -15,12 +15,12 @@ const fixture = () => [{ total_count: 4, jobs: [
   job(3, 'Native browser suite', '12', '20'),
   job(4, 'CI Required', '21', '21', { status: 'in_progress', conclusion: null }),
 ] }];
-async function run(pages, budget = '30', prefix = '') {
+async function run(pages, budget = null, prefix = '') {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'ohc-ci-time-'));
   try {
     const input = path.join(dir, 'jobs.json'); await writeFile(input, JSON.stringify(pages));
     const result = spawnSync('python3', [script, '--jobs', input, '--run-id', '42', '--attempt', '2',
-      '--budget-minutes', budget, '--job-prefix', prefix, '--cold', '--output', path.join(dir, 'report')], { encoding: 'utf8', timeout: 15000 });
+      ...(budget === null ? [] : ['--budget-minutes', budget]), '--job-prefix', prefix, '--cold', '--output', path.join(dir, 'report')], { encoding: 'utf8', timeout: 15000 });
     assert.ifError(result.error);
     let report;
     try { report = JSON.parse(await readFile(path.join(dir, 'report/performance.json'), 'utf8')); }
@@ -34,6 +34,20 @@ test('CI wall time includes dependent-job waits and is not the sum of parallel r
   assert.equal(result.report.cache_mode_requested, 'disabled');
   assert.equal(result.report.cache_hit_proven, false);
   assert.equal(result.report.within_budget, true);
+});
+test('the default budget accepts exactly 35 minutes and rejects the next second', async () => {
+  const pages = fixture();
+  pages[0].jobs[3].started_at = '2026-09-19T10:35:00Z';
+  const boundary = await run(pages);
+  assert.equal(boundary.status, 0, boundary.stderr);
+  assert.equal(boundary.report.budget_seconds, 2100);
+  assert.equal(boundary.report.elapsed_seconds, 2100);
+  assert.equal(boundary.report.within_budget, true);
+  pages[0].jobs[3].started_at = '2026-09-19T10:35:01Z';
+  const exceeded = await run(pages);
+  assert.equal(exceeded.status, 1);
+  assert.equal(exceeded.report.elapsed_seconds, 2101);
+  assert.equal(exceeded.report.within_budget, false);
 });
 test('core build timing includes Tauri and dependency waits without replacing the full gate', async () => {
   const pages = fixture();

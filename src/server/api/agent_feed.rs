@@ -2,12 +2,12 @@ use super::ws_compression::{encode_json, negotiate};
 use axum::{
     Json, Router,
     extract::{
-        Extension, Path, Query, State,
+        Extension, Query, State,
         ws::{Message as WsMessage, WebSocket, WebSocketUpgrade},
     },
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, put},
+    routing::get,
 };
 use serde::{Deserialize, Serialize};
 
@@ -80,16 +80,9 @@ pub struct PaginationQuery {
     pub mobile_optimized: Option<bool>,
 }
 
-#[derive(Deserialize)]
-pub struct UpdateStateRequest {
-    pub state: String,
-    pub proposed_action: Option<serde_json::Value>,
-    pub context_payload: Option<serde_json::Value>,
-    #[serde(default)]
-    pub edited_payload: Option<String>,
-    #[serde(default)]
-    pub modified_content: Option<String>,
-}
+#[path = "agent_feed/decisions.rs"]
+pub mod decisions;
+pub use decisions::UpdateStateRequest;
 
 #[derive(Deserialize)]
 pub struct CreateFeedItemRequest {
@@ -117,8 +110,7 @@ where
             "/api/v1/agent-feed/",
             get(list_feed_items).post(create_feed_item),
         )
-        .route("/api/v1/agent-feed/{id}", put(update_feed_item_state))
-        .route("/api/v1/agent-feed/{id}/state", put(update_feed_item_state))
+        .merge(decisions::router())
         .route("/api/v1/agent-feed/ws", get(ws_feed_handler))
 }
 
@@ -440,145 +432,6 @@ pub async fn create_feed_item(
         }
         Err(e) => {
             tracing::error!("Failed to create agent feed item: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
-}
-
-async fn update_feed_item_state(
-    State(pool): State<PgPool>,
-    Path(id): Path<String>,
-    claims: Option<Extension<Claims>>,
-    Json(payload): Json<UpdateStateRequest>,
-) -> impl IntoResponse {
-    let tenant_id = match claims.and_then(|Extension(c)| c.organization_id) {
-        Some(org_id) if !org_id.is_empty() => org_id,
-        _ => "default".to_string(),
-    };
-
-    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
-        pool: pool.clone(),
-        store: crate::db::DbStore::Postgres,
-    }));
-
-    let edited_payload = payload
-        .edited_payload
-        .clone()
-        .or_else(|| payload.modified_content.clone());
-
-    if payload.proposed_action.is_some()
-        || payload.context_payload.is_some()
-        || edited_payload.is_some()
-    {
-        let mut proposed = payload.proposed_action.clone();
-
-        if let (Some(edited), Some(prop)) = (&edited_payload, proposed.as_mut()) {
-            if let Some(obj) = prop.as_object_mut() {
-                if obj.contains_key("draft_reply") {
-                    obj.insert(
-                        "draft_reply".to_string(),
-                        serde_json::Value::String(edited.clone()),
-                    );
-                } else {
-                    obj.insert(
-                        "message".to_string(),
-                        serde_json::Value::String(edited.clone()),
-                    );
-                }
-            } else {
-                proposed = Some(serde_json::json!({
-                    "message": edited
-                }));
-            }
-        } else if let (Some(edited), None) = (&edited_payload, proposed.as_ref()) {
-            // If the user edited but there wasn't a proposed_action provided in the request payload
-            // we should try to fetch the existing one and update it, but for simplicity here we
-            // just create a new one.
-            proposed = Some(serde_json::json!({
-                "message": edited
-            }));
-        }
-
-        let proposed_json = proposed.map(sqlx::types::Json);
-        let context_json = payload.context_payload.clone().map(sqlx::types::Json);
-        let _ = repo
-            .update_payloads(&tenant_id, &id, context_json, proposed_json)
-            .await;
-    }
-
-    match repo.update_state(&tenant_id, &id, &payload.state).await {
-        Ok(updated_item) => {
-            let _ = crate::domain::agent_approvals::sync_legacy_approval_status(
-                &tenant_id,
-                &id,
-                &payload.state,
-                &pool,
-            )
-            .await;
-
-            // Notify via Redis Pub/Sub for WebSockets
-            if let Some(client) = get_redis_client()
-                && let Ok(mut conn) = client.get_multiplexed_async_connection().await
-            {
-                let payload_str = serde_json::json!({
-                    "event_type": "approval_decision",
-                    "data": {
-                        "request_id": id,
-                        "status": payload.state,
-                        "department": updated_item.event_source
-                    }
-                })
-                .to_string();
-                let topic = format!("agent_feed:{}", tenant_id);
-                let _: Result<(), redis::RedisError> = redis::cmd("PUBLISH")
-                    .arg(topic)
-                    .arg(payload_str)
-                    .query_async(&mut conn)
-                    .await;
-            }
-
-            if payload.state == "APPROVED"
-                && let Ok(Some(item)) = repo.get(&tenant_id, &id).await
-            {
-                let mut is_incident = false;
-                let mut feature_type = None;
-                let mut dispatch_payload = None;
-
-                if item.event_source == "incident_resolution" {
-                    is_incident = true;
-                    dispatch_payload = item.context_payload.clone().map(|p| p.0);
-                } else if let Some(ref pl) = item
-                    .proposed_action
-                    .clone()
-                    .or(item.context_payload.clone())
-                    && let Some(ft) = pl.get("feature_type").and_then(|v| v.as_str())
-                {
-                    feature_type = Some(ft.to_string());
-                    dispatch_payload = Some(pl.0.clone());
-                }
-
-                if is_incident || feature_type.is_some() {
-                    let job_payload = serde_json::json!({
-                         "action_id": id,
-                         "tenant_id": tenant_id,
-                         "is_incident": is_incident,
-                         "feature_type": feature_type,
-                         "payload": dispatch_payload,
-                         "event_source": item.event_source
-                    });
-                    let pool_arc = std::sync::Arc::new(pool.clone());
-                    let job_queue = crate::orchestration::queue::OmniSoloJobQueue::new(pool_arc);
-                    let _ = job_queue
-                        .enqueue(&tenant_id, "agent_feed_action", &job_payload)
-                        .await;
-                }
-            }
-
-            crate::invalidate_agent_feed_caches(&tenant_id).await;
-            (StatusCode::OK, Json(updated_item)).into_response()
-        }
-        Err(e) => {
-            tracing::error!("Failed to update agent feed item state: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

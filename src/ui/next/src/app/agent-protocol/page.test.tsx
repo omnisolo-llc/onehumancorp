@@ -63,6 +63,35 @@ describe('Agent Protocol UI', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Load workspace runtime tasks' }));
     expect(await screen.findByText('No tasks found.')).toBeVisible();
   });
+  it.each(['history', 'creation'])('consumes the unavailable runtime response without inventing %s', async operation => {
+    const response = Response.json({ error: 'Agent runtime is not configured; no work was dispatched' }, { status: 503 });
+    mockRuntime.mockResolvedValue(response);
+    render(<AgentProtocolPage />);
+    if (operation === 'history') {
+      fireEvent.click(screen.getByRole('button', { name: 'Load workspace runtime tasks' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Workspace runtime task history could not be verified.');
+      expect(screen.queryByText('No tasks found.')).toBeNull();
+    } else {
+      fireEvent.change(screen.getByPlaceholderText('New Task Input...'), { target: { value: 'Retain my task' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+      expect(await screen.findByRole('region', { name: 'Unconfirmed task creation' })).toBeVisible();
+      expect(screen.getByPlaceholderText('New Task Input...')).toHaveValue('Retain my task');
+      expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();
+    }
+    expect(response.bodyUsed).toBe(true);
+  });
+  it.each([401, 403])('retains the confirmed auth rejection even if its response body fails: %s', async status => {
+    const body = new ReadableStream({ start(controller) { controller.error(new Error('Body delivery failed')); } });
+    mockRuntime.mockResolvedValue(new Response(body, { status }));
+    render(<AgentProtocolPage />);
+    fireEvent.change(screen.getByPlaceholderText('New Task Input...'), { target: { value: 'Retained rejected task' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(mockRuntime).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled());
+    expect(screen.queryByRole('region', { name: 'Unconfirmed task creation' })).toBeNull();
+    expect(screen.getByPlaceholderText('New Task Input...')).toHaveValue('Retained rejected task');
+    expect(screen.getByText('Task creation was rejected by authentication or permission checks. Your input is retained.')).toBeVisible();
+  });
   it('preserves actual runtime creation and its method', async () => {
     await loadRuntime();
     fireEvent.change(screen.getByPlaceholderText('New Task Input...'), { target: { value: task.input } });

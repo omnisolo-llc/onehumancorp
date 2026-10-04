@@ -1,3 +1,4 @@
+use crate::api::staff_timecards::{sync_timecard_handler, timecard_receipt_handler};
 use crate::db::DB;
 use axum::{
     Json, Router,
@@ -43,24 +44,6 @@ pub struct StaffMember {
 #[derive(Serialize)]
 pub struct GetStaffResponse {
     pub staff: Vec<StaffMember>,
-}
-
-#[derive(Deserialize)]
-pub struct SyncTimecardRequest {
-    pub events: Vec<TimecardEventInput>,
-}
-
-#[derive(Deserialize)]
-pub struct TimecardEventInput {
-    pub id: String,
-    pub staff_id: String,
-    pub event_type: String,
-    pub offline_timestamp: String,
-}
-
-#[derive(Serialize)]
-pub struct SyncTimecardResponse {
-    pub success: bool,
 }
 
 #[derive(Serialize)]
@@ -398,95 +381,6 @@ pub async fn get_staff_handler(
     };
 
     (axum::http::StatusCode::OK, Json(GetStaffResponse { staff })).into_response()
-}
-
-pub async fn sync_timecard_handler(
-    claims: Option<Extension<::server_common::Claims>>,
-    State(db): State<Arc<DB>>,
-    Json(payload): Json<SyncTimecardRequest>,
-) -> impl IntoResponse {
-    let tenant_id = match get_tenant_id(claims.as_ref()) {
-        Some(id) => id,
-        None => {
-            return (
-                axum::http::StatusCode::UNAUTHORIZED,
-                Json(serde_json::json!({"error": "unauthorized"})),
-            )
-                .into_response();
-        }
-    };
-
-    for event in payload.events {
-        match &db.store {
-            crate::db::DbStore::Sqlite(pool) => {
-                let _ = sqlx::query(
-                    "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, event_time) VALUES (?, ?, ?, ?, ?)",
-                )
-                .bind(&event.id)
-                .bind(&tenant_id)
-                .bind(&event.staff_id)
-                .bind(&event.event_type)
-                .bind(&event.offline_timestamp)
-                .execute(pool)
-                .await;
-            }
-            crate::db::DbStore::Postgres => {
-                let mut tx = match db.pool.begin().await {
-                    Ok(tx) => tx,
-                    Err(e) => {
-                        tracing::error!("Failed to begin transaction: {:?}", e);
-                        return (
-                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                            Json(serde_json::json!({"error": "db_error"})),
-                        )
-                            .into_response();
-                    }
-                };
-                if let Err(e) =
-                    ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await
-                {
-                    tracing::error!("Failed to set org context: {:?}", e);
-                    return (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({"error": "db_error"})),
-                    )
-                        .into_response();
-                }
-                let res = sqlx::query(
-                    "INSERT INTO ohc_timecard_event (id, tenant_id, staff_id, event_type, event_time) VALUES ($1, $2, $3, $4, $5::timestamp)",
-                )
-                .bind(&event.id)
-                .bind(&tenant_id)
-                .bind(&event.staff_id)
-                .bind(&event.event_type)
-                .bind(&event.offline_timestamp)
-                .execute(&mut *tx)
-                .await;
-                if let Err(e) = res {
-                    tracing::error!("Failed to insert timecard event: {:?}", e);
-                    return (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({"error": "db_error"})),
-                    )
-                        .into_response();
-                }
-                if let Err(e) = tx.commit().await {
-                    tracing::error!("Failed to commit transaction: {:?}", e);
-                    return (
-                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(serde_json::json!({"error": "db_error"})),
-                    )
-                        .into_response();
-                }
-            }
-        }
-    }
-
-    (
-        axum::http::StatusCode::OK,
-        Json(SyncTimecardResponse { success: true }),
-    )
-        .into_response()
 }
 
 pub async fn get_timecard_handler(
@@ -1152,6 +1046,10 @@ pub fn router<S: Clone + Send + Sync + 'static>(db: Arc<DB>) -> Router<S> {
             "/timecard",
             post(sync_timecard_handler).get(get_timecard_handler),
         )
+        .route(
+            "/timecard/receipts/{id}",
+            axum::routing::get(timecard_receipt_handler),
+        )
         .route("/tasks", post(create_task_handler).get(get_tasks_handler))
         .route(
             "/tasks/{id}",
@@ -1401,7 +1299,8 @@ mod tests {
             "Sarah Smith"
         );
 
-        // 4. Sync Timecard
+        // 4. Injected claims alone cannot authorize a canonical timecard write.
+        // Actual bearer/effect success is covered by staff_timecards_test on both stores.
         let timecard_payload = serde_json::json!({
             "events": [{
                 "id": "evt_123",
@@ -1420,7 +1319,12 @@ mod tests {
         request.extensions_mut().insert(signed_claims);
 
         let response = app.clone().oneshot(request).await.unwrap();
-        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM ohc_timecard_event")
+            .fetch_one(&sqlite_pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0);
     }
 
     #[tokio::test]

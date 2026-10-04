@@ -2,6 +2,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const { createOwnedAuditSeed, quoteAuditRoutes, quoteAuditRoute, ownedQuoteAuditRecord } = require('./ui-audit-fixture.cjs');
 const { execFileSync } = require('node:child_process');
 const PROTOCOL = 1;
 const ATTACHMENT = 'ohc-click-coverage-v1';
@@ -148,6 +149,7 @@ function validateReceipts(receipts, context, totalShards) {
   const shards = new Set(), allIds = new Set(), covered = new Set();
   const expectedContracts = new Set([INVENTORY_TITLE, ...GLOBAL_TITLES, ...context.routes.flatMap(route => [CLICK_TITLE + route, PURPOSE_TITLE + route])]);
   const completedContracts = new Set();
+  const ownedQuoteNamespaces = new Set();
   let targets = 0, declarations = 0, tests = 0;
   for (const receipt of receipts) {
     requireTrue(receipt && receipt.protocol === PROTOCOL && exact(receipt.context, context), 'stale or foreign receipt identity');
@@ -194,16 +196,56 @@ function validateReceipts(receipts, context, totalShards) {
         observed.add(observation.key); targets += 1;
       }
       requireTrue(Array.isArray(audit.navigations) && audit.navigations.length === discovered.length + 1, 'navigation evidence must cover initial discovery and every document reset');
-      for (const navigation of audit.navigations) {
+      const quoteRoute = quoteAuditRoutes.includes(route);
+      const quoteStateKeys = new Map();
+      if (quoteRoute) {
+        const states = route === '/quotes/e2e-id' ? ['entry', 'editing'] : ['entry'];
+        for (const state of states) quoteStateKeys.set(state, []);
+        for (const key of discovered) {
+          let scoped;
+          try { scoped = JSON.parse(key); } catch { throw new Error('Click coverage: quote inventory key lacks its source view'); }
+          requireTrue(Array.isArray(scoped) && scoped.length === 2 && quoteStateKeys.has(scoped[0])
+            && typeof scoped[1] === 'string' && scoped[1].length > 0, 'quote inventory has an unclassified view');
+          quoteStateKeys.get(scoped[0]).push(key);
+        }
+        requireTrue(states.every(state => quoteStateKeys.get(state).length > 0), 'quote inventory omitted a required view');
+        requireTrue(audit.isolation?.kind === 'case-owned-postgres'
+          && Array.isArray(audit.isolation.cases) && audit.isolation.cases.length === audit.navigations.length
+          && audit.isolation.cases.at(-1).state === 'entry',
+          'quote navigation requires a separately owned case for every discovery/reset, ending with the full entry view');
+      }
+      for (const [index, navigation] of audit.navigations.entries()) {
         requireTrue(navigation && typeof navigation.requestedUrl === 'string' && typeof navigation.finalUrl === 'string', 'invalid navigation evidence');
         let requested, final;
         try { requested = new URL(navigation.requestedUrl); final = new URL(navigation.finalUrl); }
         catch { throw new Error('Click coverage: invalid navigation URL'); }
         requireTrue(['http:', 'https:'].includes(requested.protocol) && !requested.username && !requested.password
-          && !final.username && !final.password && requested.origin === final.origin
-          && requested.pathname === route && final.pathname === expectedAuditPath(route)
-          && (route !== '/share-card' || (!requested.search && !requested.hash))
-          && navigation.redirected === (requested.href !== final.href), 'navigation destination or redirect evidence differs from the classified source route');
+          && !final.username && !final.password && requested.origin === final.origin,
+          'navigation origin or credentials differ from the classified source route');
+        if (quoteRoute) {
+          const proof = navigation.quoteFixture;
+          requireTrue(proof && navigation.sourceRoute === route && !ownedQuoteNamespaces.has(proof.namespace), 'quote navigation lacks a unique source-bound owned fixture');
+          const actor = createOwnedAuditSeed(fs.readFileSync(path.join(__dirname, '../src/e2e/e2e-seed.sql'), 'utf8'), proof.namespace);
+          const expected = ownedQuoteAuditRecord(actor);
+          const isolated = audit.isolation.cases[index];
+          requireTrue(audit.isolation.seedDigest === actor.sourceDigest && isolated.tenantId === actor.tenantId
+            && isolated.userId === actor.userId && quoteStateKeys.has(isolated.state), 'quote navigation isolation differs from the canonical source fixture');
+          const keys = uniqueStrings(isolated.keys, 'quote case inventory');
+          requireTrue(exact([...keys].sort(), [...quoteStateKeys.get(isolated.state)].sort())
+            && (index === discovered.length || keys.includes(audit.observations[index].key)),
+            'quote case inventory changed before a click or reset');
+          const expectedUrl = new URL(quoteAuditRoute(route, expected.quoteId), requested.origin).href;
+          requireTrue(proof.quoteId === expected.quoteId && proof.customerId === expected.customerId && proof.tenantId === expected.tenantId
+            && proof.status === 200 && proof.method === 'GET' && proof.detailUrl === `${requested.origin}/api/v1/quotes/${expected.quoteId}`
+            && requested.href === expectedUrl && final.href === expectedUrl && navigation.redirected === false,
+            'quote navigation or canonical detail proof differs from the source-bound owned record');
+          ownedQuoteNamespaces.add(proof.namespace);
+        } else {
+          requireTrue(navigation.sourceRoute === undefined && navigation.quoteFixture === undefined
+            && requested.pathname === route && final.pathname === expectedAuditPath(route)
+            && (route !== '/share-card' || (!requested.search && !requested.hash))
+            && navigation.redirected === (requested.href !== final.href), 'navigation destination or redirect evidence differs from the classified source route');
+        }
       }
       covered.add(route);
     }

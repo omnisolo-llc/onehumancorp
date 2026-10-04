@@ -92,7 +92,7 @@ EXPECTED_PYYAML_BOOTSTRAP_LINES = (
 )
 EXPECTED_POSTGRES_TOOLCHAIN_LINES = (
     "sudo apt-get update",
-    "sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
+    "sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server",
 )
 
 ADMIN_PSQL_HEREDOC = 'psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''

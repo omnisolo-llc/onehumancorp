@@ -8,13 +8,14 @@ vi.mock("@/lib/auth/backendTransport", () => ({
   validateJsonRequestBody: (body: Uint8Array<ArrayBuffer>) => { JSON.parse(new TextDecoder().decode(body)); return body; },
 }));
 import { PUT } from "./route";
+import { PATCH as approve } from "./approve/route";
 import { POST as accept } from "./accept/route";
 const context = () => ({ params: Promise.resolve({ id: "quote-1" }) });
 const request = (method: string, body = "{}") => new Request("http://localhost/api/v1/quotes/quote-1", { method, body });
 describe("quote mutation routes use authenticated backend outcomes", () => {
   beforeEach(() => { proxyBackendRequest.mockReset(); proxyBackendRequest.mockResolvedValue(Response.json({ success: true })); });
   it("forwards owner updates and preserves a real backend rejection", async () => {
-    const body = { total_amount: 500, required_deposit: 100, line_items: [] };
+    const body = { expected_updated_at: "2026-10-01T03:00:00.123456+00:00", total_amount: 500, required_deposit: 100, line_items: [] };
     const req = request("PUT", JSON.stringify(body));
     const backend = Response.json({ success: false, reason: "accepted quote is immutable" }, { status: 409 });
     proxyBackendRequest.mockResolvedValue(backend);
@@ -27,6 +28,13 @@ describe("quote mutation routes use authenticated backend outcomes", () => {
   it("forwards the exact reviewed acceptance timestamp", async () => {
     const body = { expected_updated_at: "2026-10-01T03:00:00.123456+00:00" };
     await accept(request("POST", JSON.stringify(body)), context());
+    const options = proxyBackendRequest.mock.calls[0][2]!;
+    expect(options.suppressRequestBody).not.toBe(true);
+    expect(JSON.parse(new TextDecoder().decode(await options.transformRequestBody!(new TextEncoder().encode(JSON.stringify(body)))))).toEqual(body);
+  });
+  it("forwards exact reviewed approval timestamps without stripping the body", async () => {
+    const body = { expected_updated_at: "2026-10-01T03:00:00.123456+00:00" };
+    await approve(request("PATCH", JSON.stringify(body)), context());
     const options = proxyBackendRequest.mock.calls[0][2]!;
     expect(options.suppressRequestBody).not.toBe(true);
     expect(JSON.parse(new TextDecoder().decode(await options.transformRequestBody!(new TextEncoder().encode(JSON.stringify(body)))))).toEqual(body);

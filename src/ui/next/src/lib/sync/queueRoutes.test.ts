@@ -49,3 +49,43 @@ it('preserves an observed entity version and timestamp instead of rebasing queue
   const plan = planRoutes({ id: 'v', type: 'UPDATE_ORDER_STATUS', timestamp: 1, payload: { order_id: 'o', status: 'Ready', expected_status: 'Preparing', base_version: 7, expected_updated_at: '2026-09-30T10:00:00Z' } })[0];
   expect(plan.body).toEqual({ events: [expect.objectContaining({ base_version: 7, payload: expect.objectContaining({ expected_updated_at: '2026-09-30T10:00:00Z' }) })] });
 });
+
+it.each(['update_quote', 'approve_quote'])('freezes the exact observed quote version for %s', type => {
+  const token = '2026-10-04T00:00:00.123456+00:00';
+  const plan = planRoutes({ id: 'versioned', type, quoteId: 'quote', timestamp: 1, payload: { expected_updated_at: token, line_items: [] } })[0];
+  expect(plan.body).toMatchObject({ expected_updated_at: token });
+});
+it.each(['update_quote', 'approve_quote'])('refuses to dispatch %s without a reviewed version', type => {
+  expect(() => planRoutes({ id: 'unreviewed', type, quoteId: 'quote', timestamp: 1, payload: {} })).toThrow('reviewed quote version');
+});
+
+const clock = { id: 'clock-safe_1', type: 'staff_clock_event_v1', timestamp: 1, payload: { staff_id: 'a', event_type: 'CLOCK_IN' } };
+it('plans each new clock event as one exact timecard mutation using only the action timestamp', () => {
+  expect(planRoutes(clock)).toEqual([{ id: '/api/v1/staff/timecard', method: 'POST', maxAttempts: 1,
+    body: { events: [{ id: clock.id, staff_id: 'a', event_type: 'CLOCK_IN', offline_timestamp: '1970-01-01T00:00:00.001Z' }] } }]);
+});
+it.each(['', '.', '..', 'a/b', 'a%2Fb', 'a b', 'é', 'a'.repeat(129)])('rejects an unsafe clock receipt identifier %j', id => {
+  expect(() => planRoutes({ ...clock, id })).toThrow(/clock/i);
+});
+it.each([{}, { staff_id: '', event_type: 'CLOCK_IN' }, { staff_id: 'a', event_type: 'BREAK' }, { staff_id: 4, event_type: 'CLOCK_OUT' }, { staff_id: 'a', event_type: 'CLOCK_IN', timestamp: '2000-01-01T00:00:00Z' }])('rejects incomplete or ambiguous clock payload %j', payload => {
+  expect(() => planRoutes({ ...clock, payload })).toThrow(/clock/i);
+});
+it.each(['CLOCK_IN', 'CLOCK_OUT'])('preserves the historical %s plan without transforming its envelope', type => {
+  const old = { id: 'old', type, timestamp: 1, payload: { staff_id: 'a', timestamp: '1970-01-01T00:00:00.001Z' } };
+  expect(planRoutes(old)).toEqual([
+    { id: '/api/v1/sync/operation-intents', method: 'POST', maxAttempts: 1, body: { intents: [{ id: 'old', action_type: type, payload: old.payload, timestamp: '1970-01-01T00:00:00.001Z' }] } },
+    { id: '/api/v1/sync/offline', method: 'POST', maxAttempts: 1, body: { mutations: [old] } },
+  ]);
+});
+it('whitelists only the exact timecard POST route', async () => {
+  const { validRoutePlan } = await import('./queueRoutes');
+  expect(validRoutePlan(planRoutes(clock)[0])).toBe(true);
+  for (const id of ['/api/v1/staff/timecard/other', '/api/v1/staff/timecard?x=1', '/api/v1/staff/timecard/receipts/clock-safe_1']) {
+    expect(validRoutePlan({ id, method: 'POST', maxAttempts: 1 })).toBe(false);
+  }
+  expect(validRoutePlan({ id: '/api/v1/staff/timecard', method: 'PUT', maxAttempts: 1 })).toBe(false);
+});
+
+it.each(['1970-01-01T00:00:00.001Z', NaN, Infinity, 1.25, Number.MAX_SAFE_INTEGER, 8_640_000_000_000_001, Date.UTC(10000, 0, 1), Date.UTC(-1, 0, 1)])('rejects corrupt new-clock millisecond timestamps without coercion: %s', timestamp => {
+  expect(() => planRoutes({ ...clock, timestamp: timestamp as number })).toThrow(/clock timestamp/i);
+});

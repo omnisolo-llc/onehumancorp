@@ -1,0 +1,18 @@
+[package]
+name = "ohc-memory-jsonb-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros", "json"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

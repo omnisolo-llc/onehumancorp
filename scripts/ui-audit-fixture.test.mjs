@@ -60,3 +60,23 @@ test('a later case must retain every baseline target, even after an earlier case
   assert.throws(() => assertSameClickInventory(baseline, [...baseline, 'unexpected']), /unexpected/);
   assert.throws(() => assertSameClickInventory(baseline, [...baseline, 'edit-record']), /duplicate/);
 });
+
+test('all four quote source routes map only to their persisted record identity', () => {
+  const { quoteAuditRoute, quoteAuditRoutes, ownedQuoteAuditRecord } = factory();
+  assert.deepEqual(quoteAuditRoutes, ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view']);
+  const first = createRecord('audit-11111111-1111-4111-8111-111111111111');
+  const second = createRecord('audit-22222222-2222-4222-8222-222222222222');
+  function createRecord(namespace) { return ownedQuoteAuditRecord(factory().createOwnedAuditSeed(seed, namespace)); }
+  assert.notEqual(first.quoteId, second.quoteId);
+  assert.notEqual(first.customerId, second.customerId);
+  for (const record of [first, second]) {
+    assert.equal(quoteAuditRoute('/quotes/e2e-id', record.quoteId), `/quotes/${record.quoteId}`);
+    assert.equal(quoteAuditRoute('/quote/e2e-id', record.quoteId), `/quote/${record.quoteId}`);
+    assert.equal(quoteAuditRoute('/quoting', record.quoteId), `/quoting?id=${record.quoteId}`);
+    assert.equal(quoteAuditRoute('/proposals/customer-view', record.quoteId), `/proposals/customer-view?id=${record.quoteId}`);
+    assert.throws(() => quoteAuditRoute('/unrelated', record.quoteId), /quote.*route/i);
+  }
+  for (const id of ['e2e-id', 'missing', '//outside.test', '11111111-1111-4111-8111-111111111111?extra=1']) {
+    assert.throws(() => quoteAuditRoute('/quote/e2e-id', id), /quote.*identity/i);
+  }
+});
