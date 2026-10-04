@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { createServer } from 'node:net';
 import { createWriteStream, existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,6 +14,7 @@ import browserShards from './browser-shards.cjs';
 import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
 import { verifyProductionFixtureBoundary } from './verify-production-fixture-boundary.mjs';
 import { startShippoBrowserFixture } from './shippo-browser-fixture.mjs';
+import { reserveServicePorts } from './native-port-reservations.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -44,14 +44,6 @@ export function nativeBinaryPaths(repository = root, environment = process.env, 
 
 function command(executable, args, options = {}) {
   return runNativeCommand(executable, args, { cwd: root, ...options });
-}
-
-async function freePort() {
-  const socket = createServer();
-  await new Promise((resolve, reject) => { socket.once('error', reject); socket.listen(0, '127.0.0.1', resolve); });
-  const port = socket.address().port;
-  await new Promise((resolve) => socket.close(resolve));
-  return port;
 }
 
 async function waitHttp(url, child, seconds = 120, signal) {
@@ -146,6 +138,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
   const pg = `ohc-e2e-pg-${suffix}`, cache = `ohc-e2e-cache-${suffix}`;
   const processes = [], logs = [];
   let shippoFixture;
+  let portReservations;
+  let reservationCloseError;
   let runFailed = false;
   const start = (binary, arguments_, name, environment) => {
     const output = createWriteStream(path.join(temp, name), { mode: 0o600 });
@@ -186,7 +180,9 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
     }
     if (!ready) throw new Error('PostgreSQL test container did not become ready; no SQLite fallback is permitted');
     await execute('bash', ['deploy/tests/support/generate_test_tls.sh', temp], { env });
-    const apiPort = await freePort(), grpcPort = await freePort(), webPort = await freePort();
+    portReservations = await reserveServicePorts(['api', 'grpc', 'web'], { signal: execution.signal });
+    const { api: apiPort, grpc: grpcPort, web: webPort } = portReservations.ports;
+    console.log(`Native service ports: api=${apiPort} grpc=${grpcPort} web=${webPort}`);
     const apiOrigin = `http://127.0.0.1:${apiPort}`, webOrigin = `http://127.0.0.1:${webPort}`;
     Object.assign(env, {
       OMNISOLO_PORT: String(apiPort), OMNISOLO_GRPC_PORT: String(grpcPort),
@@ -229,6 +225,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
     // A real HTTP provider boundary, owned by this run; never inherited live credentials.
     shippoFixture = await startShippoBrowserFixture({ runId: suffix, tenantId: 'e2e-tenant' });
     Object.assign(env, shippoFixture.environment);
+    await portReservations.release('api', 'grpc');
+    execution.signal.throwIfAborted();
     const backend = start(server, [], 'server.log', env);
     await waitHttp(`${apiOrigin}/readyz`, backend, 120, execution.signal);
     await execute('docker', ['exec', '-i', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc'], {
@@ -245,6 +243,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
     if (!identity.token || identity.user?.organization_id !== 'e2e-tenant'
         || !identity.user.roles?.includes('ADMIN')) throw new Error('Fixture owner identity was not verified');
     await verifyProductionFixtureBoundary(apiOrigin, identity.token, execution.signal);
+    await portReservations.release('web');
+    execution.signal.throwIfAborted();
     const frontend = start(process.execPath, [web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitHttp(`${webOrigin}/login`, frontend, 120, execution.signal);
     // Execute exactly the complete/sharded selection checked by preflight.
@@ -279,6 +279,7 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
     }
     throw error;
   } finally {
+    try { await portReservations?.close(); } catch (error) { reservationCloseError = error; }
     for (const child of processes.reverse()) await stop(child);
     for (const log of logs) log.end();
     const closeError = await finishShippoBrowserFixture(shippoFixture, async () => {
@@ -288,7 +289,11 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
       process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
     }, runFailed);
     if (closeError) console.error('Shippo fixture shutdown also failed; owned-container and temporary-file cleanup was attempted.');
+    if (reservationCloseError) {
+      console.error(`Service port reservation cleanup also failed: ${reservationCloseError.message}`);
+    }
   }
+  if (reservationCloseError) throw reservationCloseError;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
