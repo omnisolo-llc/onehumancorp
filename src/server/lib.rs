@@ -4427,13 +4427,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     if legacy_sqlx_background_enabled {
         health_worker.start();
     }
-    let agent_action_worker =
-        std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(
-            db.pool.clone(),
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
-        ));
     if legacy_sqlx_background_enabled {
-        agent_action_worker.start();
         drop(crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone()));
     }
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
@@ -4884,6 +4878,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(std::io::Error::other)?;
     let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
+    if legacy_sqlx_background_enabled {
+        let agent_action_worker = std::sync::Arc::new(
+            crate::workers::agent_action_worker::AgentActionWorker::new(
+                db.pool.clone(),
+                std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+            )
+            .with_authority(http_auth_store.as_ref())
+            .await,
+        );
+        agent_action_worker.start();
+    }
     let workflow_execution =
         configured_workflow_execution(http_auth_store.clone(), auth_database.as_ref().clone());
     let http_auth_router = crate::auth::http::router(http_auth_store.clone())

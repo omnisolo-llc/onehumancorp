@@ -895,14 +895,18 @@ mod tests {
         assert!(!list.is_empty());
         assert!(list.iter().any(|i| i.id == new_item.id));
 
-        // 5. List items with mobile_optimized = true
+        // 5. Repository rows remain canonical for either presentation hint.
+        // Mobile payload projection belongs to the API/work-triage boundary;
+        // retaining these fields here preserves actionable owner content.
         let list_mobile = repo
             .list(tenant_id, 10, 0, true)
             .await
             .expect("Failed to list feed items (mobile)");
         assert!(!list_mobile.is_empty());
         let mobile_item = list_mobile.iter().find(|i| i.id == new_item.id).unwrap();
-        assert!(mobile_item.context_payload.is_none());
-        assert!(mobile_item.proposed_action.is_none());
+        assert_eq!(mobile_item.tenant_id, tenant_id);
+        assert_eq!(mobile_item.lifecycle_state, "APPROVED");
+        assert_eq!(mobile_item.context_payload, new_item.context_payload);
+        assert_eq!(mobile_item.proposed_action, new_item.proposed_action);
     }
 }

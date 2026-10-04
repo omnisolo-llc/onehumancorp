@@ -9,11 +9,33 @@ use tokio::time::{Duration, sleep};
 pub struct AgentActionWorker {
     pub pool: PgPool,
     pub redis_url: String,
+    catalog_authority: Option<super::agent_catalog_dispatch::CanonicalCatalogDispatch>,
 }
 
 impl AgentActionWorker {
     pub fn new(pool: PgPool, redis_url: String) -> Self {
-        Self { pool, redis_url }
+        Self {
+            pool,
+            redis_url,
+            catalog_authority: None,
+        }
+    }
+
+    /// Bind local writes to the same canonical identity and business objects
+    /// used for owner admission. The legacy constructor remains fail-closed for
+    /// catalog work until this proof succeeds.
+    pub async fn with_authority(mut self, store: &server_auth::Store) -> Self {
+        self.catalog_authority =
+            match super::agent_catalog_dispatch::CanonicalCatalogDispatch::bind(store, &self.pool)
+                .await
+            {
+                Ok(authority) => Some(authority),
+                Err(error) => {
+                    tracing::error!(%error, "Canonical catalog authority is unavailable; catalog work will be held before any effect");
+                    None
+                }
+            };
+        self
     }
 
     pub fn start(self: Arc<Self>) {
@@ -47,7 +69,20 @@ impl AgentActionWorker {
                 return;
             }
         };
+        let local_catalog = attempt.payload.get("is_incident").and_then(Value::as_bool)
+            != Some(true)
+            && attempt.payload.get("feature_type").and_then(Value::as_str)
+                == Some("create_product");
         let process = async {
+            if local_catalog {
+                return self
+                    .catalog_authority
+                    .as_ref()
+                    .ok_or_else(|| "Canonical catalog authority is unavailable".to_string())?
+                    .execute(&attempt)
+                    .await
+                    .map_err(|error| error.to_string());
+            }
             let payload = attempt
                 .payload
                 .get("payload")
@@ -86,6 +121,10 @@ impl AgentActionWorker {
                 false
             }
         };
+        if local_catalog && returned {
+            // The product and returned receipt already committed together.
+            return;
+        }
         if let Err(error) = dispatch::finish(&self.pool, &attempt, returned).await {
             tracing::error!(%error,job_id=%job.id,"Feed dispatch return acknowledgement unconfirmed");
             if let Err(error) = dispatch::defer_or_hold(&self.pool, &job).await {

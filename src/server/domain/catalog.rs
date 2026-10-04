@@ -1,11 +1,26 @@
 use serde_json::Value;
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool, Postgres};
 
 pub async fn handle_create_product(
     tenant_id: &str,
     payload: &Value,
     pool: &PgPool,
 ) -> Result<(), sqlx::Error> {
+    create_product_on(tenant_id, payload, pool)
+        .await
+        .map(|_| ())
+}
+
+/// The queued local action supplies its tenant-scoped, authority-owned
+/// transaction. The legacy pool API above keeps its existing caller contract.
+pub(crate) async fn create_product_on<'e, E>(
+    tenant_id: &str,
+    payload: &Value,
+    executor: E,
+) -> Result<String, sqlx::Error>
+where
+    E: Executor<'e, Database = Postgres>,
+{
     let title = payload
         .get("title")
         .or_else(|| payload.get("name"))
@@ -45,8 +60,8 @@ pub async fn handle_create_product(
     .bind(description)
     .bind(item_type)
     .bind(price_cents)
-    .execute(pool)
+    .execute(executor)
     .await?;
 
-    Ok(())
+    Ok(product_id)
 }

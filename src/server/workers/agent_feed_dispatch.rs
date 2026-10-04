@@ -11,7 +11,7 @@ pub struct Attempt {
     pub job_id: String,
     pub payload: Value,
 }
-async fn status(
+pub(super) async fn status(
     conn: &mut PgConnection,
     record: &DispatchRecord,
     state: &str,
@@ -171,7 +171,10 @@ pub async fn finish(pool: &PgPool, attempt: &Attempt, returned: bool) -> Result<
             &mut tx,
             &record,
             "DISPATCH_RETURNED",
-            "Handler returned; external execution or delivery is not verified",
+            record
+                .detail
+                .as_deref()
+                .unwrap_or("Handler returned; external execution or delivery is not verified"),
         )
         .await?;
         return tx.commit().await;
