@@ -1,0 +1,4 @@
+{
+  "issue_title": "Issue #28105: [Research] Architect Automated Omnichannel Review Acquisition & Reputation Management",
+  "issue_description": "The requested feature for Automated Omnichannel Review Acquisition & Reputation Management is unauthorized and blocked. According to RESEARCH.md and the business capability audit, proposed new features or epics that lack an explicit, evidence-backed decision (e.g., those based solely on public anecdotes or competitor research, like this one) must result in a 'blocked' terminal report. No new viral generators, referral badges, or generic reputation management integrations are allowed without verified owner outcome evidence and an explicit expansion decision. Skill provenance: Superpowers revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d, loaded from .task-scratch/skills/superpowers/skills/using-superpowers/SKILL.md"
+}
