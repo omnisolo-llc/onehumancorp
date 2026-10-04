@@ -4,7 +4,7 @@ import { createServer, request as httpRequest } from 'node:http';
 import { randomBytes } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { spawn } from 'node:child_process';
-import { createServer as netServer } from 'node:net';
+import { createServer as netServer, connect as connectSocket } from 'node:net';
 import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
@@ -121,7 +121,7 @@ export async function startCheckoutProvider({ runId, appOrigin }) {
 }
 
 export async function startCheckoutEgressProxy({ appOrigin }) {
-  requireCheckoutLoopbackOrigin(appOrigin);
+  const ownedApp = requireCheckoutLoopbackOrigin(appOrigin);
   const connects = [], blockedHttp = [], forwardedHttp = [];
   const upstreams = new Set();
   const server = createServer((request, response) => {
@@ -143,11 +143,37 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
     upstream.on('error', () => { if (!response.headersSent) json(response, 502, { error: 'Owned application request failed' }); else response.destroy(); });
     request.on('aborted', () => upstream.destroy()); request.pipe(upstream);
   });
-  server.on('connect', (request, socket) => {
-    if (connects.length < 1000) connects.push({ method: 'CONNECT', authority: request.url, status: 403 });
-    // Never resolve a hostname or open a tunnel. This proves only navigation
-    // intent, never hosted Checkout page loading or payment completion.
-    socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+  server.on('connect', (request, socket, head) => {
+    const row = { method: 'CONNECT', authority: request.url, status: 403 };
+    const capacity = connects.length < 1000;
+    if (capacity) connects.push(row);
+    // Playwright's API request client tunnels even plain HTTP. Match the raw
+    // authority exactly; aliases, other loopback ports and all external hosts
+    // stay refused, without resolving or connecting to the requested target.
+    if (!capacity || request.url !== ownedApp.host) {
+      socket.end('HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+      return;
+    }
+    socket.pause();
+    const upstream = connectSocket({ host: '127.0.0.1', port: Number(ownedApp.port) });
+    upstreams.add(upstream);
+    upstream.once('close', () => { upstreams.delete(upstream); socket.destroy(); });
+    socket.once('close', () => upstream.destroy());
+    socket.on('error', () => upstream.destroy());
+    upstream.setTimeout(5000, () => upstream.destroy(new Error('Owned application tunnel timeout')));
+    upstream.on('error', () => {
+      if (row.status === 200) socket.destroy();
+      else {
+        row.status = 502;
+        socket.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+      }
+    });
+    upstream.once('connect', () => {
+      row.status = 200;
+      socket.write('HTTP/1.1 200 Connection Established\r\n\r\n');
+      if (head.length) upstream.write(head);
+      socket.pipe(upstream); upstream.pipe(socket); socket.resume();
+    });
   });
   const stop = closer(server), origin = await listen(server);
   return { server: origin, bypass: '<-loopback>',

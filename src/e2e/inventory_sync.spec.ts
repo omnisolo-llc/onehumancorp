@@ -91,7 +91,9 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
           expect(await online.json()).toEqual({ checkout_url: checkoutUrl });
           await expect.poll(() => redirects).toContain(checkoutUrl);
           await expect.poll(() => fixture.evidence().connects.filter(request => request.authority === 'checkout.stripe.com:443').length).toBeGreaterThan(previousCheckoutConnects);
-          expect(fixture.evidence().connects.every(request => request.status === 403)).toBe(true);
+          const appAuthority = new URL(fixture.origin).host;
+          expect(fixture.evidence().connects.some(request => request.authority === appAuthority && request.status === 200)).toBe(true);
+          expect(fixture.evidence().connects.every(request => request.status === (request.authority === appAuthority ? 200 : 403))).toBe(true);
           await assertPersistedStockOutcome(actors.stock, null);
         }
       } finally { await actors.close(); }

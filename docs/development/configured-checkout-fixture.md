@@ -65,8 +65,10 @@ unknown endpoints fail. Issued sessions always have `payment_status: unpaid`.
 
 The returned URL satisfies the unchanged production Stripe-hosted redirect
 allowlist. A dedicated browser proxy forwards only the exact owned application
-origin and rejects **all** CONNECT tunnels without DNS resolution or outbound
-connections. An observed `checkout.stripe.com:443` CONNECT is navigation intent,
+origin. Playwright's API client uses CONNECT even for HTTP, so tunnels are allowed
+only to the exact validated application host and port. Every other CONNECT target,
+including other loopback ports and host aliases, is rejected without resolving or
+connecting to that target. An observed refused `checkout.stripe.com:443` CONNECT is navigation intent,
 not a loaded hosted page. Do not use Playwright route substitution or replace
 application API responses. Use both the observed browser URL request and the
 proxy refusal when asserting this handoff.

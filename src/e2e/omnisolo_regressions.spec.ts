@@ -106,13 +106,52 @@ test.describe('OmniSolo browser regressions', () => {
     }
   });
 
-  test('mPOS loads its catalog from the collection endpoint', async ({ page }) => {
-    const catalogResponse = page.waitForResponse((response) =>
-      response.url().includes('/api/v1/catalog/products') && response.request().method() === 'GET',
-    );
-    await page.goto('/pos/mpos?tenantId=e2e-tenant');
-
-    expect((await catalogResponse).status()).toBe(200);
-    await expect(page.getByRole('heading', { name: 'mPOS' })).toBeVisible();
+  test('mPOS loads the signed owner catalog and ignores a destination tenant selector', async ({ page, baseURL, adminUser, unlimitedAdminUser }) => {
+    if (!baseURL) throw new Error('The mobile catalog regression requires the runner application origin.');
+    const suffix = randomUUID();
+    const products = [adminUser.organizationId, unlimitedAdminUser.organizationId].map((tenantId, index) => ({
+      tenantId, id: `mobile-catalog-${suffix}-${index}`, title: `Mobile owned product ${suffix} ${index}`, cents: 1234 + index,
+    }));
+    const [mine, foreign] = products;
+    await e2eDbTransaction(async query => {
+      for (const product of products) await query(
+        `INSERT INTO products (id, tenant_id, title, price_cents, inventory_count, available_quantity, locked_quantity)
+         VALUES ($1, $2, $3, $4, 2, 2, 0)`, [product.id, product.tenantId, product.title, product.cents],
+      );
+    });
+    try {
+      const identityResponse = await page.request.get('/api/v1/auth/session-identity');
+      expect(identityResponse.status()).toBe(200);
+      const identity = await identityResponse.json();
+      expect(identity.tenantId).toBe(mine.tenantId);
+      const appOrigin = new URL(baseURL).origin;
+      const catalogResponse = page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.origin === appOrigin && url.pathname === '/api/v1/pos/inventory' && response.request().method() === 'GET';
+      });
+      await page.goto(`/pos/mpos?tenantId=${encodeURIComponent(foreign.tenantId)}`);
+      const response = await catalogResponse;
+      expect(response.status()).toBe(200);
+      expect(new URL(response.url()).search).toBe('');
+      const headers = await response.request().allHeaders();
+      expect(headers['x-ohc-expected-user']).toBe(identity.userId);
+      expect(headers['x-ohc-expected-tenant']).toBe(identity.tenantId);
+      const body = await response.json();
+      expect(body.inventory).toEqual(expect.arrayContaining([
+        expect.objectContaining({ id: mine.id, name: mine.title, price_cents: mine.cents, stock: 2 }),
+      ]));
+      expect(body.inventory.map((product: { id: string }) => product.id)).not.toContain(foreign.id);
+      await expect(page.getByRole('heading', { name: 'mPOS', exact: true })).toBeVisible();
+      await expect(page.getByText(mine.title, { exact: true })).toBeVisible();
+      await expect(page.getByText(foreign.title, { exact: true })).toHaveCount(0);
+      await expect(page.getByRole('button', { name: 'Quick Charge', exact: true })).toBeDisabled();
+      await page.getByText(mine.title, { exact: true }).click();
+      await expect(page.getByText('1 Items', { exact: true })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Quick Charge', exact: true })).toBeEnabled();
+    } finally {
+      await e2eDbTransaction(async query => {
+        for (const product of products) await query('DELETE FROM products WHERE id=$1 AND tenant_id=$2', [product.id, product.tenantId]);
+      });
+    }
   });
 });

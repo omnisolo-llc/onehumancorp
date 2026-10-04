@@ -93,6 +93,126 @@ function proxyRequest(proxy, target) {
   });
 }
 
+test('Playwright carries the real login request, rejection and challenge cookie through the owned app tunnel', async t => {
+  const observed = [];
+  const app = createServer(async (req, res) => {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    observed.push({ method: req.method, path: req.url, origin: req.headers.origin, cookie: req.headers.cookie,
+      body: Buffer.concat(chunks).toString('utf8') });
+    res.setHeader('content-type', 'application/json');
+    if (req.url === '/api/v1/auth/login') {
+      // Transport evidence only. This fixture never substitutes a successful
+      // application login or issues an application authentication cookie.
+      res.writeHead(401, { 'set-cookie': 'owned_transport_challenge=challenge-one; Path=/; HttpOnly; SameSite=Lax' });
+      res.end(JSON.stringify({ error: 'owned transport rejected these credentials' }));
+    } else res.end(JSON.stringify({ cookie: req.headers.cookie ?? null }));
+  });
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { app.closeAllConnections(); app.close(resolve); }));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`;
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  const context = await require('@playwright/test').request.newContext({ baseURL: appOrigin, proxy: { server: proxy.server }, timeout: 3000 });
+  t.after(() => context.dispose());
+  const login = { username: 'owned-probe@example.test', password: 'synthetic-transport-input', organization_id: 'e2e-owned-probe' };
+  const response = await context.post('/api/v1/auth/login', {
+    headers: { origin: appOrigin, 'sec-fetch-site': 'same-origin' }, data: login,
+  });
+  assert.equal(response.status(), 401, 'the actual upstream authentication rejection must reach the client');
+  assert.deepEqual(await response.json(), { error: 'owned transport rejected these credentials' });
+  assert.deepEqual(observed, [{ method: 'POST', path: '/api/v1/auth/login', origin: appOrigin, cookie: undefined, body: JSON.stringify(login) }]);
+  const cookies = await context.get('/transport-cookie-check');
+  assert.equal(cookies.status(), 200);
+  assert.deepEqual(await cookies.json(), { cookie: 'owned_transport_challenge=challenge-one' });
+  assert.ok(proxy.evidence().connects.length >= 1);
+  assert.ok(proxy.evidence().connects.every(row => row.authority === new URL(appOrigin).host && row.status === 200));
+  assert.deepEqual(proxy.evidence().blockedHttp, []);
+});
+
+function connectBytes(proxy, authority, head = '') {
+  return new Promise((resolve, reject) => {
+    const socket = connect(Number(new URL(proxy.server).port), '127.0.0.1');
+    let response = '';
+    socket.setTimeout(2000, () => socket.destroy(new Error('Owned proxy tunnel did not finish')));
+    socket.on('error', reject); socket.on('data', chunk => { response += chunk; });
+    socket.on('close', () => resolve(response));
+    socket.on('connect', () => socket.write(`CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n\r\n${head}`));
+  });
+}
+
+test('owned CONNECT preserves initial bytes and rejects external, alternate-loopback and malformed authorities', async t => {
+  let received = 0;
+  const app = createServer((req, res) => { received += 1; res.end(`owned upstream ${req.method} ${req.url}`); });
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { app.closeAllConnections(); app.close(resolve); }));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`, authority = new URL(appOrigin).host;
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  const response = await connectBytes(proxy, authority, `GET /received-head HTTP/1.1\r\nHost: ${authority}\r\nConnection: close\r\n\r\n`);
+  assert.match(response, /^HTTP\/1\.1 200 Connection Established\r\n/);
+  assert.match(response, /owned upstream GET \/received-head/);
+  assert.equal(received, 1);
+  const rejected = ['checkout.stripe.com:443', 'example.com:443', '127.0.0.1:1',
+    `localhost:${app.address().port}`, `${authority}/path`, `${authority}@example.com`, `127.0.0.1:0${app.address().port}`];
+  for (const target of rejected) assert.match(await connectBytes(proxy, target), /^HTTP\/1\.1 403 /, target);
+  assert.equal(received, 1, 'rejected destinations never reach the owned app or another listener');
+  assert.deepEqual(proxy.evidence().connects.slice(1), rejected.map(authority => ({ method: 'CONNECT', authority, status: 403 })));
+});
+
+test('closing the owned proxy reaps an active application tunnel', async t => {
+  const app = createServer((_req, res) => { res.writeHead(200); res.write('owned open response'); });
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { app.closeAllConnections(); app.close(resolve); }));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`, authority = new URL(appOrigin).host;
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  const socket = connect(Number(new URL(proxy.server).port), '127.0.0.1');
+  t.after(() => socket.destroy());
+  await new Promise((resolve, reject) => {
+    let received = '';
+    socket.setTimeout(1000, () => socket.destroy(new Error('Owned tunnel lifecycle timed out')));
+    socket.on('error', reject);
+    socket.on('data', chunk => { received += chunk; if (received.includes('owned open response')) resolve(); });
+    socket.on('connect', () => socket.write(`CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n\r\nGET /held HTTP/1.1\r\nHost: ${authority}\r\n\r\n`));
+  });
+  const closed = new Promise((resolve, reject) => { socket.once('close', resolve); socket.once('error', reject); });
+  await proxy.close();
+  await closed;
+  assert.equal(socket.destroyed, true);
+});
+
+test('an owned upstream EOF preserves the complete body for a backpressured tunnel reader', async t => {
+  const body = Buffer.alloc(16 * 1024 * 1024, 'x');
+  const app = createServer((_req, res) => { res.writeHead(200, { 'content-length': body.length }); res.end(body); });
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { app.closeAllConnections(); app.close(resolve); }));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`, authority = new URL(appOrigin).host;
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  const received = await new Promise((resolve, reject) => {
+    const socket = connect(Number(new URL(proxy.server).port), '127.0.0.1');
+    const chunks = [];
+    socket.setTimeout(8000, () => socket.destroy(new Error('Backpressured owned response did not finish')));
+    socket.on('error', reject);
+    socket.on('data', chunk => {
+      chunks.push(chunk); socket.pause();
+      setTimeout(() => socket.resume(), 2);
+    });
+    socket.on('close', () => resolve(Buffer.concat(chunks)));
+    socket.on('connect', () => {
+      socket.write(`CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n\r\nGET /complete-body HTTP/1.1\r\nHost: ${authority}\r\nConnection: close\r\n\r\n`);
+      socket.pause(); setTimeout(() => socket.resume(), 50);
+    });
+  });
+  const tunnelEnd = received.indexOf('\r\n\r\n') + 4;
+  const headersEnd = received.indexOf('\r\n\r\n', tunnelEnd) + 4;
+  assert.ok(tunnelEnd >= 4 && headersEnd > tunnelEnd);
+  const actualBody = received.subarray(headersEnd);
+  assert.equal(actualBody.length, body.length, 'normal upstream EOF must flush all queued downstream bytes');
+  assert.equal(actualBody.equals(body), true);
+});
+
 test('egress proxy forwards actual owned HTTP and refuses every external HTTP/CONNECT target', async t => {
   let received = 0;
   const app = createServer((req, res) => { received += 1; res.end(`actual app ${req.url}`); });

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { observeButtonStates } from '../../../scripts/playwright/button-states.mjs';
 
 test.describe('Viral Receipt Lottery Generator', () => {
   test('should load the generator and generate a lottery link', async ({ page }) => {
@@ -13,23 +14,39 @@ test.describe('Viral Receipt Lottery Generator', () => {
     const generateBtn = page.locator('#generate-btn');
     await expect(generateBtn).toBeVisible();
 
-    // 4. Click generate
-    await generateBtn.click();
-
-    // 5. Verify button state
-    await expect(generateBtn).toBeDisabled();
-    await expect(generateBtn).toHaveText('Generating...');
-
-    // 6. Wait for the result to show
-    const resultArea = page.locator('#result-area');
-    await expect(resultArea).toBeVisible({ timeout: 5000 });
-
-    // 7. Check share link generated correctly
-    const shareLink = page.locator('#share-link');
-    await expect(shareLink).toHaveValue(/win\/[\w-]+/);
-
-    // 8. Check that preview URL updated
+    // Finish the page-load generation before observing the separate user click.
     const previewUrl = page.locator('#preview-url');
-    await expect(previewUrl).toHaveText(/cloud.omnisolo.co\/win\/[\w-]+/);
+    await expect(previewUrl).toHaveText(/^cloud\.omnisolo\.co\/win\/[\da-f-]{36}$/);
+    const resultArea = page.locator('#result-area');
+    await expect(resultArea).not.toBeVisible();
+
+    // Record actual DOM transitions before clicking: a fast real response may
+    // restore the button before click() returns to the test runner.
+    const observation = await generateBtn.evaluateHandle(observeButtonStates);
+    try {
+      const [request] = await Promise.all([
+        page.waitForRequest(request => request.method() === 'POST'
+          && new URL(request.url()).pathname === '/api/v1/growth/referrals/generate'),
+        generateBtn.click(),
+      ]);
+      const response = await request.response();
+      expect(response, 'the click must receive a real referral-generation response').not.toBeNull();
+      expect(response!.status()).toBe(200);
+      const data = await response!.json();
+      expect(data.referral_link).toMatch(/^https:\/\/cloud\.omnisolo\.co\/ref\/[\da-f-]{36}$/);
+      const refId = new URL(data.referral_link).pathname.split('/').pop();
+
+      expect(await observation.evaluate(value => value.states)).toContainEqual({
+        disabled: true, text: 'Generating...',
+      });
+      await expect(resultArea).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('#share-link')).toHaveValue(new URL(`/win/${refId}`, page.url()).href);
+      await expect(previewUrl).toHaveText(`cloud.omnisolo.co/win/${refId}`);
+      await expect(generateBtn).toBeEnabled();
+      await expect(generateBtn).toHaveText('Generate Lottery Link');
+    } finally {
+      await observation.evaluate(value => value.disconnect());
+      await observation.dispose();
+    }
   });
 });
