@@ -858,6 +858,34 @@
       "title": "Token Budget Alerts (last 1h)",
       "type": "timeseries",
       "transparent": true
+    },
+    {
+      "type": "text",
+      "title": "Sub-Agent Queue Latency by Mode",
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family: 'Inter', 'Outfit', sans-serif; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); padding: 15px; border-radius: 8px; color: #fff;\"><h3>Sub-Agent Queue Latency</h3><p>Metric: <code>ohc_sub_agent_queue_latency_seconds</code> (Histogram)</p><ul><li>Mode: Postgres</li><li>Mode: SQLite</li></ul></div>"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "text",
+      "title": "Sub-Agent Spawn Error Rate by Mode",
+      "options": {
+        "mode": "html",
+        "content": "<div style=\"font-family: 'Inter', 'Outfit', sans-serif; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); padding: 15px; border-radius: 8px; color: #fff;\"><h3>Sub-Agent Spawn Errors</h3><p>Metric: <code>ohc_sub_agent_spawn_errors_total</code> (Counter)</p><ul><li>Mode: Cloud</li><li>Mode: Standalone</li></ul></div>"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
     }
   ],
   "schemaVersion": 38,

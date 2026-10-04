@@ -177,7 +177,7 @@ impl TaskQueue for SQLiteTaskQueue {
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
             ::server_telemetry::record_task_claim_contention(
-                ::server_telemetry::get_deployment_mode(),
+                "sqlite",
             );
         }
 
@@ -198,7 +198,7 @@ impl TaskQueue for SQLiteTaskQueue {
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
             ::server_telemetry::record_sub_agent_queue_delay(
                 latency,
-                ::server_telemetry::get_deployment_mode(),
+                "sqlite",
             );
 
             let job =

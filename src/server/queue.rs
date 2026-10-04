@@ -798,7 +798,7 @@ impl QueueManager {
                 Err(e) => {
                     retry_count += 1;
                     if retry_count > 3 {
-                        ::server_telemetry::record_task_claim_contention(::server_telemetry::get_deployment_mode());
+                        ::server_telemetry::record_task_claim_contention("generic");
                         return Err(e);
                     }
                     tokio::time::sleep(std::time::Duration::from_millis(50)).await;
@@ -808,7 +808,7 @@ impl QueueManager {
 
         if start_poll.elapsed() > std::time::Duration::from_millis(100) {
             ::server_telemetry::record_task_claim_contention(
-                ::server_telemetry::get_deployment_mode(),
+                "generic",
             );
         }
 
@@ -966,8 +966,14 @@ impl QueueManager {
                                 let handle_res = tokio::time::timeout(omnisolo_builtin_agent::agent::agent_task_timeout(), handler(job.clone())).await;
                                 let handler_res = match handle_res {
                                     Ok(Ok(())) => Ok(()),
-                                    Ok(Err(e)) => Err(e),
-                                    Err(_) => Err("Timeout executing job".to_string()),
+                                    Ok(Err(e)) => {
+                                        ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
+                                        Err(e)
+                                    }
+                                    Err(_) => {
+                                        ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
+                                        Err("Timeout executing job".to_string())
+                                    }
                                 };
                                 match handler_res {
                                     Ok(_) => {
