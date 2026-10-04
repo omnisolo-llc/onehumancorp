@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Design Autonomous Multi-lingual Voice-to-Text Order Interception Architecture for Food and Service Personas"
+issue_description: "The Multi-lingual Voice-to-Text Order Interception Architecture (KDS and Twilio voice webhook) is already implemented in the repository (see src/ui/next/src/app/kitchen/page.tsx, src/e2e/kds.spec.ts, src/server/api/twilio_voice.rs, and src/e2e/omnichannel_voice_intake.mock-contract.ts). The webhook handles 'ORDER_FOOD' intents and generates tasks with order_drafts. Furthermore, new verticals or additional channels require explicit evidence and expansion gate approval per RESEARCH.md."
