@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "[Research] AI-Native Autonomous Operations & Intake Agent for SMB Owners"
+issue_description: "The requested feature involves building new channels (Instagram DMs, Web Chat, SMS) and an autonomous Intake Agent, which conflicts with the strict constraints outlined in `RESEARCH.md` that state: 'New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require evidence and the expansion gate in RESEARCH.md'. The issue lacks explicit owner evidence or willingness-to-pay justification for the expansion gate, thereby making it invalid."
