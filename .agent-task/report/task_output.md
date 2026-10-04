@@ -1,4 +1,0 @@
-{
-  "issue_title": "Feature: Autonomous Pre-Order & Real-Time Pickup Coordination Engine",
-  "issue_description": "Food operators with limited space and resources, such as Fatima the Food Cart Operator, struggle with overwhelming ad-hoc communication (DMs, texts) during peak hours. Legacy systems (Shopify, Wix) treat food orders like physical shipments, and dedicated restaurant POS systems (Square, Toast) are complex, expensive, and rely on passive dashboard management. Fatima needs a proactive system that handles pre-orders, dynamically manages pickup times based on current load, and auto-notifies customers—all orchestrated via a simple 375px mobile UI and AI agents working in the background.\n\nBlocked: The exclusive digital-service first market is suspended. Evaluate owner needs across plausible service, retail and physical-operation workflows already represented in the code. New verticals require evidence and the expansion gate in RESEARCH.md."
-}
