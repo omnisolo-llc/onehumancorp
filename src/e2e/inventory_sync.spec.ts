@@ -22,7 +22,7 @@ test.describe('Multi-Channel Inventory Sync & Distributed POS', () => {
     const payBtn = page2.getByRole('button', { name: 'Pay' });
 
     // Click them concurrently
-    const [posClick, onlineClick] = await Promise.allSettled([
+    await Promise.allSettled([
       posBtn.click(),
       payBtn.click(),
     ]);
