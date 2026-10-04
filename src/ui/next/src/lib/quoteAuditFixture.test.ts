@@ -1,8 +1,8 @@
 import { expect, it, vi } from 'vitest';
 import type { Page } from '@playwright/test';
 import { navigateQuoteAudit, prepareQuoteAudit } from '../../../../e2e/support/quote_audit_fixture';
-vi.mock('../../../../e2e/playwright/quote_fixture', () => ({ createOwnerQuote: vi.fn() }));
-import { createOwnerQuote } from '../../../../e2e/playwright/quote_fixture';
+vi.mock('../../../../e2e/playwright/quote_fixture', () => ({ createOwnerQuote: vi.fn(), createOwnerQuoteFromRequest: vi.fn() }));
+import { createOwnerQuote, createOwnerQuoteFromRequest } from '../../../../e2e/playwright/quote_fixture';
 
 const quoteId = '11111111-1111-4111-8111-111111111111';
 const customerId = '22222222-2222-4222-8222-222222222222';
@@ -46,16 +46,18 @@ for (const kind of ['missing', 'foreign tenant', 'foreign customer', 'foreign qu
     await expect(navigateQuoteAudit(f.page, origin, '/quotes/e2e-id', record, f.navigate)).rejects.toThrow();
   });
 }
-it('global audit starts from a real same-origin authenticated document before API-backed quote creation', async () => {
+it('global quote preparation uses guarded authenticated requests without mounting a dashboard document', async () => {
   const f = fixture('/proposals/customer-view');
-  vi.mocked(createOwnerQuote).mockImplementationOnce(async () => {
-    expect(f.navigate).toHaveBeenCalledWith(f.page, '/dashboard');
+  const created = async (): ReturnType<typeof createOwnerQuote> => {
     f.detail.quote.tenant_id = 'e2e-tenant'; f.detail.quote.required_deposit_cents = 1000;
     f.detail.line_items[0].description = 'UI audit persisted quote';
     return { quoteId, customerId };
-  });
+  };
+  vi.mocked(createOwnerQuote).mockImplementationOnce(created);
+  vi.mocked(createOwnerQuoteFromRequest).mockImplementationOnce(created);
   const receipt = await prepareQuoteAudit(f.page, origin, '/proposals/customer-view', f.navigate);
-  expect(createOwnerQuote).toHaveBeenCalledWith(f.page, 'e2e-tenant', { description: 'UI audit persisted quote', priceCents: 15000 });
+  expect(createOwnerQuoteFromRequest).toHaveBeenCalledWith(f.page.request, origin, expect.objectContaining({ organizationId: 'e2e-tenant' }), { description: 'UI audit persisted quote', priceCents: 15000 });
+  expect(f.navigate.mock.calls.map(([, route]) => route)).toEqual([`/proposals/customer-view?id=${quoteId}`]);
   expect(receipt.finalUrl).toBe(`${origin}/proposals/customer-view?id=${quoteId}`);
 });
 

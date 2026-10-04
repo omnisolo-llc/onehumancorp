@@ -22,13 +22,21 @@ function deferred<T>() {
   const promise = new Promise<T>(r => { resolve = r; });
   return { promise, resolve };
 }
+function pendingErrorResponse(status: number) {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value; } });
+  const response = new Response(stream, { status, headers: { 'content-type': 'application/json' } });
+  controller.enqueue(new TextEncoder().encode('{"error":'));
+  return { response, complete() { controller.enqueue(new TextEncoder().encode('"review required"}')); controller.close(); } };
+}
 const fetcher = vi.fn<typeof fetch>();
 const back = vi.fn();
+const push = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(useParams).mockReturnValue({ id });
-  vi.mocked(useRouter).mockReturnValue({ back } as unknown as ReturnType<typeof useRouter>);
+  vi.mocked(useRouter).mockReturnValue({ back, push } as unknown as ReturnType<typeof useRouter>);
   vi.stubGlobal('fetch', fetcher);
   fetcher.mockReset();
   fetcher.mockImplementation(async () => Response.json(detail()));
@@ -41,6 +49,30 @@ async function ready() {
 }
 
 describe('Quote detail truthfulness', () => {
+  it.each([404, 500])('finishes the HTTP %s read body before exposing its error state', async status => {
+    const pending = pendingErrorResponse(status);
+    fetcher.mockResolvedValueOnce(pending.response);
+    render(<QuoteReviewPage />);
+    await act(async () => { await Promise.resolve(); });
+    expect(pending.response.bodyUsed).toBe(true);
+    expect(screen.getByText('Loading...')).toBeVisible();
+    await act(async () => pending.complete());
+    await screen.findByText(status === 404 ? 'Quote not found' : /Unable to load quote/);
+  });
+
+  it('finishes a rejected approval body before reporting unconfirmed approval', async () => {
+    await ready();
+    const pending = pendingErrorResponse(409);
+    fetcher.mockResolvedValueOnce(pending.response);
+    fireEvent.click(screen.getByRole('button', { name: /^Approve quote$/ }));
+    await act(async () => { await Promise.resolve(); });
+    expect(pending.response.bodyUsed).toBe(true);
+    expect(screen.queryByText(/Approval could not be confirmed/)).toBeNull();
+    await act(async () => pending.complete());
+    await screen.findByText(/Approval could not be confirmed/);
+    expect(screen.getByText('DRAFT')).toBeVisible();
+  });
+
   it.each(['e2e-id', 'visual-audit-id', '../other'])('rejects unsupported ID %s without requesting or inventing a quote', async invalid => {
     vi.mocked(useParams).mockReturnValue({ id: invalid });
     render(<QuoteReviewPage />);
@@ -313,6 +345,14 @@ describe('Quote detail truthfulness', () => {
     expect(screen.queryByRole('button', { name: /Approve|Edit/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Back to Feed' }));
-    expect(back).toHaveBeenCalledOnce();
+    expect(push).toHaveBeenCalledExactlyOnceWith('/feed');
+    expect(back).not.toHaveBeenCalled();
   });
+});
+
+it('Back to Feed reaches its named destination from a direct quote link without browser history', async () => {
+  await ready();
+  fireEvent.click(screen.getByRole('button', { name: 'Back to Feed' }));
+  expect(push).toHaveBeenCalledExactlyOnceWith('/feed');
+  expect(back).not.toHaveBeenCalled();
 });

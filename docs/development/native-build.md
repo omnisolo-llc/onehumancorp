@@ -72,8 +72,7 @@ Focused checks accelerate iteration; they do not replace the complete regression
 ## Build once, consume real artifacts
 
 ```sh
-cargo build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
-npm run build:web
+make build-e2e
 npm run desktop:build -- --debug --no-bundle
 npx --no-install playwright install chromium
 npm run test:e2e -- --workers=1
@@ -82,6 +81,10 @@ npm run test:e2e -- --workers=1
 `build:web` compiles the maintained Next application and only then creates a source-bound proof and standalone package in `target/native-web`. Tauri owns a loopback Node server for this package. The authenticated Next server routes are retained; a static HTML export would remove necessary application behavior. The packaged executable is a separate official Node distribution, verified against the pinned release checksums and shipped with its license—not a copied CI `process.execPath` that might depend on shared host libraries.
 
 The package manifest binds source, dependency lock, build ID, Node version, OS and architecture. Packaging refuses stale output even when dependency locks are unchanged. Environment files and build caches are excluded from standalone, public and static content. Never merge old artifacts into a new bundle. `OMNISOLO_PREBUILT_WEB` may reuse a validated artifact from the same workflow/source/platform, not an arbitrary cached directory.
+
+`make build-e2e` also snapshots native producer source before Cargo and records the resulting server and agent hashes after Cargo succeeds. The proof lives beside those binaries in `${CARGO_TARGET_DIR:-target}/debug/native-binary-proof.json`. The configured checkout session tests require this proof and refuse stale or unproved binaries. A direct Cargo build alone does not produce it; use the maintained Make target before local E2E execution.
+
+The inventory session tests start a separate backend and Next process pair from the verified outputs, using the runner-owned database, fresh test tenants and an owned loopback provider. The provider accepts only registered checkout terms and returns an unpaid session. A browser proxy allows only the owned application and refuses all external CONNECT requests, including the observed HTTPS Stripe redirect. These tests establish cash receipt versus online session/stock-hold exclusion. They do not exercise hosted payment or a paid webhook. The existing backend binds all interfaces inside the test runner; the provider, proxy and Next bind loopback. Global unconfigured-provider tests keep their original environment.
 
 The Rust API runs separately, either locally or on a configured HTTPS host. Desktop owns only its packaged Node process; it must not claim to provision or supervise a missing Rust backend. Mobile builds point at explicit HTTPS `OMNISOLO_MOBILE_WEB_URL` and do not bundle a desktop Node runtime. Platform SDKs, signing keys, store enrollment and actual device/install tests remain separate release prerequisites.
 

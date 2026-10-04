@@ -132,8 +132,9 @@ export default function OrderDetailsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, weight: weight.trim(), dimensions: dimensions.trim().toLowerCase() }),
       });
+      const body: unknown = await response.json();
       if (response.ok) {
-        const parsed = parseRates(await response.json());
+        const parsed = parseRates(body);
         if (generation !== orderGeneration.current) return;
         if (parsed && parsed.length > 0) {
           setRates(parsed);

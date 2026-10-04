@@ -12,6 +12,65 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_cash_runner_rejects_unavailable_redis_before_native_execution(self):
+        import os
+        import shutil
+        import subprocess
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            sandbox = Path(directory)
+            folder = sandbox/'scripts/cash-receipts'
+            folder.mkdir(parents=True)
+            for name in ['run.sh', 'database_guard.py']:
+                shutil.copyfile(root/'scripts/cash-receipts'/name, folder/name)
+            shared = sandbox/'scripts/agent-feed-decision-contract'
+            shared.mkdir()
+            shutil.copyfile(root/'scripts/agent-feed-decision-contract/database_guard.py', shared/'database_guard.py')
+            (sandbox/'Cargo.lock').write_text('fixture lock')
+            binaries = sandbox/'bin'
+            binaries.mkdir()
+            capture = sandbox/'native-started'
+            (binaries/'cargo').write_text('#!/bin/sh\ntouch "$CASH_NATIVE_CAPTURE"\n')
+            (binaries/'redis-cli').write_text('#!/bin/sh\nexit 1\n')
+            (binaries/'cargo').chmod(0o755)
+            (binaries/'redis-cli').chmod(0o755)
+            environment = dict(os.environ, PATH=str(binaries)+os.pathsep+os.environ['PATH'],
+                CASH_NATIVE_CAPTURE=str(capture), OHC_CASH_TEST_DATABASE_URL='postgres://fixture@127.0.0.1:5432/ohc_cash_test',
+                OHC_CASH_TEST_REDIS_URL='redis://127.0.0.1:56379/0')
+            result = subprocess.run(['bash', str(folder/'run.sh')], cwd=sandbox, env=environment, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(capture.exists(), 'unavailable Redis must stop before metadata or compilation')
+            self.assertIn('Owned Redis fixture is unavailable', result.stderr)
+
+    def test_cash_receipts_require_all_cases_cold_fetch_and_owned_services(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        self.assertIn('cash-receipts', gate.GATES)
+        self.assertEqual(gate.GATES['cash-receipts'], (44, 'OHC_CASH_TEST_DATABASE_URL'))
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/cash-receipts/fetch.sh')
+        execute = next(i for i, step in enumerate(steps) if 'focused_ci_gate.py cash-receipts' in step.get('run', ''))
+        self.assertLess(fetch, execute)
+        self.assertIn('!cancelled()', steps[fetch]['if'])
+        self.assertIn('!cancelled()', steps[execute]['if'])
+        self.assertEqual(steps[execute]['env']['OHC_CASH_TEST_DATABASE_URL'], 'postgres://postgres:postgres@127.0.0.1:5432/ohc_cash_receipts_test')
+        self.assertIn('job.services.widget_redis.ports[6379]', steps[execute]['env']['OHC_CASH_TEST_REDIS_URL'])
+        self.assertIn('createdb ', steps[execute]['run'])
+        fetch_script = (root/'scripts/cash-receipts/fetch.sh').read_text()
+        self.assertLess(fetch_script.index('cp Cargo.lock '), fetch_script.index('cargo metadata '))
+        self.assertLess(fetch_script.index('cargo metadata '), fetch_script.index('verify_lock.py'))
+        self.assertLess(fetch_script.index('verify_lock.py'), fetch_script.index('cargo fetch --locked'))
+        self.assertNotIn('metadata --offline', fetch_script)
+        self.assertNotIn('metadata --no-deps', fetch_script)
+        runner = (root/'scripts/cash-receipts/run.sh').read_text()
+        self.assertIn('database_guard.py', runner)
+        self.assertIn('--locked --offline', runner)
+        self.assertNotIn(' cash_contract --', runner)
+        self.assertNotIn('--ignored', runner)
+        manifest = (root/'scripts/cash-receipts/prepare.py').read_text()
+        for source in ['.github/workflows/ci.yml', 'scripts/focused_ci_gate.py', 'scripts/test_focused_ci_gate.py', 'scripts/agent-feed-decision-contract/database_guard.py']:
+            self.assertIn(source, manifest)
+
     def test_nats_metadata_fetch_precedes_required_offline_gate(self):
         import yaml
         root = Path(__file__).resolve().parents[1]

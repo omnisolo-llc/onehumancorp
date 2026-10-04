@@ -15,8 +15,12 @@ const secondaryClass = 'w-full min-h-[44px] border border-gray-300 dark:border-g
 
 async function readQuote(id: string, signal?: AbortSignal): Promise<QuoteDetail | null> {
   const response = await fetch(`/api/v1/quotes/${id}`, { cache: 'no-store', signal });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error('Quote read failed');
+  if (!response.ok) {
+    // Complete finite error bodies before exposing the result or reusing this view.
+    await response.arrayBuffer();
+    if (response.status === 404) return null;
+    throw new Error('Quote read failed');
+  }
   return parseQuoteDetail(await response.json(), id);
 }
 
@@ -117,8 +121,8 @@ function QuoteReview({ id }: { id: string }) {
         method: kind === 'approve' ? 'PATCH' : 'PUT',
         headers: { 'Content-Type': 'application/json' }, body,
       });
-      if (!response.ok) throw new Error('Quote change failed');
       const receipt = await response.json();
+      if (!response.ok) throw new Error('Quote change failed');
       if (kind === 'save' ? receipt?.success !== true : receipt?.quote?.id?.toLowerCase() !== id) {
         throw new Error('Invalid quote change receipt');
       }
@@ -149,7 +153,7 @@ function QuoteReview({ id }: { id: string }) {
 
   const navigation = <>
     <button onClick={() => setRefresh(value => value + 1)} disabled={busy || !validReference} className={secondaryClass}>Refresh quote</button>
-    <button onClick={() => router.back()} className={secondaryClass}>Back to Feed</button>
+    <button onClick={() => router.push('/feed')} className={secondaryClass}>Back to Feed</button>
   </>;
   if (loading) return <AppShell title="Loading Quote..."><div role="status" aria-busy="true" className="p-4 text-center">Loading...</div></AppShell>;
   if (loadError) return <AppShell title="Quote unavailable"><div className="p-4 space-y-4"><p role="alert">Unable to load quote. Please refresh to try again.</p>{refreshNotice && <p role="status">{refreshNotice}</p>}{navigation}</div></AppShell>;

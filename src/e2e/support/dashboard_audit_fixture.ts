@@ -141,8 +141,8 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
     return { actor, page, close: () => context.close(), navigate: async (route = '/dashboard'): Promise<AuditNavigationReceipt> => {
       if (!isolatedClickAuditRoutes.has(route)) throw new Error(`No isolated click fixture exists for ${route}`);
       const quoteRoute = quoteAuditRoutes.has(route);
-      // Give Back to Feed a real app history entry in this new cookie/storage context.
-      if (quoteRoute) await navigate(page, '/dashboard');
+      // Authentication is request-only inside navigate; do not mount an
+      // unrelated dashboard whose startup work would outlive this document.
       const initialReads = (quoteRoute ? [] : initialRouteReads[route]).map(path => page.waitForResponse(response =>
         new URL(response.url()).origin === new URL(baseURL).origin && new URL(response.url()).pathname === path && response.request().method() === 'GET'));
       // Complete the real initial reads before discovery; no API substitution.

@@ -86,13 +86,9 @@ impl InventoryLocker for StandaloneInventoryLocker {
         let now = Instant::now();
         self.memory_fallback
             .retain(|_, (_, expires_at)| *expires_at > now);
-        if let Some(v) = self.memory_fallback.get(lock_key)
-            && v.0 == expected_lock_id
-        {
-            self.memory_fallback.remove(lock_key);
-            return true;
-        }
-        false
+        self.memory_fallback
+            .remove_if(lock_key, |_, (value, _)| value == expected_lock_id)
+            .is_some()
     }
 
     async fn get_lock_id(&self, lock_key: &str) -> Option<String> {
@@ -227,6 +223,15 @@ pub struct CommitResult {
     pub error_message: String,
 }
 
+/// Cash explicitly selects available stock. Existing paid/legacy callers keep
+/// their historical reserved-first completion behavior even without a token.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum InventoryCommitMode {
+    LegacyPayment,
+    AvailableOnly,
+    ReservedOnly,
+}
+
 impl InventoryService {
     pub fn new(redis_client: Option<redis::Client>) -> Self {
         let locker: Box<dyn InventoryLocker> = if let Some(ref client) = redis_client {
@@ -256,6 +261,13 @@ impl InventoryService {
         quantity: i32,
         ttl_seconds: i32,
     ) -> Result<ReserveResult, String> {
+        if quantity <= 0 {
+            return Ok(ReserveResult {
+                success: false,
+                lock_id: String::new(),
+                error_message: "Quantity must be positive".into(),
+            });
+        }
         let lock_id = Uuid::new_v4().to_string();
         let lock_key = Self::get_lock_key(tenant_id, product_id);
 
@@ -337,128 +349,51 @@ impl InventoryService {
         }
 
         let pool = crate::db::get_pool();
-        if let Ok(mut tx) = pool.begin().await {
-            if crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
-                .await
-                .is_ok()
-            {
-                let current_stock: Option<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE")
-                        .bind(product_id)
-                        .bind(tenant_id)
-                        .fetch_optional(&mut *tx)
-                        .await
-                        .unwrap_or(None);
-
-                if let Some(stock) = current_stock {
-                    if stock < quantity {
-                        let _ = tx.rollback().await;
-                        self.locker.clear(&lock_key).await;
-                        return Ok(ReserveResult {
-                            success: false,
-                            lock_id: "".to_string(),
-                            error_message: format!("Insufficient inventory. Available: {}", stock),
-                        });
-                    } else {
-                        let update_res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count + $1, available_count = available_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND available_count >= $1")
-                                .bind(quantity)
-                                .bind(product_id)
-                                .bind(tenant_id)
-                                .execute(&mut *tx)
-                                .await;
-                        if let Ok(res) = update_res
-                            && res.rows_affected() == 0
-                        {
-                            let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
-                            return Ok(ReserveResult {
-                                success: false,
-                                lock_id: "".to_string(),
-                                error_message: "Insufficient inventory.".to_string(),
-                            });
-                        }
-                    }
-                } else {
-                    // Fallback to legacy products if not in centralized inventory yet
-                    let update_res = sqlx::query("UPDATE products SET locked_quantity = locked_quantity + $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND available_quantity >= $1")
-                            .bind(quantity)
-                            .bind(product_id)
-                            .bind(tenant_id)
-                            .execute(&mut *tx)
-                            .await;
-
-                    if let Ok(res) = update_res {
-                        if res.rows_affected() == 0 {
-                            let f_stock: Option<i32> = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE")
-                                    .bind(product_id)
-                                    .bind(tenant_id)
-                                    .fetch_optional(&mut *tx)
-                                    .await
-                                    .unwrap_or(None);
-
-                            let _ = tx.rollback().await;
-                            self.locker.clear(&lock_key).await;
-                            if let Some(stock) = f_stock {
-                                return Ok(ReserveResult {
-                                    success: false,
-                                    lock_id: "".to_string(),
-                                    error_message: format!(
-                                        "Insufficient inventory. Available: {}",
-                                        stock
-                                    ),
-                                });
-                            } else {
-                                return Ok(ReserveResult {
-                                    success: false,
-                                    lock_id: "".to_string(),
-                                    error_message: "Product not found".to_string(),
-                                });
-                            }
-                        }
-                    } else {
-                        let _ = tx.rollback().await;
-                        self.locker.clear(&lock_key).await;
-                        return Ok(ReserveResult {
-                            success: false,
-                            lock_id: "".to_string(),
-                            error_message: "Product not found".to_string(),
-                        });
-                    }
-                }
-                let _ = tx.commit().await; // Publish to Redis Pub/Sub for Real-Time Sync
-                if let Some(client) = &self.redis_client
-                    && let Ok(mut conn) = client.get_multiplexed_async_connection().await
-                {
-                    let invalidation_topic = "cache_invalidation_events";
-                    let invalidation_payload = serde_json::json!({
-                        "event": "inventory.updated",
-                        "tags": [
-                            format!("tenant-id:{}", tenant_id),
-                            format!("entity:product:{}", product_id)
-                        ]
-                    })
-                    .to_string();
-                    let _: Result<(), _> = redis::cmd("PUBLISH")
-                        .arg(invalidation_topic)
-                        .arg(invalidation_payload)
-                        .query_async(&mut conn)
-                        .await;
-                }
-            } else {
-                self.locker.clear(&lock_key).await;
-                return Ok(ReserveResult {
-                    success: false,
-                    lock_id: "".to_string(),
-                    error_message: "Failed to set org context".to_string(),
-                });
+        let transaction = pool.begin().await;
+        let mut tx = match transaction {
+            Ok(tx) => tx,
+            Err(error) => {
+                self.locker.release(&lock_key, &lock_id).await;
+                return Err(error.to_string());
             }
-        } else {
-            self.locker.clear(&lock_key).await;
+        };
+        let allocation: Result<(), String> = async {
+            crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await.map_err(|error| error.to_string())?;
+            let levels: Vec<(String, i32)> = sqlx::query_as("SELECT id,available_count FROM inventory_levels WHERE variant_id=$1 AND tenant_id=$2 ORDER BY id FOR UPDATE")
+                .bind(product_id).bind(tenant_id).fetch_all(&mut *tx).await.map_err(|error| error.to_string())?;
+            if levels.is_empty() {
+                let changed = sqlx::query("UPDATE products SET locked_quantity=locked_quantity+$1,available_quantity=available_quantity-$1 WHERE id=$2 AND tenant_id=$3 AND available_quantity >= $1")
+                    .bind(quantity).bind(product_id).bind(tenant_id).execute(&mut *tx).await.map_err(|error| error.to_string())?;
+                if changed.rows_affected()!=1 { return Err("Insufficient inventory or product not found".into()); }
+            } else {
+                let available:i64 = levels.iter().map(|(_, count)|i64::from(*count)).sum();
+                if available < i64::from(quantity) { return Err(format!("Insufficient inventory. Available: {}",available)); }
+                let mut remaining=quantity;
+                for (level,available) in levels {
+                    let take=remaining.min(available);
+                    if take<=0 { continue; }
+                    let changed=sqlx::query("UPDATE inventory_levels SET committed_count=committed_count+$1,available_count=available_count-$1 WHERE id=$2 AND tenant_id=$3 AND available_count >= $1")
+                        .bind(take).bind(level).bind(tenant_id).execute(&mut *tx).await.map_err(|error|error.to_string())?;
+                    if changed.rows_affected()!=1 { return Err("Inventory allocation changed during reservation".into()); }
+                    remaining-=take;
+                    if remaining==0 {break;}
+                }
+            }
+            Ok(())
+        }.await;
+        if let Err(error_message) = allocation {
+            tx.rollback().await.map_err(|error| error.to_string())?;
+            self.locker.release(&lock_key, &lock_id).await;
             return Ok(ReserveResult {
                 success: false,
-                lock_id: "".to_string(),
-                error_message: "Database error".to_string(),
+                lock_id: String::new(),
+                error_message,
             });
         }
+        // An uncertain COMMIT retains its reservation lock for reconciliation.
+        tx.commit().await.map_err(|error| error.to_string())?;
+        self.publish_inventory_invalidation(tenant_id, product_id)
+            .await;
 
         Ok(ReserveResult {
             success: true,
@@ -474,50 +409,73 @@ impl InventoryService {
         quantity: i32,
         lock_id: &str,
     ) -> Result<ReleaseResult, String> {
+        if quantity <= 0 {
+            return Ok(ReleaseResult {
+                success: false,
+                error_message: "Quantity must be positive".into(),
+            });
+        }
         let lock_key = Self::get_lock_key(tenant_id, product_id);
-
-        let current_lock_id: Option<String> = self.locker.get_lock_id(&lock_key).await;
-
-        if let Some(cid) = current_lock_id
-            && cid != lock_id
-            && !lock_id.is_empty()
+        let current_lock_id = self.locker.get_lock_id(&lock_key).await;
+        if current_lock_id
+            .as_deref()
+            .is_some_and(|current| !lock_id.is_empty() && current != lock_id)
         {
             return Ok(ReleaseResult {
                 success: false,
-                error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
+                error_message: "Lock ID mismatch. Reservation may have expired.".into(),
             });
         }
-
         let pool = crate::db::get_pool();
-        if let Ok(mut tx) = pool.begin().await
-            && let Ok(_) = crate::common::auth_utils::set_org_context(&mut *tx, tenant_id).await
-        {
-            let res = sqlx::query("UPDATE inventory_levels SET committed_count = committed_count - $1, available_count = available_count + $1 WHERE variant_id = $2 AND tenant_id = $3")
-                    .bind(quantity)
-                    .bind(product_id)
-                    .bind(tenant_id)
-                    .execute(&mut *tx)
-                    .await;
-            if let Ok(res) = res
-                && res.rows_affected() == 0
-            {
-                // Fallback to legacy products
-                let _ = sqlx::query("UPDATE products SET locked_quantity = locked_quantity - $1, available_quantity = available_quantity + $1 WHERE id = $2 AND tenant_id = $3")
-                            .bind(quantity)
-                            .bind(product_id)
-                            .bind(tenant_id)
-                            .execute(&mut *tx)
-                            .await;
+        let mut tx = pool.begin().await.map_err(|error| error.to_string())?;
+        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
+            .await
+            .map_err(|error| error.to_string())?;
+        let levels:Vec<(String,i32)>=sqlx::query_as("SELECT id,committed_count FROM inventory_levels WHERE variant_id=$1 AND tenant_id=$2 ORDER BY id FOR UPDATE")
+            .bind(product_id).bind(tenant_id).fetch_all(&mut *tx).await.map_err(|error|error.to_string())?;
+        if levels.is_empty() {
+            let changed=sqlx::query("UPDATE products SET locked_quantity=locked_quantity-$1,available_quantity=available_quantity+$1 WHERE id=$2 AND tenant_id=$3 AND locked_quantity >= $1")
+                .bind(quantity).bind(product_id).bind(tenant_id).execute(&mut *tx).await.map_err(|error|error.to_string())?;
+            if changed.rows_affected() != 1 {
+                return Ok(ReleaseResult {
+                    success: false,
+                    error_message: "Reservation quantity is unavailable".into(),
+                });
             }
-
-            let _ = tx.commit().await;
+        } else {
+            let reserved: i64 = levels.iter().map(|(_, count)| i64::from(*count)).sum();
+            if reserved < i64::from(quantity) {
+                return Ok(ReleaseResult {
+                    success: false,
+                    error_message: "Reservation quantity is unavailable".into(),
+                });
+            }
+            let mut remaining = quantity;
+            for (level, reserved) in levels {
+                let take = remaining.min(reserved);
+                if take <= 0 {
+                    continue;
+                }
+                let changed=sqlx::query("UPDATE inventory_levels SET committed_count=committed_count-$1,available_count=available_count+$1 WHERE id=$2 AND tenant_id=$3 AND committed_count >= $1")
+                    .bind(take).bind(level).bind(tenant_id).execute(&mut *tx).await.map_err(|error|error.to_string())?;
+                if changed.rows_affected() != 1 {
+                    return Err("Inventory allocation changed during release".into());
+                }
+                remaining -= take;
+                if remaining == 0 {
+                    break;
+                }
+            }
         }
-
-        self.locker.clear(&lock_key).await;
-
+        tx.commit().await.map_err(|error| error.to_string())?;
+        if let Some(current) = current_lock_id {
+            self.locker.release(&lock_key, &current).await;
+        }
+        self.publish_inventory_invalidation(tenant_id, product_id)
+            .await;
         Ok(ReleaseResult {
             success: true,
-            error_message: "".to_string(),
+            error_message: String::new(),
         })
     }
 
@@ -528,8 +486,46 @@ impl InventoryService {
         quantity: i32,
         lock_id: &str,
     ) -> Result<CommitResult, String> {
+        let pool = crate::db::get_pool();
+        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
+        let result = self
+            .commit_inventory_in_transaction(
+                &mut tx,
+                tenant_id,
+                product_id,
+                quantity,
+                lock_id,
+                InventoryCommitMode::LegacyPayment,
+            )
+            .await?;
+        if !result.success {
+            tx.rollback().await.map_err(|e| e.to_string())?;
+            return Ok(result);
+        }
+        tx.commit().await.map_err(|e| e.to_string())?;
+        self.finish_inventory_commit(tenant_id, product_id, lock_id)
+            .await;
+        Ok(result)
+    }
+
+    /// The caller commits stock and its durable business receipt together.
+    /// Reservation locks remain intact until that transaction is known committed.
+    pub async fn commit_inventory_in_transaction(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tenant_id: &str,
+        product_id: &str,
+        quantity: i32,
+        lock_id: &str,
+        mode: InventoryCommitMode,
+    ) -> Result<CommitResult, String> {
+        if quantity <= 0 {
+            return Ok(CommitResult {
+                success: false,
+                error_message: "Quantity must be positive".into(),
+            });
+        }
         let mut all_match = true;
-        let mut valid_indices = Vec::new();
         let lock_id_base;
 
         let parts: Vec<&str> = lock_id.split(':').collect();
@@ -545,12 +541,11 @@ impl InventoryService {
 
             let current_lock_ids = futures::future::join_all(get_lock_futures).await;
 
-            for (idx, current_lock_id) in indices.iter().zip(current_lock_ids.iter()) {
+            for current_lock_id in &current_lock_ids {
                 if current_lock_id.as_deref() != Some(lock_id_base) {
                     all_match = false;
                     break;
                 }
-                valid_indices.push(*idx);
             }
 
             if !all_match {
@@ -559,16 +554,7 @@ impl InventoryService {
                     error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                 });
             }
-
-            let mut clear_lock_futures = Vec::new();
-            for idx in &valid_indices {
-                let lock_key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), idx);
-                clear_lock_futures.push(async move {
-                    self.locker.clear(&lock_key).await;
-                });
-            }
-            futures::future::join_all(clear_lock_futures).await;
-        } else {
+        } else if !lock_id.is_empty() {
             let lock_key = Self::get_lock_key(tenant_id, product_id);
             let current_lock_id = self.locker.get_lock_id(&lock_key).await;
             if current_lock_id != Some(lock_id.to_string()) && !lock_id.is_empty() {
@@ -577,82 +563,104 @@ impl InventoryService {
                     error_message: "Lock ID mismatch. Reservation may have expired.".to_string(),
                 });
             }
-            self.locker.clear(&lock_key).await;
         }
 
-        let pool = crate::db::get_pool();
-        let mut tx = pool.begin().await.map_err(|e| e.to_string())?;
-
-        crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
+        crate::common::auth_utils::set_org_context(&mut **tx, tenant_id)
             .await
             .map_err(|e| e.to_string())?;
 
-        // Check if centralized inventory has the item
-        let _ = sqlx::query("SELECT available_count FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2 FOR UPDATE")
-            .bind(product_id)
-            .bind(tenant_id)
-            .execute(&mut *tx)
-            .await
-            .unwrap_or_default();
-
-        let mut update_result: Option<i32> = sqlx::query_scalar("UPDATE inventory_levels SET committed_count = committed_count - $1 WHERE variant_id = $2 AND tenant_id = $3 AND committed_count >= $1 RETURNING available_count")
-            .bind(quantity)
-            .bind(product_id)
-            .bind(tenant_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .unwrap_or(None);
-
-        if update_result.is_some() {
-            let inventory_level_res = sqlx::query(
-                "SELECT id FROM inventory_levels WHERE variant_id = $1 AND tenant_id = $2",
-            )
-            .bind(product_id)
-            .bind(tenant_id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(|e| e.to_string())?;
-
-            if let Some(row) = inventory_level_res {
-                let level_id: String = sqlx::Row::get(&row, "id");
-                let tx_id = uuid::Uuid::new_v4().to_string();
-                sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'SALE', -$4)")
-                    .bind(&tx_id)
+        // Centralized locations share the requested quantity. Updating every
+        // variant row by the full quantity would multiply a single sale.
+        let levels: Vec<(String, i32, i32)> = sqlx::query_as(
+            "SELECT id,available_count,committed_count FROM inventory_levels WHERE variant_id=$1 AND tenant_id=$2 ORDER BY id FOR UPDATE",
+        )
+        .bind(product_id)
+        .bind(tenant_id)
+        .fetch_all(&mut **tx)
+        .await
+        .map_err(|e| e.to_string())?;
+        let mut update_result = None;
+        if !levels.is_empty() {
+            let available: i64 = levels.iter().map(|(_, count, _)| i64::from(*count)).sum();
+            let reserved: i64 = levels.iter().map(|(_, _, count)| i64::from(*count)).sum();
+            let use_available = mode == InventoryCommitMode::AvailableOnly
+                || (mode == InventoryCommitMode::LegacyPayment && reserved < i64::from(quantity));
+            let capacity = if use_available { available } else { reserved };
+            if capacity < i64::from(quantity) {
+                return Ok(CommitResult {
+                    success: false,
+                    error_message: format!("Insufficient inventory. Available: {}", capacity),
+                });
+            }
+            let mut remaining = quantity;
+            for (level, available_count, committed_count) in &levels {
+                if remaining == 0 {
+                    break;
+                }
+                let quantity_here = remaining.min(if use_available {
+                    *available_count
+                } else {
+                    *committed_count
+                });
+                if quantity_here <= 0 {
+                    continue;
+                }
+                let update = if use_available {
+                    "UPDATE inventory_levels SET available_count=available_count-$1 WHERE id=$2 AND tenant_id=$3 AND available_count >= $1"
+                } else {
+                    "UPDATE inventory_levels SET committed_count=committed_count-$1 WHERE id=$2 AND tenant_id=$3 AND committed_count >= $1"
+                };
+                let changed = sqlx::query(update)
+                    .bind(quantity_here)
+                    .bind(level)
                     .bind(tenant_id)
-                    .bind(level_id)
-                    .bind(quantity)
-                    .execute(&mut *tx)
+                    .execute(&mut **tx)
                     .await
                     .map_err(|e| e.to_string())?;
+                if changed.rows_affected() != 1 {
+                    return Err("Inventory allocation changed during commit".into());
+                }
+                sqlx::query("INSERT INTO inventory_transactions (id,tenant_id,inventory_level_id,type,quantity_change) VALUES ($1,$2,$3,'SALE',-$4)")
+                    .bind(Uuid::new_v4().to_string()).bind(tenant_id).bind(level).bind(quantity_here).execute(&mut **tx).await.map_err(|e|e.to_string())?;
+                remaining -= quantity_here;
             }
-        }
-
-        if update_result.is_none() {
+            let remaining_available = available
+                - if use_available {
+                    i64::from(quantity)
+                } else {
+                    0
+                };
+            update_result = Some(i32::try_from(remaining_available).unwrap_or(i32::MAX));
+        } else {
             // Enforce row-level locking for final commit on legacy
-            let _ = sqlx::query(
+            sqlx::query(
                 "SELECT inventory_count FROM products WHERE id = $1 AND tenant_id = $2 FOR UPDATE",
             )
             .bind(product_id)
             .bind(tenant_id)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await
             .map_err(|e| e.to_string())?;
 
-            update_result = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
+            if mode != InventoryCommitMode::AvailableOnly {
+                update_result = sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, locked_quantity = locked_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND locked_quantity >= $1 RETURNING inventory_count")
                 .bind(quantity)
                 .bind(product_id)
                 .bind(tenant_id)
-                .fetch_optional(&mut *tx)
+                .fetch_optional(&mut **tx)
                 .await
-                .unwrap_or(None);
+                .map_err(|e| e.to_string())?;
+            }
 
-            update_result = if update_result.is_none() {
-                // Fallback: If not enough locked quantity, deduct from available quantity directly (e.g. offline POS sync or direct commit without reserve)
+            update_result = if update_result.is_none() && mode != InventoryCommitMode::ReservedOnly
+            {
+                // Legacy paid/offline callers historically fall back to available
+                // stock. Cash selects that behavior explicitly, never by token absence.
                 sqlx::query_scalar("UPDATE products SET inventory_count = inventory_count - $1, available_quantity = available_quantity - $1 WHERE id = $2 AND tenant_id = $3 AND inventory_count >= $1 AND available_quantity >= $1 RETURNING inventory_count")
                 .bind(quantity)
                 .bind(product_id)
                 .bind(tenant_id)
-                .fetch_optional(&mut *tx)
+                .fetch_optional(&mut **tx)
                 .await
                 .map_err(|e| e.to_string())?
             } else {
@@ -669,12 +677,13 @@ impl InventoryService {
             })
             .to_string();
 
-            let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'InventoryUpdated', $3::jsonb, 'PENDING')")
+            sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'InventoryUpdated', $3::jsonb, 'PENDING')")
                 .bind(event_id)
                 .bind(tenant_id)
                 .bind(&event_payload)
-                .execute(&mut *tx)
-                .await;
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
             let payload_str = serde_json::json!({
                 "product_id": product_id,
@@ -684,12 +693,13 @@ impl InventoryService {
             })
             .to_string();
 
-            let _ = sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
                 .bind(Uuid::new_v4().to_string())
                 .bind(tenant_id)
                 .bind(&payload_str)
-                .execute(&mut *tx)
-                .await;
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| e.to_string())?;
 
             if new_stock <= 5 {
                 let product_title: String = sqlx::query_scalar(
@@ -697,9 +707,9 @@ impl InventoryService {
                 )
                 .bind(product_id)
                 .bind(tenant_id)
-                .fetch_optional(&mut *tx)
+                .fetch_optional(&mut **tx)
                 .await
-                .unwrap_or(Some(product_id.to_string()))
+                .map_err(|e| e.to_string())?
                 .unwrap_or_else(|| product_id.to_string());
 
                 let job_id = Uuid::new_v4().to_string();
@@ -722,12 +732,13 @@ impl InventoryService {
                 })
                 .to_string();
 
-                let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
+                sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
                     .bind(job_id)
                     .bind(tenant_id)
                     .bind(&job_payload)
-                    .execute(&mut *tx)
-                    .await;
+                    .execute(&mut **tx)
+                    .await
+                .map_err(|e| e.to_string())?;
 
                 // Directly notify Operations Agent for real-time monitoring as per Step 3
                 tracing::info!(
@@ -742,13 +753,14 @@ impl InventoryService {
                     "suggested_action": "Restock Item"
                 })
                 .to_string();
-                let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+                sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
                     .bind(&action_request_id)
                     .bind(tenant_id)
                     .bind(product_id)
                     .bind(&action_payload)
-                    .execute(&mut *tx)
-                    .await;
+                    .execute(&mut **tx)
+                    .await
+                .map_err(|e| e.to_string())?;
 
                 let feed_id = Uuid::new_v4().to_string();
                 let feed_payload = serde_json::json!({
@@ -759,15 +771,16 @@ impl InventoryService {
                 let proposed_action = serde_json::json!({
                     "action": "Review and approve restock order"
                 });
-                let _ = sqlx::query(
+                sqlx::query(
                     "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state) VALUES ($1, $2, 'operations', $3::jsonb, $4::jsonb, 'PENDING_APPROVAL')"
                 )
                 .bind(&feed_id)
                 .bind(tenant_id)
                 .bind(&feed_payload)
                 .bind(&proposed_action)
-                .execute(&mut *tx)
-                .await;
+                .execute(&mut **tx)
+                .await
+                .map_err(|e| e.to_string())?;
             }
         } else {
             let current_stock: Option<i32> = sqlx::query_scalar(
@@ -775,11 +788,9 @@ impl InventoryService {
             )
             .bind(product_id)
             .bind(tenant_id)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&mut **tx)
             .await
             .map_err(|e| e.to_string())?;
-
-            let _ = tx.rollback().await;
 
             if let Some(stock) = current_stock {
                 return Ok(CommitResult {
@@ -794,7 +805,29 @@ impl InventoryService {
             }
         }
 
-        tx.commit().await.map_err(|e| e.to_string())?; // Publish to Redis Pub/Sub for Real-Time Sync
+        Ok(CommitResult {
+            success: true,
+            error_message: String::new(),
+        })
+    }
+
+    /// Compare-and-delete prevents a slow commit from clearing a newer lock.
+    pub async fn finish_inventory_commit(&self, tenant_id: &str, product_id: &str, lock_id: &str) {
+        if let Some((base, indices)) = lock_id.split_once(':') {
+            for index in indices.split(',') {
+                let key = format!("{}:{}", Self::get_lock_key(tenant_id, product_id), index);
+                self.locker.release(&key, base).await;
+            }
+        } else if !lock_id.is_empty() {
+            self.locker
+                .release(&Self::get_lock_key(tenant_id, product_id), lock_id)
+                .await;
+        }
+        self.publish_inventory_invalidation(tenant_id, product_id)
+            .await;
+    }
+
+    async fn publish_inventory_invalidation(&self, tenant_id: &str, product_id: &str) {
         if let Some(client) = &self.redis_client
             && let Ok(mut conn) = client.get_multiplexed_async_connection().await
         {
@@ -813,11 +846,6 @@ impl InventoryService {
                 .query_async(&mut conn)
                 .await;
         }
-
-        Ok(CommitResult {
-            success: true,
-            error_message: "".to_string(),
-        })
     }
 }
 

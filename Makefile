@@ -54,7 +54,9 @@ prepare-desktop:
 	OMNISOLO_PREBUILT_WEB=target/native-web $(NPM) run desktop:prepare
 
 build-e2e:
+	node scripts/native-binary-proof.mjs snapshot "$(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/native-source-snapshot.json"
 	$(CARGO) build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
+	node scripts/native-binary-proof.mjs record "$(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/native-source-snapshot.json" "$(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/native-binary-proof.json"
 	$(MAKE) build-web
 
 test-e2e:

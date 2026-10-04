@@ -2,6 +2,13 @@ import { act,fireEvent,render,screen } from '@testing-library/react';
 import { afterEach,beforeEach,describe,expect,it,vi } from 'vitest';
 import OrderDetailsPage from './page';
 
+function pendingErrorResponse(status: number) {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value; } });
+  const response = new Response(stream, { status, headers: { 'content-type': 'application/json' } });
+  controller.enqueue(new TextEncoder().encode('{"error":'));
+  return { response, complete() { controller.enqueue(new TextEncoder().encode('"review required"}')); controller.close(); } };
+}
 const route=vi.hoisted(()=>({id:'order-1'}));
 vi.mock('next/navigation', () => ({ useParams: () => ({ id: route.id }) }));
 afterEach(()=>{route.id='order-1';});
@@ -10,6 +17,24 @@ vi.mock('../../components/AppShell', () => ({
 }));
 
 describe('OrderDetailsPage', () => {
+  it('finishes a rejected rates body before exposing the fulfillment error', async () => {
+    const pending = pendingErrorResponse(400);
+    global.fetch = vi.fn(async (url: string) => url === '/api/v1/ui/orders/order-1'
+      ? Response.json({ id: 'order-1', customer_name: 'A Customer' }) : pending.response);
+    render(<OrderDetailsPage />);
+    await screen.findByText('A Customer');
+    fireEvent.change(screen.getByLabelText('Package weight in ounces'), { target: { value: '16' } });
+    fireEvent.change(screen.getByLabelText('Package dimensions'), { target: { value: '0x10x8' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Get Shipping Rates' }));
+    await act(async () => { await Promise.resolve(); });
+    expect(pending.response.bodyUsed).toBe(true);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Get Shipping Rates' })).toBeDisabled();
+    await act(async () => pending.complete());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Shipping rates are unavailable.');
+    expect(screen.queryByRole('button', { name: 'Buy Label' })).toBeNull();
+  });
+
   beforeEach(() => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === '/api/v1/ui/orders/order-1') {

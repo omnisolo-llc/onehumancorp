@@ -1,7 +1,7 @@
 import type { Page, Response } from '@playwright/test';
 import { quoteAuditRoutes as sourceQuoteRoutes, quoteAuditRoute } from '../../../scripts/ui-audit-fixture.cjs';
 import { E2E_ADMIN_USER } from '../identities';
-import { createOwnerQuote } from '../playwright/quote_fixture';
+import { createOwnerQuoteFromRequest } from '../playwright/quote_fixture';
 import { parseQuoteDetail } from '../../ui/next/src/app/quotes/[id]/quoteDetail';
 import { isQuoteVersion } from '../../ui/next/src/lib/quoteVersion';
 import type { AuditNavigationReceipt } from './ui_audit_navigation';
@@ -53,8 +53,9 @@ export async function navigateQuoteAudit(page: Page, baseURL: string, route: str
 
 export async function prepareQuoteAudit(page: Page, baseURL: string, route: string, navigate: Navigate) {
   if (!quoteAuditRoutes.has(route)) throw new Error('Unclassified quote audit route');
-  await navigate(page, '/dashboard');
   const description = 'UI audit persisted quote';
-  const created = await createOwnerQuote(page, E2E_ADMIN_USER.organizationId, { description, priceCents: 15000 });
+  const created = await createOwnerQuoteFromRequest(page.request, baseURL, {
+    username: E2E_ADMIN_USER.email, password: E2E_ADMIN_USER.password, organizationId: E2E_ADMIN_USER.organizationId,
+  }, { description, priceCents: 15000 });
   return navigateQuoteAudit(page, baseURL, route, { ...created, tenantId: E2E_ADMIN_USER.organizationId, description, priceCents: 15000, depositCents: 1000 }, navigate);
 }

@@ -7,6 +7,8 @@ import { loadStripeTerminal, type Terminal, type Reader } from '@stripe/terminal
 import '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
 import { WalkthroughTarget } from '../../../components/Walkthrough';
+import { readQueueOwner, sameOwner, currentVerifiedQueueOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
+import { cashItems, cashAttemptLock, readCashAttempt, persistCashAttempt, retireCashAttempt, confirmedCashReceipt, type CashAttempt } from './cashReceipt';
 
 interface StripeTerminalClientProps {
   onSuccess?: (amount: number) => void;
@@ -32,6 +34,55 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const mounted = useRef(false);
   const offlineAttempt = useRef(0);
   const offlinePending = useRef(false);
+  const cashPending = useRef(false);
+  const cashVersion = useRef(0);
+  const cashStartedHere = useRef<string | null>(null);
+  const currentCart = useRef({ amount, productId, cart, onOptimisticReserve, onSuccess });
+  currentCart.current = { amount, productId, cart, onOptimisticReserve, onSuccess };
+  const [cashHeld, setCashHeld] = useState<CashAttempt | null>(null);
+  const [cashRecorded, setCashRecorded] = useState(false);
+  const [cashRetryAllowed, setCashRetryAllowed] = useState(false);
+  const [cashRecoveryError, setCashRecoveryError] = useState(false);
+  const methodRef = useRef(selectedMethod);
+  methodRef.current = selectedMethod;
+
+  useEffect(() => {
+    const invalidate = () => {
+      cashVersion.current += 1; cashPending.current = false; cashStartedHere.current = null;
+      setCashHeld(null); setCashRecorded(false); setCashRetryAllowed(false); setCashRecoveryError(false); setReserving(false);
+    };
+    const storage = (event: StorageEvent) => { if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) invalidate(); };
+    window.addEventListener('omnisolo_auth_changed', invalidate);
+    window.addEventListener('pagehide', invalidate);
+    window.addEventListener('storage', storage);
+    return () => { cashVersion.current += 1; window.removeEventListener('omnisolo_auth_changed', invalidate); window.removeEventListener('pagehide', invalidate); window.removeEventListener('storage', storage); };
+  }, []);
+
+  useEffect(() => {
+    const restore = () => {
+      if (cashPending.current) return;
+      const owner = currentVerifiedQueueOwner();
+      if (!owner || owner.tenantId !== tenantId) return;
+      try {
+        const previous = readCashAttempt(owner);
+        if (previous) {
+          setCashHeld(previous); setSelectedMethod('cash');
+          setStatus('An earlier cash sale needs confirmation. Check the recorded sale before trying again.');
+        }
+      } catch {
+        setCashRecoveryError(true); setSelectedMethod('cash');
+        setStatus('Cash sale recovery storage is unavailable. Review recorded orders before another payment.');
+      }
+    };
+    const changed = (event: StorageEvent) => {
+      const owner = currentVerifiedQueueOwner();
+      if (owner && event.key === cashAttemptLock(owner)) restore();
+    };
+    const unsubscribe = subscribeQueueIdentityReadiness(restore);
+    window.addEventListener('storage', changed);
+    restore();
+    return () => { unsubscribe(); window.removeEventListener('storage', changed); };
+  }, [tenantId]);
 
   useEffect(() => {
     mounted.current = true;
@@ -56,7 +107,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     async function initTerminal() {
       const StripeTerminal = await loadStripeTerminal();
       if (!StripeTerminal) {
-        setStatus('Failed to load Stripe Terminal SDK.');
+        if (methodRef.current === 'tap') setStatus('Failed to load Stripe Terminal SDK.');
         return;
       }
 
@@ -79,7 +130,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         }
       });
       setTerminal(term);
-      setStatus('Terminal initialized. Ready to discover readers.');
+      if (methodRef.current === 'tap') setStatus('Terminal initialized. Ready to discover readers.');
     }
     initTerminal();
   }, []);
@@ -211,50 +262,95 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
     }
   };
 
-  const processCashSale = async () => {
-     if (typeof window !== 'undefined' && !navigator.onLine) {
-       await queueOfflineSale('cash_sale');
-       return;
-     }
-
-     setStatus('Processing cash sale...');
-     // Online cash sale: explicitly reserve and commit inventory
-     try {
-         let lockId = '';
-         if (productId) {
-             const reserveRes = await fetch('/api/v1/payments/terminal/reserve', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: cart?.[0]?.quantity || 1, ttl_seconds: 15 })
-             });
-             const reserveData = await reserveRes.json();
-             if (!reserveRes.ok || !reserveData.success) {
-                 setStatus('Failed to reserve inventory: ' + (reserveData.error_message || ''));
-                 if (onOptimisticRollback) onOptimisticRollback();
-                 return;
-             }
-             lockId = reserveData.lock_id;
-         }
-
-         if (onOptimisticReserve) onOptimisticReserve();
-
-         if (productId && lockId) {
-             const commitRes = await fetch('/api/v1/payments/terminal/commit', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ tenant_id: tenantId, product_id: productId, quantity: cart?.[0]?.quantity || 1, lock_id: lockId, amount_cents: amount })
-             });
-             if (!commitRes.ok) {
-                 setStatus('Failed to commit inventory');
-                 return;
-             }
-         }
-
-         setStatus('Cash sale recorded.');
-         if (mounted.current) onSuccess?.(amount);
-     } catch  {
-         setStatus('Error processing cash sale');
-     }
+  const processCashSale = async (readback = false, retrySameOperation = false) => {
+    if (cashPending.current || cashRecorded || cashRecoveryError || (!readback && !retrySameOperation && cashHeld)
+      || (retrySameOperation && !cashRetryAllowed)) return;
+    if (typeof window !== 'undefined' && !navigator.onLine) {
+      if (readback || retrySameOperation) {
+        setStatus('Reconnect to check the original cash sale. No replacement sale was queued.');
+      } else await queueOfflineSale('cash_sale');
+      return;
+    }
+    cashPending.current = true;
+    const version = ++cashVersion.current;
+    let storageEpoch: string | null = null;
+    const sameView = () => mounted.current && version === cashVersion.current;
+    const current = () => {
+      try { return sameView() && storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+      catch { return false; }
+    };
+    setReserving(true); setCashRetryAllowed(false); setStatus(readback ? 'Checking recorded cash sale...' : 'Verifying cash sale...');
+    let submitted = false;
+    try {
+      storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+      const owner = await readQueueOwner();
+      if (!current()) return;
+      if (owner.tenantId !== tenantId) throw new Error('The signed business changed. Reopen the terminal before recording cash.');
+      if (!navigator.locks) throw new Error('Cash sale coordination is unavailable. No sale was submitted.');
+      await navigator.locks.request(cashAttemptLock(owner), { mode: 'exclusive', ifAvailable: true }, async lock => {
+        if (!current()) return;
+        if (!lock) { setStatus('Another cash sale is being checked. Wait before trying again.'); return; }
+        const earlier = readCashAttempt(owner);
+        if (earlier && !readback && !retrySameOperation) {
+          setCashHeld(earlier); setStatus('An earlier cash sale needs confirmation. Check the recorded sale before trying again.');
+          return;
+        }
+        if ((readback || retrySameOperation) && (!earlier || !cashHeld || earlier.request.operation_id !== cashHeld.request.operation_id)) {
+          throw new Error('The cash sale recovery record changed. Reopen the terminal to review it.');
+        }
+        const attempt = earlier ?? persistCashAttempt(owner, cashItems(cart, productId, amount), amount);
+        if (!earlier) cashStartedHere.current = attempt.request.operation_id;
+        setCashHeld(attempt);
+        const headers = { 'Content-Type': 'application/json', 'x-ohc-expected-user': owner.userId, 'x-ohc-expected-tenant': owner.tenantId };
+        submitted = true;
+        let response: Response;
+        let body: unknown;
+        try {
+          response = await fetch(readback ? `/api/v1/payments/terminal/commit/${attempt.request.operation_id}` : '/api/v1/payments/terminal/commit', {
+            method: readback ? 'GET' : 'POST', headers, credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+            ...(readback ? {} : { body: JSON.stringify(attempt.request) }),
+          });
+          body = await response.json();
+        } catch {
+          if (current()) setStatus('Cash sale outcome is unknown. Check the recorded sale before trying again.');
+          return;
+        }
+        if (!current()) return;
+        const verified = await readQueueOwner();
+        if (!current() || !sameOwner(verified, owner)) return;
+        if (response.status === 200 && confirmedCashReceipt(body, attempt)) {
+          const view = currentCart.current;
+          let matchesCurrentCart = false;
+          try {
+            matchesCurrentCart = view.amount === attempt.request.amount_cents
+              && JSON.stringify(cashItems(view.cart, view.productId, view.amount)) === JSON.stringify(attempt.request.items);
+          } catch { /* The recovered sale cannot complete an invalid current cart. */ }
+          const appliesToThisCart = cashStartedHere.current === attempt.request.operation_id && matchesCurrentCart;
+          retireCashAttempt(attempt); setCashHeld(null); cashStartedHere.current = null;
+          setCashRecorded(appliesToThisCart);
+          if (appliesToThisCart) {
+            setStatus('Cash sale recorded.');
+            try { view.onOptimisticReserve?.(); view.onSuccess?.(attempt.request.amount_cents); }
+            catch { setStatus('Cash sale recorded. Reopen the recorded order to refresh this view.'); }
+          } else setStatus('The earlier cash sale is recorded. This cart has not been recorded.');
+        } else if (!readback && [400, 403, 409].includes(response.status) && body && typeof body === 'object'
+          && 'success' in body && body.success === false && 'status' in body && body.status === 'rejected') {
+          retireCashAttempt(attempt); setCashHeld(null);
+          setStatus('Cash sale rejected. Review the cart and available inventory before trying again.');
+        } else {
+          const notFound = readback && response.status === 404 && body && typeof body === 'object'
+            && 'success' in body && body.success === false && 'status' in body && body.status === 'not_found';
+          setCashRetryAllowed(!!notFound);
+          setStatus(notFound ? 'No committed receipt found. The original sale may still finish. Check again or retry this same sale.'
+            : 'Cash sale outcome is unknown. Check the recorded sale before trying again.');
+        }
+      });
+    } catch (cause) {
+      if (sameView()) setStatus(submitted ? 'Cash sale outcome is unknown. Check the recorded sale before trying again.'
+        : errorMessage(cause, 'Cash sale could not be verified. No sale was submitted.'));
+    } finally {
+      if (sameView()) { cashPending.current = false; setReserving(false); }
+    }
   };
 
   return (
@@ -292,7 +388,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              <h2 className="text-lg font-bold font-outfit text-gray-900">
                {selectedMethod === 'tap' ? 'Tap to Pay Active' : selectedMethod === 'link' ? 'Send Payment Link' : 'Record Cash Sale'}
              </h2>
-             <button onClick={() => setSelectedMethod(null)} className="text-sm font-bold text-gray-500 hover:text-gray-700">Back</button>
+             <button disabled={reserving || cashHeld !== null || cashRecorded || cashRecoveryError} onClick={() => setSelectedMethod(null)} className="text-sm font-bold text-gray-500 hover:text-gray-700">Back</button>
           </div>
           <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
@@ -381,26 +477,11 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {selectedMethod === 'cash' && (
             <div className="mt-4">
-               <button id="cash-btn-offline" onClick={async () => {
-                 setStatus('Recording...');
-                 setReserving(true);
-                 try {
-                   if (typeof window !== 'undefined' && navigator.onLine) {
-                     await fetch('/api/v1/checkout/session', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
-                     });
-                   }
-                   await processCashSale();
-                 } catch(e) {
-                   setStatus('Error: ' + errorMessage(e, ''));
-                 } finally {
-                   setReserving(false);
-                 }
-               }} disabled={reserving || offlineQueued} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+               <button id="cash-btn-offline" onClick={() => { void processCashSale(); }} disabled={reserving || offlineQueued || cashHeld !== null || cashRecorded || cashRecoveryError} className={`w-full bg-gradient-to-b from-[#FF9500] to-[#E58600] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-orange-500/30 transition-all backdrop-blur-[30px] saturate-[210%] border border-white/20 ${reserving ? 'opacity-50' : 'hover:shadow-orange-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                  {reserving ? 'Processing...' : `Record Offline Cash Sale ${(amount / 100).toFixed(2)}`}
                </button>
+               {cashHeld && <button type="button" disabled={reserving} onClick={() => { void processCashSale(true); }}>Check recorded cash sale</button>}
+               {cashHeld && cashRetryAllowed && <button type="button" disabled={reserving} onClick={() => { void processCashSale(false, true); }}>Retry same cash sale</button>}
             </div>
           )}
 

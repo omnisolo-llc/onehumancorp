@@ -110,7 +110,7 @@ for (const route of routes) {
       const rejection = await rejected;
       expect(rejection.status(), await rejection.text()).toBe(409);
       expect(rejection.request().postDataJSON()).toEqual({ expected_updated_at: original.quote.updated_at });
-      await expect(page.getByRole('alert')).toContainText('could not be confirmed');
+      await expect(page.getByRole('region', { name: 'Quote details' }).getByRole('alert')).toContainText('could not be confirmed');
       await expect(page.getByRole('button', { name: 'Accept quote', exact: true })).toBeDisabled();
       const [before] = await e2eDbQuery('SELECT COUNT(*)::int AS count FROM invoices WHERE quote_id::text=$1 AND tenant_id=$2', [quoteId, adminUser.organizationId]);
       expect(before.count).toBe(0);
@@ -138,7 +138,7 @@ for (const route of routes) {
       const read = page.waitForResponse(response => new URL(response.url()).pathname === endpoint && response.request().method() === 'GET');
       await page.goto(route.path(quoteId));
       expect((await read).status()).toBe(404);
-      await expect(page.getByRole('alert')).toContainText('Quote not found');
+      await expect(page.getByRole('region', { name: 'Quote details' }).getByRole('alert')).toContainText('Quote not found');
       await expect(page.getByText(/Private customer terms/)).toHaveCount(0);
       await expect(page.getByRole('button', { name: 'Accept quote', exact: true })).toHaveCount(0);
       const denied = await page.request.post(`${endpoint}/accept`, {

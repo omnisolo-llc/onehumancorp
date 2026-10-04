@@ -186,6 +186,16 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       runId: suffix, containerName: pg, containerId: container.Id, port: pgPort,
     }), { mode: 0o600, flag: 'wx' });
     verifiedFixtureDatabaseUrl(env);
+    // The configured-checkout journey alone may start a second owned process
+    // pair from these same-run outputs. It verifies producer/source hashes and
+    // this DB identity before startup; global Stripe-missing cases stay intact.
+    env.OMNISOLO_E2E_CHECKOUT_RUNTIME = path.join(temp, 'checkout-runtime.json');
+    await writeFile(env.OMNISOLO_E2E_CHECKOUT_RUNTIME, JSON.stringify({
+      schemaVersion: 1, runId: suffix, server, agent, web,
+      binaryProof: path.join(path.dirname(server), 'native-binary-proof.json'),
+      databaseUrl: verifiedFixtureDatabaseUrl(env), redisUrl: env.REDIS_URL,
+      databaseProof: env.OMNISOLO_E2E_FIXTURE_PROOF,
+    }), { mode: 0o600, flag: 'wx' });
     // A real HTTP provider boundary, owned by this run; never inherited live credentials.
     shippoFixture = await startShippoBrowserFixture({ runId: suffix, tenantId: 'e2e-tenant' });
     Object.assign(env, shippoFixture.environment);

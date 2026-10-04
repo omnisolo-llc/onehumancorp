@@ -415,6 +415,16 @@ pub async fn create_checkout_session_handler(
         return Err(StatusCode::BAD_REQUEST);
     }
 
+    // Fail before inventory allocation for missing or invalid provider setup.
+    let tracker = hub.tracker();
+    let client = tracker
+        .stripe_client
+        .as_ref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    client
+        .require_api_key()
+        .map_err(|_| StatusCode::SERVICE_UNAVAILABLE)?;
+
     let mut acquired_lock_id = "".to_string();
     if let Some(product_id) = &req.product_id {
         let ttl = req.ttl_seconds.unwrap_or(300); // 5 minutes default for online checkout
@@ -436,7 +446,7 @@ pub async fn create_checkout_session_handler(
         }
     }
 
-    if let Some(client) = &hub.tracker().stripe_client {
+    {
         let savings =
             crate::integrations::stripe::routing::PaymentRouter::calculate_fee_savings(amount_usd);
         if savings > 0.0 {
@@ -472,8 +482,6 @@ pub async fn create_checkout_session_handler(
                 Err(StatusCode::INTERNAL_SERVER_ERROR)
             }
         }
-    } else {
-        Err(axum::http::StatusCode::SERVICE_UNAVAILABLE)
     }
 }
 

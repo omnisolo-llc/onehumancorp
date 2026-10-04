@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InteractiveQuotePage from './page';
 import CustomerProposalView from '../../proposals/customer-view/page';
@@ -36,6 +36,13 @@ function deferred<T>() {
   const promise = new Promise<T>(r => { resolve = r; });
   return { promise, resolve };
 }
+function pendingErrorResponse(status: number) {
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value; } });
+  const response = new Response(stream, { status, headers: { 'content-type': 'application/json' } });
+  controller.enqueue(new TextEncoder().encode('{"error":'));
+  return { response, complete() { controller.enqueue(new TextEncoder().encode('"review required"}')); controller.close(); } };
+}
 const fetcher = vi.mocked(fetch);
 const posts = () => fetcher.mock.calls.filter(([, options]) => options?.method === 'POST');
 const acceptButton = () => screen.getByRole('button', { name: 'Accept quote' });
@@ -61,6 +68,40 @@ describe.each([
     await ready();
     fireEvent.click(acceptButton());
   }
+
+  it.each([404, 500])('finishes the HTTP %s read body before reporting missing or unavailable', async status => {
+    const pending = pendingErrorResponse(status);
+    fetcher.mockResolvedValueOnce(pending.response);
+    render(<Page />);
+    await act(async () => { await Promise.resolve(); });
+    expect(pending.response.bodyUsed).toBe(true);
+    expect(screen.getByText('Loading quote...')).toBeVisible();
+    await act(async () => pending.complete());
+    await screen.findByText(status === 404 ? 'Quote not found.' : 'This quote is unavailable.');
+  });
+
+  it('finishes a rejected acceptance body before its single reconciliation readback', async () => {
+    const pending = pendingErrorResponse(409);
+    fetcher.mockResolvedValueOnce(Response.json(detail())).mockResolvedValueOnce(pending.response)
+      .mockResolvedValueOnce(Response.json(detail()));
+    await submit();
+    await act(async () => { await Promise.resolve(); });
+    expect(pending.response.bodyUsed).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/Acceptance could not be confirmed/)).toBeNull();
+    await act(async () => pending.complete());
+    await screen.findByText(/Acceptance could not be confirmed/);
+    expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(posts()).toHaveLength(1);
+  });
+
+  it('keeps the actual quote error scoped separately from the empty Next route announcer', async () => {
+    fetcher.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    render(<><Page /><div role="alert" aria-live="assertive" id="__next-route-announcer__" /></>);
+    await screen.findByText('Quote not found.');
+    expect(screen.getAllByRole('alert')).toHaveLength(2);
+    expect(within(screen.getByRole('region', { name: 'Quote details' })).getByRole('alert')).toHaveTextContent('Quote not found.');
+  });
 
   it('marks the real read as pending until its result is rendered', async () => {
     const pending = deferred<Response>();

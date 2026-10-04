@@ -123,7 +123,8 @@ const navigateApp = createAuditNavigation(auditBaseURL, async (page) => {
 
 
 // Every read-only sweep also needs a real quote, including query-based pages.
-// API-backed creation starts from a verified same-origin authenticated document.
+// API-backed creation verifies the configured local origin and current session
+// without mounting an unrelated document before the quote.
 async function gotoReady(page: Page, route: string): Promise<AuditNavigationReceipt> {
   return quoteAuditRoutes.has(route)
     ? prepareQuoteAudit(page, auditBaseURL, route, navigateApp)

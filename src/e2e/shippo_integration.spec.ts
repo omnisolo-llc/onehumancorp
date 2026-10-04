@@ -7,6 +7,10 @@ import { verifiedShippoBrowserEnvironment } from '../../scripts/shippo-browser-f
 
 type ShippingFixture = Awaited<ReturnType<typeof prepareOrder>>;
 
+function fulfillmentSection(page: Page) {
+  return page.locator('section').filter({ has: page.getByRole('heading', { name: 'Fulfillment', exact: true }) });
+}
+
 async function providerEvidence(path: string) {
   const provider = verifiedShippoBrowserEnvironment();
   const url = new URL(path, provider.baseURL);
@@ -84,7 +88,7 @@ async function purchaseAndVerifyLabel(page: Page, fixture: ShippingFixture) {
   const signedRate = rates.rates[0].id as string;
   const [rateId, signature] = signedRate.split('.');
   expect(signature).toBe(createHmac('sha256', fixture.token).update(`${fixture.tenantId}\0${fixture.orderId}\0${rateId}`).digest('hex'));
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(fulfillmentSection(page).getByRole('alert')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Select a Service', exact: true })).toBeVisible();
   const radio = page.getByRole('radio', { name: /USPS Priority Mail/ });
   await radio.check();
@@ -171,7 +175,7 @@ test('User encounters invalid parcel dimensions and corrects them before purchas
   const response = await rejected;
   expect(response.status()).toBe(400);
   expect(await response.json()).toEqual({ error: 'dimensions must contain three positive numbers' });
-  await expect(page.getByRole('alert')).toHaveText('Shipping rates are unavailable.');
+  await expect(fulfillmentSection(page).getByRole('alert')).toHaveText('Shipping rates are unavailable.');
   await expect(page.getByRole('radio')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Buy Label', exact: true })).toHaveCount(0);
   expect(await e2eDbQuery('SELECT id FROM shipping_purchase_intents WHERE organization_id=$1 AND order_id=$2', [fixture.tenantId, fixture.orderId])).toEqual([]);

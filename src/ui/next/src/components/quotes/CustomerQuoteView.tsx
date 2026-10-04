@@ -41,8 +41,12 @@ function committedReceipt(quote: QuoteDetail): AcceptanceReceipt | null {
 
 async function readQuote(id: string, signal?: AbortSignal): Promise<QuoteDetail | null> {
   const response = await fetch(`/api/v1/quotes/${id}`, { cache: 'no-store', signal });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error('Quote read failed');
+  if (!response.ok) {
+    // Complete finite error bodies before exposing the result or reusing this view.
+    await response.arrayBuffer();
+    if (response.status === 404) return null;
+    throw new Error('Quote read failed');
+  }
   return parseQuoteDetail(await response.json(), id);
 }
 
@@ -135,8 +139,9 @@ export function CustomerQuoteView({ id }: { id: string }) {
           // Send the exact GET token. Date serialization would lose microseconds.
           body: JSON.stringify({ expected_updated_at: quote.updated_at }),
         });
+        const body: unknown = await response.json();
         if (current !== operation.current) return;
-        if (response.ok) returnedReceipt = parseReceipt(await response.json(), id);
+        if (response.ok) returnedReceipt = parseReceipt(body, id);
       } catch {
         // A lost/malformed response can follow a committed local invoice. One
         // owned readback can prove that result; never automatically POST again.
@@ -164,14 +169,14 @@ export function CustomerQuoteView({ id }: { id: string }) {
 
   const refreshButton = <button className={buttonClass} disabled={busy || !validReference} onClick={() => setRefresh(value => value + 1)} type="button">Refresh quote</button>;
   if (loading) return <p className="py-10 text-sm text-gray-600" role="status" aria-busy="true">Loading quote...</p>;
-  if (!quote) return <section className="app-panel max-w-lg space-y-4 rounded-lg p-5">
+  if (!quote) return <section aria-label="Quote details" className="app-panel max-w-lg space-y-4 rounded-lg p-5">
     <p role="alert">{loadError ?? 'Quote not found.'}</p>
     {refreshNotice && <p role="status">{refreshNotice}</p>}
     {refreshButton}
   </section>;
 
   const paymentLink = receipt ? paymentContinuation(receipt, quote) : null;
-  return <div className="max-w-2xl space-y-5">
+  return <div role="region" aria-label="Quote details" className="max-w-2xl space-y-5">
     <section className="app-panel rounded-lg p-5">
       <h1 className="text-xl font-semibold">Your Quote</h1>
       <p className="mt-1 font-mono text-sm">Quote ID: {quote.id}</p>
