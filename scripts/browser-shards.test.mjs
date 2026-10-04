@@ -11,17 +11,21 @@ test('complete CI accepts only owned three-way grouping, never a caller test lis
 
 import shards from './browser-shards.cjs';
 const source = { commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64) };
-test('groups balance two successful observations within the 15–20 minute testing target', () => {
+test('groups balance observed variability within the 15–20 minute testing target', () => {
   // Original twelve-runner baseline 37209169837 and isolated three-runner
-  // run 37218212302: actual logical wall time, not summed test durations.
+  // run 37218212302, plus failed run 37220871509: actual logical wall time,
+  // not summed test durations. Failed-run timings are not correctness evidence.
   const observations = [
     [515.711,583.814,592.806,636.707,169.255,176.713,177.645,151.762,131.271,97.056,84.588,168.227],
     [520.936734,475.641143,574.614912,710.200950,198.374961,128.114481,130.298400,150.215440,133.160062,55.572656,104.618273,204.805025],
+    [470.170703,713.415726,455.530801,599.729003,163.682787,137.504137,142.918925,125.912642,144.385638,70.415350,103.044192,162.060979],
   ];
   for (const seconds of observations) {
     const totals=shards.GROUPS.map(group=>group.reduce((sum,index)=>sum+seconds[index-1],0));
     for(const estimate of totals) assert.ok(estimate>=15*60&&estimate<=20*60, `${estimate/60} modeled minutes`);
-    assert.ok(Math.max(...totals)-Math.min(...totals)<=75,'modeled active testing spread must stay within 75 seconds');
+    // Exhaustive partitioning puts the best possible worst spread at 121.78s
+    // for these observations. Allow 130s while preserving the 15–20m bounds.
+    assert.ok(Math.max(...totals)-Math.min(...totals)<=130,'modeled active testing spread must stay within 130 seconds');
   }
 });
 
