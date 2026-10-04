@@ -1,4 +1,0 @@
-{
-  "issue_title": "Blocked: #27486 Autonomous Appointment Booking & Resource Management System",
-  "issue_description": "The requested feature to 'Build Autonomous Appointment Booking & Resource Management System' (Issue #27486) for 'Leo the Music Tutor' is blocked. According to RESEARCH.md and docs/research/business_capability_and_usage_economics_audit.md, the current decision is to 'repair the evidence foundation and evaluate resource-based charging/customer-funded inference. Retain existing business modules; do not build another generic assistant, duplicate subsystem or broad ERP on the basis of this research. Keep proposal, launch, retail and field-service paths as candidates until code verification and owner evidence justify selection.' Without owner evidence to justify this expansion, implementing this new capability is blocked."
-}
