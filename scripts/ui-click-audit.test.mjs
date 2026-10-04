@@ -242,3 +242,64 @@ test('dynamic order route audits the canonical persisted fixture instead of an i
     assert.match(seed, /INSERT INTO orders[\s\S]*?'e2e-seeded-record'/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+function quoteFixture(route = '/quotes/e2e-id') {
+  const f = fixture([route, '/second']);
+  const audit = f.shards[0].tests[0].attachments[0];
+  const seed = fs.readFileSync(new URL('../src/e2e/e2e-seed.sql', import.meta.url), 'utf8');
+  const { createOwnedAuditSeed } = require('./ui-audit-fixture.cjs');
+  const states = route === '/quotes/e2e-id' ? ['entry', 'editing', 'entry'] : ['entry', 'entry'];
+  const actors = ['audit-11111111-1111-4111-8111-111111111111', 'audit-22222222-2222-4222-8222-222222222222', 'audit-33333333-3333-4333-8333-333333333333'].slice(0, states.length).map(namespace => createOwnedAuditSeed(seed, namespace));
+  audit.discoveredKeys = [...new Set(states)].map(state => JSON.stringify([state, 'actual-button']));
+  audit.observations = audit.discoveredKeys.map(key => ({ key, completed: true, effect: { ...effect }, error: null }));
+  audit.isolation = { kind: 'case-owned-postgres', seedDigest: actors[0].sourceDigest, cases: actors.map((actor, index) => ({ tenantId: actor.tenantId, userId: actor.userId, state: states[index], keys: [JSON.stringify([states[index], 'actual-button'])] })) };
+  audit.navigations = actors.map(actor => {
+    const quoteId = Object.keys(actor.canonicalIds).find(key => actor.canonicalIds[key] === '823e4567-e89b-12d3-a456-426614174000');
+    const customerId = Object.keys(actor.canonicalIds).find(key => actor.canonicalIds[key] === '648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b');
+    const destination = route.endsWith('/e2e-id') ? route.replace('e2e-id', quoteId) : `${route}?id=${quoteId}`;
+    return { sourceRoute: route, requestedUrl: `https://fixture.test${destination}`, finalUrl: `https://fixture.test${destination}`, redirected: false,
+      quoteFixture: { namespace: actor.namespace, tenantId: actor.tenantId, quoteId, customerId, detailUrl: `https://fixture.test/api/v1/quotes/${quoteId}`, method: 'GET', status: 200 } };
+  });
+  return { ...f, audit };
+}
+for (const route of ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view']) {
+  test(`accepts only a source-bound real owned quote mapping for ${route}`, () => {
+    const f = quoteFixture(route);
+    assert.equal(validateReceipts(f.shards, f.context, 2).targets, f.audit.discoveredKeys.length + 1);
+  });
+}
+for (const [name, mutate] of [
+  ['wrong source alias', n => { n.sourceRoute = '/unrelated'; }],
+  ['foreign record', n => { n.quoteFixture.quoteId = '33333333-3333-4333-8333-333333333333'; }],
+  ['wrong customer', n => { n.quoteFixture.customerId = '33333333-3333-4333-8333-333333333333'; }],
+  ['wrong owner', n => { n.quoteFixture.tenantId = 'e2e-tenant'; }],
+  ['failed detail read', n => { n.quoteFixture.status = 404; }],
+  ['non-GET proof', n => { n.quoteFixture.method = 'POST'; }],
+  ['foreign detail origin', n => { n.quoteFixture.detailUrl = n.quoteFixture.detailUrl.replace('fixture.test', 'outside.test'); }],
+  ['query masquerading as canonical detail', n => { n.quoteFixture.detailUrl += '?id=other'; }],
+  ['unexpected query', n => { n.requestedUrl += '?other=1'; n.finalUrl += '?other=1'; }],
+  ['unclassified redirect', n => { n.finalUrl = 'https://fixture.test/dashboard'; n.redirected = true; }],
+  ['missing proof', n => { delete n.quoteFixture; }],
+]) test(`refuses owned quote navigation with ${name}`, () => {
+  const f = quoteFixture(); mutate(f.audit.navigations[0]);
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /quote|navigation/i);
+});
+test('refuses a reset sharing the previous mutable quote or missing its full case inventory', () => {
+  const f = quoteFixture(); f.audit.navigations[1] = structuredClone(f.audit.navigations[0]);
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /quote|isolation/i);
+  const missing = quoteFixture(); missing.audit.isolation.cases[1].keys = [];
+  assert.throws(() => validateReceipts(missing.shards, missing.context, 2), /quote|inventory/i);
+});
+test('record-dependent quote routes remain in the exact discovered inventory', () => {
+  const routes = protocol.discoverAppRoutes(path.resolve('.'));
+  for (const route of ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view']) assert.ok(routes.includes(route));
+});
+
+test('quote isolation cannot substitute an editing inventory for an entry reset or omit editing-view coverage', () => {
+  const f = quoteFixture(); f.audit.isolation.cases.at(-1).state = 'editing';
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /quote|inventory|baseline/i);
+  const missing = quoteFixture();
+  missing.audit.discoveredKeys.pop(); missing.audit.observations.pop();
+  missing.audit.navigations.splice(1, 1); missing.audit.isolation.cases.splice(1, 1);
+  assert.throws(() => validateReceipts(missing.shards, missing.context, 2), /quote|inventory/i);
+});

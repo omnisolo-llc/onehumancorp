@@ -1,19 +1,19 @@
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::departments::types::ApprovalRequest;
-use crate::utils::cache::HybridCache;
 use ::server_common::Claims;
 use axum::{
     Json, Router,
     extract::{Extension, Path, Query, State},
-    http::StatusCode,
+    http::{StatusCode, header},
     response::IntoResponse,
     routing::{get, post},
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use std::sync::OnceLock;
 
-pub static APPROVALS_CACHE: OnceLock<HybridCache<ApprovalsResponse>> = OnceLock::new();
+#[cfg(test)]
+#[path = "approvals_readback_test.rs"]
+mod readback_tests;
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ApprovalsResponse {
@@ -55,6 +55,15 @@ where
         .with_state(orchestrator)
 }
 
+fn private_approvals(status: StatusCode, body: ApprovalsResponse) -> axum::response::Response {
+    (
+        status,
+        [(header::CACHE_CONTROL, "private, no-store")],
+        Json(body),
+    )
+        .into_response()
+}
+
 async fn list_approvals(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Query(query): Query<PaginationQuery>,
@@ -63,67 +72,20 @@ async fn list_approvals(
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
         None => {
-            return (
+            return private_approvals(
                 StatusCode::UNAUTHORIZED,
-                Json(ApprovalsResponse {
+                ApprovalsResponse {
                     pending_approvals: vec![],
                     next_cursor: None,
-                }),
-            )
-                .into_response();
+                },
+            );
         }
     };
 
     let limit = query.limit.unwrap_or(20);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let cache_key = format!(
-        "approvals:{}:{}:{}:{}",
-        tenant_id,
-        query.cursor.as_deref().unwrap_or("none"),
-        limit,
-        mobile_optimized
-    );
-    let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
-
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (StatusCode::OK, Json(cached)).into_response();
-        }
-
-        let tenant_id_bg = tenant_id.clone();
-        let cursor_bg = query.cursor.clone();
-        let orchestrator_bg = orchestrator.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            let mut approvals = orchestrator_bg
-                .get_pending_approvals(&tenant_id_bg, cursor_bg, limit as i64)
-                .await;
-            if mobile_optimized {
-                for a in &mut approvals {
-                    a.payload = None;
-                }
-            }
-            let next_cursor = if approvals.len() == limit {
-                approvals.last().map(|a| a.id.clone())
-            } else {
-                None
-            };
-            if let Some(c) = APPROVALS_CACHE.get() {
-                c.set(
-                    &cache_key_bg,
-                    ApprovalsResponse {
-                        pending_approvals: approvals,
-                        next_cursor,
-                    },
-                    std::time::Duration::from_secs(10),
-                )
-                .await;
-            }
-        });
-
-        return (StatusCode::OK, Json(cached)).into_response();
-    }
-
+    // Approval decisions are mutable across writers and server instances. Read
+    // committed state directly; SWR can resurrect a decision after its HTTP ACK.
     let mut approvals = orchestrator
         .get_pending_approvals(&tenant_id, query.cursor.clone(), limit as i64)
         .await;
@@ -143,15 +105,7 @@ async fn list_approvals(
         pending_approvals: approvals,
         next_cursor,
     };
-    cache
-        .set(
-            &cache_key,
-            response.clone(),
-            std::time::Duration::from_secs(10),
-        )
-        .await;
-
-    (StatusCode::OK, Json(response)).into_response()
+    private_approvals(StatusCode::OK, response)
 }
 
 async fn list_activity_feed(
@@ -162,67 +116,20 @@ async fn list_activity_feed(
     let tenant_id = match claims.organization_id.as_deref() {
         Some(org_id) => org_id.to_string(),
         None => {
-            return (
+            return private_approvals(
                 StatusCode::UNAUTHORIZED,
-                Json(ApprovalsResponse {
+                ApprovalsResponse {
                     pending_approvals: vec![],
                     next_cursor: None,
-                }),
-            )
-                .into_response();
+                },
+            );
         }
     };
 
     let limit = query.limit.unwrap_or(20);
     let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let cache_key = format!(
-        "activity_feed:{}:{}:{}:{}",
-        tenant_id,
-        query.cursor.as_deref().unwrap_or("none"),
-        limit,
-        mobile_optimized
-    );
-    let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(crate::get_redis_client()));
-
-    if let Some((cached, is_stale)) = cache.get_with_swr(&cache_key).await {
-        if !is_stale {
-            return (StatusCode::OK, Json(cached)).into_response();
-        }
-
-        let tenant_id_bg = tenant_id.clone();
-        let cursor_bg = query.cursor.clone();
-        let orchestrator_bg = orchestrator.clone();
-        let cache_key_bg = cache_key.clone();
-        tokio::spawn(async move {
-            let mut activities = orchestrator_bg
-                .get_activity_feed(&tenant_id_bg, cursor_bg, limit as i64)
-                .await;
-            if mobile_optimized {
-                for a in &mut activities {
-                    a.payload = None;
-                }
-            }
-            let next_cursor = if activities.len() == limit {
-                activities.last().map(|a| a.id.clone())
-            } else {
-                None
-            };
-            if let Some(c) = APPROVALS_CACHE.get() {
-                c.set(
-                    &cache_key_bg,
-                    ApprovalsResponse {
-                        pending_approvals: activities,
-                        next_cursor,
-                    },
-                    std::time::Duration::from_secs(10),
-                )
-                .await;
-            }
-        });
-
-        return (StatusCode::OK, Json(cached)).into_response();
-    }
-
+    // Approval decisions are mutable across writers and server instances. Read
+    // committed state directly; SWR can resurrect a decision after its HTTP ACK.
     let mut activities = orchestrator
         .get_activity_feed(&tenant_id, query.cursor.clone(), limit as i64)
         .await;
@@ -242,15 +149,7 @@ async fn list_activity_feed(
         pending_approvals: activities,
         next_cursor,
     };
-    cache
-        .set(
-            &cache_key,
-            response.clone(),
-            std::time::Duration::from_secs(10),
-        )
-        .await;
-
-    (StatusCode::OK, Json(response)).into_response()
+    private_approvals(StatusCode::OK, response)
 }
 
 async fn decide_approval(
@@ -339,36 +238,5 @@ async fn list_ledger_entries(
             Json(serde_json::json!({ "error": e })),
         )
             .into_response(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[tokio::test]
-    async fn test_approvals_cache_initialization() {
-        let tenant_id = "test_tenant";
-        let cache_key = format!("approvals:{}:none:20:false", tenant_id);
-        let cache = APPROVALS_CACHE.get_or_init(|| HybridCache::new(None));
-
-        let initial_val = cache.get(&cache_key).await;
-        assert!(initial_val.is_none(), "Cache should be empty initially");
-
-        let dummy_resp = ApprovalsResponse {
-            pending_approvals: vec![],
-            next_cursor: None,
-        };
-
-        cache
-            .set(
-                &cache_key,
-                dummy_resp.clone(),
-                std::time::Duration::from_secs(60),
-            )
-            .await;
-
-        let cached_val = cache.get(&cache_key).await;
-        assert!(cached_val.is_some(), "Cache should hit after set");
     }
 }

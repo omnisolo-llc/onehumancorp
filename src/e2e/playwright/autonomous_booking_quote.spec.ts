@@ -51,7 +51,12 @@ test.describe('Owner service and quote review', () => {
     const { quoteId, customerId } = await createOwnerQuote(page, adminUser.organizationId, {
       description: title, serviceId: service.service_id,
     });
+    const loadedQuote = page.waitForResponse(response =>
+      new URL(response.url()).pathname === `/api/v1/quotes/${quoteId}`
+      && response.request().method() === 'GET');
     await page.goto(`/ui/quote.html?id=${quoteId}&mode=owner`);
+    const reviewedVersion = (await (await loadedQuote).json()).quote.updated_at;
+    expect(reviewedVersion).toEqual(expect.any(String));
     await expect(page.locator('#line-items-container')).toContainText(title);
     await expect(page.locator('#quote-total')).toHaveText('$50.00');
     await expect(page.locator('#deposit-amount')).toHaveText('$10.00');
@@ -69,6 +74,10 @@ test.describe('Owner service and quote review', () => {
     await page.getByRole('button', { name: 'Save Changes', exact: true }).click();
     const updated = await updatePromise;
     expect(updated.ok(), await updated.text()).toBe(true);
+    expect(updated.request().postDataJSON().expected_updated_at).toBe(reviewedVersion);
+    const updateReceipt = await updated.json();
+    expect(updateReceipt).toMatchObject({ success: true, updated_at: expect.any(String) });
+    expect(updateReceipt.updated_at).not.toBe(reviewedVersion);
     await expect(page.locator('#edit-quote-sheet')).toBeHidden();
     await page.reload();
     await expect(page.locator('#quote-total')).toHaveText('$45.00');
@@ -77,7 +86,14 @@ test.describe('Owner service and quote review', () => {
 
     const persisted = await page.request.get(`/api/v1/quotes/${quoteId}`);
     expect(persisted.ok()).toBe(true);
-    expect(await persisted.json()).toMatchObject({
+    const persistedQuote = await persisted.json();
+    expect(persistedQuote.quote.updated_at).toBe(updateReceipt.updated_at);
+    const [version] = await e2eDbQuery(
+      'SELECT updated_at=$1::timestamptz AS version_matches FROM quotes WHERE id=$2 AND tenant_id=$3',
+      [updateReceipt.updated_at, quoteId, adminUser.organizationId],
+    );
+    expect(version.version_matches).toBe(true);
+    expect(persistedQuote).toMatchObject({
       quote: {
         id: quoteId, tenant_id: adminUser.organizationId, customer_id: customerId,
         service_id: service.service_id, status: 'DRAFT',

@@ -5,9 +5,9 @@ class AppointmentWiring(unittest.TestCase):
     def test_real_parent_mount_uses_the_protected_read_router(self):
         parent=(ROOT/'src/server/api/field_ops.rs').read_text()
         self.assertIn('pub mod appointments;',parent)
-        self.assertIn('let reads = appointments::router(pool.clone(), auth_store);',parent)
+        self.assertIn('let reads = appointments::optional_router(canonical.clone(), auth_store.clone());',parent)
         self.assertIn('.merge(reads)',parent)
-        self.assertIn('crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone(), http_auth_store.clone())',(ROOT/'src/server/lib.rs').read_text())
+        self.assertIn('crate::api::field_ops::configured_router(db.pool.clone(), field_ops_pool.clone(), mesh_transport.clone(), http_auth_store.clone())',(ROOT/'src/server/lib.rs').read_text())
         child=(ROOT/'src/server/api/field_ops/appointments.rs').read_text()
         self.assertIn('server_auth::strict_bearer_auth_middleware',child)
         self.assertIn('"/appointments"',child)

@@ -19,6 +19,7 @@ let runtimeRead: () => Promise<Response>;
 const mutations = () => vi.mocked(fetch).mock.calls.filter(([, options]) => options?.method === 'POST');
 const runtimeCalls = () => vi.mocked(fetch).mock.calls.filter(([url]) => String(url).includes('/agents/protocol'));
 const panel = () => within(screen.getByRole('region', { name: 'Recorded text analysis' }));
+const analysisRegion = () => screen.getByRole('region', { name: 'Recorded text analysis' });
 beforeEach(() => {
   cleanup(); localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks();
   owner = { ...firstOwner }; configured = true; rows = [];
@@ -261,4 +262,77 @@ it('rejects an entire history response containing a foreign tenant rather than f
   await open(); expect(await panel().findByText('Recorded analysis history could not be verified.')).toBeVisible();
   expect(panel().queryByRole('button', { name: 'Open analysis Owner analysis' })).toBeNull();
   expect(panel().queryByRole('button', { name: 'Open analysis Foreign tenant analysis' })).toBeNull();
+});
+
+it('keeps analysis busy through owner-policy verification and the initial history read', async () => {
+  let finishPolicy!: (response: Response) => void;
+  let finishHistory!: (response: Response) => void;
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, options) => {
+    if (url === '/api/v1/agents/execution-policy') return new Promise(resolve => { finishPolicy = resolve; });
+    if (url === '/api/v1/agents/workflows') return new Promise(resolve => { finishHistory = resolve; });
+    return original(url, options);
+  });
+  await open();
+  expect(analysisRegion()).toHaveAttribute('aria-busy', 'true');
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeDisabled();
+  await waitFor(() => expect(finishPolicy).toBeDefined());
+  await act(async () => finishPolicy(Response.json({ available: false, mode: 'text_analysis', workspace_access: false, tools: [], policy: null })));
+  await waitFor(() => expect(finishHistory).toBeDefined());
+  expect(analysisRegion()).toHaveAttribute('aria-busy', 'true');
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeDisabled();
+  await act(async () => finishHistory(Response.json({ workflows: [] })));
+  expect(analysisRegion()).toHaveAttribute('aria-busy', 'false');
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeEnabled();
+  expect(panel().getByRole('button', { name: 'Start text analysis' })).toBeDisabled();
+  expect(mutations()).toHaveLength(0);
+});
+
+it.each(['session', 'policy', 'revoked-policy'])('settles analysis readiness after unavailable %s verification without enabling execution', async failure => {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, options) => {
+    if (failure === 'session' && String(url).endsWith('/session-identity')) return Promise.resolve(Response.json({}, { status: 401 }));
+    if (failure !== 'session' && url === '/api/v1/agents/execution-policy') return Promise.resolve(Response.json({ error: 'unavailable' }, { status: failure === 'revoked-policy' ? 401 : 503 }));
+    return original(url, options);
+  });
+  await open();
+  await waitFor(() => expect(analysisRegion()).toHaveAttribute('aria-busy', 'false'));
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeDisabled();
+  expect(panel().getByRole('button', { name: 'Start text analysis' })).toBeDisabled();
+  expect(panel().getByText('Recorded analysis history could not be verified.')).toBeVisible();
+  expect(mutations()).toHaveLength(0);
+});
+
+it('settles a failed history refresh while keeping the real refresh control available', async () => {
+  await open();
+  await waitFor(() => expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeEnabled());
+  let finish!: (response: Response) => void;
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, options) => url === '/api/v1/agents/workflows' ? new Promise(resolve => { finish = resolve; }) : original(url, options));
+  fireEvent.click(panel().getByRole('button', { name: 'Refresh analysis history' }));
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(analysisRegion()).toHaveAttribute('aria-busy', 'true');
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeDisabled();
+  await act(async () => finish(Response.json({ error: 'database unavailable' }, { status: 503 })));
+  expect(analysisRegion()).toHaveAttribute('aria-busy', 'false');
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeEnabled();
+  expect(panel().getByText('Recorded analysis history could not be verified.')).toBeVisible();
+  expect(mutations()).toHaveLength(0);
+});
+
+it('does not let an old owner verification settle the new owner readiness', async () => {
+  const finishes: ((response: Response) => void)[] = [];
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, options) => url === '/api/v1/agents/execution-policy' ? new Promise(resolve => { finishes.push(resolve); }) : original(url, options));
+  await open(); await waitFor(() => expect(finishes).toHaveLength(1));
+  await act(async () => { owner = { userId: 'next-owner', tenantId: 'next-tenant' }; notifyQueueIdentityChange(); });
+  await waitFor(() => expect(finishes).toHaveLength(2));
+  const unavailablePolicy = () => Response.json({ available: false, mode: 'text_analysis', workspace_access: false, tools: [], policy: null });
+  await act(async () => finishes[0](unavailablePolicy()));
+  expect(analysisRegion()).toHaveAttribute('aria-busy', 'true');
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeDisabled();
+  await act(async () => finishes[1](unavailablePolicy()));
+  await waitFor(() => expect(analysisRegion()).toHaveAttribute('aria-busy', 'false'));
+  expect(panel().getByRole('button', { name: 'Refresh analysis history' })).toBeEnabled();
+  expect(mutations()).toHaveLength(0);
 });

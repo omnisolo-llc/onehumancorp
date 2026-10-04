@@ -34,59 +34,103 @@ pub struct OfflineSyncResponse {
 }
 
 async fn validate_token_and_get_tenant(
-    pool: &sqlx::PgPool,
+    store: &server_auth::Store,
     headers: &axum::http::HeaderMap,
-) -> Result<(String, String), axum::response::Response> {
-    let auth_header = headers.get("authorization").and_then(|h| h.to_str().ok());
-    let token = match auth_header {
-        Some(h) if h.to_lowercase().starts_with("bearer ") => &h[7..],
-        _ => return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response()),
+) -> Result<(server_common::Claims, String), axum::response::Response> {
+    let mut values = headers.get_all(axum::http::header::AUTHORIZATION).iter();
+    let token = values
+        .next()
+        .filter(|_| values.next().is_none())
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "));
+    let Some(token) = token.filter(|t| {
+        !t.is_empty()
+            && t.len() <= server_auth::MAX_ACCESS_TOKEN_BYTES
+            && !t.chars().any(|c| c.is_whitespace() || c.is_ascii_control())
+    }) else {
+        return Err((StatusCode::UNAUTHORIZED, "Unauthorized").into_response());
     };
-
-    let repo = std::sync::Arc::new(crate::auth::postgres_store::PgUserRepository::new(
-        pool.clone(),
-    ));
-    let store = std::sync::Arc::new(crate::auth::Store::with_repo(repo));
-
-    let claims = match store.validate_token(token).await {
-        Ok(c) => c,
-        Err(_) => {
-            return Err((axum::http::StatusCode::UNAUTHORIZED, "Unauthorized").into_response());
-        }
-    };
-
-    let tenant_id = match claims.organization_id {
-        Some(id)
-            if !id.trim().is_empty() && id.trim() == id && !id.eq_ignore_ascii_case("system") =>
-        {
-            id
-        }
-        _ => {
-            return Err((
+    let claims = store
+        .validate_token(token)
+        .await
+        .map_err(|_| (StatusCode::UNAUTHORIZED, "Unauthorized").into_response())?;
+    let tenant = server_common::auth_utils::signed_tenant_id(&claims)
+        .filter(|tenant| claims.organization_id.as_deref() == Some(tenant.as_str()))
+        .ok_or_else(|| {
+            (
                 StatusCode::UNAUTHORIZED,
                 "Tenant-scoped authentication required",
             )
-                .into_response());
-        }
-    };
-    let agent_id = claims.sub;
+                .into_response()
+        })?;
+    Ok((claims, tenant))
+}
 
-    Ok((tenant_id, agent_id))
+#[derive(Clone)]
+pub struct SyncWriteState {
+    pub mutations: crate::api::field_ops::records::FieldAccess,
+    pub intents: crate::api::field_ops::records::FieldAccess,
+}
+impl SyncWriteState {
+    pub async fn new(store: Arc<server_auth::Store>, configured: Option<&sqlx::PgPool>) -> Self {
+        async fn access(
+            store: Arc<server_auth::Store>,
+            configured: Option<&sqlx::PgPool>,
+            relations: &[&str],
+        ) -> crate::api::field_ops::records::FieldAccess {
+            let pool =
+                if let (Some(repository), Some(configured)) = (store.portable_repo(), configured) {
+                    server_auth::commit_authority::canonical_pg_data_pool(
+                        repository.connection(),
+                        configured,
+                        relations,
+                    )
+                    .await
+                    .ok()
+                } else {
+                    None
+                };
+            crate::api::field_ops::records::FieldAccess { pool, store }
+        }
+        Self {
+            mutations: access(
+                store.clone(),
+                configured,
+                &[
+                    "sync_events",
+                    "applied_client_mutations",
+                    "department_tasks",
+                    "ohc_job_queue",
+                    "products",
+                    "inventory_levels",
+                ],
+            )
+            .await,
+            intents: access(store, configured, &["sync_events", "operation_intents"]).await,
+        }
+    }
 }
 
 pub async fn offline_sync_handler(
-    State((db, mesh)): State<(
-        sqlx::PgPool,
+    State((state, mesh)): State<(
+        SyncWriteState,
         Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
     )>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OfflineSyncRequest>,
 ) -> impl IntoResponse {
-    let (tenant_id, _) = match validate_token_and_get_tenant(&db, &headers).await {
-        Ok(t) => t,
-        Err(e) => return e,
-    };
-    let result = durable_sync::sync_mutations(&db, &tenant_id, &payload.mutations).await;
+    let (claims, tenant_id) =
+        match validate_token_and_get_tenant(&state.mutations.store, &headers).await {
+            Ok(t) => t,
+            Err(e) => return e,
+        };
+    let result = durable_sync::sync_authorized_mutations(
+        &state.mutations,
+        &claims,
+        &headers,
+        &payload.mutations,
+    )
+    .await;
     invalidate_committed_products(&tenant_id, &result.committed_products).await;
     for product in &result.committed_products {
         let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
@@ -161,16 +205,69 @@ pub struct SyncEventsResponse {
     pub conflict_count: i32,
 }
 
+#[derive(Clone)]
+pub struct SyncEventsState {
+    pub pool: sqlx::PgPool,
+    pub access: crate::api::field_ops::records::FieldAccess,
+}
+impl SyncEventsState {
+    /// Keep the configured pool for existing non-appointment operations. Only
+    /// the proven canonical field and receipt objects grant appointment writes.
+    pub async fn new(
+        pool: sqlx::PgPool,
+        field_pool: Option<sqlx::PgPool>,
+        store: Arc<server_auth::Store>,
+    ) -> Self {
+        let canonical = if let (Some(field), Some(repo)) = (field_pool, store.portable_repo()) {
+            if server_auth::commit_authority::CanonicalPgAuthority::bind(store.clone(), &field)
+                .is_ok()
+            {
+                server_auth::commit_authority::canonical_pg_data_pool(
+                    repo.connection(),
+                    &pool,
+                    &[
+                        "appointments",
+                        "department_tasks",
+                        "sync_events",
+                        "sync_conflict_queue",
+                    ],
+                )
+                .await
+                .ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        Self {
+            pool,
+            access: crate::api::field_ops::records::FieldAccess {
+                pool: canonical,
+                store,
+            },
+        }
+    }
+}
+
 pub async fn sync_events_handler(
-    State(db): State<sqlx::PgPool>,
+    State(state): State<SyncEventsState>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<SyncEventsRequest>,
 ) -> impl IntoResponse {
-    let (tenant_id, _) = match validate_token_and_get_tenant(&db, &headers).await {
-        Ok(t) => t,
-        Err(e) => return e,
-    };
-    let result = durable_sync::sync_events(&db, &tenant_id, &payload.events).await;
+    let (claims, tenant_id) =
+        match validate_token_and_get_tenant(&state.access.store, &headers).await {
+            Ok(identity) => identity,
+            Err(error) => return error,
+        };
+    let result = durable_sync::sync_authorized_events(
+        &state,
+        &claims,
+        &headers,
+        &tenant_id,
+        &payload.events,
+    )
+    .await;
     invalidate_committed_products(&tenant_id, &result.committed_products).await;
     (StatusCode::OK, Json(result)).into_response()
 }
@@ -202,14 +299,16 @@ pub struct OperationIntentResponse {
 }
 
 pub async fn operation_intents_handler(
-    State(db): State<sqlx::PgPool>,
+    State(state): State<SyncWriteState>,
     headers: axum::http::HeaderMap,
     Json(payload): Json<OperationIntentRequest>,
 ) -> impl IntoResponse {
-    let (tenant_id, _) = match validate_token_and_get_tenant(&db, &headers).await {
+    let (claims, _) = match validate_token_and_get_tenant(&state.intents.store, &headers).await {
         Ok(t) => t,
         Err(e) => return e,
     };
-    let result = durable_sync::sync_intents(&db, &tenant_id, &payload.intents).await;
+    let result =
+        durable_sync::sync_authorized_intents(&state.intents, &claims, &headers, &payload.intents)
+            .await;
     (StatusCode::OK, Json(result)).into_response()
 }

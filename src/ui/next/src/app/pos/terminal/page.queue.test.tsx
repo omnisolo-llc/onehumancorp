@@ -4,7 +4,7 @@ import POSTerminal from './page';
 const queue=vi.hoisted(()=>vi.fn<()=>Promise<number>>());
 vi.mock('./StripeTerminalClient',()=>({default:()=>null}));
 vi.mock('../../../components/LocalizationToggle',()=>({LocalizationToggle:()=>null}));
-vi.mock('../../../lib/sync/SyncManager',()=>({SyncManager:{getInstance:()=>({getQueueLength:queue})}}));
+vi.mock('../../../lib/sync/SyncManager',()=>({SyncManager:{getInstance:()=>({getQueueLength:queue,getClockQueueSummary:vi.fn().mockResolvedValue({confirmed:0,unconfirmed:0,legacyHeld:0})})}}));
 beforeEach(()=>{localStorage.clear();queue.mockReset();vi.stubGlobal('fetch',vi.fn(async()=>Response.json([])));});
 afterEach(()=>vi.unstubAllGlobals());
 it('shows an unavailable queue without leaking an unhandled rejection or claiming sync success',async()=>{

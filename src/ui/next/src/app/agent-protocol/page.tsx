@@ -65,7 +65,10 @@ function WorkspaceRuntime() {
     setTaskRead('loading');
     try {
       const res = await fetch('/api/v1/agents/protocol?method=ap_list_tasks');
-      if (!res.ok) throw new Error('Failed to fetch tasks');
+      if (!res.ok) {
+        await res.text();
+        throw new Error('Failed to fetch tasks');
+      }
       const data = await res.json();
       if (!data || !Array.isArray(data.tasks) || data.error != null || data.success === false) throw new Error('The task list could not be verified');
       setTasks(data.tasks); setTaskRead('ready'); return true;
@@ -86,11 +89,18 @@ function WorkspaceRuntime() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ method: 'ap_create_task', params: { input: submittedInput } }),
       });
+      // Drain finite error responses too; abandoning their body leaves browser
+      // completion and connection reuse pending even after headers arrive.
       if (res.status === 401 || res.status === 403) {
         unconfirmed = false;
+        // The status already proves rejection even if delivery of its body fails.
+        await res.text().catch(() => undefined);
         throw new Error('Task creation was rejected by authentication or permission checks. Your input is retained.');
       }
-      if (!res.ok) throw new Error('Failed to create task');
+      if (!res.ok) {
+        await res.text();
+        throw new Error('Failed to create task');
+      }
       const data = await res.json();
       if (res.status !== 200 || !data || typeof data !== 'object' || Array.isArray(data) || data.error != null || ('success' in data && data.success !== true) || typeof data.task_id !== 'string' || !data.task_id.trim()) throw new Error('Task creation was not acknowledged. Your input is retained.');
       unconfirmed = false;

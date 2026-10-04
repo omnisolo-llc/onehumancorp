@@ -207,7 +207,7 @@ export function OnboardingChatAgent({ onComplete }: OnboardingChatAgentProps) {
   if (identityError) return <div role="alert">{identityError} Your other session’s draft remains held.</div>;
   if (!isLoaded || !viewOwner) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh] w-full max-w-2xl mx-auto">
+      <div role="status" aria-label="Restoring setup" aria-busy="true" className="flex items-center justify-center min-h-[50vh] w-full max-w-2xl mx-auto">
         <div className="w-8 h-8 border-4 border-[#0066FF]/20 border-t-[#0066FF] rounded-full animate-spin"></div>
       </div>
     );

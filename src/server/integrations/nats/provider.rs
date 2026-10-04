@@ -1,4 +1,4 @@
-use super::client::{NatsClientWrapper, RealNatsClient};
+use super::client::{NatsClientWrapper, RealNatsClient, public_nats_endpoint};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ impl NatsProvider {
                 id: "nats".to_string(),
                 name: "NATS Event Mesh".to_string(),
                 category: "event_mesh".to_string(),
-                base_url: url.to_string(),
+                base_url: public_nats_endpoint(url),
             },
         })
     }
@@ -29,7 +29,7 @@ impl NatsProvider {
                 id: "nats".to_string(),
                 name: "NATS Event Mesh".to_string(),
                 category: "event_mesh".to_string(),
-                base_url: url.to_string(),
+                base_url: public_nats_endpoint(url),
             },
         }
     }

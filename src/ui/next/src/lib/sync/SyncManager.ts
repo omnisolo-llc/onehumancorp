@@ -1,7 +1,7 @@
-import { enqueueAction, getActions, getActionRoutes, claimAction, completeAction, getQueueSummary } from '../../app/utils/offlineQueue';
+import { enqueueAction, getActions, getActionRoutes, claimAction, completeAction, getQueueSummary, getClockQueueSummary, getClockReceiptCandidates, acknowledgeClockReceipt, isCurrentClockReceiptCandidate } from '../../app/utils/offlineQueue';
 import type { OfflineAction, MutationPayload } from '../../app/utils/offlineQueue';
 import { readQueueOwner, sameOwner, type QueueOwner } from './queueIdentity';
-import { readOutcome } from './queueRoutes';
+import { readOutcome, isHistoricalClock, TIMECARD_ROUTE, STAFF_CLOCK_TYPE } from './queueRoutes';
 
 type QueuedMutation = Omit<OfflineAction, 'id' | 'timestamp'> & { id?: string; timestamp?: number | string };
 type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
@@ -17,7 +17,10 @@ type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
 export class SyncManager {
   private static instance: SyncManager;
   private syncInProgress = false;
+  private clockReceiptCheckInProgress = false;
   private enqueueDuringSync = false;
+  private syncingFieldOnly = false;
+  private fullDrainRequested = false;
 
   private constructor() {
     this.connectWebSocket();
@@ -48,7 +51,7 @@ export class SyncManager {
     if (!mutation.id) {
         mutation.id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString() + Math.random().toString().substring(2);
     }
-    if (!mutation.timestamp) {
+    if (mutation.type === STAFF_CLOCK_TYPE ? mutation.timestamp === undefined : !mutation.timestamp) {
         mutation.timestamp = Date.now();
     }
 
@@ -60,7 +63,7 @@ export class SyncManager {
     this.notifyListeners();
 
     if (navigator.onLine) {
-      if (this.syncInProgress) this.enqueueDuringSync = true;
+      if (this.syncInProgress) { this.enqueueDuringSync = true; this.fullDrainRequested = true; }
       else void this.sync();
     }
   }
@@ -70,6 +73,25 @@ export class SyncManager {
   }
 
   public async getQueueSummary() { return getQueueSummary(); }
+  public async getClockQueueSummary() { return getClockQueueSummary(); }
+
+  /** Explicit receipt-only recovery. Never sends mutations or drains other work. */
+  public async reconcileClockReceipts(): Promise<void> {
+    if (typeof window === 'undefined' || !navigator.onLine || this.clockReceiptCheckInProgress) return;
+    this.clockReceiptCheckInProgress = true;
+    try {
+      for (const candidate of await getClockReceiptCandidates()) {
+        if (!sameOwner(candidate.owner, await readQueueOwner()) || !isCurrentClockReceiptCandidate(candidate)) return;
+        const response = await fetch(`${TIMECARD_ROUTE}/receipts/${candidate.action.id}`, {
+          method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+          headers: { 'x-ohc-expected-user': candidate.owner.userId, 'x-ohc-expected-tenant': candidate.owner.tenantId },
+        });
+        let body: unknown;
+        try { body = await response.json(); } catch { body = undefined; }
+        if (await acknowledgeClockReceipt(candidate, response.status, body)) this.notifyListeners();
+      }
+    } finally { this.clockReceiptCheckInProgress = false; }
+  }
 
   public async getQueueLength(): Promise<number> {
     const queue = await this.getQueue();
@@ -131,14 +153,37 @@ export class SyncManager {
     return m;
   }
 
-  public async sync() {
-    if (typeof window === 'undefined' || this.syncInProgress || !navigator.onLine) return;
+  /** Reopen only the existing durable field handoff on mount/session restoration. */
+  public async resumeFieldCompletionWork(): Promise<void> {
+    if (typeof window === 'undefined' || !navigator.onLine) return;
+    try {
+      const queue = await this.getQueue();
+      if (!queue.some(action => action.field_completion || action.field_completion_parent_id)) return;
+      if (this.syncInProgress) this.enqueueDuringSync = true;
+      else await this.sync(true);
+    } catch {
+      // Unverified owner or unavailable storage leaves the journal held. The
+      // existing queue indicator exposes its state; no request is inferred.
+    }
+  }
+
+  public async sync(fieldCompletionOnly = false) {
+    if (typeof window === 'undefined' || !navigator.onLine) return;
+    if (this.syncInProgress) {
+      if (!fieldCompletionOnly && this.syncingFieldOnly) { this.fullDrainRequested = true; this.enqueueDuringSync = true; }
+      return;
+    }
     // Acquire before the first await, including queue reads.
     this.syncInProgress = true;
+    this.syncingFieldOnly = fieldCompletionOnly;
     let completedPass = false;
     try {
       const queue = await this.getQueue();
       for (const action of queue) {
+        // These historical envelopes describe incompatible generic routes. Keep
+        // their bytes and attempts untouched, including never-attempted routes.
+        if (isHistoricalClock(action)) continue;
+        if (fieldCompletionOnly && !action.field_completion && !action.field_completion_parent_id) continue;
         for (const plan of await getActionRoutes(action.id)) {
           const claim = await claimAction(action.id, plan.id);
           if (!claim) continue;
@@ -167,6 +212,7 @@ export class SyncManager {
           // Persist the result to the original adapter and original owner's row.
           // A commit failure retains inflight state and stops this sync attempt.
           await completeAction(claim, outcome.status, outcome.reason);
+          if (outcome.status === 'acknowledged' && claim.action.field_completion) this.enqueueDuringSync = true;
           this.notifyListeners();
         }
       }
@@ -180,7 +226,9 @@ export class SyncManager {
       // blocked, and acknowledged actions without replaying their effects.
       if (this.enqueueDuringSync) {
         this.enqueueDuringSync = false;
-        if (completedPass) void this.sync();
+        const nextFieldOnly = fieldCompletionOnly && !this.fullDrainRequested;
+        this.fullDrainRequested = false;
+        if (completedPass) void this.sync(nextFieldOnly);
       }
     }
   }

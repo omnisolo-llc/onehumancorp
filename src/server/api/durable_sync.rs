@@ -4,9 +4,14 @@ use super::{OfflineMutation, OperationIntent, SyncEvent};
 use serde::Serialize;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 
-use super::super::sync_transaction::SyncError;
+#[path = "durable_appointment_sync.rs"]
+mod appointments;
+
+use super::super::sync_transaction::{SyncError, commit_owner};
+use crate::api::field_ops::records::FieldAccess;
+use server_auth::commit_authority::{AuthorityError, OwnerPgTransaction};
 
 pub(super) const EVENTS_ROUTE: &str = "/api/v1/sync/events";
 pub(super) const OFFLINE_ROUTE: &str = "/api/v1/sync/offline";
@@ -83,7 +88,7 @@ enum Claim {
     Replay(Outcome),
 }
 async fn claim(
-    tx: &mut Transaction<'_, Postgres>,
+    tx: &mut PgConnection,
     tenant: &str,
     route: &str,
     id: &str,
@@ -93,7 +98,7 @@ async fn claim(
     // Historical receipts did not prove a business mutation. Never upgrade one
     // to an acknowledgment or repeat an effect whose outcome is unknown.
     let legacy: bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM sync_events WHERE id=$1 AND tenant_id=$2 AND request_identity IS NULL)")
-        .bind(id).bind(tenant).fetch_one(&mut **tx).await?;
+        .bind(id).bind(tenant).fetch_one(&mut *tx).await?;
     if legacy {
         return Ok(Claim::Replay(Outcome::new(
             id,
@@ -104,12 +109,12 @@ async fn claim(
     }
     let key = receipt_key(tenant, route, id);
     let inserted: Option<String>=sqlx::query_scalar("INSERT INTO sync_events (id,tenant_id,action_type,payload,request_identity,receipt_route,client_event_id,receipt_status) VALUES ($1,$2,$3,$4,$5,$6,$7,'pending') ON CONFLICT (id) DO NOTHING RETURNING id")
-        .bind(&key).bind(tenant).bind(action).bind(identity.to_string()).bind(identity).bind(route).bind(id).fetch_optional(&mut **tx).await?;
+        .bind(&key).bind(tenant).bind(action).bind(identity.to_string()).bind(identity).bind(route).bind(id).fetch_optional(&mut *tx).await?;
     if inserted.is_some() {
         return Ok(Claim::New(key));
     }
     let old: Option<(Value,Option<String>,Option<i64>)>=sqlx::query_as("SELECT request_identity,receipt_status,result_version FROM sync_events WHERE id=$1 AND tenant_id=$2 FOR UPDATE")
-        .bind(&key).bind(tenant).fetch_optional(&mut **tx).await?;
+        .bind(&key).bind(tenant).fetch_optional(&mut *tx).await?;
     let outcome = match old {
         Some((ref old, ref status, version))
             if old == identity && status.as_deref() == Some("acknowledged") =>
@@ -139,7 +144,7 @@ async fn claim(
 }
 
 async fn finish(
-    tx: &mut Transaction<'_, Postgres>,
+    tx: &mut PgConnection,
     tenant: &str,
     key: &str,
     status: &str,
@@ -148,20 +153,20 @@ async fn finish(
         .bind(status)
         .bind(key)
         .bind(tenant)
-        .execute(&mut **tx)
+        .execute(&mut *tx)
         .await?;
     Ok(())
 }
 
 async fn task(
-    tx: &mut Transaction<'_, Postgres>,
+    tx: &mut PgConnection,
     tenant: &str,
     department: &str,
     event: &str,
     payload: Value,
 ) -> Result<(), sqlx::Error> {
     sqlx::query("INSERT INTO department_tasks (id,tenant_id,department,event_type,payload,status) VALUES ($1,$2,$3,$4,$5,'PENDING')")
-        .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(department).bind(event).bind(payload).execute(&mut **tx).await?;
+        .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(department).bind(event).bind(payload).execute(&mut *tx).await?;
     Ok(())
 }
 
@@ -172,6 +177,7 @@ fn block(id: &str, route: &str, reason: &str) -> Outcome {
     Outcome::new(id, route, "blocked", Some(reason))
 }
 
+#[cfg(test)]
 pub(super) async fn sync_events(
     pool: &PgPool,
     tenant: &str,
@@ -203,12 +209,55 @@ pub(super) async fn sync_events(
     response
 }
 
+pub(super) async fn sync_authorized_events(
+    state: &super::SyncEventsState,
+    claims: &server_common::Claims,
+    headers: &axum::http::HeaderMap,
+    tenant: &str,
+    events: &[SyncEvent],
+) -> BatchResponse {
+    let mut response = BatchResponse {
+        success: true,
+        ..Default::default()
+    };
+    for event in events {
+        let applied = if event.entity_type == "appointment" {
+            appointments::apply(&state.access, claims, headers, event)
+                .await
+                .map(|outcome| (outcome, None))
+        } else {
+            apply_event(&state.pool, tenant, event).await
+        };
+        match applied {
+            Ok((outcome, product)) => {
+                if let Some(product) = product {
+                    response.committed_products.push(product);
+                }
+                response.push(outcome);
+            }
+            Err(error) => {
+                tracing::warn!(%error,"Sync event transaction did not commit");
+                response.push(Outcome::new(
+                    &event.id,
+                    EVENTS_ROUTE,
+                    error.status(),
+                    Some(error.reason()),
+                ));
+            }
+        }
+    }
+    response
+}
+
 async fn apply_event(
     pool: &PgPool,
     tenant: &str,
     e: &SyncEvent,
 ) -> Result<(Outcome, Option<String>), SyncError> {
     let blocked = |reason| (block(&e.id, EVENTS_ROUTE, reason), None);
+    if e.entity_type == "appointment" {
+        return Ok(blocked("canonical_owner_authority_required"));
+    }
     if !valid_id(&e.id) || !valid_id(&e.entity_id) || e.base_version < 0 {
         return Ok(blocked("invalid_event_identity"));
     }
@@ -216,7 +265,6 @@ async fn apply_event(
         (e.entity_type.as_str(), e.action_type.as_str()),
         ("order", "UpdateStatus")
             | ("product", "ToggleSoldOut")
-            | ("appointment", "UpdateStatus")
             | ("audio_intent", "ProcessVoiceCommand")
     );
     if !supported {
@@ -254,7 +302,7 @@ async fn apply_event(
         {
             return Ok(blocked("expected_product_state_required"));
         }
-    } else if matches!(e.entity_type.as_str(), "order" | "appointment") {
+    } else if matches!(e.entity_type.as_str(), "order") {
         let status = e
             .payload
             .get("status")
@@ -308,7 +356,6 @@ async fn apply_event(
     let current=match e.entity_type.as_str() {
         "product" => sqlx::query_scalar::<_,Value>("SELECT jsonb_build_object('is_sold_out',is_sold_out,'updated_at',updated_at) FROM products WHERE id=$1 AND tenant_id=$2 FOR UPDATE").bind(&e.entity_id).bind(tenant).fetch_optional(&mut *tx).await?,
         "order" => sqlx::query_scalar::<_,Value>("SELECT jsonb_build_object('status',status,'notes',notes,'updated_at',updated_at) FROM orders WHERE id=$1 AND tenant_id=$2 FOR UPDATE").bind(&e.entity_id).bind(tenant).fetch_optional(&mut *tx).await?,
-        "appointment" => sqlx::query_scalar::<_,Value>("SELECT jsonb_build_object('status',status,'notes',notes,'updated_at',updated_at) FROM appointments WHERE id=$1 AND tenant_id=$2 FOR UPDATE").bind(&e.entity_id).bind(tenant).fetch_optional(&mut *tx).await?,
         _=>Some(json!({})),
     };
     let Some(current) = current else {
@@ -337,7 +384,7 @@ async fn apply_event(
     let conflict = version_conflict
         || match e.entity_type.as_str() {
             "product" => current.get("is_sold_out") != e.payload.get("expected_is_sold_out"),
-            "order" | "appointment" => {
+            "order" => {
                 current.get("status") != e.payload.get("expected_status")
                     || (e.payload.get("notes").is_some()
                         && current.get("notes") != e.payload.get("expected_notes"))
@@ -362,10 +409,10 @@ async fn apply_event(
     }
     match e.entity_type.as_str() {
         "product"=>{ sqlx::query("UPDATE products SET is_sold_out=$1,updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3").bind(e.payload["is_sold_out"].as_bool().unwrap()).bind(&e.entity_id).bind(tenant).execute(&mut *tx).await?; },
-        "order"|"appointment"=>{
-            let query=if e.entity_type=="order" {"UPDATE orders SET status=$1, notes=CASE WHEN $2 THEN $3 ELSE notes END, updated_at=clock_timestamp() WHERE id=$4 AND tenant_id=$5"}else{"UPDATE appointments SET status=$1, notes=CASE WHEN $2 THEN $3 ELSE notes END, updated_at=clock_timestamp() WHERE id=$4 AND tenant_id=$5"};
+        "order"=>{
+            let query="UPDATE orders SET status=$1, notes=CASE WHEN $2 THEN $3 ELSE notes END, updated_at=clock_timestamp() WHERE id=$4 AND tenant_id=$5";
             sqlx::query(query).bind(e.payload["status"].as_str().unwrap()).bind(e.payload.get("notes").is_some()).bind(e.payload.get("notes").and_then(Value::as_str)).bind(&e.entity_id).bind(tenant).execute(&mut *tx).await?;
-            let event=if e.entity_type=="order" {"order.status.updated"}else if e.payload["status"]=="Completed" {"job.completed"}else{"appointment.status.updated"};
+            let event="order.status.updated";
             task(&mut tx,tenant,"operations",event,json!({"sync_event_id":e.id,"entity_id":e.entity_id,"status":e.payload["status"]})).await?;
         },
         _=>task(&mut tx,tenant,"operations","voice.intent.synced",json!({"sync_event_id":e.id,"entity_id":e.entity_id,"transcription":e.payload["transcription"]})).await?,
@@ -380,6 +427,121 @@ async fn apply_event(
     Ok((outcome, product))
 }
 
+enum WriteTransaction {
+    Owner(OwnerPgTransaction),
+    #[cfg(test)]
+    Legacy(Transaction<'static, Postgres>),
+}
+impl WriteTransaction {
+    fn connection(&mut self) -> &mut PgConnection {
+        match self {
+            Self::Owner(tx) => tx.connection(),
+            #[cfg(test)]
+            Self::Legacy(tx) => tx,
+        }
+    }
+    async fn commit(self) -> Result<(), SyncError> {
+        match self {
+            Self::Owner(tx) => commit_owner(tx).await,
+            #[cfg(test)]
+            Self::Legacy(tx) => tx.commit().await.map_err(SyncError::Commit),
+        }
+    }
+}
+async fn begin_authorized_write(
+    access: &FieldAccess,
+    claims: &server_common::Claims,
+    headers: &axum::http::HeaderMap,
+) -> Result<(WriteTransaction, String), SyncError> {
+    let owner = access
+        .authorize(claims, headers)
+        .await
+        .map_err(|(status, _)| {
+            SyncError::Rejected(if status == axum::http::StatusCode::FORBIDDEN {
+                "current_owner_authority_required"
+            } else {
+                "canonical_authority_unavailable"
+            })
+        })?;
+    let tenant = owner.tenant_id().to_owned();
+    let tx = owner.begin().await.map_err(|error| {
+        SyncError::Rejected(if matches!(error, AuthorityError::Forbidden) {
+            "current_owner_authority_required"
+        } else {
+            "canonical_authority_unavailable"
+        })
+    })?;
+    Ok((WriteTransaction::Owner(tx), tenant))
+}
+pub(super) async fn sync_authorized_intents(
+    access: &FieldAccess,
+    claims: &server_common::Claims,
+    headers: &axum::http::HeaderMap,
+    intents: &[OperationIntent],
+) -> BatchResponse {
+    let mut response = BatchResponse {
+        success: true,
+        ..Default::default()
+    };
+    for intent in intents {
+        let result = match begin_authorized_write(access, claims, headers).await {
+            Ok((tx, tenant)) => apply_intent(tx, &tenant, intent).await,
+            Err(error) => Err(error),
+        };
+        response.push(match result {
+            Ok(outcome) => outcome,
+            Err(error) => Outcome::new(
+                &intent.id,
+                INTENTS_ROUTE,
+                error.status(),
+                Some(error.reason()),
+            ),
+        });
+    }
+    response
+}
+pub(super) async fn sync_authorized_mutations(
+    access: &FieldAccess,
+    claims: &server_common::Claims,
+    headers: &axum::http::HeaderMap,
+    mutations: &[OfflineMutation],
+) -> BatchResponse {
+    let mut response = BatchResponse {
+        success: true,
+        ..Default::default()
+    };
+    for mutation in mutations {
+        let result = match begin_authorized_write(access, claims, headers).await {
+            Ok((tx, tenant)) => apply_mutation(tx, &tenant, mutation).await,
+            Err(error) => Err(error),
+        };
+        match result {
+            Ok((outcome, product, conflict)) => {
+                if let Some(product) = product {
+                    response.committed_products.push(product);
+                }
+                if let Some(conflict) = conflict {
+                    response
+                        .pending_reconciliation
+                        .get_or_insert_default()
+                        .push(conflict);
+                }
+                response.push(outcome);
+            }
+            Err(error) => response.push(Outcome::new(
+                mutation
+                    .client_mutation_id
+                    .as_deref()
+                    .unwrap_or(&mutation.transaction_id),
+                OFFLINE_ROUTE,
+                error.status(),
+                Some(error.reason()),
+            )),
+        }
+    }
+    response
+}
+#[cfg(test)]
 pub(super) async fn sync_intents(
     pool: &PgPool,
     tenant: &str,
@@ -390,7 +552,11 @@ pub(super) async fn sync_intents(
         ..Default::default()
     };
     for intent in intents {
-        let outcome = match apply_intent(pool, tenant, intent).await {
+        let result = match begin(pool, tenant).await {
+            Ok(tx) => apply_intent(WriteTransaction::Legacy(tx), tenant, intent).await,
+            Err(error) => Err(error.into()),
+        };
+        let outcome = match result {
             Ok(o) => o,
             Err(error) => {
                 tracing::warn!(%error,"Operation intent did not commit");
@@ -407,7 +573,7 @@ pub(super) async fn sync_intents(
     response
 }
 async fn apply_intent(
-    pool: &PgPool,
+    mut tx: WriteTransaction,
     tenant: &str,
     intent: &OperationIntent,
 ) -> Result<Outcome, SyncError> {
@@ -417,9 +583,8 @@ async fn apply_intent(
     }
     let identity =
         json!({"id":intent.id,"action_type":intent.action_type,"payload":intent.payload});
-    let mut tx = begin(pool, tenant).await?;
     let key = match claim(
-        &mut tx,
+        tx.connection(),
         tenant,
         INTENTS_ROUTE,
         &intent.id,
@@ -429,14 +594,17 @@ async fn apply_intent(
     .await?
     {
         Claim::New(k) => k,
-        Claim::Replay(o) => return Ok(o),
+        Claim::Replay(o) => {
+            tx.commit().await?;
+            return Ok(o);
+        }
     };
     let existing: Option<(Option<Value>,)> = sqlx::query_as(
         "SELECT request_identity FROM operation_intents WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
     )
     .bind(&intent.id)
     .bind(tenant)
-    .fetch_optional(&mut *tx)
+    .fetch_optional(tx.connection())
     .await?;
     if existing.is_some() {
         return Ok(Outcome::new(
@@ -447,9 +615,9 @@ async fn apply_intent(
         ));
     }
     sqlx::query("INSERT INTO operation_intents (id,tenant_id,action_type,payload,status,request_identity) VALUES ($1,$2,$3,$4,'SYNCED',$5)")
-        .bind(&intent.id).bind(tenant).bind(&intent.action_type).bind(&intent.payload).bind(&identity).execute(&mut *tx).await?;
-    finish(&mut tx, tenant, &key, "acknowledged").await?;
-    tx.commit().await.map_err(SyncError::Commit)?;
+        .bind(&intent.id).bind(tenant).bind(&intent.action_type).bind(&intent.payload).bind(&identity).execute(tx.connection()).await?;
+    finish(tx.connection(), tenant, &key, "acknowledged").await?;
+    tx.commit().await?;
     Ok(Outcome::new(
         &intent.id,
         INTENTS_ROUTE,
@@ -458,6 +626,7 @@ async fn apply_intent(
     ))
 }
 
+#[cfg(test)]
 pub(super) async fn sync_mutations(
     pool: &PgPool,
     tenant: &str,
@@ -472,7 +641,11 @@ pub(super) async fn sync_mutations(
             .client_mutation_id
             .as_deref()
             .unwrap_or(&mutation.transaction_id);
-        match apply_mutation(pool, tenant, mutation).await {
+        let result = match begin(pool, tenant).await {
+            Ok(tx) => apply_mutation(WriteTransaction::Legacy(tx), tenant, mutation).await,
+            Err(error) => Err(error.into()),
+        };
+        match result {
             Ok((outcome, product, conflict)) => {
                 if let Some(p) = product {
                     response.committed_products.push(p);
@@ -499,7 +672,7 @@ pub(super) async fn sync_mutations(
     response
 }
 async fn apply_mutation(
-    pool: &PgPool,
+    mut tx: WriteTransaction,
     tenant: &str,
     m: &OfflineMutation,
 ) -> Result<(Outcome, Option<String>, Option<Value>), SyncError> {
@@ -525,12 +698,14 @@ async fn apply_mutation(
         return Ok(blocked("payload_required"));
     }
     let identity = serde_json::to_value(m).expect("OfflineMutation is JSON serializable");
-    let mut tx = begin(pool, tenant).await?;
-    let key = match claim(&mut tx, tenant, OFFLINE_ROUTE, id, kind, &identity).await? {
+    let key = match claim(tx.connection(), tenant, OFFLINE_ROUTE, id, kind, &identity).await? {
         Claim::New(k) => k,
-        Claim::Replay(o) => return Ok((o, None, None)),
+        Claim::Replay(o) => {
+            tx.commit().await?;
+            return Ok((o, None, None));
+        }
     };
-    let legacy:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM applied_client_mutations WHERE client_mutation_id=$1 AND tenant_id=$2)").bind(id).bind(tenant).fetch_one(&mut *tx).await?;
+    let legacy:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM applied_client_mutations WHERE client_mutation_id=$1 AND tenant_id=$2)").bind(id).bind(tenant).fetch_one(tx.connection()).await?;
     if legacy {
         return Ok((
             Outcome::new(
@@ -550,12 +725,12 @@ async fn apply_mutation(
     )
     .bind(id)
     .bind(tenant)
-    .execute(&mut *tx)
+    .execute(tx.connection())
     .await?;
     let mut conflict = None;
     if kind == "draft_quote" {
         task(
-            &mut tx,
+            tx.connection(),
             tenant,
             "sales",
             "tenant.omnichannel.message.received",
@@ -567,20 +742,20 @@ async fn apply_mutation(
             Ok(p) => p,
             Err(_) => return Ok(blocked("invalid_intent_payload")),
         };
-        sqlx::query("INSERT INTO ohc_job_queue (id,tenant_id,job_type,payload) VALUES ($1,$2,'agent_intent',$3)").bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(payload).execute(&mut *tx).await?;
+        sqlx::query("INSERT INTO ohc_job_queue (id,tenant_id,job_type,payload) VALUES ($1,$2,'agent_intent',$3)").bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(payload).execute(tx.connection()).await?;
     } else {
         let stock: Option<(i32,bool)> = sqlx::query_as(
             "SELECT inventory_count, (to_jsonb(products) ? 'pn_counter_p' AND to_jsonb(products) ? 'pn_counter_n') FROM products WHERE id=$1 AND tenant_id=$2 FOR UPDATE",
         )
         .bind(&m.product_id)
         .bind(tenant)
-        .fetch_optional(&mut *tx)
+        .fetch_optional(tx.connection())
         .await?;
         let Some((stock, has_counters)) = stock else {
             return Ok(blocked("product_not_found_in_tenant"));
         };
         let levels: Vec<i32> = sqlx::query_scalar("SELECT available_count FROM inventory_levels WHERE variant_id=$1 AND tenant_id=$2 FOR UPDATE")
-            .bind(&m.product_id).bind(tenant).fetch_all(&mut *tx).await?;
+            .bind(&m.product_id).bind(tenant).fetch_all(tx.connection()).await?;
         if levels.len() > 1 {
             return Ok(blocked("inventory_location_required"));
         }
@@ -589,7 +764,7 @@ async fn apply_mutation(
         if available < m.quantity_deducted {
             let c = json!({"transaction_id":m.transaction_id,"product_id":m.product_id,"shortage":i64::from(m.quantity_deducted)-i64::from(available)});
             task(
-                &mut tx,
+                tx.connection(),
                 tenant,
                 "operations",
                 "inventory.sync.conflict",
@@ -602,20 +777,20 @@ async fn apply_mutation(
             "UPDATE products SET pn_counter_n=COALESCE(pn_counter_n,0)+$1,inventory_count=GREATEST(0,COALESCE(pn_counter_p,0)-(COALESCE(pn_counter_n,0)+$1)),available_quantity=GREATEST(0,available_quantity-$1),updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3"
         } else {
             "UPDATE products SET inventory_count=GREATEST(0,inventory_count-$1),available_quantity=GREATEST(0,available_quantity-$1),updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3"
-        }).bind(m.quantity_deducted).bind(&m.product_id).bind(tenant).execute(&mut *tx).await?;
+        }).bind(m.quantity_deducted).bind(&m.product_id).bind(tenant).execute(tx.connection()).await?;
         if level.is_some() {
-            sqlx::query("UPDATE inventory_levels SET available_count=GREATEST(0,available_count-$1) WHERE variant_id=$2 AND tenant_id=$3").bind(m.quantity_deducted).bind(&m.product_id).bind(tenant).execute(&mut *tx).await?;
+            sqlx::query("UPDATE inventory_levels SET available_count=GREATEST(0,available_count-$1) WHERE variant_id=$2 AND tenant_id=$3").bind(m.quantity_deducted).bind(&m.product_id).bind(tenant).execute(tx.connection()).await?;
         }
         sqlx::query("INSERT INTO ohc_job_queue (id,tenant_id,job_type,payload) VALUES ($1,$2,'offline_pos_sync',$3)")
-            .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(json!({"transaction_id":m.transaction_id,"product_id":m.product_id,"quantity_deducted":m.quantity_deducted,"amount":m.amount,"payment_method":m.payment_method,"payment_intent_id":m.payment_intent_id,"currency":m.currency,"inventory_already_deducted":true})).execute(&mut *tx).await?;
+            .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(json!({"transaction_id":m.transaction_id,"product_id":m.product_id,"quantity_deducted":m.quantity_deducted,"amount":m.amount,"payment_method":m.payment_method,"payment_intent_id":m.payment_intent_id,"currency":m.currency,"inventory_already_deducted":true})).execute(tx.connection()).await?;
     }
     let status = if conflict.is_some() {
         "reconciliation"
     } else {
         "acknowledged"
     };
-    finish(&mut tx, tenant, &key, status).await?;
-    tx.commit().await.map_err(SyncError::Commit)?;
+    finish(tx.connection(), tenant, &key, status).await?;
+    tx.commit().await?;
     Ok((
         Outcome::new(
             id,

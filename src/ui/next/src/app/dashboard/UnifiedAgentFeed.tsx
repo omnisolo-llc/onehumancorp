@@ -26,6 +26,7 @@ import type { AgentFeedItem, AgentFeedData, ActivityItem } from '@/lib/agent-fee
 
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData }) {
+  const hasFetchedCanonicalFeedRef = useRef(false);
   const decidedIdsRef = useRef<Set<string>>(new Set());
   const pendingDecisionIdsRef = useRef<Set<string>>(new Set());
   const [items, setItems] = useState<AgentFeedItem[]>([]);
@@ -213,12 +214,16 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         }
         let unifiedData = initialData;
 
-        if (refresh || !unifiedData || !unifiedData.items || unifiedData.items.length === 0) {
+        // A late dashboard aggregate may be older than our own completed read.
+        // Once we have read the canonical feed, revalidate it instead of letting
+        // new aggregate props replace its rows with stale or partial projections.
+        if (refresh || hasFetchedCanonicalFeedRef.current || !unifiedData || !unifiedData.items || unifiedData.items.length === 0) {
           const unifiedRes = await fetch("/api/v1/agent-feed");
           if (!unifiedRes.ok) {
             throw new Error("Feed temporarily unavailable");
           }
           const refreshedData = await unifiedRes.json();
+          if (mounted) hasFetchedCanonicalFeedRef.current = true;
           unifiedData = initialData
             ? {
                 ...initialData,

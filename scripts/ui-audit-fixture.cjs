@@ -40,4 +40,21 @@ function assertSameClickInventory(baseline, current) {
   if (missing.length || unexpected.length) throw new Error(`Dashboard baseline changed before a click; missing=${JSON.stringify(missing)}; unexpected=${JSON.stringify(unexpected)}`);
 }
 
-module.exports = { createOwnedAuditSeed, assertSameClickInventory };
+const quoteAuditRoutes = ['/quotes/e2e-id', '/quote/e2e-id', '/quoting', '/proposals/customer-view'];
+function quoteAuditRoute(route, quoteId) {
+  if (!quoteAuditRoutes.includes(route)) throw new Error('Unclassified quote audit route');
+  if (!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(quoteId)) throw new Error('Invalid quote audit identity');
+  return route.endsWith('/e2e-id') ? route.replace('e2e-id', quoteId) : `${route}?id=${quoteId}`;
+}
+function ownedQuoteAuditRecord(actor) {
+  const id = canonical => {
+    const matches = Object.entries(actor.canonicalIds).filter(([, value]) => value === canonical);
+    if (matches.length !== 1) throw new Error('Canonical owned quote identity is missing or ambiguous');
+    return matches[0][0];
+  };
+  return { namespace: actor.namespace, tenantId: actor.tenantId,
+    quoteId: id('823e4567-e89b-12d3-a456-426614174000'), customerId: id('648d7c4a-8f5b-4c3e-908f-7c6d5e4f3a2b'),
+    description: 'Fix leaking sink including labor and standard materials', priceCents: 15000, depositCents: 5000 };
+}
+
+module.exports = { createOwnedAuditSeed, assertSameClickInventory, quoteAuditRoutes, quoteAuditRoute, ownedQuoteAuditRecord };

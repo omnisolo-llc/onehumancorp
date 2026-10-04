@@ -93,3 +93,14 @@ test('Razorpay configuration has explicit additive key and secret fields on the 
   assert.match(request, /string api_key = 8;/);
   assert.match(request, /string api_secret = 9;/);
 });
+
+test('NATS metadata redaction keeps the original connection input', async () => {
+  const client = await readFile(new URL('../src/server/integrations/nats/client.rs', import.meta.url), 'utf8');
+  const provider = await readFile(new URL('../src/server/integrations/nats/provider.rs', import.meta.url), 'utf8');
+  assert.match(connect, /base_url:\s*if integration_id == "nats"\s*\{\s*crate::integrations::nats::client::public_nats_endpoint\(base_url\)/);
+  assert.match(connect, /let base_url_clone = base_url\.to_string\(\);/);
+  assert.match(connect, /NatsProvider::new\(&base_url_clone\)\.await/);
+  assert.match(client, /async_nats::connect\(url\)/);
+  assert.match(provider, /RealNatsClient::new\(url\)/);
+  assert.equal([...provider.matchAll(/base_url:\s*public_nats_endpoint\(url\)/g)].length, 2);
+});

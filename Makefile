@@ -7,14 +7,14 @@ INIT_ARGS ?=
 # make init installs project-local tool links, not global default versions.
 export PATH := $(CURDIR)/target/dev-tools/bin:$(CURDIR)/target/dev-tools/venv/bin:$(CURDIR)/.github/test-tools/node_modules/.bin:$(HOME)/.cargo/bin:$(PATH)
 
-.PHONY: help init doctor test test-rust test-backend test-node test-contracts test-e2e build-e2e build-web prepare-desktop lint lint-rust lint-backend lint-node
+.PHONY: help init doctor test test-rust test-backend test-node test-contracts test-staff-timecards test-e2e build-e2e build-web prepare-desktop lint lint-rust lint-backend lint-node
 
 help:
 	@echo 'make init: install/check the pinned native development and test prerequisites'
 	@echo 'make doctor: check the environment without installing tools'
 	@echo 'make test: all Rust, Node/frontend/CLI, contracts and real-stack E2E tests'
 	@echo 'make lint: Rust formatting/Clippy, ESLint and TypeScript checks'
-	@echo 'Focused targets: test-rust test-backend test-node test-contracts test-e2e'
+	@echo 'Focused targets: test-rust test-backend test-node test-contracts test-staff-timecards test-e2e'
 	@echo 'See docs/development/native-build.md for dependencies and setup.'
 
 init:
@@ -46,6 +46,11 @@ test-node:
 test-contracts:
 	$(NPM) run test:contracts
 
+# Focused clock regression gate; an owned loopback PostgreSQL fixture is required.
+# This remains additional coverage, never a replacement for make lint/make test.
+test-staff-timecards:
+	python3 scripts/focused_ci_gate.py staff-timecard-contract
+
 build-web:
 	$(NPM) run build:web
 
@@ -54,7 +59,9 @@ prepare-desktop:
 	OMNISOLO_PREBUILT_WEB=target/native-web $(NPM) run desktop:prepare
 
 build-e2e:
+	node scripts/native-binary-proof.mjs snapshot "$(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/native-source-snapshot.json"
 	$(CARGO) build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
+	node scripts/native-binary-proof.mjs record "$(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/native-source-snapshot.json" "$(if $(CARGO_TARGET_DIR),$(CARGO_TARGET_DIR),target)/debug/native-binary-proof.json"
 	$(MAKE) build-web
 
 test-e2e:

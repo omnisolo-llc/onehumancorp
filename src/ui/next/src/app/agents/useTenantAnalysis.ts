@@ -37,6 +37,7 @@ function untilAborted<T>(operation: Promise<T>, signal: AbortSignal): Promise<T>
 export function useTenantAnalysis(retireView: () => void) {
   const [policy, setPolicy] = useState<Policy | null>(null);
   const [ready, setReady] = useState(false);
+  const [verifying, setVerifying] = useState(true);
   const [busy, setBusy] = useState(false);
   const [held, setHeld] = useState(false);
   const [receipt, setReceipt] = useState<AnalysisReceipt | null>(null);
@@ -54,10 +55,11 @@ export function useTenantAnalysis(retireView: () => void) {
     const clear = () => {
       generation.current += 1; owner.current = null; request.current?.abort(); request.current = null;
       inFlight.current = false; blocked.current = false;
-      setReady(false); setPolicy(null); setBusy(false); setHeld(false); setReceipt(null); retire.current();
+      setReady(false); setVerifying(false); setPolicy(null); setBusy(false); setHeld(false); setReceipt(null); retire.current();
     };
     const verify = async () => {
       const token = generation.current, epoch = onboardingSessionEpoch();
+      setVerifying(true);
       try {
         const expected = await openOnboardingSession();
         if (!mounted.current || token !== generation.current || epoch !== onboardingSessionEpoch()) return;
@@ -98,6 +100,8 @@ export function useTenantAnalysis(retireView: () => void) {
         setRevision(value => value + 1);
       } catch {
         if (mounted.current && token === generation.current && epoch === onboardingSessionEpoch()) setNotice('Could not verify your session or execution policy. No task can be submitted.');
+      } finally {
+        if (mounted.current && token === generation.current && epoch === onboardingSessionEpoch()) setVerifying(false);
       }
     };
     void verify();
@@ -200,5 +204,5 @@ export function useTenantAnalysis(retireView: () => void) {
     } catch { if (current(expected, token, epoch)) setNotice('The acknowledged request could not be retired locally. No new task was sent.'); }
     finally { if (current(expected, token, epoch)) { inFlight.current = false; setBusy(false); } }
   };
-  return { policy, ready, busy, held, receipt, notice, revision, readSnapshot, start, startAnother, cancelReceipt };
+  return { policy, ready, verifying, busy, held, receipt, notice, revision, readSnapshot, start, startAnother, cancelReceipt };
 }

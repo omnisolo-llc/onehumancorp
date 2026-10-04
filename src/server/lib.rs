@@ -4065,6 +4065,26 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         None
     };
 
+    // Validate Redis startup before spawning workers. Standalone and absent
+    // Redis configurations keep their existing database-backed task queue.
+    // The rate limiter still requires a valid client configuration in all modes.
+    let redis_url = std::env::var("REDIS_URL").ok();
+    let rate_limit_redis_client = redis::Client::open(
+        redis_url.as_deref().unwrap_or("redis://127.0.0.1/"),
+    )
+    .map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Invalid REDIS_URL for the Redis rate limiter",
+        )
+    })?;
+    let configured_redis_queue = match (standalone, redis_url.as_deref()) {
+        (false, Some(url)) => {
+            Some(crate::queue::RedisTaskQueue::connect_for_startup(url, "ohc_job_queue").await?)
+        }
+        _ => None,
+    };
+
     // Initialize database
     let db = Arc::new(db::DB::new().await?);
     let portable_database = match &db.store {
@@ -4380,35 +4400,12 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Mesh API server
     let is_cloud = !crate::is_standalone_runtime();
-    let redis_url = std::env::var("REDIS_URL").ok();
-    const MESH_TRANSPORT_STARTUP_ATTEMPTS: u32 = 30;
-    let mut attempt = 1;
-    let mesh_transport = loop {
-        match omnisolo_builtin_agent::mesh::transport::create_transport(
-            redis_url.as_deref(),
-            is_cloud,
-        )
-        .await
-        {
-            Ok(transport) => break transport,
-            Err(error) if is_cloud && attempt < MESH_TRANSPORT_STARTUP_ATTEMPTS => {
-                tracing::warn!(
-                    attempt,
-                    max_attempts = MESH_TRANSPORT_STARTUP_ATTEMPTS,
-                    error = %error,
-                    "Mesh transport is not ready; retrying startup"
-                );
-                attempt += 1;
-                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-            }
-            Err(error) => {
-                return Err(std::io::Error::other(format!(
-                    "Failed to create MeshTransport after {attempt} attempt(s): {error}"
-                ))
-                .into());
-            }
-        }
-    };
+    let mesh_transport = omnisolo_builtin_agent::mesh::transport::create_transport_for_startup(
+        redis_url.as_deref(),
+        is_cloud,
+    )
+    .await
+    .map_err(std::io::Error::other)?;
 
     // Initialize Handoff Manager
     let handoff_mesh = std::sync::Arc::new(crate::orchestration::mesh::CentrifugeNode::new(
@@ -4427,13 +4424,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     if legacy_sqlx_background_enabled {
         health_worker.start();
     }
-    let agent_action_worker =
-        std::sync::Arc::new(crate::workers::agent_action_worker::AgentActionWorker::new(
-            db.pool.clone(),
-            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
-        ));
     if legacy_sqlx_background_enabled {
-        agent_action_worker.start();
         drop(crate::workers::invoice_followup_worker::start_invoice_followup_worker(db.clone()));
     }
     let semantic_router = std::sync::Arc::new(crate::orchestration::router::SemanticRouter::new());
@@ -4688,22 +4679,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let rate_limiter = if let Ok(client) = redis::Client::open(redis_url.clone()) {
+    let rate_limiter = {
         let tracker = std::sync::Arc::new(::server_pricing::token_tracking::TokenTracking::new(
             &opentelemetry::global::meter("ohc_server"),
         ));
         let store = std::sync::Arc::new(::server_harness::telemetry::ViolationStore::new(None));
         std::sync::Arc::new(
-            ::server_pricing::rate_limit::RedisRateLimiter::new(client)
+            ::server_pricing::rate_limit::RedisRateLimiter::new(rate_limit_redis_client)
                 .with_token_tracking(tracker)
                 .with_telemetry(store),
         )
-    } else {
-        panic!(
-            "Failed to initialize Redis client for RateLimiter at {}",
-            redis_url
-        );
     };
 
     let webhook_state = crate::api::billing_webhook::WebhookState {
@@ -4884,6 +4869,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(std::io::Error::other)?;
     let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
+    if legacy_sqlx_background_enabled {
+        let agent_action_worker = std::sync::Arc::new(
+            crate::workers::agent_action_worker::AgentActionWorker::new(
+                db.pool.clone(),
+                std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+            )
+            .with_authority(http_auth_store.as_ref())
+            .await,
+        );
+        agent_action_worker.start();
+    }
     let workflow_execution =
         configured_workflow_execution(http_auth_store.clone(), auth_database.as_ref().clone());
     let http_auth_router = crate::auth::http::router(http_auth_store.clone())
@@ -6333,73 +6329,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    async fn load_ui_orders_from_db(
-        db: &crate::db::DB,
-        tenant_id: &str,
-        mobile_optimized: bool,
-    ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
-        match &db.store {
-            crate::db::DbStore::Postgres => {
-                let mut tx = db.pool.begin().await?;
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-                let res = if mobile_optimized {
-                    sqlx::query("SELECT o.id, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status FROM orders o WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&mut *tx)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }).collect())
-                } else {
-                    sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS DOUBLE PRECISION) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(o.created_at::text, '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = $1 ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(&mut *tx)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-                };
-                tx.commit().await?;
-                res
-            }
-            crate::db::DbStore::Sqlite(pool) => {
-                if mobile_optimized {
-                    sqlx::query("SELECT o.id, CAST(COALESCE(o.total_amount, 0.0) AS REAL) AS total_amount, COALESCE(o.status, '') AS status FROM orders o WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                        })
-                    }).collect())
-                } else {
-                    sqlx::query("SELECT o.id, COALESCE(c.name, '') AS customer_name, CAST(COALESCE(o.total_amount, 0.0) AS REAL) AS total_amount, COALESCE(o.status, '') AS status, COALESCE(CAST(o.created_at AS TEXT), '') AS created_at FROM orders o LEFT JOIN customers c ON c.id = o.customer_id AND c.tenant_id = o.tenant_id WHERE o.tenant_id = ? ORDER BY o.created_at DESC LIMIT 50")
-                    .bind(tenant_id)
-                    .fetch_all(pool)
-                    .await.map(|rows| rows.into_iter().map(|row| {
-                        serde_json::json!({
-                            "id": row.get::<String, _>("id"),
-                            "customer_name": row.get::<String, _>("customer_name"),
-                            "total_amount": row.get::<f64, _>("total_amount"),
-                            "status": row.get::<String, _>("status"),
-                            "created_at": row.get::<String, _>("created_at")
-                        })
-                    }).collect())
-                }
-            }
-        }
-    }
-
     async fn ui_dashboard_analytics_briefing_handler(
         axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
         axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
@@ -7510,29 +7439,29 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         let query_pg = r#"
             SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = $1
             UNION ALL
-            SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+            SELECT id, tenant_id, department as event_source, jsonb_build_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = $1 AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_approvals.tenant_id AND canonical.id = agent_approvals.id)
             UNION ALL
             SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, jsonb_build_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = $1 AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
             UNION ALL
-            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, jsonb_build_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, jsonb_build_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = $1 AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = omni_inbox_messages.tenant_id AND canonical.id = omni_inbox_messages.id)
             UNION ALL
-            SELECT id, tenant_id, 'orders' as event_source, jsonb_build_object('description', 'Pending Order') as context_payload, jsonb_build_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending'
+            SELECT id, tenant_id, 'orders' as event_source, jsonb_build_object('description', 'Pending Order') as context_payload, jsonb_build_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = $1 AND status = 'pending' AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = orders.tenant_id AND canonical.id = orders.id)
             UNION ALL
-            SELECT id, tenant_id, 'invoices' as event_source, jsonb_build_object('description', 'Action Required: Overdue Invoice') as context_payload, jsonb_build_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue')
+            SELECT id, tenant_id, 'invoices' as event_source, jsonb_build_object('description', 'Action Required: Overdue Invoice') as context_payload, jsonb_build_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = $1 AND status IN ('draft', 'overdue') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = invoices.tenant_id AND canonical.id = invoices.id)
             ORDER BY created_at DESC LIMIT $2
         "#;
         let query_sqlite = r#"
             SELECT id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at FROM agent_feed_items WHERE tenant_id = ?
             UNION ALL
-            SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED')
+            SELECT id, tenant_id, department as event_source, json_object('description', description) as context_payload, payload as proposed_action, CASE WHEN status = 'DRAFT' THEN 'PENDING_APPROVAL' WHEN status = 'REJECTED' THEN 'DISMISSED' ELSE status END as lifecycle_state, created_at, updated_at FROM agent_approvals WHERE tenant_id = ? AND status IN ('DRAFT', 'PAUSED', 'APPROVED', 'REJECTED', 'DISMISSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_approvals.tenant_id AND canonical.id = agent_approvals.id)
             UNION ALL
             SELECT id, tenant_id, COALESCE(agent_type, department_type, 'operations') as event_source, json_object('description', COALESCE(description, 'Action Request: ' || action_type)) as context_payload, payload as proposed_action, CASE WHEN UPPER(status) IN ('PENDING', 'DRAFT') THEN 'PENDING_APPROVAL' WHEN UPPER(status) IN ('REJECTED', 'DISMISSED') THEN 'DISMISSED' WHEN UPPER(status) = 'APPROVED' THEN 'APPROVED' WHEN UPPER(status) = 'PAUSED' THEN 'PAUSED' ELSE UPPER(status) END as lifecycle_state, created_at, updated_at FROM agent_action_requests WHERE tenant_id = ? AND UPPER(status) IN ('PENDING', 'APPROVED', 'REJECTED', 'DRAFT', 'PAUSED') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = agent_action_requests.tenant_id AND canonical.id = agent_action_requests.id)
             UNION ALL
-            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed')
+            SELECT id, tenant_id, COALESCE(source, 'omni_inbox') as event_source, json_object('customer_message', COALESCE(original_content, ''), 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as context_payload, json_object('draft_reply', COALESCE(draft_reply, ''), 'action_type', 'Draft Reply', 'feature_type', CASE WHEN source = 'Instagram DM' THEN 'instagram_dm' ELSE 'omni_inbox' END) as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM omni_inbox_messages WHERE tenant_id = ? AND status NOT IN ('resolved', 'dismissed', 'sent', 'processed') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = omni_inbox_messages.tenant_id AND canonical.id = omni_inbox_messages.id)
             UNION ALL
-            SELECT id, tenant_id, 'orders' as event_source, json_object('description', 'Pending Order') as context_payload, json_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = ? AND status = 'pending'
+            SELECT id, tenant_id, 'orders' as event_source, json_object('description', 'Pending Order') as context_payload, json_object('message', 'Process Order') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM orders WHERE tenant_id = ? AND status = 'pending' AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = orders.tenant_id AND canonical.id = orders.id)
             UNION ALL
-            SELECT id, tenant_id, 'invoices' as event_source, json_object('description', 'Action Required: Overdue Invoice') as context_payload, json_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = ? AND status IN ('draft', 'overdue')
+            SELECT id, tenant_id, 'invoices' as event_source, json_object('description', 'Action Required: Overdue Invoice') as context_payload, json_object('message', 'Send Reminder') as proposed_action, 'PENDING_APPROVAL' as lifecycle_state, created_at, updated_at FROM invoices WHERE tenant_id = ? AND status IN ('draft', 'overdue') AND NOT EXISTS (SELECT 1 FROM agent_feed_items canonical WHERE canonical.tenant_id = invoices.tenant_id AND canonical.id = invoices.id)
             ORDER BY created_at DESC LIMIT ?
         "#;
         match &db.store {
@@ -7664,7 +7593,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                             &o_key_clone,
                             std::time::Duration::from_secs(5),
                             move || async move {
-                                load_ui_orders_from_db(&db_clone, &t_clone, mobile_optimized)
+                                api::ui_orders::load(&db_clone, &t_clone, mobile_optimized, None)
                                     .await
                                     .ok()
                             },
@@ -8139,49 +8068,6 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             }
             None => {
                 tracing::error!("Failed to fetch UI priority tasks");
-                (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    axum::Json(serde_json::json!([])),
-                )
-                    .into_response()
-            }
-        }
-    }
-
-    async fn list_ui_orders_handler(
-        axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
-        axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
-        axum::extract::Query(query): axum::extract::Query<crate::common::auth_utils::UiTenantQuery>,
-    ) -> axum::response::Response {
-        use axum::response::IntoResponse;
-        let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
-            return axum::http::StatusCode::UNAUTHORIZED.into_response();
-        };
-        let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-
-        let cache_key = format!("ui_orders:{}:mobile:{}", tenant_id, mobile_optimized);
-        let cache = UI_ORDERS_CACHE
-            .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-        let items_opt = cache
-            .get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
-                let db = db.clone();
-                let t = tenant_id.clone();
-                move || async move { load_ui_orders_from_db(&db, &t, mobile_optimized).await.ok() }
-            })
-            .await;
-
-        match items_opt {
-            Some(orders) => {
-                let fields = query.fields.as_deref();
-                let shaped = ::server_utils::payload_shaper::shape_payload(
-                    serde_json::to_value(orders).unwrap_or_default(),
-                    fields,
-                );
-                (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
-            }
-            None => {
-                ::server_telemetry::record_error_signal("[bug] Failed to fetch UI orders");
-                tracing::error!("Failed to fetch UI orders");
                 (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     axum::Json(serde_json::json!([])),
@@ -8738,25 +8624,17 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     let db_for_sales = db.clone();
     let settings_store = crate::settings::Store::global();
-    let is_standalone = crate::is_standalone_runtime();
     let omnisolo_job_queue: std::sync::Arc<dyn crate::queue::TaskQueue> =
-        if !is_standalone && std::env::var("REDIS_URL").is_ok() {
-            std::sync::Arc::new(
-                crate::queue::RedisTaskQueue::new(
-                    &std::env::var("REDIS_URL").unwrap(),
-                    "ohc_job_queue",
-                )
-                .unwrap(),
-            )
-        } else {
-            match &db.store {
+        match configured_redis_queue {
+            Some(queue) => std::sync::Arc::new(queue),
+            None => match &db.store {
                 crate::db::DbStore::Postgres => {
                     std::sync::Arc::new(crate::queue::PostgresTaskQueue::new(db.pool.clone()))
                 }
                 crate::db::DbStore::Sqlite(sqlite_pool) => {
                     std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone()))
                 }
-            }
+            },
         };
 
     let omnisolo_job_queue_clone = omnisolo_job_queue.clone();
@@ -8817,8 +8695,24 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
+    let timecard_access =
+        api::staff_timecards::TimecardAccess::configured(&db, http_auth_store.clone()).await;
+    let shipping_access = std::sync::Arc::new(
+        crate::api::shipping::authority::ShippingAccess::configured(&db, http_auth_store.clone())
+            .await,
+    );
+    let field_ops_pool =
+        crate::api::field_ops::canonical_pool(&http_auth_store, db.postgres_pool()).await;
+    let sync_events_state = api::offline_sync::SyncEventsState::new(
+        db.pool.clone(),
+        field_ops_pool.clone(),
+        http_auth_store.clone(),
+    )
+    .await;
+    let sync_write_state =
+        api::offline_sync::SyncWriteState::new(http_auth_store.clone(), db.postgres_pool()).await;
     let app = axum::Router::new()
-        .nest("/api/v1/field-ops", crate::api::field_ops::router(db.pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
+        .nest("/api/v1/field-ops", crate::api::field_ops::configured_router(db.pool.clone(), field_ops_pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
 
         .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
             use axum::response::IntoResponse;
@@ -9022,7 +8916,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/v1/ui/dashboard/unified-agent-feed", axum::routing::get(ui_dashboard_unified_agent_feed_handler).with_state(db.clone()))
                 .route("/api/v1/ui/dashboard/analytics/briefing", axum::routing::get(ui_dashboard_analytics_briefing_handler).with_state(db.clone()))
                 .route("/api/v1/ui/dashboard/analytics/chat", axum::routing::post(ui_dashboard_analytics_chat_handler).with_state(db.clone()))
-                .route("/api/v1/ui/orders", axum::routing::get(list_ui_orders_handler).with_state(db.clone()))
+                .merge(api::ui_orders::router(db.clone()))
                 .route(
                     "/api/v1/ui/inventory",
                     axum::routing::get(api::pos::get_inventory_handler)
@@ -9193,9 +9087,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }),
         )
-        .route("/api/v1/sync/events", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
-        .route("/api/v1/sync/offline", axum::routing::post({ let db = db.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((db.pool.clone(), mesh.clone())), headers, payload).await } }))
-        .route("/api/v1/sync/operation-intents", axum::routing::post({ let db = db.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OperationIntentRequest>| async move { api::offline_sync::operation_intents_handler(axum::extract::State(db.pool.clone()), headers, payload).await } }))
+        .route("/api/v1/sync/events", axum::routing::post({ let state = sync_events_state.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::SyncEventsRequest>| async move { api::offline_sync::sync_events_handler(axum::extract::State(state), headers, payload).await } }))
+        .route("/api/v1/sync/offline", axum::routing::post({ let state = sync_write_state.clone(); let mesh = mesh_transport.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OfflineSyncRequest>| async move { api::offline_sync::offline_sync_handler(axum::extract::State((state, mesh.clone())), headers, payload).await } }))
+        .route("/api/v1/sync/operation-intents", axum::routing::post({ let state = sync_write_state.clone(); move |headers: axum::http::HeaderMap, payload: axum::Json<api::offline_sync::OperationIntentRequest>| async move { api::offline_sync::operation_intents_handler(axum::extract::State(state), headers, payload).await } }))
         .route("/api/v1/sync/mcp-deltas", axum::routing::post(api::sync_gateway::sync_mcp_deltas_handler).with_state(db.pool.clone()))
 
         .route("/api/v1/mesh/connect", axum::routing::get(api::mesh_handler::mesh_ws_handler).with_state(mesh_transport.clone()))
@@ -9235,8 +9129,16 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest("/api/v1/assistant", api::assistant::router(db.clone()))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
-        .nest("/api/v1/fulfillment", api::fulfillment::router(db.pool.clone()))
-        .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
+        .nest(
+            "/api/v1/fulfillment",
+            api::fulfillment::router(shipping_access.clone())
+                .merge(api::shipping::router(shipping_access.clone()))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    http_auth_store.clone(),
+                    ::server_auth::strict_bearer_auth_middleware,
+                )),
+        )
+        .nest("/api/v1/staff", api::staff_mesh::router(db.clone()).layer(axum::Extension(timecard_access)))
         .nest("/api/v1/builder", crate::builder::api::router(canonical_builder_pool(auth_database, db.postgres_pool()).await).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .route("/api/v1/agents/workflows/{id}",axum::routing::get(workflow_receipt_handler).layer(axum::Extension(workflow_execution.clone())))
@@ -9274,7 +9176,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         )
         .nest(
             "/api/v1/shipping",
-            api::shipping::router(db.clone()).route_layer(
+            api::shipping::router(shipping_access.clone()).route_layer(
                 axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
                     ::server_auth::strict_bearer_auth_middleware,
@@ -9352,7 +9254,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         ))
         .merge(api::realtime::router())
         .merge(
-            api::agent_feed::router().with_state(db.pool.clone()).route_layer(
+            api::agent_feed::router().with_state(db.pool.clone()).layer(axum::extract::Extension(http_auth_store.clone())).route_layer(
                 axum::middleware::from_fn_with_state(
                     http_auth_store.clone(),
                     ::server_auth::strict_bearer_auth_middleware,
@@ -9366,7 +9268,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .nest("/api/v1/invoices", api::invoice::router(hub.clone()))
         .nest("/api/v1/inquiries", api::inquiries::router().with_state(db.pool.clone()))
         .nest("/api/v1/quotes", api::quotes::router().with_state(db.pool.clone()))
-        .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone()))
+        .nest("/api/v1/field-service-routing", api::field_service_routing::router(db.clone(), hub.clone(), http_auth_store.clone(), field_ops_pool.clone()))
         .nest("/api/v1/work-intake/submit", api::agents::client_intake::router(dept_orchestrator.clone()).layer(axum::extract::Extension(hub.get_cost_auditor())))
         .nest(
             "/api/v1/proposals",
@@ -9446,6 +9348,11 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
             protected_bearer_auth_middleware,
         ))
         .with_state(mesh_transport)
+        // Provider callbacks authenticate the account independently of owner sessions.
+        .nest(
+            "/api/v1/fulfillment",
+            api::fulfillment::webhook_router(db.pool.clone()),
+        )
         // Publication carries its own strict owner authentication. Its public
         // document routes must remain outside the global authenticated scope.
         .merge(crate::builder::publication_http::router(
@@ -9873,26 +9780,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
     // Start Scheduler Background Task
     let hub_for_sched = hub.clone();
-    let is_standalone_prune = crate::is_standalone_runtime();
-    let omnisolo_job_queue_prune: std::sync::Arc<dyn crate::queue::TaskQueue> =
-        if !is_standalone_prune && std::env::var("REDIS_URL").is_ok() {
-            std::sync::Arc::new(
-                crate::queue::RedisTaskQueue::new(
-                    &std::env::var("REDIS_URL").unwrap(),
-                    "ohc_job_queue",
-                )
-                .unwrap(),
-            )
-        } else {
-            match &db.store {
-                crate::db::DbStore::Postgres => std::sync::Arc::new(
-                    crate::queue::PostgresTaskQueue::new(hub_for_sched.pool.clone()),
-                ),
-                crate::db::DbStore::Sqlite(sqlite_pool) => {
-                    std::sync::Arc::new(crate::queue::SqliteTaskQueue::new(sqlite_pool.clone()))
-                }
-            }
-        };
+    let omnisolo_job_queue_prune = omnisolo_job_queue.clone();
 
     if legacy_sqlx_background_enabled {
         tokio::spawn(async move {

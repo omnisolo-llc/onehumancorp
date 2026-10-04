@@ -6,7 +6,7 @@ CREATE TABLE operation_intents (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,acti
 CREATE TABLE applied_client_mutations (client_mutation_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL);
 CREATE TABLE products (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,is_sold_out BOOLEAN NOT NULL DEFAULT false,inventory_count INTEGER NOT NULL DEFAULT 10,available_quantity INTEGER NOT NULL DEFAULT 10,price NUMERIC DEFAULT 1,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
 CREATE TABLE orders (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,customer_id TEXT,total_amount NUMERIC,status TEXT,notes TEXT,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
-CREATE TABLE appointments (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,status TEXT,notes TEXT,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
+CREATE TABLE appointments (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,status TEXT,notes TEXT,scheduled_start_time TIMESTAMPTZ,scheduled_end_time TIMESTAMPTZ,updated_at TIMESTAMPTZ DEFAULT '2026-01-01T00:00:00Z');
 CREATE TABLE inventory_levels (variant_id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,available_count INTEGER);
 CREATE TABLE ohc_job_queue (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,job_type TEXT,payload JSONB);
 CREATE TABLE pos_offline_transactions (id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,client_id TEXT,amount_cents BIGINT,currency TEXT,payload JSONB,status TEXT,_sync_status TEXT);

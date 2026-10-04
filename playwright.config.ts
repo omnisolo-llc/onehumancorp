@@ -24,6 +24,15 @@ const screenshot = process.env.PLAYWRIGHT_SCREENSHOT || 'only-on-failure';
 const storageState = process.env.PLAYWRIGHT_STORAGE_STATE;
 
 export default defineConfig({
+  // These Node ESM modules own source-bound runtime/proof checks. Let Node load
+  // them unchanged; rewriting them to CommonJS breaks import.meta and shared
+  // module identity. This affects transformation only, never test discovery.
+  build: { external: [
+    '**/scripts/checkout-browser-fixture.mjs',
+    '**/scripts/native-binary-proof.mjs',
+    '**/scripts/package-web.mjs',
+    '**/scripts/e2e-fixture-database.mjs',
+  ] },
   // Resolve one root-owned test runtime even with nested npm dependency trees.
   // Use Playwright's supported TS path mapping, not a require hook or mock.
   tsconfig: './playwright.tsconfig.json',

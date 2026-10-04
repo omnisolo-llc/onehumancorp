@@ -146,3 +146,52 @@ it('forwards the expected view owner through the enqueueMutation alias', async (
   await SyncManager.getInstance().enqueueMutation({ id: 'owned', type: 'triage_action', timestamp: 1 }, owner);
   expect(enqueueAction).toHaveBeenCalledWith({ id: 'owned', type: 'triage_action', timestamp: 1 }, owner);
 });
+
+it('drains children atomically released by a completion receipt without replaying the parent', async () => {
+  const parent = { id: 'field-parent', type: 'sync_event', timestamp: 1, payload: { entity_type: 'appointment', entity_id: 'job-1', action_type: 'UpdateStatus', payload: { status: 'Completed' } }, field_completion: { job_id: 'job-1', customer_id: 'customer-1', notes: '' } };
+  const child = { id: 'field-child', type: 'generate_invoice', timestamp: 1, payload: { job_id: 'job-1', customer_id: 'customer-1' }, field_completion_parent_id: parent.id };
+  actions = [parent];
+  vi.mocked(getActions).mockImplementation(async () => [...actions]);
+  vi.mocked(completeAction).mockImplementation(async (claim, status) => {
+    states.set(claim.attemptToken, status);
+    if (claim.action.id === parent.id && status === 'acknowledged') actions = [parent, child];
+  });
+  const transport = vi.fn(async (route: string) => response(route.includes('sync/events') ? parent.id : child.id, route));
+  vi.stubGlobal('fetch', transport);
+  await SyncManager.getInstance().sync();
+  await vi.waitFor(() => expect(transport).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect([...states.values()]).toEqual(['acknowledged', 'acknowledged']));
+  await SyncManager.getInstance().sync(); expect(transport).toHaveBeenCalledTimes(2);
+});
+it('resumes only durable field completion work after a fresh application mount', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (route: string) => response('field-resume', route)));
+  actions = [{ id: 'field-resume', type: 'generate_invoice', timestamp: 1, payload: { job_id: 'job-1', customer_id: 'customer-1' }, field_completion_parent_id: 'acknowledged-parent' }];
+  await SyncManager.getInstance().resumeFieldCompletionWork();
+  expect(fetch).toHaveBeenCalledOnce();
+  actions = [sale]; await SyncManager.getInstance().resumeFieldCompletionWork();
+  expect(fetch).toHaveBeenCalledOnce();
+});
+
+it.each(['pending', 'reconciliation'])('field-only mount recovery never drains unrelated work from a mixed queue (%s field child)', async state => {
+  const child = { id: 'mixed-field', type: 'generate_invoice', timestamp: 1, payload: { job_id: 'job-1', customer_id: 'customer-1' }, field_completion_parent_id: 'acknowledged-parent' };
+  actions = [sale, child];
+  if (state === 'reconciliation') states.set(`${child.id}:/api/v1/invoices/generate`, state);
+  vi.stubGlobal('fetch', vi.fn(async (route: string) => response(route.includes('invoices') ? child.id : sale.id, route)));
+  await SyncManager.getInstance().resumeFieldCompletionWork();
+  expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual(state === 'pending' ? ['/api/v1/invoices/generate'] : []);
+  expect(states.has(`${sale.id}:/api/v1/payments/terminal/sync_offline`)).toBe(false);
+});
+it('preserves an explicit new enqueue while a narrow mount recovery is in flight', async () => {
+  const child = { id: 'active-field', type: 'generate_invoice', timestamp: 1, payload: { job_id: 'job-1', customer_id: 'customer-1' }, field_completion_parent_id: 'acknowledged-parent' };
+  actions = [child];
+  let finish!: (value: Response) => void;
+  vi.mocked(getActions).mockImplementation(async () => [...actions]);
+  vi.mocked(enqueueAction).mockImplementation(async action => { actions = [...actions, action]; });
+  vi.stubGlobal('fetch', vi.fn((route: string) => route.includes('invoices') ? new Promise<Response>(resolve => { finish = resolve; }) : Promise.resolve(response('new-triage', route))));
+  const manager = SyncManager.getInstance(); const recovering = manager.resumeFieldCompletionWork();
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledOnce());
+  await manager.enqueue({ ...triage, id: 'new-triage' }, owner);
+  finish(response(child.id, '/api/v1/invoices/generate')); await recovering;
+  await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual(['/api/v1/invoices/generate', '/api/v1/ui/triage/action']);
+});

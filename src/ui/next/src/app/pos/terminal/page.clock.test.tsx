@@ -1,19 +1,22 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import POSTerminal from './page';
-import { invalidateQueueOwner, readQueueOwner, QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
+import { invalidateQueueOwner, readQueueOwner, QUEUE_IDENTITY_EPOCH_KEY, currentVerifiedQueueOwner, subscribeQueueIdentityReadiness } from '@/lib/sync/queueIdentity';
 
+const queueLength = vi.hoisted(() => vi.fn<() => Promise<number>>());
+const clockSummary = vi.hoisted(() => vi.fn<() => Promise<{ confirmed: number; unconfirmed: number; legacyHeld: number }>>());
+const reconcileClockReceipts = vi.hoisted(() => vi.fn<() => Promise<void>>());
 const enqueue = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 vi.mock('./StripeTerminalClient', () => ({ default: () => <div>Payment controls</div> }));
 vi.mock('../../../components/LocalizationToggle', () => ({ LocalizationToggle: () => null }));
-vi.mock('../../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ enqueue, getQueueLength: async () => 0 }) } }));
+vi.mock('../../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ enqueue, getQueueLength: queueLength, getClockQueueSummary: clockSummary, reconcileClockReceipts }) } }));
 vi.mock('../../../lib/sync/MutationService', () => ({ MutationService: { getInstance: () => ({ syncPendingMutations: vi.fn(), executeMutation: vi.fn() }) } }));
 
 let owner = 'user-a';
 let identityUnavailable = false;
 let ownerExpiry: number;
 let inventoryRead: () => Promise<Response>;
-const staff = { id: 'staff-a', name: 'Recorded Staff', role: 'STAFF', tenant_id: 'tenant-a' };
+const staff = { id: 'user-a', name: 'Recorded Staff', role: 'OWNER', tenant_id: 'tenant-a' };
 const identity = () => Response.json({ userId: owner, tenantId: 'tenant-a', expiresAt: ownerExpiry });
 const transport = vi.fn<typeof fetch>(async (input) => {
   const path = String(input);
@@ -21,7 +24,7 @@ const transport = vi.fn<typeof fetch>(async (input) => {
     if (identityUnavailable) throw new Error('Identity read unavailable');
     return identity();
   }
-  if (path === '/api/v1/pos/auth') return Response.json({ success: true, staff });
+  if (path === '/api/v1/pos/auth') return Response.json({ success: true, staff: { ...staff, id: owner } });
   if (path === '/api/v1/payments/terminal/session/start') return Response.json({ success: true, session_id: 'local-session' });
   if (path === '/api/v1/pos/inventory') return inventoryRead();
   throw new Error(`Unexpected fixture request: ${path}`);
@@ -38,7 +41,7 @@ function pendingWrite() {
   return { resolve: () => resolve(), reject: () => reject(new Error('Local storage unavailable')) };
 }
 beforeEach(async () => {
-  vi.clearAllMocks(); enqueue.mockReset(); owner = 'user-a'; identityUnavailable = false; localStorage.clear(); invalidateQueueOwner();
+  vi.clearAllMocks(); clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 }); reconcileClockReceipts.mockResolvedValue(); enqueue.mockReset(); queueLength.mockResolvedValue(0); owner = 'user-a'; identityUnavailable = false; localStorage.clear(); invalidateQueueOwner();
   ownerExpiry = Date.now() + 60_000; inventoryRead = async () => Response.json({ inventory: [] });
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
   vi.stubGlobal('fetch', transport); await readQueueOwner();
@@ -146,6 +149,109 @@ it('does not apply an old inventory body after locking and verifying a different
   expect(screen.getByText('Current inventory')).toBeVisible();
 });
 
+it.each([200, 503])('retains the actual inventory outcome when clock-in revalidation overlaps its body (HTTP%s)', async status => {
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => {
+      controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'owned-product', name: 'Owned pending inventory', price_cents: 1999, stock: 1 }] })));
+      controller.close();
+    };
+  } }), { status });
+  enqueue.mockImplementation(async () => {
+    clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 0 });
+    window.dispatchEvent(new Event('omnisolo_queue_updated'));
+  });
+  render(<POSTerminal />); await unlock();
+  await waitFor(() => expect(finishBody).toBeDefined());
+  let finishVerification!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+  fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+  await waitFor(() => expect(finishVerification).toBeDefined());
+  await act(async () => finishBody());
+  expect(screen.queryByText('Owned pending inventory')).toBeNull();
+  await act(async () => finishVerification(identity()));
+  expect(await screen.findByRole('heading', { name: 'Clocked In' })).toBeVisible();
+  expect(await screen.findByText('1 saved clock change confirmed by the server.')).toBeVisible();
+  if (status === 200) expect(await screen.findByRole('button', { name: /Owned pending inventory/ })).toBeEnabled();
+  else expect(await screen.findByText('Inventory is unavailable. Verify your session and retry.')).toBeVisible();
+  expect(enqueue).toHaveBeenCalledTimes(1);
+  expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
+});
+
+it.each(['owner', 'epoch', 'unmount'] as const)('rejects a retained inventory body if %s changes during canonical verification', async change => {
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'old', name: 'Private old inventory', price_cents: 1999, stock: 1 }] }))); controller.close(); };
+  } }));
+  const view = render(<POSTerminal />); await unlock();
+  await waitFor(() => expect(finishBody).toBeDefined());
+  let finishVerification!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+  let pending!: Promise<unknown>;
+  act(() => { pending = readQueueOwner().catch(error => error); });
+  await act(async () => finishBody());
+  if (change === 'owner') owner = 'user-b';
+  else if (change === 'epoch') {
+    localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY, 'changed-epoch');
+    act(() => window.dispatchEvent(new Event('omnisolo_auth_changed')));
+  } else view.unmount();
+  await act(async () => { finishVerification(identity()); await pending; });
+  expect(screen.queryByText('Private old inventory')).toBeNull();
+  if (change !== 'unmount') expect(screen.getByText('Terminal Locked')).toBeVisible();
+});
+
+it('keeps the inventory outcome if another same-owner verification starts as the first one settles', async () => {
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'owned', name: 'Owned handoff inventory', price_cents: 1999, stock: 1 }] }))); controller.close(); };
+  } }));
+  render(<POSTerminal />); await unlock();
+  await waitFor(() => expect(finishBody).toBeDefined());
+  let finishFirst!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishFirst = resolve; }));
+  let first!: ReturnType<typeof readQueueOwner>;
+  act(() => { first = readQueueOwner(); });
+  await act(async () => finishBody());
+  let finishSecond!: (response: Response) => void;
+  let second!: ReturnType<typeof readQueueOwner>;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishSecond = resolve; }));
+  let startSecond = true;
+  const unsubscribe = subscribeQueueIdentityReadiness(() => {
+    if (startSecond && currentVerifiedQueueOwner()) { startSecond = false; second = readQueueOwner(); }
+  });
+  try {
+    await act(async () => { finishFirst(identity()); await first; });
+    expect(finishSecond).toBeDefined();
+    expect(screen.queryByText('Owned handoff inventory')).toBeNull();
+    await act(async () => { finishSecond(identity()); await second; });
+    expect(await screen.findByRole('button', { name: /Owned handoff inventory/ })).toBeEnabled();
+    expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
+  } finally { unsubscribe(); }
+});
+
+it.each(['lease expiry', 'readiness timeout'] as const)('does not turn a retained inventory body into empty success after %s', async boundary => {
+  ownerExpiry = Date.now() + (boundary === 'lease expiry' ? 1000 : 60_000);
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'old', name: 'Private delayed inventory', price_cents: 1999, stock: 1 }] }))); controller.close(); };
+  } }));
+  render(<POSTerminal />); await unlock();
+  expect(finishBody).toBeDefined();
+  let finishVerification!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+  let pending!: ReturnType<typeof readQueueOwner>;
+  act(() => { pending = readQueueOwner(); });
+  await act(async () => finishBody());
+  if (boundary === 'lease expiry') vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1001);
+  else await waitFor(() => expect(screen.getByText('Inventory is unavailable. Verify your session and retry.')).toBeInTheDocument(), { timeout: 3500 });
+  ownerExpiry = Date.now() + 60_000;
+  await act(async () => { finishVerification(identity()); await pending; });
+  expect(screen.queryByText('Private delayed inventory')).toBeNull();
+  if (boundary === 'lease expiry') expect(screen.getByText('Terminal Locked')).toBeVisible();
+  else expect(screen.getByText('Inventory is unavailable. Verify your session and retry.')).toBeVisible();
+  expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
+});
+
 it('hides private staff and retires the original lease at expiry during pending revalidation', async () => {
   ownerExpiry = Date.now() + 2000;
   await readQueueOwner(); render(<POSTerminal />); await unlock();
@@ -162,4 +268,78 @@ it('hides private staff and retires the original lease at expiry during pending 
   }
   expect(screen.getByText('Terminal Locked')).toBeVisible();
   expect(screen.queryByText('Recorded Staff')).toBeNull();
+});
+
+it('keeps saved clock work visible without blocking product selection', async () => {
+  queueLength.mockResolvedValue(1); enqueue.mockResolvedValue();
+  inventoryRead = async () => Response.json({ inventory: [{ id: 'owned-last-unit', name: 'Owned last unit', price_cents: 1999, stock: 1 }] });
+  render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+  await screen.findByRole('heading', { name: 'Clocked In' });
+  const saved = screen.getByText('Saved transactions awaiting confirmation');
+  expect(saved).toBeVisible();
+  expect(getComputedStyle(saved.closest('div')!).pointerEvents).toBe('none');
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Owned last unit/ })); });
+  expect(screen.getByRole('button', { name: /1 item\s*Charge \$19\.99/ })).toBeEnabled();
+  expect(saved).toBeVisible();
+  expect(screen.queryByText('Synced')).toBeNull();
+  queueLength.mockResolvedValue(0);
+  await act(async () => window.dispatchEvent(new Event('omnisolo_queue_updated')));
+  const synced = screen.getByText('Synced');
+  expect(synced).toBeVisible();
+  expect(getComputedStyle(synced.closest('div')!).pointerEvents).toBe('none');
+});
+
+
+it('produces a versioned clock event with the signed actor and no duplicate payload timestamp', async () => {
+  enqueue.mockResolvedValue(); render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+  await screen.findByRole('heading', { name: 'Clocked In' });
+  expect(enqueue.mock.calls[0][0]).toEqual({ type: 'staff_clock_event_v1', payload: { staff_id: 'user-a', event_type: 'CLOCK_IN' } });
+});
+it('checks saved clock receipts explicitly and distinguishes held historical and unconfirmed local work', async () => {
+  clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 1, legacyHeld: 1 });
+  enqueue.mockResolvedValue();
+  let finish!: () => void;
+  reconcileClockReceipts.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+  render(<POSTerminal />); await unlock();
+  expect(screen.getByText('1 saved clock change awaiting server confirmation.')).toBeVisible();
+  expect(screen.getByText('1 historical clock change requires review. Original records are preserved.')).toBeVisible();
+  const button = screen.getByRole('button', { name: 'Check saved clock status' });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(reconcileClockReceipts).toHaveBeenCalledTimes(1); expect(button).toBeDisabled();
+  clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 1 });
+  await act(async () => finish());
+  expect(screen.getByText('1 saved clock change confirmed by the server.')).toBeVisible();
+  expect(screen.queryByText('1 saved clock change awaiting server confirmation.')).toBeNull();
+  expect(enqueue).not.toHaveBeenCalled();
+});
+it('keeps missing receipt checks honest instead of confirming a locally saved event', async () => {
+  clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 1, legacyHeld: 0 });
+  render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved clock status' }));
+  await waitFor(() => expect(reconcileClockReceipts).toHaveBeenCalledOnce());
+  expect(screen.getByText('1 saved clock change awaiting server confirmation.')).toBeVisible();
+  expect(screen.queryByText(/saved clock change confirmed by the server/)).toBeNull();
+});
+
+
+it.each(['lock', 'owner', 'epoch'] as const)('never reports an old status check as confirmed after the terminal %s changes', async change => {
+  clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 1, legacyHeld: 0 });
+  let finish!: () => void;
+  reconcileClockReceipts.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+  render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved clock status' }));
+  await waitFor(() => expect(reconcileClockReceipts).toHaveBeenCalledOnce());
+  if (change === 'owner') { owner = 'user-b'; await act(async () => { await readQueueOwner(); }); }
+  else if (change === 'epoch') {
+    localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY, 'new-session');
+    await act(async () => window.dispatchEvent(new StorageEvent('storage', { key: QUEUE_IDENTITY_EPOCH_KEY })));
+  } else fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+  await unlock();
+  // Even an old read completing with confirmation cannot update the new lease.
+  clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 0 });
+  await act(async () => finish());
+  expect(screen.queryByText('1 saved clock change confirmed by the server.')).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Not Clocked In' })).toBeVisible();
 });

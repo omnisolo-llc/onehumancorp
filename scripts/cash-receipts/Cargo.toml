@@ -1,0 +1,26 @@
+[package]
+name = "ohc-cash-receipt-regressions"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros", "json"] }
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+server_common = { path = "../../src/server/common" }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart", "stream"] }
+tower = { version = "0.5", features = ["util"] }
+dashmap = "=5.5.3"
+redis = { version = "=0.27.6", features = ["tokio-comp"] }
+async-trait = "0.1"
+futures = { version = "0.3", default-features = false, features = ["alloc"] }
+tracing = "0.1"
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

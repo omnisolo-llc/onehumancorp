@@ -11,8 +11,18 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
+    'cash-receipts': (45, 'OHC_CASH_TEST_DATABASE_URL'),
+    'nats-metadata-contract': (16, None),
+    'mesh-startup-contract': (13, None),
+    'redis-startup-contract': (23, None),
+    'agent-feed-decision-contract': (57, 'OHC_FEED_TEST_DATABASE_URL'),
+    'memory-jsonb-contract': (27, 'OHC_MEMORY_TEST_DATABASE_URL'),
+    'approvals-read-contract': (12, 'OHC_APPROVAL_TEST_DATABASE_URL'),
+    'shipping-integrity-contract': (92, 'OHC_SHIPPING_TEST_DATABASE_URL'),
+    'field-boundary-contract': (89, 'OHC_FIELD_TEST_DATABASE_URL'),
     'checkpoint-restore-contract': (37, 'OHC_CHECKPOINT_TEST_DATABASE_URL'),
     'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
+    'staff-timecard-contract': (96, 'OHC_CLOCK_TEST_DATABASE_URL'),
     'proactive-worker-contract': (11, 'OHC_OPS_PROBE_DB'),
     'builder-generation-contract': (90, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
     'widget-chat-contract': (51, 'OHC_WIDGET_TEST_DATABASE_URL'),
@@ -20,12 +30,12 @@ GATES = {
     'operations-appointments': (11, 'OHC_APPOINTMENTS_TEST_DATABASE_URL'),
     'agent-definition-contract': (63, 'OHC_AGENT_DEFINITION_TEST_DATABASE_URL'),
 
-    'chat-tenant-isolation': (13, 'OHC_CHAT_TEST_DATABASE_URL'),
+    'chat-tenant-isolation': (22, 'OHC_CHAT_TEST_DATABASE_URL'),
     'bootstrap-portable-roles': (9, 'OHC_SETUP_TEST_DATABASE_URL'),
     'link-bio-isolation': (14, 'OHC_BIO_TEST_DATABASE_URL'),
     'tenant-search': (13, 'OHC_SEARCH_TEST_DATABASE_URL'),
     'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
-    'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
+    'quote-acceptance': (36, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
     'agent-workflow-contract': (108, None),
     'agent-receipt-postgres-contract': (56, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),

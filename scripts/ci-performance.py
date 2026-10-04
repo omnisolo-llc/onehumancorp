@@ -208,7 +208,7 @@ def main() -> int:
     parser.add_argument("--jobs", type=Path, required=True)
     parser.add_argument("--run-id", type=int, required=True)
     parser.add_argument("--attempt", type=int, required=True)
-    parser.add_argument("--budget-minutes", type=float, default=30)
+    parser.add_argument("--budget-minutes", type=float, default=35)
     parser.add_argument("--cold", action="store_true")
     parser.add_argument("--job-prefix", default='')
     parser.add_argument("--output", type=Path, required=True)

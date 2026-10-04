@@ -1,19 +1,8 @@
 "use client";
 
 
-import { errorMessage } from '@/lib/errors';
-import React, { useState, useEffect } from "react";
-
-interface FeedItemRaw {
-  id: string;
-  tenant_id: string;
-  event_source: string;
-  context_payload?: import('@/lib/agent-feed-types').ActionPayload;
-  proposed_action?: import('@/lib/agent-feed-types').ActionPayload;
-  lifecycle_state: string;
-  created_at: string;
-  updated_at: string;
-}
+import React, { useState, useEffect, useMemo } from "react";
+import { useFeedDecisions } from './useFeedDecisions';
 
 interface WorkItem {
   id: string;
@@ -35,7 +24,7 @@ interface FeedItem {
 }
 
 export default function UnifiedFeed() {
-  const [feedItems, setFeedItems] = useState<FeedItem[]>([]);
+  const decisions = useFeedDecisions();
 
   const getSourceStyle = (source: string) => {
     const s = source.toLowerCase();
@@ -78,23 +67,15 @@ export default function UnifiedFeed() {
       icon: "🔔",
     };
   };
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [processingId, setProcessingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraftText, setEditDraftText] = useState<string>("");
-
-  const fetchFeed = async () => {
-    try {
-      const res = await fetch("/api/v1/agent-feed");
-      if (!res.ok) {
-        throw new Error("Failed to fetch feed");
-      }
-      const data = await res.json();
-      const rawItems = (data.items || []) as FeedItemRaw[];
+  const [editDraftText, setEditDraftText] = useState("");
+  const { loading, processingId } = decisions;
+  useEffect(() => { setEditingId(null); setEditDraftText(""); }, [decisions.revision]);
+  const feedItems = useMemo(() => {
+      const rawItems = decisions.items;
       const pendingItems = rawItems.filter(
         (i) =>
-          i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED",
+          decisions.notices.get(i.id)?.kind === 'unknown' || (i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"),
       );
 
       const mappedItems: FeedItem[] = pendingItems.map((raw) => {
@@ -148,60 +129,29 @@ export default function UnifiedFeed() {
         return 0; // Maintain order otherwise
       });
 
-      setFeedItems(mappedItems);
-    } catch (err) {
-      setError(errorMessage(err, ''));
-    } finally {
-      setLoading(false);
-    }
-  };
+      return mappedItems;
+  }, [decisions.items, decisions.notices]);
 
-  useEffect(() => {
-    fetchFeed();
-  }, []);
-
-  const handleAction = async (
-    itemId: string,
-    action: string,
-    editedPayload?: string,
-  ) => {
-    setProcessingId(itemId);
-    setFeedItems((prev) => prev.filter((i) => i.workItem.id !== itemId));
-    try {
-      const payload: { state: string; edited_payload?: string } = { state: action };
-      if (editedPayload) {
-        payload.edited_payload = editedPayload;
-      }
-
-      await fetch(`/api/v1/agent-feed/${itemId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setProcessingId(null);
-    }
+  const handleAction = (itemId: string, action: 'APPROVED' | 'DISMISSED', editedPayload?: string) => {
+    // The hook applies acknowledged rows inside its owner fence. Do not apply
+    // editor state later from a promise belonging to an older owner or view.
+    void decisions.decide(itemId, action, editedPayload);
   };
 
   const handleApprove = (itemId: string) => handleAction(itemId, "APPROVED");
   const handleReject = (itemId: string) => handleAction(itemId, "DISMISSED");
 
   const handleEdit = (item: FeedItem) => {
+    if (decisions.blocked(item.workItem.id)) return;
     setEditingId(item.workItem.id);
     setEditDraftText(item.draft?.response || "");
   };
 
   const handleSaveEditAndApprove = (itemId: string) => {
-    handleAction(itemId, "APPROVED", editDraftText);
-    setEditingId(null);
-    setEditDraftText("");
+    void handleAction(itemId, "APPROVED", editDraftText);
   };
 
   if (loading) return <div className="p-4 text-center">Loading feed...</div>;
-  if (error)
-    return <div className="p-4 text-center text-red-500">Error: {error}</div>;
 
   return (
     <div className="w-full max-w-[375px] mx-auto min-h-screen bg-[#F5F5F7] dark:bg-[#1D1D1F] flex flex-col text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -216,11 +166,15 @@ export default function UnifiedFeed() {
         <h1 className="text-xl font-bold tracking-tight">Today</h1>
       </header>
 
+      {decisions.error && <p role="alert" className="p-4 text-red-700">{decisions.error}</p>}
+      {[...decisions.notices].map(([id, notice]) => <p key={id} role={notice.kind === 'unknown' || notice.kind === 'rejected' ? 'alert' : 'status'} aria-label="Decision status" className="p-4">{notice.message}</p>)}
+      <p className="p-4 text-sm">Approving records a decision. Execution or delivery requires a separate verified outcome.</p>
+      <button type="button" disabled={decisions.refreshing || processingId !== null} onClick={() => void decisions.refresh()}>Refresh recorded decisions</button>
       <main
         className="flex-1 overflow-y-auto p-4 space-y-4"
         data-testid="agent-feed"
       >
-        {feedItems.length === 0 ? (
+        {feedItems.length === 0 && !decisions.error && decisions.ready && ![...decisions.notices.values()].some(notice => notice.kind === 'unknown' || notice.kind === 'pending') ? (
           <div
             className="text-center text-gray-500 py-8 flex flex-col items-center gap-3 glassmorphism shadow-sm opacity-90"
             data-testid="triage-feed-empty"
@@ -289,7 +243,7 @@ export default function UnifiedFeed() {
                       <button
                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                         onClick={() => handleReject(item.workItem.id)}
-                        disabled={processingId === item.workItem.id}
+                        disabled={decisions.blocked(item.workItem.id)}
                         data-testid="unified-feed-reject-btn"
                       >
                         Dismiss
@@ -297,7 +251,7 @@ export default function UnifiedFeed() {
                       <button
                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-orange-500 text-white rounded-xl hover:bg-orange-600 shadow-md shadow-orange-500/20 active:scale-[0.98] transition-all"
                         onClick={() => handleApprove(item.workItem.id)}
-                        disabled={processingId === item.workItem.id}
+                        disabled={decisions.blocked(item.workItem.id)}
                         data-testid="feed-approve-btn"
                       >
                         {processingId === item.workItem.id
@@ -315,6 +269,7 @@ export default function UnifiedFeed() {
                         <textarea
                           className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#0066FF]/50 resize-y min-h-[100px]"
                           value={editDraftText}
+                          disabled={decisions.blocked(item.workItem.id)}
                           onChange={(e) => setEditDraftText(e.target.value)}
                           data-testid="edit-draft-textarea"
                         />
@@ -333,7 +288,7 @@ export default function UnifiedFeed() {
                             setEditingId(null);
                             setEditDraftText("");
                           }}
-                          disabled={processingId === item.workItem.id}
+                          disabled={decisions.blocked(item.workItem.id)}
                           data-testid="cancel-edit-btn"
                         >
                           Cancel
@@ -343,7 +298,7 @@ export default function UnifiedFeed() {
                           onClick={() =>
                             handleSaveEditAndApprove(item.workItem.id)
                           }
-                          disabled={processingId === item.workItem.id}
+                          disabled={decisions.blocked(item.workItem.id)}
                           data-testid="save-edit-approve-btn"
                         >
                           {processingId === item.workItem.id
@@ -356,7 +311,7 @@ export default function UnifiedFeed() {
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                           onClick={() => handleReject(item.workItem.id)}
-                          disabled={processingId === item.workItem.id}
+                          disabled={decisions.blocked(item.workItem.id)}
                           data-testid="unified-feed-reject-btn"
                         >
                           Reject
@@ -364,7 +319,7 @@ export default function UnifiedFeed() {
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                           onClick={() => handleEdit(item)}
-                          disabled={processingId === item.workItem.id}
+                          disabled={decisions.blocked(item.workItem.id)}
                           data-testid="edit-proposal"
                         >
                           Edit
@@ -372,7 +327,7 @@ export default function UnifiedFeed() {
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
                           onClick={() => handleApprove(item.workItem.id)}
-                          disabled={processingId === item.workItem.id}
+                          disabled={decisions.blocked(item.workItem.id)}
                           data-testid="feed-approve-btn"
                         >
                           {processingId === item.workItem.id

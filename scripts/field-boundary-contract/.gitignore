@@ -1,0 +1,8 @@
+/generated.rs
+/source-manifest.json
+/target/
+/generated_field_ops.rs
+/schema.sql
+/Cargo.lock
+
+/generated_offline_sync.rs

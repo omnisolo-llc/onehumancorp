@@ -1,12 +1,13 @@
 import {beforeEach as beforeLocks} from 'vitest';
 beforeLocks(() => installOnboardingLocks());
 import {installOnboardingLocks} from './testLocks';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ownedOnboardingKey } from './draftSession';
+import { onboardingDraftWritesBusy, subscribeOnboardingWriteState } from './draftWriteGate';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import Page from './page';
-import { useOnboardingStore } from './store';
+import { onboardingDraftPending, useOnboardingStore } from './store';
 import { notifyQueueIdentityChange, readQueueOwner } from '@/lib/sync/queueIdentity';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 let owner = { userId: 'owner-a', tenantId: 'tenant-a' };
@@ -104,6 +105,169 @@ it('does not reveal or autosave a held draft when session verification returns40
  render(<Page/>); await screen.findByRole('alert');
  expect(screen.queryByDisplayValue('Owner A private studio')).toBeNull();
  expect(vi.mocked(fetch).mock.calls.some(([,options])=>options?.method==='POST')).toBe(false);
+});
+
+it('keeps onboarding busy until both owned draft reads restore the conversational controls', async () => {
+ const pending = new Map<string, (response: Response) => void>();
+ vi.mocked(fetch).mockImplementation(async url => {
+  if (String(url).endsWith('/session-identity')) return Response.json({...owner, expiresAt: Date.now() + 60_000});
+  return new Promise(resolve => { pending.set(String(url), resolve); });
+ });
+ render(<Page/>);
+ expect(screen.getByRole('status', {name:'Loading onboarding'})).toHaveAttribute('aria-busy', 'true');
+ await waitFor(() => expect(pending.size).toBe(2));
+ await act(async () => pending.get('/api/v1/onboarding/draft')!(Response.json({step:0})));
+ expect(screen.getByRole('status', {name:'Loading onboarding'})).toHaveAttribute('aria-busy', 'true');
+ expect(screen.queryByRole('button', {name:'Upload Image'})).toBeNull();
+ await act(async () => pending.get('/api/v1/onboarding/state')!(Response.json({step:0})));
+ expect(await screen.findByRole('button', {name:'Upload Image'})).toBeEnabled();
+ expect(screen.queryByRole('status', {name:'Loading onboarding'})).toBeNull();
+ expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+ expect(vi.mocked(fetch).mock.calls.some(([,options])=>options?.method==='POST')).toBe(false);
+});
+
+it('settles onboarding readiness after rejected identity without exposing any held controls', async () => {
+ let finish!: (response: Response) => void;
+ vi.mocked(fetch).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+ render(<Page/>);
+ expect(screen.getByRole('status', {name:'Loading onboarding'})).toHaveAttribute('aria-busy', 'true');
+ await waitFor(() => expect(finish).toBeDefined());
+ await act(async () => finish(Response.json({}, {status:401})));
+ expect(await screen.findByRole('alert')).toHaveTextContent('Your saved drafts remain held on this device.');
+ expect(document.querySelector('[aria-busy="true"]')).toBeNull();
+ expect(screen.queryByRole('button', {name:'Upload Image'})).toBeNull();
+ expect(screen.queryByDisplayValue('Owner A private studio')).toBeNull();
+ expect(vi.mocked(fetch).mock.calls.some(([,options])=>options?.method==='POST')).toBe(false);
+});
+
+it('does not dispatch a debounced autosave after the explicit wizard write was acknowledged before render', async () => {
+ let finish!: (response: Response) => void;
+ const writes: RequestInit[] = [];
+ vi.mocked(fetch).mockImplementation(async (url, options) => {
+  if (String(url).endsWith('/session-identity')) return Response.json({...owner, expiresAt: Date.now() + 60_000});
+  if (options?.method === 'POST') { writes.push(options); return new Promise(resolve => { finish = resolve; }); }
+  return Response.json({step:0});
+ });
+ render(<Page/>); await screen.findByRole('button', {name:'Upload Image'});
+ vi.useFakeTimers();
+ try {
+  fireEvent.click(screen.getByRole('button', {name:'Back'}));
+  await act(async () => {});
+  expect(writes).toHaveLength(1); expect(onboardingDraftPending()).toBe(true);
+  await act(async () => {
+   finish(new Response(null, {status:204}));
+   // The transport acknowledgement can settle before React commits the pending
+   // indicator update and runs the effect cleanup that normally cancels debounce.
+   for (let attempt = 0; attempt < 50 && onboardingDraftPending(); attempt++) await Promise.resolve();
+   expect(onboardingDraftPending()).toBe(false);
+   vi.advanceTimersByTime(1000);
+  });
+  expect(writes).toHaveLength(1);
+  expect(onboardingDraftPending()).toBe(false);
+  expect(screen.getByRole('button', {name:'Conversational Setup'})).toBeEnabled();
+ } finally { vi.useRealTimers(); }
+});
+
+it('keeps setup busy through an autosave queued behind a slow explicit state acknowledgement', async () => {
+ const finishes: ((response: Response) => void)[] = [];
+ const writes: RequestInit[] = [];
+ vi.mocked(fetch).mockImplementation(async (url, options) => {
+  if (String(url).endsWith('/session-identity')) return Response.json({...owner, expiresAt: Date.now() + 60_000});
+  if (options?.method === 'POST') { writes.push(options); return new Promise(resolve => { finishes.push(resolve); }); }
+  return Response.json({step:0});
+ });
+ const view = render(<Page/>); await screen.findByRole('button', {name:'Upload Image'});
+ vi.useFakeTimers();
+ try {
+  fireEvent.click(screen.getByRole('button', {name:'Back'}));
+  await act(async () => {});
+  await act(async () => vi.advanceTimersByTime(1000));
+  expect(writes).toHaveLength(1);
+  await act(async () => finishes[0](new Response(null, {status:204})));
+  expect(writes).toHaveLength(2);
+  expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy', 'true');
+  expect(screen.getByRole('button', {name:'Conversational Setup'})).toBeEnabled();
+  await act(async () => finishes[1](new Response(null, {status:204})));
+  expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy', 'false');
+  expect(onboardingDraftPending()).toBe(false);
+ } finally { vi.useRealTimers(); }
+});
+
+it('settles setup write readiness on an unknown acknowledgement while preserving unsaved edits and the hold', async () => {
+ let rejectWrite!: (cause: Error) => void;
+ vi.mocked(fetch).mockImplementation(async (url, options) => {
+  if (String(url).endsWith('/session-identity')) return Response.json({...owner, expiresAt: Date.now() + 60_000});
+  if (options?.method === 'POST') return new Promise((_resolve, reject) => { rejectWrite = reject; });
+  return Response.json({step:0});
+ });
+ const view = render(<Page/>); await screen.findByRole('button', {name:'Upload Image'});
+ fireEvent.click(screen.getByRole('button', {name:'Back'}));
+ await waitFor(() => expect(rejectWrite).toBeDefined());
+ expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy', 'true');
+ await act(async () => rejectWrite(new Error('acknowledgement lost')));
+ expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy', 'false');
+ expect(screen.getByRole('alert')).toHaveTextContent('Local edits remain held for reconciliation.');
+ expect(onboardingDraftPending()).toBe(true);
+ expect(screen.getByRole('button', {name:'Conversational Setup'})).toBeEnabled();
+});
+
+it('does not readmit a deferred autosave after its earlier write becomes held for an unknown outcome', async () => {
+ let rejectWrite!: (cause: Error) => void;
+ vi.mocked(fetch).mockImplementation(async (url, options) => {
+  if (String(url).endsWith('/session-identity')) return Response.json({...owner, expiresAt: Date.now() + 60_000});
+  if (options?.method === 'POST') return new Promise((_resolve, reject) => {rejectWrite = reject;});
+  return Response.json({step:0});
+ });
+ const view = render(<Page/>);await screen.findByRole('button',{name:'Upload Image'});
+ vi.useFakeTimers();
+ let stop = () => {};
+ try {
+  fireEvent.click(screen.getByRole('button',{name:'Back'}));
+  await act(async () => {});
+  await act(async () => rejectWrite(new Error('acknowledgement lost')));
+  expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy','false');
+  const readiness: boolean[] = [];
+  stop = subscribeOnboardingWriteState(() => readiness.push(onboardingDraftWritesBusy(owner)));
+  await act(async () => vi.advanceTimersByTime(1000));
+  expect(readiness).not.toContain(true);
+  expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy','false');
+  expect(onboardingDraftPending()).toBe(true);
+  expect(screen.getByRole('alert')).toHaveTextContent('Local edits remain held for reconciliation.');
+  expect(vi.mocked(fetch).mock.calls.filter(([,options])=>options?.method==='POST')).toHaveLength(1);
+ } finally {stop();vi.useRealTimers();}
+});
+
+it('retains later local edits while earlier admitted saves settle and then acknowledges their own autosave', async () => {
+ const finishes: ((response: Response) => void)[] = [];
+ const writes: RequestInit[] = [];
+ vi.mocked(fetch).mockImplementation(async (url, options) => {
+  if (String(url).endsWith('/session-identity')) return Response.json({...owner, expiresAt: Date.now() + 60_000});
+  if (options?.method === 'POST') {writes.push(options);return new Promise(resolve => {finishes.push(resolve);});}
+  return Response.json({step:0});
+ });
+ const view = render(<Page/>);await screen.findByRole('button',{name:'Upload Image'});
+ vi.useFakeTimers();
+ try {
+  fireEvent.click(screen.getByRole('button',{name:'Back'}));
+  await act(async () => {});
+  fireEvent.click(screen.getByRole('button',{name:'Instant Build'}));
+  fireEvent.change(screen.getByTestId('instant-image-url'),{target:{value:'https://example.com/new-owner-image.png'}});
+  await act(async () => vi.advanceTimersByTime(1000));
+  expect(writes).toHaveLength(1);
+  await act(async () => finishes[0](new Response(null,{status:204})));
+  expect(writes).toHaveLength(2);
+  expect(onboardingDraftPending()).toBe(true);
+  await act(async () => finishes[1](new Response(null,{status:204})));
+  expect(writes).toHaveLength(3);
+  expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy','true');
+  expect(onboardingDraftPending()).toBe(true);
+  expect(JSON.parse(String(writes[2].body)).instantImageUrl).toBe('https://example.com/new-owner-image.png');
+  expect(screen.getByTestId('instant-image-url')).toHaveValue('https://example.com/new-owner-image.png');
+  await act(async () => finishes[2](new Response(null,{status:204})));
+  expect(view.container.querySelector('#setup-screen')).toHaveAttribute('aria-busy','false');
+  expect(onboardingDraftPending()).toBe(false);
+  expect(screen.getByTestId('instant-image-url')).toHaveValue('https://example.com/new-owner-image.png');
+ } finally {vi.useRealTimers();}
 });
 
 it('stops background reloads when the authenticated backend refuses the current session',async()=>{

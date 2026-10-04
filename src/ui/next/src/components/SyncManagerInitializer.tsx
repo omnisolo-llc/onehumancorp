@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from 'react';
-import { notifyQueueIdentityChange } from '../lib/sync/queueIdentity';
+import { notifyQueueIdentityChange, QUEUE_IDENTITY_EPOCH_KEY } from '../lib/sync/queueIdentity';
 import { SyncManager } from '../lib/sync/SyncManager';
 
 export function SyncManagerInitializer() {
@@ -14,8 +14,18 @@ export function SyncManagerInitializer() {
       window.history.replaceState(window.history.state, '', location.pathname + location.search + location.hash);
       notifyQueueIdentityChange();
     }
-    // Ensure the SyncManager is instantiated on mount
-    SyncManager.getInstance();
+    const manager = SyncManager.getInstance();
+    const resume = () => { void manager.resumeFieldCompletionWork(); };
+    const storage = (event: StorageEvent) => { if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) resume(); };
+    resume();
+    window.addEventListener('omnisolo_auth_changed', resume);
+    window.addEventListener('storage', storage);
+    window.addEventListener('pageshow', resume);
+    return () => {
+      window.removeEventListener('omnisolo_auth_changed', resume);
+      window.removeEventListener('storage', storage);
+      window.removeEventListener('pageshow', resume);
+    };
   }, []);
 
   return null;

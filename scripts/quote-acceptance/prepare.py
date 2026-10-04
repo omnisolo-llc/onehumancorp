@@ -27,6 +27,7 @@ use serde::{Serialize,Deserialize};
 use chrono::{DateTime,Utc};
 use std::sync::atomic::AtomicUsize;
 pub static PROVIDER_CALLS:AtomicUsize=AtomicUsize::new(0);
+pub static REDIS_CALLS:AtomicUsize=AtomicUsize::new(0);
 pub static PROVIDER_UNKNOWN:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
 pub static PROVIDER_BLOCKED:std::sync::atomic::AtomicBool=std::sync::atomic::AtomicBool::new(false);
 pub static OPERATIONS:std::sync::Mutex<Vec<String>>=std::sync::Mutex::new(vec![]);
@@ -34,7 +35,7 @@ pub mod integrations{pub use server_integrations_stripe as stripe;}
 pub mod orchestration{pub mod queue{pub mod redis_lock{
 pub struct RedisLock;
 impl RedisLock {
- pub fn new(_url:&str)->Result<Self,String>{Err("unrelated booking lock is not used in quote acceptance tests".into())}
+ pub fn new(_url:&str)->Result<Self,String>{crate::REDIS_CALLS.fetch_add(1,std::sync::atomic::Ordering::SeqCst);Err("unrelated booking lock is not used in quote acceptance tests".into())}
  pub async fn acquire_lock(&self,_tenant:&str,_kind:&str,_id:&str,_seconds:u64)->Result<(),String>{unreachable!()}
 }
 }}}
@@ -44,8 +45,8 @@ for name in ['Quote','QuoteLineItem']:
 for line in s.splitlines():
     if line.startswith('const QUOTE_'):source+=line+'\n'
 source+='#[derive(Debug,Clone)]struct TenantAuthority(String);\n'+block(s,'impl TenantAuthority')+'\n'
-for name in ['QuoteResponse','QuoteQuery','UpdateQuoteRequest','QuoteLineItemRequest','AcceptQuoteRequest']:
-    source+='#[derive(Serialize,Deserialize)]\n'+block(s,('pub struct ' if name!='AcceptQuoteRequest' else 'struct ')+name+' {')+'\n'
+for name in ['QuoteResponse','QuoteQuery','UpdateQuoteRequest','QuoteLineItemRequest','AcceptQuoteRequest','ApproveQuoteRequest']:
+    source+='#[derive(Serialize,Deserialize)]\n'+block(s,('pub struct ' if name not in ['AcceptQuoteRequest','ApproveQuoteRequest'] else 'struct ')+name+' {')+'\n'
 source+=f'#[path={json.dumps(str(ROOT/"src/server/api/quote_acceptance.rs"))}]mod quote_acceptance;\n'
 for name in ['validate_line_item_references','lock_owned_quote','accept_quote','get_quote','approve_quote','update_quote']:
     source+=block(s,'async fn '+name+'(')+'\n'

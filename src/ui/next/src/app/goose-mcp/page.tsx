@@ -7,21 +7,26 @@ export default function GooseMcpPage() {
   const [extensions, setExtensions] = useState<{ id: string; name: string; description?: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [extensionsRead, setExtensionsRead] = useState(false);
   const [execResult, setExecResult] = useState<string | null>(null);
 
   const fetchExtensions = async () => {
     setLoading(true);
     setError(null);
+    setExtensionsRead(false);
+    setExtensions([]);
     try {
       const res = await fetch('/api/v1/agents/goose');
       const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-      } else if (data.result) {
-        setExtensions(data.result);
-      } else {
-        setError('Failed to fetch extensions');
+      if (res.status !== 200 || !data || typeof data !== 'object' || data.error != null
+          || !Array.isArray(data.result) || !data.result.every((extension: { id?: unknown; name?: unknown; description?: unknown } | null) =>
+            extension && typeof extension.id === 'string' && extension.id.trim()
+            && typeof extension.name === 'string' && extension.name.trim()
+            && (extension.description === undefined || typeof extension.description === 'string'))) {
+        throw new Error(typeof data?.error === 'string' ? data.error : 'Extension history could not be verified.');
       }
+      setExtensions(data.result);
+      setExtensionsRead(true);
     } catch (err) {
       setError(errorMessage(err, ''));
     } finally {
@@ -60,7 +65,7 @@ export default function GooseMcpPage() {
     <div className="max-w-6xl mx-auto p-8 font-sans">
       <h1 className="text-3xl font-bold mb-4">Goose MCP Extensions UI</h1>
       {error && (
-        <div className="border border-red-200 p-4 mb-4 rounded-xl shadow-sm bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700" id="goose-error">
+        <div className="border border-red-200 p-4 mb-4 rounded-xl shadow-sm bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-700" id="goose-error" role="alert">
           <p className="font-bold">Error:</p>
           <p>{error}</p>
         </div>
@@ -68,6 +73,8 @@ export default function GooseMcpPage() {
       <h2 className="text-xl font-semibold mb-2">Available Extensions</h2>
       {loading ? (
         <p>Loading...</p>
+      ) : !extensionsRead ? (
+        <p>Extension history has not been verified.</p>
       ) : extensions.length === 0 ? (
         <p>No extensions found.</p>
       ) : (
@@ -90,6 +97,7 @@ export default function GooseMcpPage() {
       <button
         className="px-6 py-3 border border-white/20 dark:border-white/10 rounded-xl shadow-lg hover:shadow-xl hover:bg-white/60 dark:hover:bg-black/60 transition-all font-medium mb-8 bg-white/40 dark:bg-black/40 backdrop-blur-2xl saturate-[210%]"
         onClick={fetchExtensions}
+        disabled={loading}
       >
         Refresh List
       </button>

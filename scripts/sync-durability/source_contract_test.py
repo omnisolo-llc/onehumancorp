@@ -10,7 +10,7 @@ class MountedSyncContract(unittest.TestCase):
         end=source.index('\n#[cfg(test)]', start)
         mounted=source[start:end]
         self.assertNotIn('test_sync_entities', mounted)
-        self.assertIn('durable_sync::sync_events(', mounted)
+        self.assertIn('durable_sync::sync_authorized_events(', mounted)
     def test_intents_require_signed_bearer_auth(self):
         source=(ROOT/'src/server/api/offline_sync.rs').read_text()
         handler=source[source.index('pub async fn operation_intents_handler('):]

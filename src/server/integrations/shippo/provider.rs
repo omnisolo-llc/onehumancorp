@@ -1,4 +1,4 @@
-use super::client::{PurchaseLabelResponse, ShippoClient, ShippoRate};
+use super::client::{Observation, PurchaseLabelResponse, ShippoClient, ShippoRate};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -43,6 +43,29 @@ impl ShippoProvider {
 
     pub async fn purchase_label(&self, rate_id: &str) -> Result<PurchaseLabelResponse, String> {
         self._client.purchase_label(rate_id).await
+    }
+
+    pub async fn purchase_for_intent(
+        &self,
+        rate_id: &str,
+        metadata: &str,
+        is_test: bool,
+    ) -> Result<Observation, String> {
+        self._client
+            .purchase_for_intent(rate_id, metadata, is_test)
+            .await
+    }
+
+    pub async fn reconcile_for_intent(
+        &self,
+        rate_id: &str,
+        metadata: &str,
+        is_test: bool,
+        transaction_id: Option<&str>,
+    ) -> Result<Observation, String> {
+        self._client
+            .reconcile_for_intent(rate_id, metadata, is_test, transaction_id)
+            .await
     }
 
     pub async fn fetch_tracking(

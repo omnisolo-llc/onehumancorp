@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 const source=await readFile(new URL('../src/server/api/staff_mesh.rs',import.meta.url),'utf8');
 test('mounted staff, task and summary reads never turn SQL errors into empty records',()=>{
- for(const [name,next] of [['get_staff_handler','sync_timecard_handler'],['get_tasks_handler','update_task_handler'],['get_summaries_handler','get_shifts_handler']]){
+ for(const [name,next] of [['get_staff_handler','get_timecard_handler'],['get_tasks_handler','update_task_handler'],['get_summaries_handler','get_shifts_handler']]){
   const start=source.indexOf(`pub async fn ${name}(`);const end=source.indexOf(`pub async fn ${next}(`,start);assert.ok(start>=0&&end>start);
   const body=source.slice(start,end);assert.doesNotMatch(body,/unwrap_or_default\(\)/);assert.match(body,/StatusCode::INTERNAL_SERVER_ERROR/);
  }

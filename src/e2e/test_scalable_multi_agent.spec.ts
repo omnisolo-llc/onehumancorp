@@ -58,7 +58,7 @@ test.describe('Scalable multi-agent deployment', () => {
     const response = await execution;
     expect(response.request().postDataJSON()).toEqual({ count: 999, message: 'Retained task' });
     await expectRuntimeUnavailable(response);
-    await expect(page.getByRole('alert')).toHaveText(runtimeUnavailableMessage);
+    await expect(page.getByRole('alert').filter({ hasText: runtimeUnavailableMessage })).toHaveText(runtimeUnavailableMessage);
     await expect(page.getByRole('heading', { name: /Results/ })).toHaveCount(0);
     await expect(page.getByText('Agent 1:', { exact: true })).toHaveCount(0);
     await expect(page.getByPlaceholder('e.g. Analyze dataset')).toHaveValue('Retained task');

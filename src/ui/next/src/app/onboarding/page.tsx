@@ -5,7 +5,7 @@ import { errorMessage } from '@/lib/errors';
 import { useEffect,useState,useRef } from "react";
 import { useRouter } from "next/navigation";
 import { sendOnboardingDraft } from './draftWrites';
-import { onboardingDraftWriteProblem } from './draftWriteGate';
+import { onboardingDraftWriteProblem, onboardingDraftWritesBusy } from './draftWriteGate';
 import { useOnboardingStore, initializeOnboardingDraft, onboardingStorageFailed, onboardingDraftPending, markOnboardingDraftFromServer, subscribeOnboardingPersistence } from "./store";
 import { fetchForOnboardingOwner, hasHeldOnboardingDraft, readOwnedOnboardingItem, writeOwnedOnboardingItem, subscribeOnboardingInvalidation, onboardingOwner, captureOnboardingRestoreSnapshot, assertOnboardingRestoreSnapshot, type DraftOwner } from "./draftSession";
 import { canonicalRequest, normalizeReviewedProducts, observedWebsite, readDraftAcknowledgement, readLaunchResult, readPreparation, readPreparedResult, resultForPreparation, type Preparation } from "./contracts";
@@ -52,9 +52,13 @@ export default function OnboardingWizard() {
   const [identityError, setIdentityError] = useState('');
   const [heldDraft, setHeldDraft] = useState(false);
   const [draftPending, setDraftPending] = useState(false);
+  const [draftWritesBusy, setDraftWritesBusy] = useState(false);
   const [draftWriteProblem, setDraftWriteProblem] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState<string | null>(null);
-  useEffect(() => subscribeOnboardingPersistence(() => { setDraftPending(onboardingDraftPending()); setDraftWriteProblem(onboardingDraftWriteProblem(onboardingOwner())); }), []);
+  useEffect(() => subscribeOnboardingPersistence(() => {
+    const owner = onboardingOwner();
+    setDraftPending(onboardingDraftPending()); setDraftWriteProblem(onboardingDraftWriteProblem(owner)); setDraftWritesBusy(onboardingDraftWritesBusy(owner));
+  }), []);
   const initialStateLoaded = useRef(false);
   const [chatMessages, setChatMessages] = useState<
     { role: string; content: string; image_url?: string }[]
@@ -255,7 +259,7 @@ export default function OnboardingWizard() {
         const pendingLocal = onboardingDraftPending();
         const localSnapshot = pendingLocal ? { ...useOnboardingStore.getState() } : undefined;
         const localProducts = pendingLocal ? readOwnedOnboardingItem('products') : null;
-        setDraftPending(pendingLocal); setDraftWriteProblem(onboardingDraftWriteProblem(owner));
+        setDraftPending(pendingLocal); setDraftWriteProblem(onboardingDraftWriteProblem(owner)); setDraftWritesBusy(onboardingDraftWritesBusy(owner));
         const values = await Promise.all([
       fetchForOnboardingOwner("/api/v1/onboarding/draft", {}, owner)
         .then((res) => (res.ok ? res.json() : null))
@@ -324,7 +328,7 @@ export default function OnboardingWizard() {
     const unsubscribe = subscribeOnboardingInvalidation(restart => {
       loadVersion += 1; operationEpoch.current += 1; operationPending.current = false; draftSavePending.current = false;
       prepared.current = null; preparedDraft.current = null; needsRecovery.current = false;
-      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setManualInput(null); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null);
+      setChatMessages([]); setChatInput(''); setChatImageUrl(''); setManualInput(null); setSaveMessage(''); setValidationError(''); setValidationErrors({}); setDraftPending(false); setDraftWriteProblem(null); setDraftWritesBusy(false);
       initialStateLoaded.current = false; setViewOwner(null); setIsLoaded(false);
       if (restart) void load(); else setIdentityError('Your session could not be verified. Sign in again to continue.');
     });
@@ -375,6 +379,9 @@ export default function OnboardingWizard() {
     };
 
     const timer = setTimeout(() => {
+      // An explicit wizard write can finish before React cleans up this timer.
+      // A lost acknowledgement remains held instead of readmitting a blocked save.
+      if (!onboardingDraftPending() || onboardingDraftWriteProblem(onboardingOwner())) return;
       fetchWithRetry("/api/v1/onboarding/state", {
         method: "POST",
         headers: {
@@ -671,6 +678,7 @@ export default function OnboardingWizard() {
       <div
         role="status"
         aria-label="Loading onboarding"
+        aria-busy="true"
         className="flex min-h-[50vh] items-center justify-center px-6"
       >
         <div className="flex items-center gap-3 rounded-[16px] border border-slate-200 bg-white px-5 py-4 text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
@@ -748,6 +756,7 @@ export default function OnboardingWizard() {
     <div className="setup-page min-h-screen w-full bg-[#F5F5F7] dark:bg-[#16161a] flex items-center justify-center sm:p-4 font-inter overflow-x-hidden">
       <div
         id="setup-screen"
+        aria-busy={draftWritesBusy}
         data-voice-assistant-surface="glass"
         className="w-full max-w-[375px] sm:max-w-md lg:max-w-lg xl:max-w-2xl mx-auto overflow-hidden flex flex-col min-h-[100dvh] sm:min-h-[812px] relative border-0 sm:border shadow-none sm:shadow-[0_18px_44px_rgba(15,23,42,0.12)] translucent-glass-light dark:translucent-glass-dark"
       >

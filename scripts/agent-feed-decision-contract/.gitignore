@@ -1,0 +1,7 @@
+Cargo.lock
+generated.rs
+schema.sql
+token_fence.sql
+products_rls.sql
+source-manifest.json
+/target/

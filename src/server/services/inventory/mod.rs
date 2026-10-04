@@ -1,2 +1,2 @@
 pub mod service;
-pub use service::InventoryService;
+pub use service::{InventoryCommitMode, InventoryService};

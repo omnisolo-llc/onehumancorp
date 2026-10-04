@@ -1,231 +1,216 @@
 'use client';
 
-import { errorMessage } from '@/lib/errors';
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { isQuoteVersion } from '@/lib/quoteVersion';
 import { AppShell } from '../../components/AppShell';
+import {
+  hasQuoteTerms, moneyInput, parseMoneyInput, parseQuoteDetail,
+  QUOTE_ID_PATTERN, safePaymentLink, sameQuoteTerms, type QuoteDetail,
+} from './quoteDetail';
 
-interface LineItem {
-  id: string;
-  description: string;
-  unit_price_cents: number;
-  quantity: number;
-  is_optional: boolean;
+type Edits = { prices: string[]; total: string; deposit: string };
+const actionClass = 'w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50';
+const secondaryClass = 'w-full min-h-[44px] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium disabled:opacity-50';
+
+async function readQuote(id: string, signal?: AbortSignal): Promise<QuoteDetail | null> {
+  const response = await fetch(`/api/v1/quotes/${id}`, { cache: 'no-store', signal });
+  if (!response.ok) {
+    // Complete finite error bodies before exposing the result or reusing this view.
+    await response.arrayBuffer();
+    if (response.status === 404) return null;
+    throw new Error('Quote read failed');
+  }
+  return parseQuoteDetail(await response.json(), id);
 }
-
-interface Quote {
-  id: string;
-  customer_id: string;
-  status: string;
-  total_amount_cents: number;
-  required_deposit_cents: number;
-  stripe_payment_link?: string;
-  line_items?: LineItem[];
-}
-
-const QUOTE_ID_PATTERN = /^(e2e-id|[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
 
 export default function QuoteReviewPage() {
   const params = useParams();
+  const id = typeof params.id === 'string' ? params.id.toLowerCase() : '';
+  // Navigation discards both unsaved edits and in-flight results for the old ID.
+  return <QuoteReview key={id} id={id} />;
+}
+
+function QuoteReview({ id }: { id: string }) {
   const router = useRouter();
-  const id = params.id as string;
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const [quote, setQuote] = useState<QuoteDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sending, setSending] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [refresh, setRefresh] = useState(0);
+  const [edits, setEdits] = useState<Edits | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [refreshNotice, setRefreshNotice] = useState<string | null>(null);
+  const [reconcile, setReconcile] = useState(false);
+  const operation = useRef(0);
+  const busyRef = useRef(false);
+  const validReference = QUOTE_ID_PATTERN.test(id);
 
   useEffect(() => {
+    const current = ++operation.current;
+    const controller = new AbortController();
+    setQuote(null);
+    setLoading(true);
+    setLoadError(false);
+    setEdits(null);
+    setActionError(null);
+    setNotice(null);
+    setRefreshNotice(null);
+    setReconcile(false);
     if (!QUOTE_ID_PATTERN.test(id)) {
-      setQuote(null);
-      setError(null);
+      setRefreshNotice('The quote reference is invalid. Open a valid quote link.');
       setLoading(false);
       return;
     }
-
-    async function fetchQuote() {
-      try {
-        const res = await fetch(`/api/v1/quotes/${id}`);
-        if (!res.ok) throw new Error('Failed to fetch quote');
-        const data = await res.json();
-        setQuote(data);
-      } catch (err: unknown) {
-        if (id === 'e2e-id' || id === '823e4567-e89b-12d3-a456-426614174000') {
-          setQuote({
-            id,
-            customer_id: 'cust-e2e',
-            status: 'DRAFT',
-            total_amount_cents: 35000,
-            required_deposit_cents: 10000,
-            stripe_payment_link: 'https://cloud.omnisolo.co/quotes/e2e-id/pay',
-            line_items: [
-              {
-                id: 'item-1',
-                description: 'Sink Repair and Pipe Replacement',
-                unit_price_cents: 35000,
-                quantity: 1,
-                is_optional: false,
-              },
-            ],
-          });
-          setError(null);
-        } else {
-          setError(errorMessage(err));
-        }
-      } finally {
-        setLoading(false);
+    readQuote(id, controller.signal).then(value => {
+      if (current === operation.current) {
+        setQuote(value);
+        if (refresh > 0) setRefreshNotice(value ? 'Quote refreshed from saved data.' : 'Refresh complete. Quote not found.');
       }
-    }
-    fetchQuote();
-  }, [id]);
-
-  const handleSend = async () => {
-    try {
-      setSending(true);
-      const res = await fetch(`/api/v1/quotes?id=${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...quote, status: 'SENT' }),
-      });
-      if (res.ok) {
-        const updated = await res.json();
-        setQuote(updated);
-        if (typeof window !== 'undefined' && process.env.NODE_ENV === 'test') {
-          window.alert?.('Quote Sent!');
-        }
-      } else {
-        setQuote(prev => prev ? { ...prev, status: 'SENT' } : null);
+    }).catch(() => {
+      if (current === operation.current) {
+        setLoadError(true);
+        if (refresh > 0) setRefreshNotice('Refresh failed. Quote could not be loaded.');
       }
-    } catch {
-      setQuote(prev => prev ? { ...prev, status: 'SENT' } : null);
-    } finally {
-      setSending(false);
-    }
-  };
-
-  const handleUpdateLineItem = (itemId: string, newPrice: number) => {
-    if (!quote) return;
-    const newItems = quote.line_items?.map(item =>
-      item.id === itemId ? { ...item, unit_price_cents: newPrice } : item
-    );
-    const newTotal = newItems?.reduce((sum, item) => sum + (item.unit_price_cents * item.quantity), 0) || 0;
-    setQuote({
-      ...quote,
-      line_items: newItems,
-      total_amount_cents: newTotal,
-      required_deposit_cents: Math.floor(newTotal / 3)
+    }).finally(() => {
+      if (current === operation.current) setLoading(false);
     });
-  };
+    return () => { ++operation.current; controller.abort(); };
+  }, [id, refresh]);
 
-  const saveQuoteChanges = async () => {
-    try {
-      setSending(true);
-      const res = await fetch(`/api/v1/quotes?id=${id}`, {
-        method: 'POST', // Based on route.ts POST handles update if id is present
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(quote)
+  const status = quote?.status.toUpperCase();
+  const pending = status === 'DRAFTING' || status === 'PENDING';
+  const ready = !!quote && !pending && hasQuoteTerms(quote);
+  const versionAvailable = isQuoteVersion(quote?.updated_at);
+  const editable = ready && versionAvailable && !quote?.acceptance && (status === 'DRAFT' || status === 'SENT' || status === 'APPROVED');
+  const approvable = editable && status === 'DRAFT';
+
+  const mutate = async (kind: 'approve' | 'save') => {
+    if (!quote || busyRef.current || reconcile || (kind === 'approve' ? !approvable : !editable || !edits)) return;
+    let body = JSON.stringify({ expected_updated_at: quote.updated_at });
+    let reviewed = quote;
+    if (kind === 'save' && edits) {
+      const total = parseMoneyInput(edits.total);
+      const deposit = parseMoneyInput(edits.deposit);
+      const prices = edits.prices.map(parseMoneyInput);
+      if (total === null || deposit === null || prices.some((price, index) => price === null || !Number.isSafeInteger(price * quote.line_items[index].quantity))) {
+        setActionError('Enter valid amounts with at most two decimal places.');
+        return;
+      }
+      reviewed = { ...quote, total_amount_cents: total, required_deposit_cents: deposit,
+        line_items: quote.line_items.map((line, index) => ({ ...line, unit_price_cents: prices[index]! })),
+      };
+      body = JSON.stringify({
+        expected_updated_at: quote.updated_at,
+        total_amount_cents: total,
+        required_deposit_cents: deposit,
+        line_items: quote.line_items.map((line, index) => ({
+          description: line.description, unit_price_cents: prices[index], quantity: line.quantity,
+          is_optional: line.is_optional, service_item_id: line.service_item_id ?? null,
+        })),
       });
-      if (!res.ok) throw new Error('Failed to save changes');
-      setIsEditing(false);
-    } catch (err: unknown) {
-      alert(errorMessage(err));
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setActionError(null);
+    setNotice(null);
+    const current = operation.current;
+    try {
+      const response = await fetch(`/api/v1/quotes/${id}${kind === 'approve' ? '/approve' : ''}`, {
+        method: kind === 'approve' ? 'PATCH' : 'PUT',
+        headers: { 'Content-Type': 'application/json' }, body,
+      });
+      const receipt = await response.json();
+      if (!response.ok) throw new Error('Quote change failed');
+      if (kind === 'save' ? receipt?.success !== true : receipt?.quote?.id?.toLowerCase() !== id) {
+        throw new Error('Invalid quote change receipt');
+      }
+      const committedVersion = kind === 'save' ? receipt.updated_at : receipt.quote?.updated_at;
+      if (!isQuoteVersion(committedVersion)) throw new Error('Missing committed quote version');
+      if (current !== operation.current) return;
+      const saved = await readQuote(id);
+      if (!saved || saved.updated_at !== committedVersion || !sameQuoteTerms(saved, reviewed) || (kind === 'approve' && !['SENT', 'APPROVED', 'ACCEPTED'].includes(saved.status.toUpperCase()))) {
+        throw new Error('Quote change could not be verified');
+      }
+      if (current !== operation.current) return;
+      setQuote(saved);
+      setEdits(null);
+      setNotice(kind === 'save' ? 'Quote changes saved.' : 'Quote approval saved. Message delivery to the customer is not confirmed.');
+    } catch {
+      if (current !== operation.current) return;
+      // A failed response can follow a committed write. Re-read before another
+      // action; never fabricate success or blindly repeat an uncertain mutation.
+      setReconcile(true);
+      setActionError(`${kind === 'save' ? 'Changes' : 'Approval'} could not be confirmed. Refresh the quote before trying again.`);
     } finally {
-      setSending(false);
+      if (current === operation.current) {
+        busyRef.current = false;
+        setBusy(false);
+      }
     }
   };
 
-  if (loading) return <AppShell title="Loading Quote..."><div className="p-4 text-center">Loading...</div></AppShell>;
-  if (error) return <AppShell title="Error"><div className="p-4 text-center text-[#FF3B30]">{error}</div></AppShell>;
-  if (!quote) return <AppShell title="Not Found"><div className="p-4 text-center">Quote not found</div></AppShell>;
+  const navigation = <>
+    <button onClick={() => setRefresh(value => value + 1)} disabled={busy || !validReference} className={secondaryClass}>Refresh quote</button>
+    <button onClick={() => router.push('/feed')} className={secondaryClass}>Back to Feed</button>
+  </>;
+  if (loading) return <AppShell title="Loading Quote..."><div role="status" aria-busy="true" className="p-4 text-center">Loading...</div></AppShell>;
+  if (loadError) return <AppShell title="Quote unavailable"><div className="p-4 space-y-4"><p role="alert">Unable to load quote. Please refresh to try again.</p>{refreshNotice && <p role="status">{refreshNotice}</p>}{navigation}</div></AppShell>;
+  if (!quote) return <AppShell title="Not Found"><div className="p-4 space-y-4"><p>Quote not found</p>{refreshNotice && <p role="status">{refreshNotice}</p>}{navigation}</div></AppShell>;
 
+  const paymentLink = safePaymentLink(quote.stripe_payment_link);
   return (
     <AppShell title="Review Estimate" subtitle={`Quote #${id.slice(0, 8)}`}>
       <div className="w-full max-w-md mx-auto p-4 space-y-6">
         <div className="glassmorphism p-6 space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-500">Status</span>
-            <span className={`text-xs font-bold px-2 py-1 rounded-full ${quote.status === 'ACCEPTED' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-              {quote.status}
-            </span>
+            <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{quote.status}</span>
           </div>
-
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Line Items</h3>
-              {(quote.status === 'DRAFT' || quote.status === 'PENDING') && !isEditing && (
-                <button onClick={() => setIsEditing(true)} id="edit-quote-btn" className="text-[10px] text-[#0066FF] font-bold">EDIT</button>
-              )}
-            </div>
-            {quote.line_items?.map((item) => (
-              <div key={item.id} className="flex flex-col gap-1 py-2 border-b border-gray-50 dark:border-gray-800 last:border-0">
-                <div className="flex justify-between text-sm">
-                  <span>{item.description} (x{item.quantity})</span>
-                  {isEditing ? (
-                    <div className="flex items-center gap-1">
-                      <span className="text-gray-400">$</span>
-                      <input
-                        type="number"
-                        value={(item.unit_price_cents / 100).toFixed(2)}
-                        onChange={(e) => handleUpdateLineItem(item.id, Math.round(parseFloat(e.target.value) * 100))}
-                        className="w-20 text-right bg-gray-100 dark:bg-gray-800 rounded px-1 focus:outline-none focus:ring-1 focus:ring-[#0066FF]"
-                      />
-                    </div>
-                  ) : (
-                    <span className="font-medium">${((item.unit_price_cents * item.quantity) / 100).toFixed(2)}</span>
-                  )}
-                </div>
+          {pending ? <p role="status">Quote preparation is pending. Refresh to check for saved terms.</p> : <>
+            {!versionAvailable && <p role="status">Quote version is unavailable. Refresh before making changes.</p>}
+            {!ready && <p role="status">Quote terms are incomplete. Pricing and approval are unavailable until complete terms are saved.</p>}
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Line Items</h3>
+                {editable && !edits && <button aria-label="Edit quote" id="edit-quote-btn" disabled={busy || reconcile} onClick={() => {
+                  setEdits({ prices: quote.line_items.map(line => moneyInput(line.unit_price_cents)), total: moneyInput(quote.total_amount_cents!), deposit: moneyInput(quote.required_deposit_cents!) });
+                  setActionError(null);
+                  setNotice(null);
+                }} className="text-[10px] text-[#0066FF] font-bold">EDIT</button>}
               </div>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
-            <div className="flex justify-between items-center font-bold">
-              <span>Total Amount</span>
-              <span>${(quote.total_amount_cents / 100).toFixed(2)}</span>
+              {edits && <p role="status">Unsaved changes. Total and deposit are explicit terms; editing a line does not change them automatically.</p>}
+              {quote.line_items.map((line, index) => <div key={line.id} className="flex justify-between gap-2 text-sm py-2 border-b border-gray-100 dark:border-gray-800">
+                <span>{line.description} (x{line.quantity}){line.is_optional && <span className="block text-xs">Optional</span>}</span>
+                {edits ? <input id={`quote-price-${index}`} aria-label={`Unit price for ${line.description}`} type="number" step="0.01" disabled={busy || reconcile} value={edits.prices[index]} onChange={event => setEdits({ ...edits, prices: edits.prices.map((price, i) => i === index ? event.target.value : price) })} className="w-24 text-right bg-gray-100 dark:bg-gray-800 rounded px-1" /> : <span>${moneyInput(line.unit_price_cents * line.quantity)}</span>}
+              </div>)}
             </div>
-            <div className="flex justify-between items-center text-sm text-gray-500">
-              <span>Required Deposit</span>
-              <span>${(quote.required_deposit_cents / 100).toFixed(2)}</span>
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
+              <div className="flex justify-between items-center font-bold">
+                <label htmlFor="quote-total">Total Amount</label>
+                {edits ? <input id="quote-total" aria-label="Total amount" type="number" step="0.01" disabled={busy || reconcile} value={edits.total} onChange={event => setEdits({ ...edits, total: event.target.value })} className="w-24 text-right bg-gray-100 dark:bg-gray-800" /> : <span>{quote.total_amount_cents === null ? 'Not available' : `$${moneyInput(quote.total_amount_cents)}`}</span>}
+              </div>
+              <div className="flex justify-between items-center text-sm text-gray-500">
+                <label htmlFor="quote-deposit">Required Deposit</label>
+                {edits ? <input id="quote-deposit" aria-label="Required deposit" type="number" step="0.01" disabled={busy || reconcile} value={edits.deposit} onChange={event => setEdits({ ...edits, deposit: event.target.value })} className="w-24 text-right bg-gray-100 dark:bg-gray-800" /> : <span>{quote.required_deposit_cents === null ? 'Not available' : `$${moneyInput(quote.required_deposit_cents)}`}</span>}
+              </div>
             </div>
-          </div>
-
-          {quote.stripe_payment_link && (
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <p className="text-[11px] font-bold text-[#0071E3] dark:text-blue-400 mb-1 uppercase">Stripe Payment Link</p>
-              <a href={quote.stripe_payment_link} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0066FF] underline break-all">
-                {quote.stripe_payment_link}
-              </a>
-            </div>
-          )}
+            {paymentLink && <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+              <p className="text-xs mb-1">Saved payment link. A link does not confirm payment.</p>
+              <a href={paymentLink} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0066FF] underline break-all">{paymentLink}</a>
+            </div>}
+          </>}
         </div>
-
-        {isEditing ? (
-          <button
-            id="btn-save-edits"
-            onClick={saveQuoteChanges}
-            disabled={sending}
-            className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
-          >
-            {sending ? 'Saving...' : 'Save Changes'}
-          </button>
-        ) : (
-          <button
-            onClick={handleSend}
-            disabled={sending || quote.status === 'ACCEPTED'}
-            aria-label="Approve & Send Quote"
-            className="w-full min-h-[44px] bg-[#0066FF] text-white font-bold shadow-lg hover:bg-[#0052CC] transition-all disabled:opacity-50"
-          >
-            {sending ? 'Sending...' : quote.status === 'SENT' ? 'Approve & Send Quote' : 'Approve & Send Quote'}
-          </button>
-        )}
-
-        <button
-          onClick={() => router.back()}
-          className="w-full min-h-[44px] border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
-        >
-          Back to Feed
-        </button>
+        {notice && <p role="status">{notice}</p>}
+        {refreshNotice && <p role="status">{refreshNotice}</p>}
+        {!notice && status === 'SENT' && <p>Recorded status: SENT. Message delivery to the customer is not confirmed.</p>}
+        {actionError && <p role="alert" className="text-[#FF3B30]">{actionError}</p>}
+        {edits ? <>
+          <button id="btn-save-edits" onClick={() => void mutate('save')} disabled={busy || reconcile} className={actionClass}>{busy ? 'Saving...' : 'Save Changes'}</button>
+          <button onClick={() => setEdits(null)} disabled={busy} className={secondaryClass}>Cancel edits</button>
+        </> : approvable && <button onClick={() => void mutate('approve')} disabled={busy || reconcile} className={actionClass}>{busy ? 'Approving...' : 'Approve quote'}</button>}
+        {navigation}
       </div>
     </AppShell>
   );

@@ -26,6 +26,14 @@ and the WhatsApp alias remain recognized. A configured NATS transport retains
 its existing background connection attempt; configured status does not certify
 that the attempt succeeded.
 
+NATS response/provider metadata omits URL userinfo while retaining the nonsecret
+endpoint. The original URL remains the connection input; this does not implement
+NATS authentication. Registry handshake logs/errors suppress credential-bearing
+connector details without suppressing concurrent application logs. These are
+library/legacy-service serialization guarantees; the legacy IntegrationService
+is not mounted by the current server, and the separate HTTP integration endpoint
+does not accept `base_url`.
+
 ## Verification and remaining implementation gaps
 
 The focused std-only tests execute the actual production input validator. Source

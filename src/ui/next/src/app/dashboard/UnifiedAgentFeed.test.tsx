@@ -114,6 +114,45 @@ const customerTriageProjection = {
   ...customerDraft, source: 'CustomerSuccessAgent', action_type: 'approval',
 };
 
+it('revalidates canonical actions when a late dashboard aggregate arrives', async () => {
+  const fetcher = vi.fn(async () => Response.json({ items: [pendingItem] }));
+  vi.stubGlobal('fetch', fetcher);
+  const { rerender } = render(<UnifiedAgentFeed initialData={{ items: [] }} />);
+  const approve = await screen.findByRole('button', { name: 'Approve proposal' });
+  expect(approve).toBeVisible();
+  let finishRefresh!: (response: Response) => void;
+  fetcher.mockImplementationOnce(() => new Promise<Response>((resolve) => { finishRefresh = resolve; }));
+
+  // The dashboard aggregate can finish after this component's own read. Its
+  // cached canonical list omits the new row, but triage still projects its ID
+  // without the canonical proposal's context or action payload.
+  rerender(<UnifiedAgentFeed initialData={{
+    items: [{ ...customerDraft, lifecycle_state: 'APPROVED' }],
+    triage: [{ id: pendingItem.id, tenant_id: pendingItem.tenant_id, source: 'operations', action_type: 'approval' }],
+  }} />);
+  expect(screen.getByRole('button', { name: 'Approve proposal' })).toBeVisible();
+  await act(async () => finishRefresh(Response.json({ items: [pendingItem] })));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Approve proposal' })).toBeVisible());
+  expect(screen.getByTestId(`triage-card-${pendingItem.id}`)).toHaveTextContent('Review owner proposal');
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Approve proposal' }));
+  expect(fetcher).toHaveBeenCalledWith(`/api/v1/agent-feed/${pendingItem.id}`, expect.objectContaining({
+    method: 'PUT', body: JSON.stringify({ state: 'APPROVED' }),
+  }));
+  await waitFor(() => expect(screen.queryByTestId(`triage-card-${pendingItem.id}`)).not.toBeInTheDocument());
+});
+
+it('honors a newly committed decision when revalidating a late pending aggregate', async () => {
+  const fetcher = vi.fn(async () => Response.json({ items: [pendingItem] }));
+  vi.stubGlobal('fetch', fetcher);
+  const { rerender } = render(<UnifiedAgentFeed initialData={{ items: [] }} />);
+  await screen.findByRole('button', { name: 'Approve proposal' });
+  fetcher.mockImplementation(async () => Response.json({ items: [{ ...pendingItem, lifecycle_state: 'APPROVED' }] }));
+  rerender(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await waitFor(() => expect(screen.queryByTestId(`triage-card-${pendingItem.id}`)).not.toBeInTheDocument());
+  await userEvent.setup().click(screen.getByRole('button', { name: 'Activity Feed' }));
+  expect(screen.getByTestId('activity-feed-entry')).toHaveTextContent('Prepare the requested work');
+});
+
 it('renders one authoritative customer action when the same record is projected in triage', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => Response.json({ items: [customerDraft] })));
   render(<UnifiedAgentFeed initialData={{ items: [customerDraft], triage: [customerTriageProjection, { id: 'distinct-triage', tenant_id: 'tenant-1', context: 'Separate recorded inquiry', action_payload: 'Separate draft' }] }} />);

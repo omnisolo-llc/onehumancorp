@@ -18,11 +18,15 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
 COPY --from=planner /src/recipe.json recipe.json
+# Match the shipped runtime targets in both stages. Benchmark/probe binaries
+# remain covered by native CI; they are not inputs to these production images.
 RUN cargo chef cook --release --locked --recipe-path recipe.json \
-    --package omnisolo --package omnisolo_builtin_agent --package omnisolo_harness_worker --bins
+    --package omnisolo --package omnisolo_builtin_agent --package omnisolo_harness_worker \
+    --bin server --bin omnisolo-builtin-agent --bin omnisolo-harness-worker
 COPY . .
 RUN cargo build --locked --release \
-    -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
+    -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker \
+    --bin server --bin omnisolo-builtin-agent --bin omnisolo-harness-worker
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \

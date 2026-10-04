@@ -27,9 +27,8 @@ describe("NewProposalPage", () => {
   });
 
   test("shows an accessible stable error for a failed draft", async () => {
-    fetchMock.mockResolvedValue(
-      Response.json({ error: "provider secret" }, { status: 502 }),
-    );
+    const response = Response.json({ error: "provider secret" }, { status: 502 });
+    fetchMock.mockResolvedValue(response);
     render(<NewProposalPage />);
 
     fireEvent.change(screen.getByLabelText("Project Brief / Topic"), {
@@ -41,6 +40,7 @@ describe("NewProposalPage", () => {
       "Failed to draft proposal",
     );
     expect(screen.queryByText("undefined")).not.toBeInTheDocument();
+    expect(response.bodyUsed).toBe(true);
   });
 });
 

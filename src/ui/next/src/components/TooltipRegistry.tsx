@@ -47,7 +47,9 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (pathname === '/login') return;
+    // A share-card document is immediately replaced; load destination tooltips
+    // when the application route mounts instead of abandoning this read.
+    if (pathname === '/login' || pathname === '/share-card') return;
 
     const abortController = new AbortController();
     const fetchTooltips = async () => {

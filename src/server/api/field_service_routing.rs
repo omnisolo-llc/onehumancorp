@@ -1,19 +1,19 @@
-use crate::db::DB;
-use crate::hub::Hub;
-use ::server_omnisolo::orchestration::TeammateMeshEvent;
+use crate::api::field_ops::records::{
+    self, FieldAccess, FieldError, Receipt, authority_error, conflict, expected, invalid, missing,
+    unavailable,
+};
+use crate::{db::DB, hub::Hub};
 use axum::{
     Json, Router,
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
+    extract::{Extension, Path, Query, State},
+    http::HeaderMap,
     routing::{get, post},
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use uuid::Uuid;
+use std::{collections::HashMap, sync::Arc};
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct JobLocation {
     pub id: String,
     pub customer_id: Option<String>,
@@ -21,12 +21,14 @@ pub struct JobLocation {
     pub address: String,
     pub lat: Option<f64>,
     pub lng: Option<f64>,
-    pub scheduled_start: DateTime<Utc>,
+    pub scheduled_start: Option<DateTime<Utc>>,
     pub scheduled_end: Option<DateTime<Utc>>,
     pub status: String,
     pub order_index: i32,
+    pub updated_at: DateTime<Utc>,
+    #[serde(skip)]
+    pub service_route_id: String,
 }
-
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ServiceRoute {
     pub id: String,
@@ -35,359 +37,187 @@ pub struct ServiceRoute {
     pub status: String,
     pub jobs: Vec<JobLocation>,
 }
-
 #[derive(Serialize)]
 pub struct TodayRoutesResponse {
     pub routes: Vec<ServiceRoute>,
 }
-
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct UpdateJobStatusRequest {
     pub status: String,
+    pub expected_updated_at: Option<DateTime<Utc>>,
 }
-
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct UpdateJobStatusResponse {
     pub success: bool,
     pub error: Option<String>,
+    pub id: String,
+    pub status: String,
+    pub updated_at: DateTime<Utc>,
 }
-
-pub fn router<S>(db: Arc<DB>, hub: Arc<Hub>) -> Router<S>
+#[derive(Clone)]
+struct AppState {
+    hub: Arc<Hub>,
+    access: FieldAccess,
+}
+pub fn router<S>(
+    db: Arc<DB>,
+    hub: Arc<Hub>,
+    auth_store: Arc<server_auth::Store>,
+    canonical: Option<sqlx::PgPool>,
+) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
-    let state = AppState { db, hub };
+    let _ = db;
+    let state = AppState {
+        hub,
+        access: FieldAccess {
+            pool: canonical,
+            store: auth_store.clone(),
+        },
+    };
     Router::new()
         .route("/routes/today", get(get_today_routes))
         .route("/jobs/{id}/status", post(update_job_status))
+        .route_layer(axum::middleware::from_fn_with_state(
+            auth_store,
+            server_auth::strict_bearer_auth_middleware,
+        ))
         .with_state(state)
+        .layer(axum::extract::DefaultBodyLimit::max(64 * 1024))
+        .layer(axum::middleware::map_response(records::private_response))
 }
-
-#[derive(Clone)]
-struct AppState {
-    db: Arc<DB>,
-    hub: Arc<Hub>,
-}
-
-static ROUTES_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<Vec<ServiceRoute>>> =
-    std::sync::OnceLock::new();
-
 #[derive(Deserialize)]
 pub struct GetTodayRoutesQuery {
     pub mobile_optimized: Option<bool>,
 }
-
 async fn get_today_routes(
+    headers: HeaderMap,
     State(state): State<AppState>,
-    axum::extract::Query(query): axum::extract::Query<GetTodayRoutesQuery>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
-) -> impl IntoResponse {
-    let tenant_id = auth_info
-        .map(|ext| ext.0.org_id)
-        .filter(|id| !id.is_empty())
-        .unwrap_or_else(|| "e2e-tenant".to_string());
-
-    let mobile_optimized = query.mobile_optimized.unwrap_or(false);
-    let cache_key = format!("routes_today_{}:{}", tenant_id, mobile_optimized);
-    let cache = ROUTES_CACHE
-        .get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client()));
-
-    if let Some((cached, false)) = cache.get_with_swr(&cache_key).await {
-        return (StatusCode::OK, Json(serde_json::json!({"routes": cached}))).into_response();
+    Extension(claims): Extension<server_common::Claims>,
+    Query(query): Query<GetTodayRoutesQuery>,
+) -> Result<Json<TodayRoutesResponse>, FieldError> {
+    let owner = state.access.authorize(&claims, &headers).await?;
+    let tenant = owner.tenant_id().to_owned();
+    let mut tx = owner.begin().await.map_err(authority_error)?;
+    // Read both parent and child rows from the same tenant-bound transaction.
+    // Global cached relationship snapshots cannot authorize current tenant ownership.
+    let routes:Vec<(String,Option<String>,NaiveDate,String)>=sqlx::query_as("SELECT id,agent_id,route_date,status FROM service_routes WHERE tenant_id=$1 AND route_date=$2 ORDER BY id FOR SHARE")
+        .bind(&tenant).bind(Utc::now().date_naive()).fetch_all(tx.connection()).await.map_err(unavailable)?;
+    let ids: Vec<_> = routes.iter().map(|row| row.0.clone()).collect();
+    let malformed:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM job_locations j LEFT JOIN appointments a ON a.id=j.appointment_id AND a.tenant_id=j.tenant_id WHERE j.tenant_id=$1 AND j.service_route_id=ANY($2) AND a.id IS NULL)")
+        .bind(&tenant).bind(&ids).fetch_one(tx.connection()).await.map_err(unavailable)?;
+    if malformed {
+        return Err(unavailable("Invalid stored field appointment relationship"));
     }
-
-    let pool = state.db.pool.clone();
-
-    let today = Utc::now().date_naive();
-
-    let mut tx = match pool.begin().await {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::error!("failed to begin tx: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(serde_json::json!({"error": "internal error"})),
-            )
-                .into_response();
-        }
-    };
-
-    let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    use sqlx::Row;
-
-    // Use parallel execution for N+1 queries optimization
-    let routes_result = sqlx::query(
-        r#"
-        SELECT id, COALESCE(agent_id, '') as staff_id, route_date, status
-        FROM service_routes
-        WHERE tenant_id = $1 AND route_date = $2
-        "#,
-    )
-    .bind(&tenant_id)
-    .bind(today)
-    .fetch_all(&mut *tx)
-    .await;
-
-    let mut routes = Vec::new();
-    if let Ok(routes_rows) = routes_result {
-        // Collect all routes into a list
-        let mut routes_data = Vec::new();
-        for r_row in routes_rows {
-            let r_id: String = r_row.get("id");
-            let staff_id: Option<String> = r_row.try_get("staff_id").unwrap_or(None);
-            let route_date: chrono::NaiveDate = r_row.get("route_date");
-            let status: String = r_row.get("status");
-            routes_data.push((r_id, staff_id, route_date, status));
-        }
-
-        let mut job_futures = Vec::new();
-        for (r_id, _, _, _) in &routes_data {
-            let t_id = tenant_id.clone();
-            let route_id = r_id.clone();
-            let pool = pool.clone();
-
-            job_futures.push(tokio::spawn(async move {
-                let mut conn = match pool.acquire().await {
-                    Ok(c) => c,
-                    Err(e) => {
-                        tracing::error!("failed to acquire connection for job: {}", e);
-                        return (route_id, Vec::new());
-                    }
-                };
-
-                let query_str = r#"
-                    SELECT
-                        jl.id,
-                        a.customer_id,
-                        COALESCE(jt.name, 'Service Job') as job_title,
-                        COALESCE(a.location_address, 'No Address Provided') as address,
-                        a.location_lat as lat,
-                        a.location_lng as lng,
-                        COALESCE(a.scheduled_start_time, CURRENT_TIMESTAMP) as scheduled_start,
-                        a.scheduled_end_time as scheduled_end,
-                        jl.status,
-                        jl.sequence_order as order_index
-                    FROM job_locations jl
-                    JOIN appointments a ON jl.appointment_id = a.id
-                    LEFT JOIN job_templates jt ON a.job_template_id = jt.id
-                    WHERE jl.tenant_id = $1 AND jl.service_route_id = $2
-                    ORDER BY jl.sequence_order ASC, a.scheduled_start_time ASC
-                "#;
-
-                let jobs_result = sqlx::query(query_str)
-                    .bind(&t_id)
-                    .bind(&route_id)
-                    .fetch_all(&mut *conn)
-                    .await;
-
-                let mut jobs = Vec::new();
-                if let Ok(jobs_rows) = jobs_result {
-                    for j_row in jobs_rows {
-                        jobs.push(JobLocation {
-                            id: j_row.get("id"),
-                            customer_id: j_row.try_get("customer_id").unwrap_or(None),
-                            job_title: j_row.get("job_title"),
-                            address: j_row.get("address"),
-                            lat: j_row.try_get("lat").unwrap_or(None),
-                            lng: j_row.try_get("lng").unwrap_or(None),
-                            scheduled_start: j_row.get("scheduled_start"),
-                            scheduled_end: j_row.try_get("scheduled_end").unwrap_or(None),
-                            status: j_row.get("status"),
-                            order_index: j_row.get("order_index"),
-                        });
-                    }
-                }
-                (route_id, jobs)
-            }));
-        }
-
-        let jobs_results = futures::future::join_all(job_futures).await;
-        let mut jobs_by_route: std::collections::HashMap<String, Vec<JobLocation>> =
-            std::collections::HashMap::new();
-        for (r_id, jobs) in jobs_results.into_iter().flatten() {
-            jobs_by_route.insert(r_id, jobs);
-        }
-
-        for (r_id, staff_id, route_date, status) in routes_data {
-            let jobs = jobs_by_route.remove(&r_id).unwrap_or_default();
-            routes.push(ServiceRoute {
-                id: r_id,
-                staff_id,
-                route_date,
-                status,
-                jobs,
-            });
-        }
+    let jobs=sqlx::query_as::<_,JobLocation>("SELECT j.id,c.id AS customer_id,COALESCE(t.name,'Service Job') AS job_title,COALESCE(a.location_address,'No Address Provided') AS address,CASE WHEN $3 THEN NULL::double precision ELSE a.location_lat END AS lat,CASE WHEN $3 THEN NULL::double precision ELSE a.location_lng END AS lng,a.scheduled_start_time AS scheduled_start,a.scheduled_end_time AS scheduled_end,j.status,j.sequence_order AS order_index,j.updated_at,j.service_route_id FROM job_locations j JOIN appointments a ON a.id=j.appointment_id AND a.tenant_id=j.tenant_id JOIN service_routes r ON r.id=j.service_route_id AND r.tenant_id=j.tenant_id LEFT JOIN job_templates t ON t.id=a.job_template_id AND t.tenant_id=a.tenant_id LEFT JOIN customers c ON c.id=a.customer_id AND c.tenant_id=a.tenant_id WHERE j.tenant_id=$1 AND j.service_route_id=ANY($2) ORDER BY j.service_route_id,j.sequence_order,j.id")
+        .bind(&tenant).bind(&ids).bind(query.mobile_optimized.unwrap_or(false)).fetch_all(tx.connection()).await.map_err(unavailable)?;
+    let mut grouped: HashMap<String, Vec<JobLocation>> = HashMap::new();
+    for job in jobs {
+        grouped
+            .entry(job.service_route_id.clone())
+            .or_default()
+            .push(job);
     }
-
-    let _ = tx.commit().await;
-
-    cache
-        .set(
-            &cache_key,
-            routes.clone(),
-            std::time::Duration::from_secs(60),
-        )
-        .await;
-
-    (StatusCode::OK, Json(TodayRoutesResponse { routes })).into_response()
+    let routes = routes
+        .into_iter()
+        .map(|(id, staff_id, route_date, status)| ServiceRoute {
+            jobs: grouped.remove(&id).unwrap_or_default(),
+            id,
+            staff_id,
+            route_date,
+            status,
+        })
+        .collect();
+    tx.commit().await.map_err(authority_error)?;
+    Ok(Json(TodayRoutesResponse { routes }))
 }
-
 async fn update_job_status(
+    headers: HeaderMap,
     State(state): State<AppState>,
     Path(id): Path<String>,
-    auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
+    Extension(claims): Extension<server_common::Claims>,
     Json(payload): Json<UpdateJobStatusRequest>,
-) -> impl IntoResponse {
-    let tenant_id = auth_info
-        .map(|ext| ext.0.org_id)
-        .filter(|id| !id.is_empty())
-        .unwrap_or_else(|| "e2e-tenant".to_string());
+) -> Result<Json<UpdateJobStatusResponse>, FieldError> {
+    let owner = state.access.authorize(&claims, &headers).await?;
+    let tenant = owner.tenant_id().to_owned();
+    let actor = owner.actor_id().to_owned();
+    if !records::valid_id(&id) || !valid_status(&payload.status) {
+        return Err(invalid("Invalid job identifier or status"));
+    }
+    let observed = expected(payload.expected_updated_at)?;
+    let receipt = Receipt::new(
+        &headers,
+        &owner,
+        "routing_job",
+        &serde_json::json!({"id":id,"payload":payload}),
+    )?;
+    let mut tx = owner.begin().await.map_err(authority_error)?;
+    if let Some(receipt) = &receipt
+        && let Some(saved) = receipt.replay(tx.connection()).await?
+    {
+        tx.commit().await.map_err(authority_error)?;
+        return Ok(Json(saved));
+    }
+    let row:Option<(String,DateTime<Utc>)>=sqlx::query_as("SELECT j.status,j.updated_at FROM job_locations j JOIN appointments a ON a.id=j.appointment_id AND a.tenant_id=j.tenant_id JOIN service_routes r ON r.id=j.service_route_id AND r.tenant_id=j.tenant_id WHERE j.id=$1 AND j.tenant_id=$2 FOR UPDATE OF j FOR SHARE OF a,r")
+        .bind(&id).bind(&tenant).fetch_optional(tx.connection()).await.map_err(unavailable)?;
+    let (current, updated_at) = row.ok_or_else(missing)?;
+    if observed != updated_at {
+        return Err(conflict());
+    }
+    records::check_transition(&current, &payload.status)?;
+    let saved=sqlx::query_as::<_,UpdateJobStatusResponse>("UPDATE job_locations SET status=$1,updated_at=GREATEST(clock_timestamp(),updated_at+INTERVAL '1 microsecond') WHERE id=$2 AND tenant_id=$3 AND updated_at=$4 RETURNING TRUE AS success,NULL::text AS error,id,status,updated_at")
+        .bind(&payload.status).bind(&id).bind(&tenant).bind(observed).fetch_optional(tx.connection()).await.map_err(unavailable)?.ok_or_else(conflict)?;
+    if let Some(receipt) = &receipt {
+        receipt.save(tx.connection(), &saved).await?;
+    }
+    tx.commit().await.map_err(authority_error)?;
+    let event=server_omnisolo::orchestration::TeammateMeshEvent{agent_id:actor,action:"job_status_changed".into(),status:"ok".into(),msg_id:uuid::Uuid::new_v4().to_string(),payload:serde_json::to_vec(&serde_json::json!({"tenant_id":tenant,"job_id":saved.id,"status":saved.status,"updated_at":saved.updated_at})).map_err(unavailable)?};
+    if let Err(error) = state
+        .hub
+        .publish_teammate_event("job_status_updates".into(), event)
+        .await
+    {
+        tracing::warn!(%error,"Committed route status notification unavailable");
+    }
+    Ok(Json(saved))
+}
 
-    let pool = state.db.pool.clone();
-
-    let valid_statuses = [
+fn valid_status(status: &str) -> bool {
+    [
         "pending",
         "en_route",
         "on_site",
         "done",
         "cancelled",
         "completed",
-    ];
-    if !valid_statuses.contains(&payload.status.as_str()) {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(UpdateJobStatusResponse {
-                success: false,
-                error: Some("invalid status".to_string()),
-            }),
-        )
-            .into_response();
-    }
-
-    let mut tx = match pool.begin().await {
-        Ok(t) => t,
-        Err(e) => {
-            tracing::error!("failed to begin tx: {}", e);
-            return (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(UpdateJobStatusResponse {
-                    success: false,
-                    error: Some("internal error".to_string()),
-                }),
-            )
-                .into_response();
-        }
-    };
-
-    let _ = crate::common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-
-    let update_res = sqlx::query(
-        r#"
-        UPDATE job_locations
-        SET status = $1, updated_at = CURRENT_TIMESTAMP
-        WHERE id = $2 AND tenant_id = $3
-        RETURNING id
-        "#,
-    )
-    .bind(&payload.status)
-    .bind(&id)
-    .bind(&tenant_id)
-    .fetch_optional(&mut *tx)
-    .await;
-
-    match update_res {
-        Ok(Some(_)) => {
-            let _ = tx.commit().await;
-
-            let cache = ROUTES_CACHE
-                .get_or_init(|| ::server_utils::cache::HybridCache::new(state.hub.redis_client()));
-            cache
-                .invalidate(&format!("routes_today_{}:false", tenant_id))
-                .await;
-            cache
-                .invalidate(&format!("routes_today_{}:true", tenant_id))
-                .await;
-
-            // Broadcast TeammateMeshEvent
-            let payload_json = serde_json::json!({
-                "job_id": id,
-                "status": payload.status,
-            });
-            let payload_bytes = serde_json::to_vec(&payload_json).unwrap_or_default();
-
-            let event = TeammateMeshEvent {
-                agent_id: "system".to_string(),
-                action: "job_status_changed".to_string(),
-                status: "ok".to_string(),
-                payload: payload_bytes,
-                msg_id: Uuid::new_v4().to_string(),
-            };
-
-            if let Err(e) = state
-                .hub
-                .publish_teammate_event("job_status_updates".to_string(), event)
-                .await
-            {
-                tracing::warn!("Failed to publish mesh event for job status change: {}", e);
-            }
-
-            (
-                StatusCode::OK,
-                Json(UpdateJobStatusResponse {
-                    success: true,
-                    error: None,
-                }),
-            )
-                .into_response()
-        }
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(UpdateJobStatusResponse {
-                success: false,
-                error: Some("job not found".to_string()),
-            }),
-        )
-            .into_response(),
-        Err(e) => {
-            tracing::error!("failed to update job status: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(UpdateJobStatusResponse {
-                    success: false,
-                    error: Some("failed to update job".to_string()),
-                }),
-            )
-                .into_response()
-        }
-    }
+    ]
+    .contains(&status)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
     #[test]
     fn test_valid_statuses() {
-        let valid_statuses = [
+        for status in [
             "pending",
             "en_route",
             "on_site",
             "done",
             "cancelled",
             "completed",
-        ];
-        assert!(valid_statuses.contains(&"pending"));
-        assert!(valid_statuses.contains(&"completed"));
-        assert!(!valid_statuses.contains(&"unknown_status"));
+        ] {
+            assert!(valid_status(status));
+        }
+        assert!(!valid_status("unknown_status"));
     }
-
     #[test]
     fn test_update_job_status_request() {
-        let req = UpdateJobStatusRequest {
-            status: "done".to_string(),
-        };
+        let req: UpdateJobStatusRequest = serde_json::from_value(
+            serde_json::json!({"status":"done","expected_updated_at":"2026-10-03T00:00:00Z"}),
+        )
+        .unwrap();
         assert_eq!(req.status, "done");
+        assert_eq!(req.expected_updated_at.unwrap().timestamp(), 1790985600);
     }
 }

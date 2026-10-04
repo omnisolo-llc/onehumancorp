@@ -7,7 +7,11 @@ fixture creates uniquely named schemas and login roles only inside that selected
 database, verifies non-superuser/NOBYPASSRLS identity, and drops its own objects.
 
 The small crate imports the complete actual chat module, original models, service
-methods and their maintained tests. It embeds the same migration directory read
+methods and their maintained tests, including the outbox, its actual omnichannel
+repository and Redis pool dependencies. The production `DB`/`DbStore` declarations
+and standalone-mode helper are imported verbatim, and production common/config
+crates are used directly. Their source files and manifests are fingerprinted;
+the runner isolates configuration and standalone files from the operator's home. It embeds the same migration directory read
 by the production SQLx macro, checks every SQL/version/checksum, and executes the
 actual chat migrations 233, 1009, 1021 and 1024 in each disposable schema. Registry dependencies
 must match the repository lockfile. There is no SQL mock, provider call, message
@@ -19,7 +23,9 @@ connection across tenants. This gate covers service/data isolation and migration
 discovery; HTTP authentication, live messaging providers and full server acceptance
 remain separate checks.
 
-The gate requires all thirteen cases, with no ignored or filtered acceptance. Parent
+The gate requires all twenty-two cases: the original thirteen chat/migration
+cases, three repository model cases and six Redis pool cases, with no ignored or
+filtered acceptance. Parent
 IDs are checked inside the same INSERT statement against the supplied tenant;
 channel, conversation and message writes cannot reference another tenant's rows.
 The regression runs those attempts under both the restricted role and table owner.

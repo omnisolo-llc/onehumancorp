@@ -6,13 +6,13 @@ import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
 vi.mock('./StripeTerminalClient', () => ({ default: ({ onQueued, onSuccess }: { onQueued?: (amount: number) => void; onSuccess?: (amount: number) => void }) => <div>Payment reader<button onClick={() => onQueued?.(5000)}>Queue test sale</button><button onClick={() => onSuccess?.(5000)}>Confirm test payment</button></div> }));
 vi.mock('../../../components/LocalizationToggle', () => ({ LocalizationToggle: () => null }));
 vi.mock('../../../lib/sync/SyncManager', () => ({
-  SyncManager: { getInstance: () => ({ start: vi.fn(), enqueue: vi.fn().mockResolvedValue(undefined), getQueueLength: vi.fn().mockResolvedValue(0) }) },
+  SyncManager: { getInstance: () => ({ start: vi.fn(), enqueue: vi.fn().mockResolvedValue(undefined), getQueueLength: vi.fn().mockResolvedValue(0), getClockQueueSummary: vi.fn().mockResolvedValue({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 }) }) },
 }));
 vi.mock('../../../lib/sync/MutationService', () => ({
   MutationService: { getInstance: () => ({ syncPendingMutations: vi.fn(), executeMutation: vi.fn() }) },
 }));
 
-const staff = { id: 'staff-a', name: 'Verified Staff', role: 'STAFF', tenant_id: 'tenant-a' };
+const staff = { id: 'user-a', name: 'Verified Staff', role: 'OWNER', tenant_id: 'tenant-a' };
 let authentication: () => Promise<Response>;
 const transport = vi.fn<typeof fetch>(async (input) => {
   const url = String(input);
@@ -61,6 +61,7 @@ describe('POS terminal identity', () => {
     { status: 401, body: { success: true, staff } },
     { status: 200, body: { success: true } },
     { status: 200, body: { success: true, staff: { ...staff, tenant_id: '' } } },
+    { status: 200, body: { success: true, staff: { ...staff, id: 'unverified-staff' } } },
     { status: 200, body: { success: true, staff: { ...staff, role: {} } } },
   ])('rejects unsuccessful or malformed identity responses: %j', async ({ status, body }) => {
     authentication = async () => Response.json(body, { status });
@@ -74,7 +75,7 @@ describe('POS terminal identity', () => {
     render(<POSTerminal />);
     await enterPin();
     expect(await screen.findByText('Verified Staff')).toBeVisible();
-    expect(screen.getByText('STAFF')).toBeVisible();
+    expect(screen.getByText('OWNER')).toBeVisible();
     await waitFor(() => expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/payments/terminal/session/start')).toHaveLength(1));
     expect(screen.queryByText('Manager')).not.toBeInTheDocument();
   });

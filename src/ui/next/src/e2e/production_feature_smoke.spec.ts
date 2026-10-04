@@ -1,6 +1,6 @@
 import { E2E_ADMIN_USER, expect, test } from "../../../../e2e/fixtures";
 import { discoverApplicationRoutes } from "./production_route_inventory";
-import { recordSmokeHttpResponse, isVerifiedVoicePolicyDiagnostic } from "../../../../e2e/support/hosted_voice_policy";
+import { recordSmokeHttpResponse, isVerifiedVoicePolicyDiagnostic, isVerifiedSavingsPolicyDiagnostic } from "../../../../e2e/support/hosted_voice_policy";
 import { isVerifiedRuntimePolicyDiagnostic, runtimeUnavailableMessage } from "../../../../e2e/support/runtime_policy";
 import { createLinkBioActor } from "../../../../e2e/link_bio_owner";
 
@@ -62,7 +62,7 @@ test("all application pages render through the real authenticated service", asyn
   const policyChecks: Promise<void>[] = [];
   const websocketFailures: string[] = [];
   page.on("response", (response) => {
-    recordSmokeHttpResponse(response, baseUrl, { failures, httpFailures, verifiedPolicyUrls, policyChecks });
+    recordSmokeHttpResponse(response, baseUrl, { failures, httpFailures, verifiedPolicyUrls, policyChecks }, actor);
   });
   page.on("requestfailed", (request) => {
     const failure = request.failure()?.errorText ?? "request failed";
@@ -103,6 +103,19 @@ test("all application pages render through the real authenticated service", asyn
       if (response.status() >= 400) {
         routeFailures.push(`${response.status()} ${route}`);
       }
+      if (route === '/dashboard') {
+        const savings = page.getByRole('region', { name: 'Recorded time savings' });
+        await expect(savings.getByRole('heading', { name: 'Recorded time savings' })).toBeVisible();
+        await expect(savings.getByText('Recorded time-savings data is unavailable.', { exact: true })).toBeVisible();
+        await expect(savings.getByText(/hours saved|inquiries handled|appointments scheduled/i)).toHaveCount(0);
+        // Retain the actual policy body before navigation can evict its document.
+        await Promise.all(policyChecks);
+      }
+      if (route === '/goose-mcp') {
+        await expect(page.getByRole('alert').filter({ hasText: runtimeUnavailableMessage })).toBeVisible();
+        await expect(page.getByText('No extensions found.', { exact: true })).toHaveCount(0);
+        await expect(page.getByRole('button', { name: 'Execute', exact: true })).toHaveCount(0);
+      }
       if (route === '/sona') {
         await expect(page.getByRole('alert').filter({ hasText: runtimeUnavailableMessage })).toBeVisible();
         await expect(page.getByText('No patterns recorded yet.', { exact: true })).toHaveCount(0);
@@ -125,13 +138,13 @@ test("all application pages render through the real authenticated service", asyn
   }
 
   await Promise.all(policyChecks);
-  expect([...verifiedPolicyUrls].sort(), "the exact hosted voice and absent runtime boundaries were verified from their actual responses").toEqual([new URL("/api/v1/settings/voice", baseUrl).href, new URL("/api/v1/sona", baseUrl).href].sort());
+  expect([...verifiedPolicyUrls].sort(), "the exact hosted voice, absent runtime and measured-savings boundaries were verified from their actual responses").toEqual([new URL("/api/v1/settings/voice", baseUrl).href, new URL("/api/v1/sona", baseUrl).href, new URL("/api/v1/agents/goose", baseUrl).href, new URL("/api/v1/growth/time-savings", baseUrl).href].sort());
   expect(routeFailures, "application page failures during the page crawl").toEqual([]);
   expect(contentFailures, "fabricated data or legacy branding during the page crawl").toEqual([]);
   expect(httpFailures, "unexpected HTTP 4xx responses during the page crawl").toEqual([]);
   expect(failures, "server-side 5xx responses during the page crawl").toEqual([]);
   expect(requestFailures, "failed browser requests during the page crawl").toEqual([]);
-  expect(consoleErrors.filter(({ text, url }) => !isVerifiedVoicePolicyDiagnostic(text, url, verifiedPolicyUrls) && !isVerifiedRuntimePolicyDiagnostic(text, url, verifiedPolicyUrls)), "browser console errors during the page crawl").toEqual([]);
+  expect(consoleErrors.filter(({ text, url }) => !isVerifiedVoicePolicyDiagnostic(text, url, verifiedPolicyUrls) && !isVerifiedRuntimePolicyDiagnostic(text, url, verifiedPolicyUrls) && !isVerifiedSavingsPolicyDiagnostic(text, url, verifiedPolicyUrls)), "browser console errors during the page crawl").toEqual([]);
   expect(websocketFailures, "failed WebSocket upgrades during the page crawl").toEqual([]);
 });
 

@@ -216,8 +216,7 @@ Seeded E2E users:
 Build the real native inputs and run the isolated suite:
 
 ```bash
-cargo build --locked -p omnisolo -p omnisolo_builtin_agent -p omnisolo_harness_worker --bins
-npm run build:web
+make build-e2e
 npx --no-install playwright install chromium
 npm run test:e2e
 # Focus one test without changing complete CI discovery:

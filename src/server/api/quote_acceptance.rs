@@ -115,7 +115,11 @@ async fn begin(
     ::server_common::auth_utils::set_org_context(&mut *tx, tenant).await?;
     Ok(tx)
 }
-async fn locked_quote(tx: &mut PgConnection, tenant: &str, id: &str) -> Result<Quote, Error> {
+pub(super) async fn locked_quote(
+    tx: &mut PgConnection,
+    tenant: &str,
+    id: &str,
+) -> Result<Quote, Error> {
     let quote: Quote = sqlx::query_as(&format!(
         "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text=$1 AND tenant_id=$2 FOR UPDATE"
     ))
@@ -277,6 +281,28 @@ pub(super) async fn read_locked(
     }
     Ok(receipt.map(|r| r.public()))
 }
+// Check the exact observed instant only after acquiring the owned quote lock.
+// DateTime comparison retains PostgreSQL microseconds and normalizes offsets.
+pub(super) fn ensure_reviewed_version(
+    quote: &Quote,
+    expected: Option<DateTime<Utc>>,
+) -> Result<(), Error> {
+    if expected.is_none() || quote.updated_at != expected {
+        return Err(Error::Conflict("reviewed_quote_version_required"));
+    }
+    Ok(())
+}
+
+pub(super) fn ensure_approvable(quote: &Quote) -> Result<(), Error> {
+    if !matches!(
+        quote.status.to_ascii_uppercase().as_str(),
+        "DRAFT" | "SENT" | "APPROVED"
+    ) {
+        return Err(Error::Conflict("quote_not_open_for_approval"));
+    }
+    Ok(())
+}
+
 pub(super) async fn ensure_editable(tx: &mut PgConnection, quote: &Quote) -> Result<(), Error> {
     let invoices: bool = sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM invoices WHERE quote_id::text=$1 AND tenant_id=$2)",
@@ -312,9 +338,7 @@ pub(super) async fn accept<C: Checkout>(
         return Ok(receipt);
     }
     ensure_editable(&mut tx, &quote).await?;
-    if expected.is_none() || quote.updated_at != expected {
-        return Err(Error::Conflict("reviewed_quote_version_required"));
-    }
+    ensure_reviewed_version(&quote, expected)?;
     if !matches!(
         quote.status.to_ascii_uppercase().as_str(),
         "DRAFT" | "SENT" | "APPROVED"

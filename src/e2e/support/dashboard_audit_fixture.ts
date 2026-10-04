@@ -1,24 +1,65 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { Browser, Page, Request } from '@playwright/test';
-import { createOwnedAuditSeed } from '../../../scripts/ui-audit-fixture.cjs';
+import type { Browser, Page } from '@playwright/test';
+import { createOwnedAuditSeed, ownedQuoteAuditRecord } from '../../../scripts/ui-audit-fixture.cjs';
 import { e2eDbTransaction } from '../db_utils';
 import { authenticateRequest } from '../authenticate';
 import { createAuditNavigation, type AuditNavigationReceipt } from './ui_audit_navigation';
+import { observeAuditRequests } from './audit_request_lifecycle';
+import { navigateQuoteAudit, quoteAuditRoutes } from './quote_audit_fixture';
 
 export const isolatedClickAuditRoutes = new Set([
-  '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder',
+  ...quoteAuditRoutes,
+  '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder', '/onboarding', '/share-card',
 ]);
 
 export function clickAuditStates(route: string): string[] {
+  if (route === '/quotes/e2e-id') return ['entry', 'editing'];
+  if (route === '/onboarding' || route === '/share-card') return ['entry', 'intro', 'instant-draft', 'manual-draft'];
   return route === '/builder' || route === '/website-builder' ? ['entry', 'started-draft'] : ['entry'];
 }
 
-// Both preparations are local wizard choices, never a dispatched business
-// action. Recreate them only in a newly seeded owner/context, before observation.
+// Preparations select wizard views and persist draft choices only, never
+// dispatch provider work. Recreate them in a new owner before observation.
 export async function prepareClickAuditState(page: Page, route: string, state: string) {
   if (state === 'entry') return;
+  if (route === '/quotes/e2e-id' && state === 'editing') {
+    await page.getByRole('button', { name: 'Edit quote', exact: true }).click();
+    await page.getByRole('button', { name: 'Save Changes', exact: true }).waitFor({ state: 'visible' });
+    return;
+  }
+  if (route === '/onboarding' || route === '/share-card') {
+    if (!['intro', 'instant-draft', 'manual-draft'].includes(state)) throw new Error(`Unknown click audit state: ${state}`);
+    const select = async (name: string, step: number) => {
+      const origin = new URL(page.url()).origin;
+      const committed = page.waitForResponse(response => {
+        const url = new URL(response.url());
+        return url.origin === origin && url.pathname === '/api/v1/onboarding/state'
+          && response.request().method() === 'POST' && response.request().postDataJSON()?.step === step;
+      });
+      await page.getByRole('button', { name, exact: true }).click();
+      const response = await committed;
+      if (response.status() !== 204) throw new Error(`Onboarding draft state preparation failed: HTTP ${response.status()}`);
+      const completionError = await response.finished();
+      if (completionError) throw completionError;
+    };
+    // A new owner has the backend's actual step-0 conversational entry state.
+    await select('Back', -2);
+    await page.getByRole('button', { name: 'Conversational Setup', exact: true }).waitFor({ state: 'visible' });
+    if (state === 'instant-draft') {
+      await select('Instant Build', -1);
+      await page.locator('#instant-bio').waitFor({ state: 'visible' });
+    } else if (state === 'manual-draft') {
+      await select('Start My Business', 1);
+      await page.getByRole('heading', { name: "What's the name of your business?", exact: true }).waitFor({ state: 'visible' });
+    }
+    // Let the acknowledged write retire its React persistence effects before
+    // a target's observation window begins. No action is retried here.
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+    await page.locator('#setup-screen[aria-busy="false"]').waitFor({ state: 'visible' });
+    return;
+  }
   if (state !== 'started-draft') throw new Error(`Unknown click audit state: ${state}`);
   if (route === '/website-builder') {
     await page.getByRole('button', { name: 'Start My Business', exact: true }).click();
@@ -38,6 +79,8 @@ const initialRouteReads: Record<string, string[]> = {
   '/action-center': ['/api/v1/agents/approvals'],
   '/builder': ['/api/v1/auth/session-identity'],
   '/website-builder': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
+  '/onboarding': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
+  '/share-card': ['/api/v1/onboarding/draft', '/api/v1/onboarding/state'],
 };
 
 const canonicalSeed = () => readFileSync(path.resolve(__dirname, '../e2e-seed.sql'), 'utf8');
@@ -62,8 +105,11 @@ export async function seedDashboardAuditOwner(baseURL: string) {
       (SELECT count(*)::int FROM agent_approvals WHERE tenant_id=$2) AS approvals,
       (SELECT count(*)::int FROM omni_inbox_messages WHERE tenant_id=$2) AS inbox,
       (SELECT count(*)::int FROM products WHERE tenant_id=$2) AS products,
-      (SELECT count(*)::int FROM opportunities WHERE tenant_id=$2) AS opportunities`, [`${seed.namespace}-%`, seed.tenantId]);
-    if (JSON.stringify(graph[0]) !== JSON.stringify({ tenants: 5, feed: 8, approvals: 2, inbox: 1, products: 2, opportunities: 2 })) {
+      (SELECT count(*)::int FROM opportunities WHERE tenant_id=$2) AS opportunities,
+      (SELECT count(*)::int FROM onboarding_state WHERE tenant_id=$2) AS onboarding,
+      (SELECT count(*)::int FROM quotes WHERE tenant_id=$2) AS quotes,
+      (SELECT count(*)::int FROM quote_line_items WHERE tenant_id=$2) AS quote_lines`, [`${seed.namespace}-%`, seed.tenantId]);
+    if (JSON.stringify(graph[0]) !== JSON.stringify({ tenants: 5, feed: 8, approvals: 2, inbox: 1, products: 2, opportunities: 2, onboarding: 0, quotes: 1, quote_lines: 1 })) {
       throw new Error(`Canonical case-owned dashboard graph was not persisted: ${JSON.stringify(graph[0])}`);
     }
   });
@@ -74,12 +120,7 @@ export async function seedDashboardAuditOwner(baseURL: string) {
 export async function createDashboardAuditCase(browser: Browser, baseURL: string, viewport: { width: number; height: number } | null, videoDirectory?: string) {
   const actor = await seedDashboardAuditOwner(baseURL);
   const context = await browser.newContext({ baseURL, ...(viewport ? { viewport } : {}), ...(videoDirectory ? { recordVideo: { dir: videoDirectory } } : {}) });
-  const pending = new Set<Request>();
-  context.on('request', request => {
-    if (new URL(request.url()).origin === new URL(baseURL).origin && ['fetch', 'xhr'].includes(request.resourceType())) pending.add(request);
-  });
-  context.on('requestfinished', request => pending.delete(request));
-  context.on('requestfailed', request => pending.delete(request));
+  const pending = observeAuditRequests(context, baseURL);
   try {
     await context.addInitScript(tenant => {
       // about:blank has an opaque origin before the first application navigation.
@@ -99,10 +140,15 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
     });
     return { actor, page, close: () => context.close(), navigate: async (route = '/dashboard'): Promise<AuditNavigationReceipt> => {
       if (!isolatedClickAuditRoutes.has(route)) throw new Error(`No isolated click fixture exists for ${route}`);
-      const initialReads = initialRouteReads[route].map(path => page.waitForResponse(response =>
-        new URL(response.url()).pathname === path && response.request().method() === 'GET'));
+      const quoteRoute = quoteAuditRoutes.has(route);
+      // Authentication is request-only inside navigate; do not mount an
+      // unrelated dashboard whose startup work would outlive this document.
+      const initialReads = (quoteRoute ? [] : initialRouteReads[route]).map(path => page.waitForResponse(response =>
+        new URL(response.url()).origin === new URL(baseURL).origin && new URL(response.url()).pathname === path && response.request().method() === 'GET'));
       // Complete the real initial reads before discovery; no API substitution.
-      const [receipt, responses] = await Promise.all([navigate(page, route), Promise.all(initialReads)]);
+      const [receipt, responses] = await Promise.all([quoteRoute
+        ? navigateQuoteAudit(page, baseURL, route, ownedQuoteAuditRecord(actor), navigate)
+        : navigate(page, route), Promise.all(initialReads)]);
       for (const response of responses) {
         if (response.status() !== 200) throw new Error(`${route} baseline read failed: HTTP ${response.status()}`);
         await response.finished();
@@ -112,6 +158,9 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
         await page.getByText('Loading Agent Proposals...', { exact: true }).waitFor({ state: 'hidden' });
       } else if (route === '/unified-feed' || route === '/dashboard/unified-feed') {
         await page.getByText('Loading feed...', { exact: true }).waitFor({ state: 'hidden' });
+      } else if (route === '/onboarding' || route === '/share-card') {
+        await page.getByText('Preparing your setup…', { exact: true }).waitFor({ state: 'hidden' });
+        await page.getByRole('button', { name: 'Upload Image', exact: true }).waitFor({ state: 'visible' });
       } else if (route === '/feed') {
         await page.getByText('Checking your feed...', { exact: true }).waitFor({ state: 'hidden' });
       }
@@ -120,7 +169,7 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
         // Rendering after completed responses is scheduled in the browser realm.
         await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
         if (pending.size === 0) break;
-        if (Date.now() >= deadline) throw new Error(`${route} baseline reads did not settle before discovery`);
+        if (Date.now() >= deadline) throw new Error(`${route} baseline reads did not settle before discovery; requests=${JSON.stringify(pending.snapshot())}`);
         await page.waitForTimeout(25);
       }
       return receipt;

@@ -49,6 +49,8 @@ export interface ProposedSlot {
 }
 
 export interface QuotePayload {
+  updated_at?: string | null;
+  required_deposit_cents?: number | null;
   id?: string;
   customer_id?: string;
   customer_name?: string;

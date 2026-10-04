@@ -24,7 +24,7 @@ def rust_item(text,start_marker):
             depth-=1
             if depth==0:return text[start:index+1]
     raise ValueError(start_marker)
-parent_router=rust_item(parent_source,"pub fn router<S:")
+parent_router=rust_item(parent_source,"pub fn router<S:")+"\n"+rust_item(parent_source,"pub fn configured_router<S:")
 parent_state=rust_item(parent_source,"pub struct FieldOpsState")
 generated += '''
 // Only unrelated mutation leaves and their unused mesh dependency are fixtures.
@@ -33,7 +33,7 @@ extern crate self as omnisolo_builtin_agent;
 pub mod mesh {pub mod transport {pub trait MeshTransport:Send+Sync {} impl MeshTransport for () {}}}
 pub mod mounted_parent {
 use crate::appointments;use axum::{Router,extract::State,http::StatusCode};use sqlx::PgPool;use std::sync::Arc;
-''' + parent_state + '''
+''' + f'#[path={json.dumps(str(ROOT/"src/server/api/field_ops/records.rs"))}]pub mod records; use records::FieldAccess;\n' + parent_state + '''
 async fn update_appointment(State(_state):State<Arc<FieldOpsState>>)->StatusCode{StatusCode::IM_A_TEAPOT}
 async fn optimize_route()->StatusCode{StatusCode::IM_A_TEAPOT}
 async fn running_late()->StatusCode{StatusCode::IM_A_TEAPOT}
@@ -50,7 +50,7 @@ schema.append('ALTER TABLE customers ENABLE ROW LEVEL SECURITY;')
 schema.append(re.search(r'CREATE POLICY tenant_isolation_customers ON .*?;',initial,re.S).group())
 schema.extend([field, locations])
 (HERE/'schema.sql').write_text('\n'.join(schema)+'\n')
-paths = ['.github/workflows/ci.yml','scripts/focused_ci_gate.py','scripts/test_focused_ci_gate.py','Cargo.lock','Cargo.toml','src/server/api/field_ops.rs','src/server/lib.rs','src/server/migrations/001_initial.sql','src/server/migrations/162_field_ops_appointments.sql','src/server/migrations/222_field_ops_and_global_commerce.sql']
+paths = ['.github/workflows/ci.yml','scripts/focused_ci_gate.py','scripts/test_focused_ci_gate.py','Cargo.lock','Cargo.toml','src/server/api/field_ops.rs','src/server/api/field_ops/records.rs','src/server/lib.rs','src/server/migrations/001_initial.sql','src/server/migrations/162_field_ops_appointments.sql','src/server/migrations/222_field_ops_and_global_commerce.sql']
 if module.exists():
     paths.append(str(module.relative_to(ROOT)))
 paths += [str(p.relative_to(ROOT)) for p in HERE.iterdir() if p.is_file() and p.name not in ['Cargo.lock','generated.rs','schema.sql','source-manifest.json']]

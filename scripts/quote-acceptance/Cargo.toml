@@ -17,6 +17,8 @@ server_common = { path = "../../src/server/common" }
 async-trait = "0.1"
 server_integrations_stripe = { path = "../../src/server/integrations/stripe" }
 tower = { version = "0.5", features = ["util"] }
+[dev-dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 [lib]
 path = "generated.rs"
 [profile.dev]

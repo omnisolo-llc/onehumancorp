@@ -148,6 +148,7 @@ pub struct CreateQuoteRequest {
 
 #[derive(Deserialize)]
 pub struct UpdateQuoteRequest {
+    pub expected_updated_at: Option<chrono::DateTime<chrono::Utc>>,
     #[serde(alias = "total_amount")]
     pub total_amount_cents: Option<i64>,
     #[serde(alias = "required_deposit")]
@@ -281,18 +282,14 @@ async fn lock_owned_quote(
     authority: &TenantAuthority,
     quote_id: Uuid,
 ) -> Result<Option<Quote>, StatusCode> {
-    let query = format!(
-        "SELECT {QUOTE_COLUMNS} FROM quotes WHERE id::text = $1 AND tenant_id = $2 FOR UPDATE",
-    );
-    sqlx::query_as::<_, Quote>(&query)
-        .bind(quote_id.to_string())
-        .bind(authority.tenant_id())
-        .fetch_optional(&mut **tx)
-        .await
-        .map_err(|error| {
-            tracing::error!("Failed to lock quote for replacement: {}", error);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })
+    match quote_acceptance::locked_quote(tx, authority.tenant_id(), &quote_id.to_string()).await {
+        Ok(quote) => Ok(Some(quote)),
+        Err(quote_acceptance::Error::NotFound) => Ok(None),
+        Err(error) => {
+            tracing::error!(?error, "Failed to lock owned quote and customer");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }
 
 async fn create_quote(
@@ -543,6 +540,17 @@ async fn update_quote(
     if let Err(error) = quote_acceptance::ensure_editable(&mut tx, &current_quote).await {
         return error.response();
     }
+    if let Err(error) =
+        quote_acceptance::ensure_reviewed_version(&current_quote, payload.expected_updated_at)
+    {
+        return error.response();
+    }
+    if payload.status.as_deref().is_some_and(|status| {
+        status.eq_ignore_ascii_case("SENT") || status.eq_ignore_ascii_case("APPROVED")
+    }) && let Err(error) = quote_acceptance::ensure_approvable(&current_quote)
+    {
+        return error.response();
+    }
     if payload
         .status
         .as_deref()
@@ -658,12 +666,30 @@ async fn update_quote(
         }
     }
 
+    // Each line write advances the parent review token. Read only after all
+    // deletes/inserts have completed, while retaining the quote transaction lock.
+    let updated_at: chrono::DateTime<chrono::Utc> = match sqlx::query_scalar(
+        "SELECT updated_at FROM quotes WHERE id::text=$1 AND tenant_id=$2",
+    )
+    .bind(quote_id.to_string())
+    .bind(authority.tenant_id())
+    .fetch_one(&mut *tx)
+    .await
+    {
+        Ok(updated_at) => updated_at,
+        Err(error) => return quote_acceptance::Error::Database(error).response(),
+    };
+
     if let Err(e) = tx.commit().await {
         tracing::error!("Failed to commit transaction: {}", e);
         return StatusCode::INTERNAL_SERVER_ERROR.into_response();
     }
 
-    (StatusCode::OK, Json(serde_json::json!({"success": true}))).into_response()
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({"success": true, "updated_at": updated_at})),
+    )
+        .into_response()
 }
 
 async fn get_quote(
@@ -765,10 +791,16 @@ async fn accept_quote(
     }
 }
 
+#[derive(Deserialize)]
+struct ApproveQuoteRequest {
+    expected_updated_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
 async fn approve_quote(
     State(pool): State<PgPool>,
     Extension(claims): Extension<::server_common::Claims>,
     Path(id): Path<String>,
+    payload: Option<Json<ApproveQuoteRequest>>,
 ) -> impl IntoResponse {
     let authority = match TenantAuthority::from_claims(&claims) {
         Ok(authority) => authority,
@@ -794,6 +826,15 @@ async fn approve_quote(
         Err(status) => return status.into_response(),
     };
     if let Err(error) = quote_acceptance::ensure_editable(&mut tx, &quote).await {
+        return error.response();
+    }
+    if let Err(error) = quote_acceptance::ensure_reviewed_version(
+        &quote,
+        payload.and_then(|Json(request)| request.expected_updated_at),
+    ) {
+        return error.response();
+    }
+    if let Err(error) = quote_acceptance::ensure_approvable(&quote) {
         return error.response();
     }
     let approve_query = format!(
@@ -1214,6 +1255,13 @@ mod tests {
             .execute(&pool)
             .await
             .expect("suppress quote update");
+        let expected_updated_at: chrono::DateTime<chrono::Utc> =
+            sqlx::query_scalar("SELECT updated_at FROM quotes WHERE id=$1")
+                .bind(quote_id)
+                .fetch_one(&pool)
+                .await
+                .expect("load observed quote version");
+        let expected_updated_at = expected_updated_at.to_rfc3339();
         let response = app
             .oneshot(
                 Request::builder()
@@ -1221,7 +1269,7 @@ mod tests {
                     .uri(format!("/{quote_id}"))
                     .header("content-type", "application/json")
                     .body(Body::from(format!(
-                        r#"{{"total_amount_cents":900,"line_items":[{{"description":"Replacement","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{service_item_id}"}}]}}"#
+                        r#"{{"expected_updated_at":"{expected_updated_at}","total_amount_cents":900,"line_items":[{{"description":"Replacement","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{service_item_id}"}}]}}"#
                     )))
                     .unwrap(),
             )
@@ -1466,8 +1514,15 @@ mod tests {
         .fetch_one(&pool)
         .await
         .expect("load claims-owned quote");
+        let expected_updated_at: chrono::DateTime<chrono::Utc> =
+            sqlx::query_scalar("SELECT updated_at FROM quotes WHERE id=$1")
+                .bind(owned_quote_id)
+                .fetch_one(&pool)
+                .await
+                .expect("load observed quote version");
+        let expected_updated_at = expected_updated_at.to_rfc3339();
         let foreign_update = format!(
-            r#"{{"line_items":[{{"description":"Foreign update","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{foreign_service_item_id}"}}]}}"#,
+            r#"{{"expected_updated_at":"{expected_updated_at}","line_items":[{{"description":"Foreign update","unit_price_cents":900,"quantity":1,"is_optional":false,"service_item_id":"{foreign_service_item_id}"}}]}}"#,
         );
         let response = app
             .clone()
@@ -1493,7 +1548,7 @@ mod tests {
         assert_eq!(owned_items, 1);
 
         let owned_update = format!(
-            r#"{{"line_items":[{{"description":"Owned update","unit_price_cents":600,"quantity":1,"is_optional":false,"service_item_id":"{owned_service_item_id}"}}]}}"#,
+            r#"{{"expected_updated_at":"{expected_updated_at}","line_items":[{{"description":"Owned update","unit_price_cents":600,"quantity":1,"is_optional":false,"service_item_id":"{owned_service_item_id}"}}]}}"#,
         );
         let response = app
             .clone()

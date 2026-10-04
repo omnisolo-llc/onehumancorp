@@ -96,7 +96,8 @@ export function RecordedTextAnalysis({ execution }: { execution: Execution }) {
       if (live.current && sequence === detailSequence.current) setCancelNotice('Cancellation could not be confirmed. Refresh the recorded status before trying again.');
     } finally { cancelling.current = false; }
   }
-  return <section aria-label="Recorded text analysis" className="mb-10 rounded-2xl border border-sky-200 p-6">
+  const historyPending = historyState === 'loading' || ready && historyState === 'unverified';
+  return <section aria-label="Recorded text analysis" aria-busy={execution.verifying || historyPending} className="mb-10 rounded-2xl border border-sky-200 p-6">
     <h2 className="text-xl font-bold">Text analysis only</h2>
     <p>Analyze text you supply with the configured provider and your authorized usage budget. This does not run workspace tools, Git, actors, expert teams or swarm execution.</p>
     <p role="status" className="my-3">{execution.notice}</p>
@@ -108,7 +109,7 @@ export function RecordedTextAnalysis({ execution }: { execution: Execution }) {
     </div>
     <h3 className="font-semibold mt-6">Your recorded analysis history</h3>
     <button type="button" disabled={!ready || historyState === 'loading'} onClick={() => void loadHistory()}>Refresh analysis history</button>
-    {historyState === 'ready' ? <><ul>{history.map(row => <li key={row.id}><button type="button" onClick={() => setSelectedId(row.id)} aria-label={`Open analysis ${row.name}`}>{row.name}</button></li>)}</ul>{history.length === 0 && <p>No recorded text analyses on this page.</p>}</> : <p role="status">{historyState === 'unavailable' ? 'Recorded analysis history could not be verified.' : 'Checking recorded analysis history…'}</p>}
+    {historyState === 'ready' ? <><ul>{history.map(row => <li key={row.id}><button type="button" onClick={() => setSelectedId(row.id)} aria-label={`Open analysis ${row.name}`}>{row.name}</button></li>)}</ul>{history.length === 0 && <p>No recorded text analyses on this page.</p>}</> : <p role="status">{historyState === 'unavailable' || !ready && !execution.verifying ? 'Recorded analysis history could not be verified.' : 'Checking recorded analysis history…'}</p>}
     {cursor && <button type="button" onClick={() => setCursor(null)}>Latest analyses</button>}
     {nextCursor && <button type="button" onClick={() => setCursor(nextCursor)}>Older analyses</button>}
     {selectedId && <div className="mt-4 rounded border p-4">

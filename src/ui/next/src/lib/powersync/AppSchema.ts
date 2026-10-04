@@ -46,7 +46,8 @@ const appointments = new Table({
   location_address: column.text,
   notes: column.text,
   actual_start_time: column.text,
-  actual_end_time: column.text
+  actual_end_time: column.text,
+  updated_at: column.text
 });
 
 const serviceRoutes = new Table({

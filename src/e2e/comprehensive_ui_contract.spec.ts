@@ -9,6 +9,7 @@ import { authenticateRequest } from './authenticate';
 import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
 import { createDashboardAuditCase, isolatedClickAuditRoutes, clickAuditStates, prepareClickAuditState } from './support/dashboard_audit_fixture';
+import { prepareQuoteAudit, quoteAuditRoutes } from './support/quote_audit_fixture';
 import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
 import { runFiniteClickInventory, runDynamicClickInventory, scopeClickInventory, FINITE_CLICK_CASE_BUDGET } from '../../scripts/ui-audit-inventory.cjs';
 
@@ -112,7 +113,7 @@ async function visibleText(page: Page) {
 }
 
 const auditBaseURL = process.env.BASE_URL || 'http://127.0.0.1:18789';
-const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
+const navigateApp = createAuditNavigation(auditBaseURL, async (page) => {
   await authenticateRequest(page.request, {
     username: E2E_ADMIN_USER.email,
     password: E2E_ADMIN_USER.password,
@@ -121,6 +122,14 @@ const gotoReady = createAuditNavigation(auditBaseURL, async (page) => {
 });
 
 
+// Every read-only sweep also needs a real quote, including query-based pages.
+// API-backed creation verifies the configured local origin and current session
+// without mounting an unrelated document before the quote.
+async function gotoReady(page: Page, route: string): Promise<AuditNavigationReceipt> {
+  return quoteAuditRoutes.has(route)
+    ? prepareQuoteAudit(page, auditBaseURL, route, navigateApp)
+    : navigateApp(page, route);
+}
 
 async function auditInteractivePurposeForRoute(page: Page, route: string) {
   await gotoReady(page, route);
@@ -358,28 +367,88 @@ test.describe('comprehensive UI contract', () => {
       failures.push(`uncaught page error: ${error.message}`);
     });
 
-    for (const route of appRoutes) {
-      const navigation = await gotoReady(page, route);
-      // Check the verified final document with the same authenticated context.
-      // The share-card's initial shell is not the document being audited.
-      const response = await page.request.get(navigation.finalUrl, { failOnStatusCode: false });
-      const status = response?.status() ?? 0;
-      if (status >= 400) {
-        failures.push(`${routeLabel(route)}: HTTP ${status}`);
-        continue;
+    type LoadPhase = 'navigation' | 'final-document' | 'rendered-content';
+    type LoadProgress = { route: string; phase: LoadPhase; elapsedMs: number; completed: boolean; status?: number; documentPath?: string };
+    const started = Date.now();
+    const phaseTotalsMs: Record<LoadPhase, number> = { navigation: 0, 'final-document': 0, 'rendered-content': 0 };
+    const recentPhases: LoadProgress[] = [];
+    let completedRoutes = 0;
+    let phaseCount = 0;
+    // These labels come from source discovery, never finalUrl or error text.
+    // Replace the source inventory's dynamic examples with their templates.
+    const templates = new Map(appRoutes.map(route => [route, route.split(/[?#]/, 1)[0]
+        .replace(/\/e2e-(?:id|seeded-record)(?=\/|$)/g, '/[id]')
+        .replace(/^\/help\/getting-started-1$/, '/help/[articleId]')
+        .replace(/^\/bio\/default$/, '/bio/[tenant]')]));
+    const staticPaths = new Set(appRoutes.filter(route => templates.get(route) === route));
+    const documentPathFor = (route: string, finalUrl: string): string => {
+      try {
+        const url = new URL(finalUrl);
+        if (url.origin !== new URL(auditBaseURL).origin || url.username || url.password) return '/[redacted]';
+        if (staticPaths.has(url.pathname)) return url.pathname;
+        const template = templates.get(route);
+        if (template && template !== route) {
+          const parts = template.split('/');
+          const observed = url.pathname.split('/');
+          if (parts.length === observed.length && parts.every((part, index) => /^\[[a-zA-Z]+\]$/.test(part) || part === observed[index])) return template;
+        }
+      } catch { /* Unknown destinations carry no safe document identity. */ }
+      return '/[redacted]';
+    };
+    const timed = async <T>(route: string, phase: LoadPhase, operation: () => Promise<T>, documentPath?: string): Promise<T> => {
+      const template = templates.get(route) ?? '/[redacted]';
+      const progress: LoadProgress = { route: template, phase, elapsedMs: 0, completed: false, ...(documentPath ? { documentPath } : {}) };
+      const phaseStarted = Date.now();
+      try {
+        const result = await test.step(`load ${completedRoutes + 1}/${appRoutes.length} ${template}: ${phase}`, operation);
+        progress.completed = true;
+        return result;
+      } finally {
+        progress.elapsedMs = Math.max(0, Date.now() - phaseStarted);
+        phaseTotalsMs[phase] += progress.elapsedMs;
+        phaseCount += 1;
+        recentPhases.push(progress);
+        if (recentPhases.length > 20) recentPhases.shift();
       }
+    };
 
-      if (route === '/orders/e2e-seeded-record') {
-        // The dynamic example is a persisted order, not a tolerated missing
-        // record. Wait for its actual read instead of accepting a loading shell.
-        await expect(page.getByRole('heading', { name: 'Order Summary', exact: true })).toBeVisible();
-        await expect(page.getByText('e2e-seeded-record', { exact: true })).toBeVisible();
+    try {
+      for (const route of appRoutes) {
+        const navigation = await timed(route, 'navigation', () => gotoReady(page, route));
+        // Check the verified final document with the same authenticated context.
+        // The share-card's initial shell is not the document being audited.
+        const response = await timed(route, 'final-document', () => page.request.get(navigation.finalUrl, { failOnStatusCode: false }), documentPathFor(route, navigation.finalUrl));
+        const status = response?.status() ?? 0;
+        recentPhases[recentPhases.length - 1].status = status;
+        if (status >= 400) {
+          failures.push(`${routeLabel(route)}: HTTP ${status}`);
+          completedRoutes += 1;
+          continue;
+        }
+
+        await timed(route, 'rendered-content', async () => {
+          if (route === '/orders/e2e-seeded-record') {
+            // The dynamic example is a persisted order, not a tolerated missing
+            // record. Wait for its actual read instead of accepting a loading shell.
+            await expect(page.getByRole('heading', { name: 'Order Summary', exact: true })).toBeVisible();
+            await expect(page.getByText('e2e-seeded-record', { exact: true })).toBeVisible();
+          }
+          const bodyText = await visibleText(page);
+          const visibleErrors = visiblePageErrors(bodyText);
+          if (visibleErrors.length > 0) {
+            failures.push(`${routeLabel(route)}: visible error text found: ${JSON.stringify(visibleErrors)}`);
+          }
+        });
+        completedRoutes += 1;
       }
-      const bodyText = await visibleText(page);
-      const visibleErrors = visiblePageErrors(bodyText);
-      if (visibleErrors.length > 0) {
-        failures.push(`${routeLabel(route)}: visible error text found: ${JSON.stringify(visibleErrors)}`);
-      }
+    } finally {
+      const progress = { routeCount: appRoutes.length, completedRoutes, elapsedMs: Math.max(0, Date.now() - started),
+        phaseTotalsMs, omittedPhases: phaseCount - recentPhases.length, recentPhases };
+      console.info(`Load audit progress: ${JSON.stringify(progress)}`);
+      // Console evidence survives even if timeout teardown rejects attachment.
+      try {
+        await test.info().attach('ohc-load-audit-progress-v1', { body: Buffer.from(JSON.stringify(progress)), contentType: 'application/json' });
+      } catch { console.info('Load audit progress attachment unavailable.'); }
     }
 
     expect(failures).toEqual([]);

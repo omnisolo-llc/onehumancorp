@@ -152,9 +152,24 @@ def main() -> None:
             "unreliable check-changes runner",
         ),
         (
-            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
-            "          sudo apt-get install -y --no-install-recommends postgresql-client",
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server",
+            "          sudo apt-get install -y --no-install-recommends postgresql-client redis-server",
             "missing protoc bootstrap",
+        ),
+        (
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server",
+            "          sudo apt-get install -y --no-install-recommends protobuf-compiler redis-server",
+            "missing PostgreSQL client bootstrap",
+        ),
+        (
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server",
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler",
+            "missing required Redis fixture bootstrap",
+        ),
+        (
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server",
+            "          sudo apt-get install -y --no-install-recommends postgresql-client protobuf-compiler redis-server curl",
+            "unreviewed toolchain package",
         ),
         (
             "      - name: Install PyYAML\n        run: |\n          sudo apt-get update && sudo apt-get install -y python3-yaml\n\n",

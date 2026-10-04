@@ -788,6 +788,26 @@ impl MeshTransport for SqliteTransport {
     }
 }
 
+/// Only fixed, credential-free diagnostics may cross the startup boundary.
+#[derive(Clone, Copy, Debug)]
+enum MeshConnectError {
+    InvalidRedisConfiguration,
+    RedisUnavailable,
+    RedisTimedOut,
+    MissingRedisUrl,
+}
+
+impl std::fmt::Display for MeshConnectError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::InvalidRedisConfiguration => "Invalid Redis mesh configuration",
+            Self::RedisUnavailable => "Redis mesh service is unavailable",
+            Self::RedisTimedOut => "Redis mesh connection timed out after 5 seconds",
+            Self::MissingRedisUrl => "Redis URL is required in cloud mode",
+        })
+    }
+}
+
 pub struct RedisPubSubTransport {
     client: redis::Client,
     publish_conn: tokio::sync::Mutex<redis::aio::MultiplexedConnection>,
@@ -795,11 +815,21 @@ pub struct RedisPubSubTransport {
 
 impl RedisPubSubTransport {
     pub async fn new(redis_url: &str) -> Result<Self, String> {
-        let client = redis::Client::open(redis_url).map_err(|e| e.to_string())?;
-        let publish_conn = client
-            .get_multiplexed_tokio_connection()
+        Self::new_checked(redis_url)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|error| error.to_string())
+    }
+
+    async fn new_checked(redis_url: &str) -> Result<Self, MeshConnectError> {
+        let client = redis::Client::open(redis_url)
+            .map_err(|_| MeshConnectError::InvalidRedisConfiguration)?;
+        let publish_conn = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            client.get_multiplexed_tokio_connection(),
+        )
+        .await
+        .map_err(|_| MeshConnectError::RedisTimedOut)?
+        .map_err(|_| MeshConnectError::RedisUnavailable)?;
 
         Ok(RedisPubSubTransport {
             client,
@@ -961,7 +991,14 @@ pub struct NatsTransport {
 
 impl NatsTransport {
     pub async fn new(url: &str) -> Result<Self, String> {
-        let client = async_nats::connect(url).await.map_err(|e| e.to_string())?;
+        use tracing::instrument::WithSubscriber;
+        // The connector logs raw server rejection text and credential-bearing
+        // addresses. Silence only this handshake future's polls; concurrent
+        // tasks keep their own subscriber. The caller emits a safe diagnostic.
+        let client = async_nats::connect(url)
+            .with_subscriber(tracing::subscriber::NoSubscriber::default())
+            .await
+            .map_err(|_| "NATS mesh connection is unavailable".to_string())?;
         let js = async_nats::jetstream::new(client.clone());
         let kv = match js.get_key_value("mesh_locks").await {
             Ok(store) => store,
@@ -1423,16 +1460,62 @@ pub async fn create_transport(
     redis_url: Option<&str>,
     is_cloud: bool,
 ) -> Result<Arc<dyn MeshTransport>, String> {
+    create_transport_checked(redis_url, is_cloud)
+        .await
+        .map_err(|error| error.to_string())
+}
+
+/// Preserve the existing cloud retry count and delay, while ensuring a selected
+/// transport cannot keep the whole server in startup indefinitely. Dropping this
+/// future cancels the current attempt and prevents later retries.
+pub async fn create_transport_for_startup(
+    redis_url: Option<&str>,
+    is_cloud: bool,
+) -> Result<Arc<dyn MeshTransport>, String> {
+    let max_attempts = if is_cloud { 30 } else { 1 };
+    let startup = async {
+        let mut attempt = 1;
+        loop {
+            match create_transport_checked(redis_url, is_cloud).await {
+                Ok(transport) => break Ok(transport),
+                Err(error) if attempt < max_attempts => {
+                    tracing::warn!(
+                        attempt,
+                        max_attempts,
+                        error = %error,
+                        "Mesh transport is not ready; retrying startup"
+                    );
+                    attempt += 1;
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                }
+                Err(error) => {
+                    break Err(format!(
+                        "Failed to create MeshTransport after {attempt} attempt(s): {error}"
+                    ));
+                }
+            }
+        }
+    };
+    // Thirty five-second Redis attempts plus twenty-nine one-second gaps fit
+    // inside this budget. It also bounds another selected transport (e.g. NATS).
+    tokio::time::timeout(std::time::Duration::from_secs(180), startup)
+        .await
+        .map_err(|_| "Mesh transport startup timed out after 180 seconds".to_string())?
+}
+
+async fn create_transport_checked(
+    redis_url: Option<&str>,
+    is_cloud: bool,
+) -> Result<Arc<dyn MeshTransport>, MeshConnectError> {
     if let Ok(nats_url) = std::env::var("NATS_URL") {
         match NatsTransport::new(&nats_url).await {
             Ok(t) => {
                 tracing::info!("Initialized NatsTransport");
                 return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
             }
-            Err(e) => {
+            Err(_) => {
                 tracing::warn!(
-                    "Failed to initialize NatsTransport: {}. Falling back to default transport.",
-                    e
+                    "NATS mesh transport is unavailable; falling back to default transport"
                 );
             }
         }
@@ -1440,20 +1523,17 @@ pub async fn create_transport(
 
     if is_cloud {
         if let Some(url) = redis_url {
-            match RedisPubSubTransport::new(url).await {
+            match RedisPubSubTransport::new_checked(url).await {
                 Ok(t) => {
                     tracing::info!("Initialized RedisPubSubTransport");
                     return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));
                 }
                 Err(e) => {
-                    return Err(format!(
-                        "Failed to initialize RedisPubSubTransport in cloud mode: {}",
-                        e
-                    ));
+                    return Err(e);
                 }
             }
         } else {
-            return Err("Redis URL is required in cloud mode".to_string());
+            return Err(MeshConnectError::MissingRedisUrl);
         }
     }
 
@@ -1488,7 +1568,7 @@ pub async fn create_transport(
     }
 
     if let Some(url) = redis_url {
-        match RedisPubSubTransport::new(url).await {
+        match RedisPubSubTransport::new_checked(url).await {
             Ok(t) => {
                 tracing::info!("Initialized RedisPubSubTransport (Standalone)");
                 return Ok(Arc::new(UniversalTransportBridge::new(Arc::new(t))));

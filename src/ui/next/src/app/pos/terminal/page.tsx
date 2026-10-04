@@ -6,16 +6,18 @@ import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import { QUEUE_IDENTITY_EPOCH_KEY, currentVerifiedQueueOwner, currentVerifiedQueueLease, hasPendingQueueOwnerVerification, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '../../../lib/sync/queueIdentity';
 import { fetchForOwnedBusinessRead, openOnboardingSession } from '../../onboarding/draftSession';
+import type { ClockQueueSummary } from '../../utils/offlineQueue';
 import { MutationService } from '../../../lib/sync/MutationService';
 
 type TerminalStaff = { id: string; name: string; role: string; tenant_id: string };
 type TerminalLease = NonNullable<ReturnType<typeof currentVerifiedQueueLease>>;
+const TERMINAL_IDENTITY_TIMEOUT_MS = 3000;
 
-function waitForTerminalLease(owner: QueueOwner, current: () => boolean): Promise<TerminalLease> {
+function waitForTerminalLease(owner: QueueOwner, current: () => boolean, timeoutMs = TERMINAL_IDENTITY_TIMEOUT_MS): Promise<TerminalLease> {
   return new Promise((resolve, reject) => {
     let settled = false;
     let unsubscribe = () => {};
-    const timer = window.setTimeout(() => finish(null), 3000);
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
     const finish = (lease: TerminalLease | null) => {
       if (settled) return;
       settled = true; window.clearTimeout(timer); unsubscribe();
@@ -53,6 +55,10 @@ export default function POSTerminal() {
   const [clockPending, setClockPending] = useState(false);
   const [clockError, setClockError] = useState('');
   const clockPendingRef = useRef(false);
+  const clockCheckPendingRef = useRef(false);
+  const [clockCheckPending, setClockCheckPending] = useState(false);
+  const [clockCheckError, setClockCheckError] = useState('');
+  const [clockSummary, setClockSummary] = useState<ClockQueueSummary>({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 });
   const mounted = useRef(true);
   const terminalVersion = useRef(0);
   const terminalLease = useRef<TerminalLease | null>(null);
@@ -93,6 +99,8 @@ export default function POSTerminal() {
     clearTimeout(leaseTimer.current); inventoryVersion.current += 1; setInventoryError('');
     authenticationPending.current = false; setAuthenticating(false); setPin('');
     clockPendingRef.current = false; setClockPending(false); setClockError('');
+    clockCheckPendingRef.current = false; setClockCheckPending(false); setClockCheckError('');
+    setClockSummary({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 });
     setQueueIdentityReady(false); setClockedIn(false); setLocked(true); setActiveStaff(null);
     setInventory([]); setCart([]); setCheckoutComplete(false); setCheckoutQueued(false);
   };
@@ -129,11 +137,12 @@ export default function POSTerminal() {
       const version = ++readVersion;
       try {
         const qLen = await SyncManager.getInstance().getQueueLength();
+        const clocks = await SyncManager.getInstance().getClockQueueSummary();
         if (!active || version !== readVersion) return;
         clearTimeout(successTimer);
         const cleared = navigator.onLine && lastKnownCount !== null && lastKnownCount > 0 && qLen === 0;
         lastKnownCount = qLen;
-        setPendingSyncCount(qLen); setQueueError(''); setQueueAccessible(true);
+        setPendingSyncCount(qLen); setClockSummary(clocks); setQueueError(''); setQueueAccessible(true);
         setSyncSuccess(cleared); setSyncing(navigator.onLine && qLen > 0);
         if (cleared) successTimer = setTimeout(() => { if (active) setSyncSuccess(false); }, 3000);
       } catch {
@@ -227,7 +236,7 @@ export default function POSTerminal() {
             const owner = await readQueueOwner();
             await waitForTerminalLease(expectedOwner, current);
             if (!current()) return;
-            if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
+            if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || owner.userId !== staff.id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
             terminalLease.current = lease;
             clearTimeout(leaseTimer.current);
             leaseTimer.current = setTimeout(() => { if (terminalLease.current === lease) retireTerminal(); }, Math.min(lease.expiresAt - Date.now(), 2_147_483_647));
@@ -282,10 +291,13 @@ export default function POSTerminal() {
     const lease = terminalLease.current;
     if (!lease) return;
     const version = ++inventoryVersion.current;
+    const leaseCurrent = () => {
+      try { return mounted.current && terminalLease.current === lease && version === inventoryVersion.current && lease.expiresAt > Date.now() && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+      catch { return false; }
+    };
     const current = () => {
       const owner = currentVerifiedQueueOwner();
-      try { return mounted.current && terminalLease.current === lease && version === inventoryVersion.current && lease.expiresAt > Date.now() && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && !!owner && sameOwner(owner, lease.owner); }
-      catch { return false; }
+      return leaseCurrent() && !!owner && sameOwner(owner, lease.owner);
     };
     if (isOffline) {
        if (current()) { setInventory([]); setInventoryError('Inventory is unavailable while offline.'); }
@@ -294,11 +306,24 @@ export default function POSTerminal() {
     try {
       const res = await fetchForOwnedBusinessRead('/api/v1/pos/inventory', lease.owner);
       const data = await res.json();
-      if (!current()) return;
+      // Clock/queue activity can revalidate the same owner while this body is
+      // arriving. Keep its real outcome until readiness settles, without
+      // replacing or extending the original terminal lease.
+      const deadline = Date.now() + TERMINAL_IDENTITY_TIMEOUT_MS;
+      while (true) {
+        await waitForTerminalLease(lease.owner, leaseCurrent, Math.max(0, deadline - Date.now()));
+        if (!leaseCurrent()) return;
+        if (current()) break;
+        // Another readiness listener may begin a check before this continuation.
+        // Retain the body, but never restart the original waiting budget.
+        if (!hasPendingQueueOwnerVerification() || Date.now() >= deadline) throw new Error('Inventory identity verification did not settle');
+      }
       if (res.status !== 200 || !data || !Array.isArray(data.inventory)) throw new Error('Inventory unavailable');
       setInventory(data.inventory); setInventoryError('');
     } catch (e) {
-      if (current()) { console.error("Failed to load inventory", e); setInventory([]); setInventoryError('Inventory is unavailable. Verify your session and retry.'); }
+      // An unresolved check must not become an apparently empty catalog when
+      // readiness later returns. This status stays behind the identity gate.
+      if (leaseCurrent()) { console.error("Failed to load inventory", e); setInventory([]); setInventoryError('Inventory is unavailable. Verify your session and retry.'); }
     }
   };
 
@@ -320,8 +345,8 @@ export default function POSTerminal() {
     let committed = false;
     try {
       await SyncManager.getInstance().enqueue({
-        type: action,
-        payload: { staff_id: activeStaff.id, timestamp: new Date().toISOString() },
+        type: 'staff_clock_event_v1',
+        payload: { staff_id: lease.owner.userId, event_type: action },
       }, lease.owner);
       committed = true;
       if (!current()) { if (mounted.current && terminalLease.current === lease) retireTerminal(); return; }
@@ -337,6 +362,30 @@ export default function POSTerminal() {
       else if (mounted.current && terminalLease.current === lease) retireTerminal();
     } finally {
       if (current()) { clockPendingRef.current = false; setClockPending(false); }
+    }
+  };
+
+  const handleCheckClockStatus = async () => {
+    const lease = terminalLease.current;
+    if (!lease || clockCheckPendingRef.current || !queueAccessible || !hasVerifiedOfflineQueueOwner(lease.owner) || !navigator.onLine) return;
+    const version = terminalVersion.current;
+    const current = () => {
+      const owner = currentVerifiedQueueOwner();
+      try { return mounted.current && version === terminalVersion.current && terminalLease.current === lease && lease.expiresAt > Date.now()
+        && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && !!owner && sameOwner(owner, lease.owner); }
+      catch { return false; }
+    };
+    clockCheckPendingRef.current = true; setClockCheckPending(true); setClockCheckError('');
+    try {
+      await SyncManager.getInstance().reconcileClockReceipts();
+      const summary = await SyncManager.getInstance().getClockQueueSummary();
+      if (current()) setClockSummary(summary);
+    } catch {
+      if (current()) setClockCheckError('Saved clock status could not be verified. Unconfirmed records remain held.');
+    } finally {
+      if (mounted.current && version === terminalVersion.current && terminalLease.current === lease) {
+        clockCheckPendingRef.current = false; setClockCheckPending(false);
+      }
     }
   };
 
@@ -548,9 +597,16 @@ export default function POSTerminal() {
                {clockedIn ? t('Clocked In') : t('Not Clocked In')}
              </h2>
              <p className="text-sm text-gray-500 mb-6">
-                {clockedIn ? t('Your time is being tracked locally.') : t('Clock in to start your shift.')}
+                {clockedIn ? t('Clock-in saved on this device. Server confirmation is shown below.') : t('Clock in to start your shift.')}
              </p>
              <p role="status" className="text-sm mb-3">{queueAccessible && queueIdentityReady ? 'Offline queue ready for this session.' : 'Verify this session and local storage before offline work.'}</p>
+             {clockSummary.unconfirmed > 0 && <p role="status">{clockSummary.unconfirmed} saved clock {clockSummary.unconfirmed === 1 ? 'change' : 'changes'} awaiting server confirmation.</p>}
+             {clockSummary.confirmed > 0 && <p role="status">{clockSummary.confirmed} saved clock {clockSummary.confirmed === 1 ? 'change' : 'changes'} confirmed by the server.</p>}
+             {clockSummary.legacyHeld > 0 && <p role="status">{clockSummary.legacyHeld} historical clock {clockSummary.legacyHeld === 1 ? 'change requires' : 'changes require'} review. Original records are preserved.</p>}
+             <button type="button" onClick={handleCheckClockStatus} disabled={clockCheckPending || isOffline || !queueAccessible || !queueIdentityReady} className="text-sm underline mb-3">
+               {clockCheckPending ? 'Checking saved clock status...' : 'Check saved clock status'}
+             </button>
+             {clockCheckError && <p role="alert">{clockCheckError}</p>}
              {clockPending && <p role="status">Saving clock change...</p>}
              {clockError && <p role="alert">{clockError}</p>}
              {committedClock.current && <button type="button" onClick={() => { void readQueueOwner().catch(() => {}); }}>Reverify saved clock change</button>}
@@ -843,7 +899,7 @@ export default function POSTerminal() {
           </div>
         )}
         {syncing && !isOffline && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#0071E3]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div role="status" style={{ pointerEvents: 'none' }} className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#0071E3]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -852,7 +908,7 @@ export default function POSTerminal() {
           </div>
         )}
         {syncSuccess && !isOffline && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#34C759]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
+          <div role="status" style={{ pointerEvents: 'none' }} className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-[#34C759]/90 backdrop-blur-[30px] saturate-[210%] border border-white/20 text-white px-6 py-3 rounded-full shadow-lg font-bold min-h-[44px] flex items-center justify-center space-x-2 z-50">
             <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
             <span>{t('Synced')}</span>
           </div>
