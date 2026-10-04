@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Implement Multi-Channel POS Sync and Row-Level Inventory Reservation Architecture"
+issue_description: "The requested feature requires implementing Point-of-Sale (POS) and inventory reservation architecture. According to RESEARCH.md, POS engines, physical operations, and inventory are gated expansions that require retained-customer need, measurable value, and explicit strategy approval. Without this evidence and approval, new POS features cannot be implemented."
+issue_priority: "P0"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
