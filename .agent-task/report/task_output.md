@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement Unified Agentic Autonomous Booking & Resource System for Mobile-First Operations"
+issue_description: "The proposed Unified Agentic Autonomous Booking & Resource System epic targets a hypothetical persona (Leo the Music Tutor) based on competitor gaps (Shopify, Wix, Calendly) rather than an explicit, evidence-backed decision in RESEARCH.md. According to the OHC operating contract and RESEARCH.md, new epics based solely on competitor research or public anecdotes without an explicit expansion decision are unauthorized. Therefore, this issue is blocked. Loaded skill: skills/using-superpowers/SKILL.md at revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d."
