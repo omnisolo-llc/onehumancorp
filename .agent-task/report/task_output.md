@@ -1,3 +1,3 @@
 outcome: blocked
-issue_title: "Implement Unified Agentic Autonomous Booking & Resource System for Mobile-First Operations"
-issue_description: "The feature lacks an explicit, evidence-backed decision in RESEARCH.md and is based on competitor research. Loaded skills: skills/using-superpowers/SKILL.md, skills/writing-plans/SKILL.md (Revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d)."
+issue_title: "Implement Autonomous AI Website Generation for SMBs"
+issue_description: "The requested implementation targets the Flutter mobile app, which has been removed from the repository. Furthermore, visual workflow builders and viral generators are explicitly deferred by the expansion gate in RESEARCH.md. Therefore, this issue is blocked."
