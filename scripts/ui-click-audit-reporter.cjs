@@ -7,10 +7,15 @@ class ClickCoverageReporter {
     this.root = process.env.OHC_CLICK_AUDIT_ROOT || path.resolve(__dirname, '..');
     this.context = JSON.parse(process.env.OHC_CLICK_AUDIT_CONTEXT || 'null');
     this.sourceSnapshot=assertSource(this.root, this.context);
-    const shard = config.shard || { current: 1, total: 1 };
+    const groupedInventory = process.env.OHC_BROWSER_GROUP_INVENTORY
+      ? JSON.parse(fs.readFileSync(process.env.OHC_BROWSER_GROUP_INVENTORY, 'utf8')) : undefined;
+    const shard = groupedInventory
+      ? require('./browser-shards.cjs').validateProof(groupedInventory, this.context, suite.allTests().map(test => this.identity(test)))
+      : config.shard || { current: 1, total: 1 };
     this.file = path.join(process.env.OHC_CLICK_AUDIT_DIRECTORY || path.join(this.root, 'test-results/click-receipts'), `shard-${shard.current}.json`);
     if (fs.existsSync(this.file) || fs.existsSync(`${this.file}.pending`)) throw new Error('Click coverage receipt already exists; preserve it and use a fresh run directory');
     this.receipt = { protocol: PROTOCOL, context: this.context, shard: { index: shard.current, total: shard.total },
+      ...(groupedInventory ? { groupedInventory } : {}),
       selection: suite.allTests().map(test => this.identity(test)), tests: [], complete: false, runStatus: 'running' };
     this.flush();
   }
