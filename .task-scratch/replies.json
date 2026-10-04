@@ -1,10 +1,6 @@
 [
     {
         "comment_id": "5982860715",
-        "reply": "Understood. Acknowledging that the report file was missing required fields `issue_priority`, `issue_category`, `issue_type`, `issue_label`, and `assignees`. I have re-generated the file as valid YAML including these fields with the correct `outcome`."
-    },
-    {
-        "comment_id": "5982860986",
-        "reply": "Understood. The issue requested a Go rewrite of the ledger which is already implemented in Rust. Per the instructions, since this is a `no-work` outcome finding, I only updated the report file and didn't introduce source code changes alongside it. I have also ensured that no other scratch or test files are committed with this update."
+        "reply": "Understood. The patch does not implement the requested feature because doing so would require integrating with unsupported channels (Instagram DMs, WhatsApp, SMS). According to the `RESEARCH.md` contract, 'Additional channels... require retained-customer need, measurable value and explicit strategy approval' (Gated expansion). Because this approval and the expansion gate is missing in `RESEARCH.md`, the task is explicitly 'blocked' as a 'no-work finding'. The task instructions require me to 'return an explicit no_work or blocked outcome. Do not invent follow-up features or dummy changes.', and to commit this finding with an empty commit, which I have done. Please refer to `RESEARCH.md` for the explicit policy forbidding adding channels without explicit approval."
     }
 ]
