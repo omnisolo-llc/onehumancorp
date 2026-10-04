@@ -437,8 +437,8 @@ jobs:
     strategy:
       fail-fast: false
       # Three duration-balanced runners combine complete logical shard units.
-      # Each starts one isolated stack and two workers; exact discovery unions
-      # are checked before execution and again in the final receipt gate.
+      # Each logical shard starts its own isolated stack with two workers;
+      # exact discovery unions are checked before execution and in the final gate.
       max-parallel: 3
       matrix:
         shard: [1, 2, 3]
