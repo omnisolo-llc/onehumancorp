@@ -54,7 +54,19 @@ function validateGroupedReceipts(receipts, context, required = false) {
   }
   sameInventory(receipts.flatMap(receipt => receipt.tests), full);
 }
-async function prepareGroupedShard({ root, index, source, list }) {
+async function readDiscovery(execute) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'ohc-browser-inventory-'));
+  const filename = path.join(directory, 'discovery.json');
+  try {
+    await execute(filename);
+    const result = JSON.parse(await fs.readFile(filename, 'utf8'));
+    inventory(result);
+    return result;
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+}
+async function prepareGroupedShard({ index, source, list }) {
   assert.ok(Number.isInteger(index) && index >= 1 && index <= 3, 'invalid grouped shard');
   const full = await list([]);
   const slices = [];
@@ -72,6 +84,6 @@ async function prepareGroupedShard({ root, index, source, list }) {
   const proofFile = path.join(directory, 'inventory.json');
   await fs.writeFile(proofFile, JSON.stringify(proof), { mode: 0o600 });
   console.log(`Grouped browser inventory ${index}/3: ${selected.length}/${full.length} exact identities; logical shards ${GROUPS[index-1].join(',')}`);
-  return { args: ['--test-list', filename], proofFile, directory, root };
+  return { args: ['--test-list', filename], proofFile, directory };
 }
-module.exports = { GROUPS, sameInventory, groupInventory, validateProof, validateGroupedReceipts, prepareGroupedShard };
+module.exports = { GROUPS, sameInventory, groupInventory, validateProof, validateGroupedReceipts, readDiscovery, prepareGroupedShard };

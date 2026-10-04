@@ -42,3 +42,17 @@ test('logical shard inventory refuses missing, duplicate and substituted identit
   }
   const f=fixture();assert.throws(()=>shards.groupInventory(f.full,f.slices,[[1,2,10],[3,5,7,8,11],[4,6,9,11]]));
 });
+
+test('complete inventory transfer survives bounded native command output', async () => {
+  const { runNativeCommand } = await import('./native-process.mjs');
+  const { createRequire } = await import('node:module');
+  const require = createRequire(import.meta.url);
+  const reporter = require.resolve('./browser-inventory-reporter.cjs');
+  const expected = Array.from({length:2000}, (_,i)=>({id:`test-${i}`,title:'large discovery title '.repeat(10),file:'src/example.spec.ts',selector:`[chromium] › example.spec.ts › test ${i}`}));
+  assert.ok(JSON.stringify(expected).length > 128 * 1024);
+  const actual = await shards.readDiscovery(async filename => {
+    await runNativeCommand(process.execPath,['-e', `const Reporter=require(process.argv[1]);const r=new Reporter();r.tests=JSON.parse(require('node:fs').readFileSync(0,'utf8'));r.onEnd({status:'passed'});`,reporter],
+      {env:{...process.env,OHC_BROWSER_INVENTORY_OUTPUT:filename},input:JSON.stringify(expected),quiet:true});
+  });
+  assert.deepEqual(actual,expected);
+});
