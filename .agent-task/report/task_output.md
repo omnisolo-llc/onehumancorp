@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Autonomous Staff & Contractor Task Orchestration Engine"
+issue_description: "The requested feature for Autonomous Staff & Contractor Task Orchestration Engine is blocked. Implementing new business verticals, channels, or task orchestration engines requires an explicit evidence-backed decision according to RESEARCH.md. The document explicitly states: 'Later; do not make HR/MRP prerequisites for solo owners' regarding 'Employer/multi-location operator: Jun', and 'Defer new viral generators... simultaneous HR/payroll/MRP coverage...'. Without authorization, this task is a blocked terminal finding.\n\nSkill Provenance:\n- Superpowers revision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d\n- Loaded skills: skills/using-superpowers/SKILL.md"
