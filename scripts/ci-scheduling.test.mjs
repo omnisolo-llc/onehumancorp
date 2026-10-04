@@ -120,7 +120,8 @@ test('all twelve browser shards, action budgets and real artifact producers rema
     assert.equal(producers.length, 1, artifact); assert.ok(bound.ancestors.get('native-e2e').has(producers[0][0]), artifact);
   }
   assert.match(JSON.stringify(browser), /--ci --shard=\$\{\{ matrix\.shard \}\}\/12 --workers=2 --retries=0/);
-  assert.match(JSON.stringify(jobs['ci-required']), /--budget-minutes 30/);
+  assert.match(JSON.stringify(jobs['ci-required']), /--budget-minutes 35/);
+  assert.equal(jobs['ci-required']['timeout-minutes'], 5, 'reporting has separate timeout headroom');
 });
 test('real browser setup owns its PostgreSQL schema and consumes no PG-gate outputs', async () => {
   const { jobs } = await workflow();

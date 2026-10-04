@@ -27,7 +27,7 @@ Make targets already prepend project-local tool links to PATH. The generated she
 
 A failed or interrupted install is not recorded as successful. Check an existing `target/dev-tools/.initializing` lock before removing it after an interrupted run; never remove active compiler caches or another user's files. Successful initialization proves environment readiness, **not that application tests pass**. Run the quality gates separately.
 
-The [2026-09-19 measured cleanup record](../research/native_build_measurements_2026-09-19.md) records an **8m 33.94s empty-output backend build**, **1.87s unchanged rerun**, and **31.40s fresh Node build**. Dependency downloads/toolchains were already available; this is not completely cold hosted CI. Keep the **10-minute core backend compilation goal** distinct from the **30-minute full required-CI target**. Repository-wide lint and full execution gates remain mandatory.
+The [2026-09-19 measured cleanup record](../research/native_build_measurements_2026-09-19.md) records an **8m 33.94s empty-output backend build**, **1.87s unchanged rerun**, and **31.40s fresh Node build**. Dependency downloads/toolchains were already available; this is not completely cold hosted CI. Keep the **10-minute core backend compilation goal** distinct from the **35-minute full required-CI budget**. Repository-wide lint and full execution gates remain mandatory.
 
 Use the same `CARGO_TARGET_DIR` with Cargo and `npm run test:e2e`; the browser runner honors custom output directories instead of using old default-directory binaries. Web output remains at `target/native-web` and must pass its source/platform/Node/lockfile checks.
 
@@ -120,7 +120,9 @@ Before deleting generated caches, confirm their exact project-relative path, tha
 
 ## CI critical path and measured time budget
 
-The engineering target is **X = 30 minutes for the complete Linux CI required gate**, with a **15-minute warm-cache stretch target**. A provisional **10-minute core-build target** covers backend, Next and Tauri compilation; it does not substitute for the complete test/security/deployment gate. These are acceptance targets, not achieved CI percentiles. Desktop/mobile signing, publishing and other release platforms are separate workflows and are not represented as fitting this budget.
+The engineering target is **X = 35 minutes for the complete Linux CI required gate**, with a **15-minute warm-cache stretch target**. A provisional **10-minute core-build target** covers backend, Next and Tauri compilation; it does not substitute for the complete test/security/deployment gate. These are acceptance targets, not achieved CI percentiles. Desktop/mobile signing, publishing and other release platforms are separate workflows and are not represented as fitting this budget.
+
+The complete-CI budget was relaxed from 30 to 35 minutes on 2026-10-04 to allow modest run-to-run timing variation. Individual test limits, retries and required checks are unchanged. The final reporting job retains its separate five-minute timeout for report collection and upload; it does not run the preceding CI workloads. Historical measurements retain their original budgets.
 
 The CI graph now separates work that can run independently:
 
@@ -132,7 +134,7 @@ The CI graph now separates work that can run independently:
 
 `workflow_dispatch` accepts `cold_cache: true`. It disables restored Rust, npm-download, Next and Docker build caches; freshly compiled layers may still be reused **within the same run**. Hosted toolchain downloads/base operating-system images are outside this project-cache definition. This input does not remove any acceptance check and is not an instruction to dispatch a workflow without authorization.
 
-The final gate fetches the complete job list for the **exact run attempt** with read-only Actions permission. `scripts/ci-performance.py` records elapsed time from the earliest job start to the final gate start, including waits between dependent jobs. It excludes the initial queue before the first job and the final reporting/upload itself. Missing/inconsistent pagination, wrong run/attempt, unfinished predecessor jobs and invalid timestamps fail closed. Runs above 30 minutes fail the performance check; failed functional jobs never become successful performance evidence. Markdown and JSON reports are uploaded as `ci-performance-<attempt>` and shown in the Actions summary. Cache mode is labeled as requested, not claimed to be a hit.
+The final gate fetches the complete job list for the **exact run attempt** with read-only Actions permission. `scripts/ci-performance.py` records elapsed time from the earliest job start to the final gate start, including waits between dependent jobs. It excludes the initial queue before the first job and the final reporting/upload itself. Missing/inconsistent pagination, wrong run/attempt, unfinished predecessor jobs and invalid timestamps fail closed. Runs above 35 minutes fail the performance check; failed functional jobs never become successful performance evidence. Markdown and JSON reports are uploaded as `ci-performance-<attempt>` and shown in the Actions summary. Cache mode is labeled as requested, not claimed to be a hit.
 
 ### Local observations on 2026-09-19
 

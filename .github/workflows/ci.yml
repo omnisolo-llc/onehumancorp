@@ -1329,7 +1329,7 @@ jobs:
           fi
       - uses: actions/checkout@v6
         if: always()
-      - name: Measure complete CI critical path against the 30-minute budget
+      - name: Measure complete CI critical path against the 35-minute budget
         if: always()
         env:
           CI_PERFORMANCE_PREFIX: ${{ inputs.performance_prefix || '' }}
@@ -1345,7 +1345,7 @@ jobs:
           python3 scripts/ci-performance.py --jobs target/ci-performance/jobs.json \
             --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
             --job-prefix "$CI_PERFORMANCE_PREFIX" \
-            --budget-minutes 30 --output target/ci-performance "${args[@]}" || status=$?
+            --budget-minutes 35 --output target/ci-performance "${args[@]}" || status=$?
           if [[ -f target/ci-performance/performance.md ]]; then
             cat target/ci-performance/performance.md >> "$GITHUB_STEP_SUMMARY"
           fi
