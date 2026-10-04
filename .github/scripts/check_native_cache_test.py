@@ -78,19 +78,19 @@ class NativeCacheTests(unittest.TestCase):
                 peak = max(peak, sum(weights[name] for name in concurrent))
         return peak
 
-    def test_complete_ci_graph_uses_at_most_ten_concurrent_runners(self):
+    def test_complete_ci_graph_uses_at_most_seven_concurrent_runners(self):
         peak = self.runner_bound(self.ci['jobs'])
-        self.assertLessEqual(peak, 10, f'CI can occupy {peak} runners concurrently')
+        self.assertLessEqual(peak, 7, f'CI can occupy {peak} runners concurrently')
 
-    def test_removing_docker_completion_fence_requires_eleven_runners(self):
+    def test_removing_docker_completion_fence_requires_eight_runners(self):
         jobs = copy.deepcopy(self.ci['jobs'])
         jobs['docker-e2e']['needs'] = [name for name in jobs['docker-e2e']['needs']
                                       if name != 'native-node']
-        self.assertEqual(self.runner_bound(jobs), 11)
+        self.assertEqual(self.runner_bound(jobs), 8)
 
     def test_browser_shards_keep_running_after_independent_quality_failure(self):
         job = self.ci['jobs']['native-e2e']
-        self.assertEqual(job['strategy']['matrix']['shard'], list(range(1, 13)))
+        self.assertEqual(job['strategy']['matrix']['shard'], [1, 2, 3])
         self.assertIn('!cancelled()', job['if'])
         self.assertIn("needs.native-build.result == 'success'", job['if'])
         self.assertIn("needs.native-web.result == 'success'", job['if'])

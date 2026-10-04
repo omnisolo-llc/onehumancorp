@@ -200,7 +200,7 @@ async function crawlDashboard({ unavailable = true, metrics = false, routes = ['
     policyChecks: policyResult.policyChecks,
     runtimeUnavailableMessage: runtime.runtimeUnavailableMessage,
     page: {
-      goto: async url => { onNavigate(new URL(url).pathname); return { status: () => 200 }; },
+      goto: async url => { onNavigate(new URL(url).pathname); return { status: () => 200, url: () => new URL(url).pathname === '/' ? valid.origin + '/dashboard' : url }; },
       getByRole: (role, options = {}) => locator(role, options.name),
       locator: () => ({ innerText: async () => 'Dashboard' }),
     },
@@ -257,5 +257,36 @@ for (const readable of [true, false]) {
     assert.deepEqual(navigations, ['/dashboard', '/next']);
     assert.deepEqual(policyResult.failures, readable ? [] : [`501 ${valid.url}`]);
     assert.deepEqual([...policyResult.verifiedPolicyUrls], readable ? [valid.url] : []);
+  });
+}
+
+for (const readable of [true, false]) {
+  test(`redirected-root regression retains actual dashboard response until body settles (readable: ${readable})`, async () => {
+    const policyResult = results(), navigations = [];
+    let resolveBody, rejectBody, enteredRoot;
+    const body = new Promise((resolve, reject) => { resolveBody = resolve; rejectBody = reject; });
+    const entered = new Promise(resolve => { enteredRoot = resolve; });
+    const crawl = crawlDashboard({ routes: ['/', '/after-root', '/dashboard', '/after-dashboard'], policyResult, onNavigate: route => {
+      navigations.push(route);
+      if (route === '/') {
+        record(valid, policyResult, actor, () => body);
+        enteredRoot();
+      } else if (route === '/after-root') {
+        // Model the browser invalidating an unread body after document navigation.
+        rejectBody(new Error('Browser response body unavailable after navigation'));
+      } else if (route === '/dashboard') {
+        record(valid, policyResult);
+      }
+    } });
+    await entered;
+    await new Promise(setImmediate);
+    const beforeBody = [...navigations];
+    if (readable) resolveBody(valid.body);
+    else rejectBody(new Error('Malformed JSON remains a failure'));
+    await crawl;
+    await Promise.all(policyResult.policyChecks);
+    assert.deepEqual(beforeBody, ['/'], 'root resolved to dashboard, so its body must settle before the next navigation');
+    assert.deepEqual(policyResult.failures, readable ? [] : [`501 ${valid.url}`]);
+    assert.deepEqual([...policyResult.verifiedPolicyUrls], [valid.url]);
   });
 }

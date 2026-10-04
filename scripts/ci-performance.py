@@ -59,15 +59,19 @@ def browser_postgres_timing(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if len(postgres) > 1:
         raise ValueError("Duplicate PostgreSQL scheduling identity")
     shards: dict[int, dict[str, Any]] = {}
+    total_shards = None
     for row in rows:
-        match = re.fullmatch(r"Native real-stack Playwright ([0-9]+)/12", row["name"])
+        match = re.fullmatch(r"Native real-stack Playwright ([0-9]+)/([0-9]+)", row["name"])
         if not match:
             continue
-        index = int(match[1])
-        if not 1 <= index <= 12 or index in shards:
+        index, total = int(match[1]), int(match[2])
+        if total < 1 or (total_shards is not None and total != total_shards):
+            raise ValueError("Inconsistent browser shard totals")
+        total_shards = total
+        if not 1 <= index <= total or index in shards:
             raise ValueError("Duplicate or invalid browser scheduling identity")
         shards[index] = row
-    missing = sorted(set(range(1, 13)) - set(shards))
+    missing = sorted(set(range(1, (total_shards or 3) + 1)) - set(shards))
     result = {
         "measurement_complete": False, "browser_shards": len(shards), "missing_shards": missing,
         "postgres_browser_overlap_seconds": None, "first_browser_after_postgres_seconds": None,
@@ -190,7 +194,7 @@ def render(report: dict[str, Any]) -> str:
         lines.append(f"Core builds: **{core['elapsed_seconds'] / 60:.2f} minutes**, {outcome}; provisional target: **10 minutes** (diagnostic, not a replacement gate).")
     scheduling = report["browser_postgres"]
     if scheduling["measurement_complete"]:
-        lines.append(f"Browser/PostgreSQL overlap: **{scheduling['postgres_browser_overlap_seconds'] / 60:.2f} minutes** across all twelve shards (union of actual execution intervals).")
+        lines.append(f"Browser/PostgreSQL overlap: **{scheduling['postgres_browser_overlap_seconds'] / 60:.2f} minutes** across all {scheduling['browser_shards']} shards (union of actual execution intervals).")
         wait = scheduling["browser_wait_after_artifacts_seconds"]
         if wait is not None:
             lines.append(f"Wait from ready browser artifacts to the first browser job: **{wait / 60:.2f} minutes**; this is measured scheduling time, not proof of a cache hit or speedup.")
@@ -208,7 +212,7 @@ def main() -> int:
     parser.add_argument("--jobs", type=Path, required=True)
     parser.add_argument("--run-id", type=int, required=True)
     parser.add_argument("--attempt", type=int, required=True)
-    parser.add_argument("--budget-minutes", type=float, default=35)
+    parser.add_argument("--budget-minutes", type=float, default=60)
     parser.add_argument("--cold", action="store_true")
     parser.add_argument("--job-prefix", default='')
     parser.add_argument("--output", type=Path, required=True)

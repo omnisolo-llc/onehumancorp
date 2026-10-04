@@ -1,7 +1,6 @@
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { createServer } from 'node:net';
 import { createWriteStream, existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -11,9 +10,11 @@ import os from 'node:os';
 import { validateWebArtifact } from './package-web.mjs';
 import { runNativeCommand } from './native-process.mjs';
 import clickCoverage from './ui-click-audit.cjs';
+import browserShards from './browser-shards.cjs';
 import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
 import { verifyProductionFixtureBoundary } from './verify-production-fixture-boundary.mjs';
 import { startShippoBrowserFixture } from './shippo-browser-fixture.mjs';
+import { reserveServicePorts } from './native-port-reservations.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -43,14 +44,6 @@ export function nativeBinaryPaths(repository = root, environment = process.env, 
 
 function command(executable, args, options = {}) {
   return runNativeCommand(executable, args, { cwd: root, ...options });
-}
-
-async function freePort() {
-  const socket = createServer();
-  await new Promise((resolve, reject) => { socket.once('error', reject); socket.listen(0, '127.0.0.1', resolve); });
-  const port = socket.address().port;
-  await new Promise((resolve) => socket.close(resolve));
-  return port;
 }
 
 async function waitHttp(url, child, seconds = 120, signal) {
@@ -86,9 +79,15 @@ export async function finishShippoBrowserFixture(fixture, cleanup, runFailed) {
   return closeError;
 }
 
-export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
+export function nativeDiscoveryArgs(playwright, args) {
+  // Discovery must never invoke HTML reporting: its default output cleanup
+  // would remove evidence from earlier logical executions in this job.
+  return [playwright, 'test', '--config', 'playwright.config.ts', '--list', '--reporter=list', ...args.filter(arg => arg !== '--list')];
+}
+
+export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalContext) {
   const ciSelection = inputArgs.includes('--ci');
-  const args = inputArgs.filter((arg) => arg !== '--ci');
+  let args = inputArgs.filter((arg) => arg !== '--ci');
   if (args.some((arg) => arg === '--pass-with-no-tests')) throw new Error('Zero-test success is not allowed');
   const completeSelection = clickCoverage.completeSelection(args);
   if (ciSelection && !completeSelection) throw new Error('Required CI cannot narrow or override the complete browser selection');
@@ -97,10 +96,31 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   env.PLAYWRIGHT_LIST_REPORTER = '1';
   if (ciSelection) env.CI = 'true';
   const playwright = require.resolve('@playwright/test/cli');
+  const groupFlag = args.find(arg => arg.startsWith('--grouped-shard='));
+  if (args.includes('--grouped-shard')) throw new Error('Use --grouped-shard=N/3');
+  if (groupFlag) {
+    if (!completeSelection) throw new Error('Grouped browser runs require the complete selection');
+    const index = Number(groupFlag.match(/^--grouped-shard=([1-3])\/3$/)?.[1]);
+    args = args.filter(arg => arg !== groupFlag);
+    const execution = new AbortController();
+    const interrupt = () => execution.abort(new Error('Grouped browser execution cancelled'));
+    process.once('SIGINT', interrupt); process.once('SIGTERM', interrupt);
+    try {
+      const coverage = clickCoverage.makeRunContext(root, process.env);
+      return await browserShards.runGroupedUnits({ index, source: {commit:coverage.commit, sourceDigest:coverage.sourceDigest}, signal: execution.signal,
+        list: selection => browserShards.readDiscovery(filename => command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
+          '--list', '--reporter', './scripts/browser-inventory-reporter.cjs', ...args, ...selection],
+        { env: { ...env, OHC_BROWSER_INVENTORY_OUTPUT: filename }, signal: execution.signal, quiet: true })),
+        runUnit: (logical, context) => runNativeE2e([...inputArgs.filter(arg => arg !== groupFlag), `--shard=${logical}/12`], {...context, coverage}),
+      });
+    } finally {
+      process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
+    }
+  }
+
   // Fail on broken imports, invalid fixtures or zero selection BEFORE spending
   // time starting Docker, applying migrations or launching either application.
-  const listed = await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
-    '--list', ...args.filter((arg) => arg !== '--list')], { env });
+  const listed = await command(process.execPath, nativeDiscoveryArgs(playwright, args), { env, signal: logicalContext?.signal });
   if (!/Total:\s*[1-9]\d* tests?/.test(listed)) throw new Error('Playwright selected zero tests or did not report its test count');
   if (args.includes('--list')) return;
   // Respect the native Cargo output directory instead of silently executing
@@ -111,13 +131,15 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     throw new Error(`Required native test input missing: ${required}. Build Cargo binaries and run npm run build:web first.`);
   }
   // Detect conflicting migrations before starting containers or the backend.
-  await command('bash', ['src/server/migrations/sqlx_migration_contract_test.sh'], { env });
+  await command('bash', ['src/server/migrations/sqlx_migration_contract_test.sh'], { env, signal: logicalContext?.signal });
   await validateWebArtifact(path.join(root, 'target/native-web'), root);
   const temp = await mkdtemp(path.join(os.tmpdir(), 'ohc-native-e2e-'));
   const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
   const pg = `ohc-e2e-pg-${suffix}`, cache = `ohc-e2e-cache-${suffix}`;
   const processes = [], logs = [];
   let shippoFixture;
+  let portReservations;
+  let reservationCloseError;
   let runFailed = false;
   const start = (binary, arguments_, name, environment) => {
     const output = createWriteStream(path.join(temp, name), { mode: 0o600 });
@@ -134,6 +156,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     for (const child of processes) child.kill('SIGTERM');
   };
   process.once('SIGINT', interrupt); process.once('SIGTERM', interrupt);
+  logicalContext?.signal.addEventListener('abort', interrupt, { once: true });
+  if (logicalContext?.signal.aborted) interrupt();
   try {
     await execute('docker', ['info'], { env, quiet: true });
     for (const image of [postgresImage, valkeyImage]) await execute('docker', ['pull', image], { env });
@@ -156,7 +180,9 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     }
     if (!ready) throw new Error('PostgreSQL test container did not become ready; no SQLite fallback is permitted');
     await execute('bash', ['deploy/tests/support/generate_test_tls.sh', temp], { env });
-    const apiPort = await freePort(), grpcPort = await freePort(), webPort = await freePort();
+    portReservations = await reserveServicePorts(['api', 'grpc', 'web'], { signal: execution.signal });
+    const { api: apiPort, grpc: grpcPort, web: webPort } = portReservations.ports;
+    console.log(`Native service ports: api=${apiPort} grpc=${grpcPort} web=${webPort}`);
     const apiOrigin = `http://127.0.0.1:${apiPort}`, webOrigin = `http://127.0.0.1:${webPort}`;
     Object.assign(env, {
       OMNISOLO_PORT: String(apiPort), OMNISOLO_GRPC_PORT: String(grpcPort),
@@ -178,8 +204,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       OMNISOLO_E2E_SESSION_STATE_DIR: path.join(temp, 'actor-sessions'),
       OMNISOLO_LLM_CONFIG_PATH: path.join(temp, 'no-provider-config.json'),
       PLAYWRIGHT_TEST_DIR: './src', PLAYWRIGHT_LIST_REPORTER: '1',
-      PLAYWRIGHT_OUTPUT_DIR: path.join(root, 'test-results/native'),
-      PLAYWRIGHT_HTML_REPORT: path.join(root, 'playwright-report'), NEXT_TELEMETRY_DISABLED: '1',
+      PLAYWRIGHT_OUTPUT_DIR: path.join(root, 'test-results/native', logicalContext?.artifactSuffix ?? ''),
+      PLAYWRIGHT_HTML_REPORT: path.join(root, 'playwright-report', logicalContext?.artifactSuffix ?? ''), NEXT_TELEMETRY_DISABLED: '1',
     });
     const container = JSON.parse(await execute('docker', ['inspect', pg], { env, quiet: true }))[0];
     await writeFile(env.OMNISOLO_E2E_FIXTURE_PROOF, JSON.stringify({
@@ -199,6 +225,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     // A real HTTP provider boundary, owned by this run; never inherited live credentials.
     shippoFixture = await startShippoBrowserFixture({ runId: suffix, tenantId: 'e2e-tenant' });
     Object.assign(env, shippoFixture.environment);
+    await portReservations.release('api', 'grpc');
+    execution.signal.throwIfAborted();
     const backend = start(server, [], 'server.log', env);
     await waitHttp(`${apiOrigin}/readyz`, backend, 120, execution.signal);
     await execute('docker', ['exec', '-i', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc'], {
@@ -215,18 +243,22 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     if (!identity.token || identity.user?.organization_id !== 'e2e-tenant'
         || !identity.user.roles?.includes('ADMIN')) throw new Error('Fixture owner identity was not verified');
     await verifyProductionFixtureBoundary(apiOrigin, identity.token, execution.signal);
+    await portReservations.release('web');
+    execution.signal.throwIfAborted();
     const frontend = start(process.execPath, [web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitHttp(`${webOrigin}/login`, frontend, 120, execution.signal);
     // Execute exactly the complete/sharded selection checked by preflight.
-    const coverage = completeSelection ? clickCoverage.makeRunContext(root, process.env) : undefined;
+    const coverage = logicalContext?.coverage ?? (completeSelection ? clickCoverage.makeRunContext(root, process.env) : undefined);
     const receiptDirectory = path.join(root, 'test-results/click-receipts', coverage ? `${coverage.runId}-${coverage.attempt}` : 'partial');
-    const browserEnv = coverage ? { ...env, OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(coverage), OHC_CLICK_AUDIT_DIRECTORY: receiptDirectory } : env;
-    await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
-      env: browserEnv, signal: execution.signal, timeoutMs: 24 * 60 * 1000,
+    const browserEnv = coverage ? { ...env, ...(logicalContext ? { OHC_BROWSER_GROUP_INVENTORY: logicalContext.proofFile } : {}), OHC_CLICK_AUDIT_CONTEXT: JSON.stringify(coverage), OHC_CLICK_AUDIT_DIRECTORY: receiptDirectory } : env;
+    const browserCommand = ({ timeoutMs }) => command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts', ...args], {
+      env: browserEnv, signal: execution.signal, timeoutMs,
     });
+    if (logicalContext) await logicalContext.runBrowser(browserCommand);
+    else await browserCommand({ timeoutMs: browserShards.BROWSER_BUDGET_MS });
     if (coverage) {
       clickCoverage.assertSource(root, coverage);
-      if (!args.some(arg => arg === '--shard' || arg.startsWith('--shard='))) {
+      if (!logicalContext && !args.some(arg => arg === '--shard' || arg.startsWith('--shard='))) {
         console.log('Complete click coverage:', clickCoverage.validateReceipts(clickCoverage.readReceipts(receiptDirectory), coverage, 1));
       }
     }
@@ -247,15 +279,21 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     }
     throw error;
   } finally {
+    try { await portReservations?.close(); } catch (error) { reservationCloseError = error; }
     for (const child of processes.reverse()) await stop(child);
     for (const log of logs) log.end();
     const closeError = await finishShippoBrowserFixture(shippoFixture, async () => {
       await command('docker', ['rm', '-f', pg, cache], { env, quiet: true }).catch(() => {});
       await rm(temp, { recursive: true, force: true });
+      logicalContext?.signal.removeEventListener('abort', interrupt);
       process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
     }, runFailed);
     if (closeError) console.error('Shippo fixture shutdown also failed; owned-container and temporary-file cleanup was attempted.');
+    if (reservationCloseError) {
+      console.error(`Service port reservation cleanup also failed: ${reservationCloseError.message}`);
+    }
   }
+  if (reservationCloseError) throw reservationCloseError;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {

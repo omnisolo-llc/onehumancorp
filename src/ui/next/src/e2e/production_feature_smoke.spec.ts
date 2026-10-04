@@ -103,7 +103,9 @@ test("all application pages render through the real authenticated service", asyn
       if (response.status() >= 400) {
         routeFailures.push(`${response.status()} ${route}`);
       }
-      if (route === '/dashboard') {
+      // The root route also redirects here; retain that document until its
+      // owned savings response is verified before the next navigation.
+      if (new URL(response.url()).pathname === '/dashboard') {
         const savings = page.getByRole('region', { name: 'Recorded time savings' });
         await expect(savings.getByRole('heading', { name: 'Recorded time savings' })).toBeVisible();
         await expect(savings.getByText('Recorded time-savings data is unavailable.', { exact: true })).toBeVisible();

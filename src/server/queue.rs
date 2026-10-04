@@ -821,10 +821,7 @@ impl QueueManager {
                 .unwrap_or_else(|_| chrono::Utc::now());
 
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(
-                latency,
-                "postgres",
-            );
+            ::server_telemetry::record_sub_agent_queue_delay(latency, "postgres");
 
             ::server_telemetry::record_queue_length_sync(
                 -1,
@@ -980,7 +977,6 @@ impl QueueManager {
                                     }
                                     Err(e) => {
                                         tracing::trace!("Job handler failed: {}, error: {}", job.id, e);
-                                        ::server_telemetry::record_sub_agent_spawn_error(::server_telemetry::get_deployment_mode());
                                         if attempts < max_attempts {
                                             let mut retry_job = job.clone();
                                             retry_job.payload["attempts"] = serde_json::json!(attempts);

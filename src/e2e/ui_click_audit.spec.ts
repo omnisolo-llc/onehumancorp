@@ -40,11 +40,75 @@ test.describe('click audit oracle', () => {
     expect(await page.locator('#file').inputValue()).toBe('');
   });
 
-  test('observes an actual popup document', async ({ page }) => {
+  test('observes an actual popup document', async ({ page, browser }) => {
     await page.setContent(`<button onclick="const p=window.open('about:blank');p.document.body.textContent='Quote request';">Request Quote</button>`);
     const effect = await observeClickEffects(page, (await page.getByRole('button', { name: 'Request Quote' }).elementHandle())!);
     expect(effect.popupSeen).toBe(true);
     expect(hasMeaningfulClickEffect(effect)).toBe(true);
+
+    // Initial popup navigation is real before its first response exists. Keep
+    // that response pending until observation ends; external traffic is absent.
+    const responses = new Set<import('node:http').ServerResponse>();
+    const requests: string[] = [];
+    const server = createServer((request, response) => {
+      if (request.url?.startsWith('/pending')) {
+        requests.push(request.url);
+        responses.add(response);
+        response.on('close', () => responses.delete(response));
+        return;
+      }
+      const mode = new URL(request.url || '/', 'http://fixture.invalid').searchParams.get('mode') || 'trusted';
+      if (mode.startsWith('blocked')) response.setHeader('content-security-policy', 'sandbox allow-scripts');
+      response.setHeader('content-type', 'text/html');
+      const open = `window.open('/pending?mode=${mode}', '_blank')`;
+      const handler = mode === 'dead' ? '' : mode === 'blank' ? "window.open('about:blank')"
+        : mode === 'empty' ? "window.open('')" : mode === 'closed' ? `${open}?.close()`
+        : mode === 'late' ? `setTimeout(() => ${open}, 0)`
+        : mode === 'blocked-unrelated' ? `${open};reportClick()` : open;
+      response.end(`<button onclick="${handler}">Share</button>`);
+    });
+    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Missing local popup fixture address');
+      const origin = `http://127.0.0.1:${address.port}`;
+      for (const mode of ['trusted', 'blank', 'empty', 'blocked', 'dead', 'late', 'closed', 'blocked-unrelated']) {
+        await test.step(`popup boundary: ${mode}`, async () => {
+          const isolated = await browser.newContext();
+          try {
+            const targetPage = await isolated.newPage();
+            if (mode === 'blocked-unrelated') {
+              const foreignPage = await isolated.newPage();
+              await foreignPage.setContent('<h1>Unrelated existing page</h1>');
+              await targetPage.exposeFunction('reportClick', () => foreignPage.evaluate(url => {
+                window.open(url, '_blank');
+              }, `${origin}/pending?mode=${mode}`));
+            }
+            await targetPage.goto(`${origin}/?mode=${mode}`);
+            const originalOpen = await targetPage.evaluateHandle(() => window.open);
+            const observed = await observeClickEffects(targetPage, (await targetPage.getByRole('button', { name: 'Share' }).elementHandle())!);
+            expect(observed.changed).toBe(false);
+            expect(observed.popupSeen, mode).toBe(false);
+            expect(observed.requestSeen).toBe(mode === 'trusted');
+            expect(hasMeaningfulClickEffect(observed)).toBe(mode === 'trusted');
+            expect(await targetPage.evaluate(original => window.open === original, originalOpen)).toBe(true);
+            await originalOpen.dispose();
+            if (['trusted', 'late', 'blocked-unrelated'].includes(mode)) expect(requests).toContain(`/pending?mode=${mode}`);
+            else if (mode !== 'closed') expect(requests).not.toContain(`/pending?mode=${mode}`);
+            if (mode === 'trusted' || mode === 'late') {
+              // The observer owns this still-loading popup and must close it
+              // even though Playwright had no popup Page while it was pending.
+              await expect.poll(() => responses.size).toBe(0);
+              expect(isolated.pages()).toEqual([targetPage]);
+            }
+          } finally { await isolated.close(); }
+        });
+      }
+    } finally {
+      for (const response of responses) response.destroy();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
   });
 
   test('observes browser required-field feedback without inventing submission', async ({ page }) => {

@@ -79,5 +79,6 @@ export function useProPlan() {
     if (active.current) setClaimError('Trial activation is unavailable because a durable grant is not verified. Check your current plan or review billing.');
     return false;
   }, []);
-  return { hasPro: identityReady && (plan === 'Pro' || plan === 'Business'), currentPlan: identityReady ? plan : null, verifiedOwner: identityReady && owner.current ? { ...owner.current } : null, planError, claimError, claimTrial, refreshPlan };
+  // Expose local retirement/refresh changes without treating pending verification as retirement.
+  return { ownerRevision: epoch.current, hasPro: identityReady && (plan === 'Pro' || plan === 'Business'), currentPlan: identityReady ? plan : null, verifiedOwner: identityReady && owner.current ? { ...owner.current } : null, planError, claimError, claimTrial, refreshPlan };
 }

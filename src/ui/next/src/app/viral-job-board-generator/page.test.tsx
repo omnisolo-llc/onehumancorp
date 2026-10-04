@@ -1,5 +1,6 @@
 import { render,screen,fireEvent } from '@testing-library/react';
 import { describe,it,expect,vi,beforeEach } from 'vitest';
+import { renderToString } from 'react-dom/server';
 import ViralJobBoardGeneratorPage from './page';
 
 const mockPush = vi.fn();
@@ -60,6 +61,24 @@ describe('ViralJobBoardGeneratorPage', () => {
 
     const descDisplays = screen.getAllByText('We are looking for misfits.');
     expect(descDisplays.length).toBeGreaterThan(0);
+  });
+
+  it('enables text editing after hydration and clears the description to its fallback', () => {
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(<ViralJobBoardGeneratorPage />);
+
+    const titleInput = container.querySelector('input')!;
+    const descInput = container.querySelector('textarea')!;
+    expect(titleInput).toBeDisabled();
+    expect(descInput).toBeDisabled();
+
+    document.body.appendChild(container);
+    render(<ViralJobBoardGeneratorPage />, { container, hydrate: true });
+    expect(titleInput).toBeEnabled();
+    expect(descInput).toBeEnabled();
+    fireEvent.change(descInput, { target: { value: '' } });
+    expect(descInput).toHaveValue('');
+    expect(screen.getByText('Join our team.', { exact: true })).toBeVisible();
   });
 
   it('holds copying while no job board publication exists', async () => {

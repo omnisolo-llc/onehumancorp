@@ -46,15 +46,18 @@ function discoverAppRoutes(root) {
   return [...new Set(routes)].sort();
 }
 function completeSelection(args) {
+  let shards = 0;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--headed') continue;
-    const match = /^--(workers|retries|shard)(?:=(.+))?$/.exec(arg);
+    const match = /^--(workers|retries|shard|grouped-shard)(?:=(.+))?$/.exec(arg);
     if (!match) return false;
     const value = match[2] ?? args[++index];
-    if (match[1] === 'shard') {
+    if (match[1] === 'shard' || match[1] === 'grouped-shard') {
+      if (++shards > 1) return false;
       const shard = /^(\d+)\/(\d+)$/.exec(value || '');
       if (!shard || Number(shard[1]) < 1 || Number(shard[1]) > Number(shard[2])) return false;
+      if (match[1] === 'grouped-shard' && (Number(shard[2]) !== 3 || Number(shard[1]) > 3)) return false;
     } else if (!/^\d+$/.test(value || '')) return false;
   }
   return true;
@@ -143,8 +146,9 @@ function meaningful(effect) {
     && (effect.focusSeen === undefined || typeof effect.focusSeen === 'boolean'), 'invalid observed effect');
   return effect.selectionRestored !== false && (effect.focusSeen === true || keys.filter(key => key !== 'dialogSeen').some(key => effect[key]));
 }
-function validateReceipts(receipts, context, totalShards) {
+function validateReceipts(receipts, context, totalShards, requireGrouped = false) {
   validateContext(context);
+  require('./browser-shards.cjs').validateGroupedReceipts(receipts, context, requireGrouped);
   requireTrue(Number.isInteger(totalShards) && totalShards > 0 && Array.isArray(receipts) && receipts.length === totalShards, 'missing or extra shards');
   const shards = new Set(), allIds = new Set(), covered = new Set();
   const expectedContracts = new Set([INVENTORY_TITLE, ...GLOBAL_TITLES, ...context.routes.flatMap(route => [CLICK_TITLE + route, PURPOSE_TITLE + route])]);
@@ -281,9 +285,10 @@ module.exports = { PROTOCOL, ATTACHMENT, CLICK_TITLE, INVENTORY_TITLE, PURPOSE_T
   sourceIdentity, makeRunContext, completeSelection, validateContext, assertSource, validateReceipts, readReceipts, writeReceipt };
 if (require.main === module) {
   try {
-    const [directory, count] = process.argv.slice(2);
+    const [directory, count, mode, ...extra] = process.argv.slice(2);
+    requireTrue(extra.length === 0 && (mode === undefined || mode === '--grouped'), 'unknown coverage mode');
     requireTrue(directory && /^[1-9]\d*$/.test(count || ''), 'usage: ui-click-audit.cjs RECEIPT_DIRECTORY SHARD_COUNT');
     const root = path.resolve(__dirname, '..');
-    console.log(JSON.stringify(validateReceipts(readReceipts(path.resolve(directory)), makeRunContext(root), Number(count)), null, 2));
+    console.log(JSON.stringify(validateReceipts(readReceipts(path.resolve(directory)), makeRunContext(root), Number(count), mode === '--grouped'), null, 2));
   } catch (error) { console.error(error.message); process.exitCode = 1; }
 }
