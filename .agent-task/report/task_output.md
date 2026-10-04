@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement Zero-Click Onboarding Agent for Non-Technical Owners"
+issue_description: "The feature to implement an autonomous conversational AI Zero-Click Onboarding Agent is currently blocked. The capability mapping and evidence from docs/research/business_capability_and_usage_economics_audit.md indicates that testing out and creating broad new workflows and AI orchestration elements lacks necessary verified owner business outcome and capability evaluation data. Creating this feature is out-of-scope for the current implementation slice and there is missing support for this automated business provisioning without explicit authorization. The issue is recorded as blocked."
