@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type { Browser, Page, Request } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { createOwnedAuditSeed } from '../../../scripts/ui-audit-fixture.cjs';
 import { e2eDbTransaction } from '../db_utils';
 import { authenticateRequest } from '../authenticate';
 import { createAuditNavigation, type AuditNavigationReceipt } from './ui_audit_navigation';
+import { observeAuditRequests } from './audit_request_lifecycle';
 
 export const isolatedClickAuditRoutes = new Set([
   '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder', '/onboarding', '/share-card',
@@ -109,12 +110,7 @@ export async function seedDashboardAuditOwner(baseURL: string) {
 export async function createDashboardAuditCase(browser: Browser, baseURL: string, viewport: { width: number; height: number } | null, videoDirectory?: string) {
   const actor = await seedDashboardAuditOwner(baseURL);
   const context = await browser.newContext({ baseURL, ...(viewport ? { viewport } : {}), ...(videoDirectory ? { recordVideo: { dir: videoDirectory } } : {}) });
-  const pending = new Set<Request>();
-  context.on('request', request => {
-    if (new URL(request.url()).origin === new URL(baseURL).origin && ['fetch', 'xhr'].includes(request.resourceType())) pending.add(request);
-  });
-  context.on('requestfinished', request => pending.delete(request));
-  context.on('requestfailed', request => pending.delete(request));
+  const pending = observeAuditRequests(context, baseURL);
   try {
     await context.addInitScript(tenant => {
       // about:blank has an opaque origin before the first application navigation.
@@ -158,7 +154,7 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
         // Rendering after completed responses is scheduled in the browser realm.
         await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
         if (pending.size === 0) break;
-        if (Date.now() >= deadline) throw new Error(`${route} baseline reads did not settle before discovery`);
+        if (Date.now() >= deadline) throw new Error(`${route} baseline reads did not settle before discovery; requests=${JSON.stringify(pending.snapshot())}`);
         await page.waitForTimeout(25);
       }
       return receipt;

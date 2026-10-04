@@ -357,8 +357,13 @@
         document.getElementById('retry-sync').hidden = !active() || !navigator.onLine || !unknown;
         if (active() && currentRoutesData) renderRoutes(currentRoutesData, mine);
       } catch {
-        queueError = 'Offline storage unavailable. Changes are not saved.';
+        if (sequence !== viewSequence || epoch !== generation) return;
+        queueError = 'Offline storage unavailable; changes cannot be confirmed.';
         showNetwork(queueError, '#FF9500');
+        for (const card of document.querySelectorAll('.route-card')) {
+          card.querySelector('.job-receipt').textContent = 'Offline storage unavailable; confirmation unavailable.';
+          card.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        }
       }
     }
     async function updateJobStatus(jobId, newStatus) {
@@ -370,6 +375,14 @@
         if (!active(expectedOwner, epoch)) throw new Error('Verify the current business before editing.');
         const job = findJob(jobId);
         if (!job || !validTime(job.updated_at) || !statuses.includes(newStatus)) throw new Error('Reload the job to obtain its current version.');
+        // Retire the previous receipt synchronously, before IndexedDB can yield.
+        // This intent is not durable yet, so do not claim it is saved locally.
+        confirmed.delete(jobId);
+        const card = [...document.querySelectorAll('.route-card')].find(card => card.dataset.testid === `job-card-${jobId}`);
+        if (card) {
+          card.querySelector('.job-receipt').textContent = 'Saving change locally; confirmation pending.';
+          card.querySelectorAll('button').forEach(button => { button.disabled = true; });
+        }
         await queueTransaction('readwrite', (store, rows) => {
           if (!active(expectedOwner, epoch)) throw new Error('Business context changed.');
           const previous = ordered(rows.filter(row => owned(row, expectedOwner) && row.jobId === jobId)).at(-1);
@@ -381,12 +394,15 @@
             timestamp: Math.max(Date.now(), ...rows.map(row => Number(row.timestamp) + 1 || 0)), state: 'pending' });
         });
         if (!active(expectedOwner, epoch)) return;
-        queueError = ''; confirmed.delete(jobId); snapshotRevision++;
+        queueError = ''; snapshotRevision++;
         await updateOfflineStatus();
         if (navigator.onLine) await syncOfflineQueue();
       } catch (error) {
-        if (epoch === generation) { queueError = error.message || 'Change not saved.'; await updateOfflineStatus(); }
-      } finally { addingJobs.delete(jobId); }
+        if (epoch === generation) queueError = error.message || 'Change not saved.';
+      } finally {
+        addingJobs.delete(jobId);
+        if (epoch === generation) await updateOfflineStatus();
+      }
     }
     async function setQueueState(mutation, state) {
       await queueTransaction('readwrite', (store, rows) => {
@@ -514,7 +530,8 @@
         textElement('h2', 'job-title', job.job_title);
         textElement('div', 'job-address', `📍 ${job.address}`);
         textElement('div', 'job-time', `${formatTime(job.scheduled_start)}${job.scheduled_end ? ' - ' + formatTime(job.scheduled_end) : ''}`);
-        const receipt = textElement('p', 'job-receipt', blocked ? 'Change not saved (blocked). Reload and review before retrying.'
+        const saving = addingJobs.has(job.id) && !pending.length && !confirmed.has(job.id);
+        const receipt = textElement('p', 'job-receipt', saving ? 'Saving change locally; confirmation pending.' : blocked ? 'Change not saved (blocked). Reload and review before retrying.'
           : unknown ? 'Save outcome unknown; confirmation pending. Retry to reconcile.'
           : pending.length ? 'Saved locally; confirmation pending.' : confirmed.has(job.id) ? 'Confirmed by server.' : 'Current server snapshot.', `job-receipt-${job.id}`);
         receipt.setAttribute('role', 'status');
@@ -522,7 +539,7 @@
         function button(label, target, testid) {
           const button = document.createElement('button'); button.className = `btn ${target ? 'btn-primary' : 'btn-secondary'}`; button.textContent = label;
           if (testid) button.dataset.testid = `btn-${testid}-${job.id}`;
-          if (target) { button.disabled = blocked || unknown || pending.some(row => sending.has(row.id)) || !validTime(job.updated_at); button.onclick = () => updateJobStatus(job.id, target); }
+          if (target) { button.disabled = addingJobs.has(job.id) || blocked || unknown || pending.some(row => sending.has(row.id)) || !validTime(job.updated_at); button.onclick = () => updateJobStatus(job.id, target); }
           actions.append(button); return button;
         }
         if (status === 'pending') button('Start Travel', 'en_route', 'start-travel');

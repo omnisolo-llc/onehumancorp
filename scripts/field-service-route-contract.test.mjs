@@ -13,7 +13,7 @@ const owner = { userId: 'owner-a', tenantId: 'tenant-a', expiresAt: Date.now() +
 // A transaction fixture, not a browser certification. Requests succeed before
 // commit; failed commits roll back. Production code must wait for oncomplete.
 function indexedDBFixture() {
-  const state = { rows: new Map(), failCommit: false, clearCalls: 0 };
+  const state = { rows: new Map(), failCommit: false, clearCalls: 0, failOpen: false, holdOpen: false, pendingOpens: [] };
   let tail = Promise.resolve();
   const db = {
     objectStoreNames: { contains: () => true }, close() {},
@@ -55,7 +55,15 @@ function indexedDBFixture() {
       return tx;
     },
   };
-  return { state, api: { open() { const req = {}; setImmediate(() => { req.result = db; req.onsuccess?.({ target: req }); }); return req; } } };
+  return { state, api: { open() {
+    const req = {};
+    const complete = () => setImmediate(() => {
+      if (state.failOpen) { req.error = new Error('fixture storage unavailable'); req.onerror?.(); }
+      else { req.result = db; req.onsuccess?.({ target: req }); }
+    });
+    if (state.holdOpen) state.pendingOpens.push(complete); else complete();
+    return req;
+  } } };
 }
 async function setup(root, options = {}) {
   const idb = options.idb ?? indexedDBFixture();
@@ -77,7 +85,7 @@ async function setup(root, options = {}) {
           const body = JSON.parse(init.body);
           const job = jobs.find(item => String(url).includes(`/${item.id}/`));
           if (body.expected_updated_at !== job.updated_at) return new Response('Reload before editing', { status: 428 });
-          job.status = body.status; job.updated_at = job.updated_at === version ? nextVersion : '2026-10-03T08:00:00.000003Z';
+          job.status = body.status; job.updated_at = job.updated_at.replace(/\.(\d+)Z$/, (_match, fraction) => `.${String(Number(fraction) + 1).padStart(fraction.length, '0')}Z`);
           return Response.json({ success: true, error: null, id: job.id, status: job.status, updated_at: job.updated_at });
         }
         throw new Error(`Unexpected request: ${url}`);
@@ -326,5 +334,71 @@ for (const root of roots) {
     const f = await setup(root, { post: () => Response.json({ success: true, error: null, id: 'job-1', status: 'en_route', updated_at: advanced }) });
     try { await f.click(); assert.equal(f.idb.state.rows.size, 0); assert.match(f.receipt(), /Confirmed/); }
     finally { f.dom.window.close(); }
+  });
+}
+
+for (const root of roots) {
+  test(`${root}: Job Done immediately retires the prior confirmation before delayed local storage`, async () => {
+    const f = await setup(root);
+    let pending;
+    try {
+      await f.click(); await f.click('job-1', 'on_site');
+      assert.equal(f.receipt(), 'Confirmed by server.');
+      const button = f.dom.window.document.querySelector('[data-testid="btn-job-done-job-1"]');
+      f.idb.state.holdOpen = true;
+      pending = button.onclick();
+      await button.onclick(); // A repeated click cannot stage another request.
+      assert.equal(f.receipt(), 'Saving change locally; confirmation pending.');
+      assert.equal(button.disabled, true);
+      assert.equal(f.posts().length, 2);
+      assert.equal(f.idb.state.rows.size, 0); // It is not saved locally yet.
+      f.idb.state.holdOpen = false;
+      f.idb.state.pendingOpens.splice(0).forEach(complete => complete());
+      await pending;
+      assert.equal(f.posts().length, 3);
+      assert.deepEqual(JSON.parse(f.posts()[2].init.body), { status: 'done', expected_updated_at: '2026-10-03T08:00:00.000003Z' });
+      assert.equal(f.receipt(), 'Confirmed by server.');
+      assert.equal(f.dom.window.document.querySelector('[data-testid="job-status-job-1"]').textContent, 'done');
+      assert.equal(f.idb.state.rows.size, 0);
+    } finally {
+      f.idb.state.holdOpen = false;
+      f.idb.state.pendingOpens.splice(0).forEach(complete => complete());
+      await pending; f.dom.window.close();
+    }
+  });
+  test(`${root}: a failed local save never restores the previous transition confirmation`, async () => {
+    const f = await setup(root);
+    try {
+      await f.click(); assert.equal(f.receipt(), 'Confirmed by server.');
+      f.idb.state.failCommit = true;
+      await f.click('job-1', 'on_site');
+      assert.equal(f.posts().length, 1);
+      assert.equal(f.idb.state.rows.size, 0);
+      assert.doesNotMatch(f.receipt(), /Confirmed|Saved locally|Saving change/);
+      assert.equal(f.dom.window.document.querySelector('[data-testid="job-status-job-1"]').textContent, 'en route');
+      assert.match(f.dom.window.document.getElementById('network-status-text').textContent, /aborted/);
+      assert.equal(f.dom.window.document.querySelector('[data-testid="btn-arrived-job-1"]').disabled, false);
+    } finally { f.dom.window.close(); }
+  });
+}
+
+for (const root of roots) {
+  test(`${root}: persistent storage failure ends the saving claim without restoring a prior receipt`, async () => {
+    const f = await setup(root);
+    try {
+      await f.click(); assert.equal(f.receipt(), 'Confirmed by server.');
+      f.idb.state.failOpen = true;
+      await f.click('job-1', 'on_site');
+      assert.equal(f.posts().length, 1);
+      assert.equal(f.idb.state.rows.size, 0);
+      assert.equal(f.receipt(), 'Offline storage unavailable; confirmation unavailable.');
+      assert.equal(f.dom.window.document.querySelector('[data-testid="btn-arrived-job-1"]').disabled, true);
+      assert.equal(f.dom.window.document.querySelector('[data-testid="job-status-job-1"]').textContent, 'en route');
+      assert.match(f.dom.window.document.getElementById('network-status-text').textContent, /cannot be confirmed/);
+      f.idb.state.failOpen = false;
+      await f.dom.window.fetchRoutes();
+      assert.equal(f.receipt(), 'Current server snapshot.');
+      assert.equal(f.dom.window.document.querySelector('[data-testid="btn-arrived-job-1"]').disabled, false);
+    } finally { f.dom.window.close(); }
   });
 }
