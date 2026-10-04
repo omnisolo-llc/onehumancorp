@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement the AI Work Assistant: Market Mapping & Issue Formulation"
+issue_description: "The issue proposes new features ('Work Triage Feed' and 'Agent Draft Approvals') based on public anecdotes (Trustpilot, WeChat Forums, Reddit). However, the operating contract explicitly states: 'Do not interpret public anecdotes as customer interviews.' Furthermore, 'New epics need an explicit evidence-backed decision; assigned concrete defect work may continue.' Therefore, these new features are unauthorized and blocked by RESEARCH.md. Loaded Superpowers skill revision: ef167d89ad2568a18dd5c53f3da07d85b299bd15 (skills/using-superpowers/SKILL.md)."
