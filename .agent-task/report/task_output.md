@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement Multi-Channel Redis Distributed Locks for POS & Inventory"
+issue_description: "The requested expansion to the POS engine is blocked by the guidelines in RESEARCH.md. According to the research document, 'New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require explicit evidence and authorization via the expansion gate in RESEARCH.md'. We have verified that the required POS locks are not currently implemented, but due to these constraints, we cannot proceed with the implementation. I have loaded skills from revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d of superpowers, specifically skills/using-superpowers/SKILL.md."
