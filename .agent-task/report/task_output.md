@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Product Gap: OHC Needs a Unified Agentic Action Feed & AI Operations Assistant for SMB Owners"
+issue_description: "Implementation is blocked. The issue proposes building a new 'Unified Action Feed' and 'Triage Agent' integrating with new channels (Instagram, WhatsApp). According to the OneHumanCorp operating contract (revision 2026-09-18-usage-audit), new channels and features explicitly require evidence and the expansion gate in RESEARCH.md. A grep of RESEARCH.md for 'Instagram\\|WhatsApp\\|Action Feed\\|Triage Agent' yielded no results. Therefore, this mandates a blocked or no-work finding."
+issue_priority: "P2"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
