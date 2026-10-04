@@ -24,7 +24,7 @@ for name in ['StaffMember','GetStaffResponse','GetTasksResponse','GetSummariesRe
  assert match,name
  parts.append(match[0])
 parts.append(between('fn get_tenant_id(', 'pub async fn create_staff_handler('))
-for start,end in [('get_staff_handler','sync_timecard_handler'),('get_tasks_handler','update_task_handler')]:
+for start,end in [('get_staff_handler','get_timecard_handler'),('get_tasks_handler','update_task_handler')]:
  parts.append(between('pub async fn '+start+'(', 'pub async fn '+end+'('))
 parts.append(between('pub async fn get_summaries_handler(', '#[derive(Serialize)]\npub struct GetShiftsResponse'))
 parts.append('''pub fn router(database:Arc<DB>)->Router {

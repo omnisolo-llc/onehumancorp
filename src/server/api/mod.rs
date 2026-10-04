@@ -6,6 +6,7 @@ pub mod offline_sync;
 pub mod omnichannel_webhook;
 pub mod pos;
 pub mod staff_mesh;
+pub mod staff_timecards;
 pub mod sync;
 pub mod terminal_api;
 pub mod twilio_voice;
@@ -86,3 +87,6 @@ pub mod widget;
 pub mod production_readiness;
 
 pub(crate) mod fixture_boundary;
+
+#[cfg(test)]
+mod staff_timecards_test;
