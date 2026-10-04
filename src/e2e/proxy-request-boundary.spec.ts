@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import type { APIRequestContext, APIResponse, Page, TestInfo } from '@playwright/test';
-import { computeCacheBustingSearchParam } from '../ui/next/node_modules/next/dist/shared/lib/router/utils/cache-busting-search-param';
+import { computeCacheBustingSearchParam } from 'next/dist/shared/lib/router/utils/cache-busting-search-param';
 import { retiredPageDestination } from '../ui/next/src/lib/auth/retiredPageRoutes';
 import { parseAuthRuntimeConfig } from '../ui/next/src/lib/auth/runtimeConfig';
 import { parseSessionKeyRing } from '../ui/next/src/lib/auth/sessionKeys';
