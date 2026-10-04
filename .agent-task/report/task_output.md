@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Implement Unified Agentic Autonomous Booking & Resource System for Mobile-First Operations"
+issue_description: "The requested Agentic Autonomous Booking & Resource System for Leo the Music Tutor introduces a new vertical and major new feature set (natural language availability, AI re-engagement). According to the current operating contract and RESEARCH.md, new verticals, channels, agent marketplaces, and unverified AI capabilities are blocked by default and require explicit evidence and passing the expansion gate. Full Rust checks were skipped as this is a report-only task."
