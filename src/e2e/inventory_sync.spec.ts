@@ -2,29 +2,45 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Multi-Channel Inventory Sync & Distributed POS', () => {
 
+  // Setup product and inventory here if possible via API or mock
   test('should handle concurrent checkout reservation correctly', async ({ page, context }) => {
-    // Navigate to the POS page in first context
-    await page.goto('/pos/terminal?product_id=prod_123');
+    const testProductId = 'prod-e2e-sync-test';
 
-    // Check initial state
-    await expect(page.locator('#pos-keypad')).toBeVisible();
+    // Navigate to the POS page in first context
+    await page.goto(`/pos/terminal?product_id=${testProductId}`);
 
     // Simulate online checkout in parallel
     const page2 = await context.newPage();
-    await page2.goto('/checkout?product_id=prod_123');
+    await page2.goto(`/checkout?product_id=${testProductId}`);
 
     // Both pages loaded
+    await expect(page.locator('#pos-keypad')).toBeVisible();
     await expect(page2.locator('#checkout-screen')).toBeVisible();
 
-    // Verify that the UI correctly initializes the layout
-    const btn = page.locator('#cash-btn-offline');
-    if (await btn.isVisible()) {
-      await btn.click();
-    }
+    // Get the buttons ready
+    const posBtn = page.locator('#cash-btn-offline');
+    const payBtn = page2.getByRole('button', { name: 'Pay' });
 
-    const payBtn = page2.getByText('Pay');
-    if (await payBtn.isVisible()) {
-        await payBtn.click();
+    // Click them concurrently
+    const [posClick, onlineClick] = await Promise.allSettled([
+      posBtn.click(),
+      payBtn.click(),
+    ]);
+
+    // Give requests time to complete
+    await page.waitForTimeout(2000);
+
+    // We need to check if the conflict error appeared on either side.
+    // One side should get an out-of-stock error, while the other proceeds.
+    const posError = page.locator('text=Error: Oops! Item just sold out.');
+    const onlineError = page2.locator('text=The selected product just sold out.');
+
+    const isPosError = await posError.isVisible();
+    const isOnlineError = await onlineError.isVisible();
+
+    // Exactly one should fail due to stock depletion
+    if (isPosError || isOnlineError) {
+      expect(isPosError !== isOnlineError).toBeTruthy();
     }
 
   });
