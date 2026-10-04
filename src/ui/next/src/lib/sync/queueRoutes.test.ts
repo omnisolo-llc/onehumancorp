@@ -49,3 +49,12 @@ it('preserves an observed entity version and timestamp instead of rebasing queue
   const plan = planRoutes({ id: 'v', type: 'UPDATE_ORDER_STATUS', timestamp: 1, payload: { order_id: 'o', status: 'Ready', expected_status: 'Preparing', base_version: 7, expected_updated_at: '2026-09-30T10:00:00Z' } })[0];
   expect(plan.body).toEqual({ events: [expect.objectContaining({ base_version: 7, payload: expect.objectContaining({ expected_updated_at: '2026-09-30T10:00:00Z' }) })] });
 });
+
+it.each(['update_quote', 'approve_quote'])('freezes the exact observed quote version for %s', type => {
+  const token = '2026-10-04T00:00:00.123456+00:00';
+  const plan = planRoutes({ id: 'versioned', type, quoteId: 'quote', timestamp: 1, payload: { expected_updated_at: token, line_items: [] } })[0];
+  expect(plan.body).toMatchObject({ expected_updated_at: token });
+});
+it.each(['update_quote', 'approve_quote'])('refuses to dispatch %s without a reviewed version', type => {
+  expect(() => planRoutes({ id: 'unreviewed', type, quoteId: 'quote', timestamp: 1, payload: {} })).toThrow('reviewed quote version');
+});

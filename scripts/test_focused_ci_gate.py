@@ -12,6 +12,13 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_quote_acceptance_requires_complete_owner_version_inventory(self):
+        minimum, database = gate.GATES['quote-acceptance']
+        self.assertGreaterEqual(minimum, 36)
+        self.assertEqual(database, 'OHC_QUOTE_TEST_DATABASE_URL')
+        with self.assertRaises(ValueError):
+            gate.validate_results('test result: ok. 35 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out;', minimum)
+
     def test_redis_startup_fetch_precedes_offline_gate(self):
         import yaml
         root = Path(__file__).resolve().parents[1]
@@ -421,24 +428,24 @@ if sys.argv[1] == 'test':
     def test_real_child_success_retains_log_and_manifest(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            self.fixture(root, 'test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s')
+            self.fixture(root, 'test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s')
             self.assertEqual(gate.run_gate(root, 'quote-acceptance', root/'evidence'), 0)
             receipt = json.loads((root/'evidence/quote-acceptance/result.json').read_text())
-            self.assertEqual(receipt['passed'], 25)
             self.assertEqual(receipt['status'], 'passed')
+            self.assertEqual(receipt['passed'], 36)
             self.assertEqual((root/'evidence/quote-acceptance/source-manifest.json').read_bytes(), (root/'scripts/quote-acceptance/source-manifest.json').read_bytes())
 
     def test_nonzero_child_exit_cannot_be_hidden_by_green_output(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
-            self.fixture(root, 'test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s', 7)
+            self.fixture(root, 'test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s', 7)
             self.assertNotEqual(gate.run_gate(root, 'quote-acceptance', root/'evidence'), 0)
             self.assertEqual(json.loads((root/'evidence/quote-acceptance/result.json').read_text())['exit_code'], 7)
 
     def test_missing_source_manifest_cannot_pass(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp)
-            self.fixture(root, 'test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s', manifest=False)
+            self.fixture(root, 'test result: ok. 36 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1s', manifest=False)
             self.assertNotEqual(gate.run_gate(root, 'quote-acceptance', root/'evidence'), 0)
 
     def test_missing_paired_source_cannot_pass(self):

@@ -10,7 +10,7 @@ let rows: Map<string, Record<string, unknown>>;
 let failCommit: boolean;
 let tail: Promise<unknown>;
 const owner = { userId: 'a', tenantId: 't' };
-const action: OfflineAction = { id: 'one', type: 'update_quote', payload: { title: 'Saved' }, quoteId: 'quote', notes: 'terms', amount: 500, currency: 'eur', device_signature: 'signature', timestamp: 1 };
+const action: OfflineAction = { id: 'one', type: 'update_quote', payload: { title: 'Saved', expected_updated_at: '2026-10-04T00:00:00.123456Z' }, quoteId: 'quote', notes: 'terms', amount: 500, currency: 'eur', device_signature: 'signature', timestamp: 1 };
 
 beforeEach(() => {
   localStorage.clear(); rows = new Map(); failCommit = false; tail = Promise.resolve();
@@ -235,4 +235,14 @@ it('holds a conflicting child ID instead of acknowledging the parent or replacin
   const claim = (await claimAction(completion.id, '/api/v1/sync/events'))!;
   await expect(completeAction(claim, 'acknowledged')).rejects.toThrow(/collision/i);
   expect(rows.size).toBe(2); expect((await getQueueSummary()).reconciliation).toBe(1);
+});
+
+it.each(['update_quote', 'approve_quote'])('holds existing versionless %s envelopes without rebasing or claiming them', async type => {
+  const legacyAction = { id: 'versionless', type, quoteId: 'quote', payload: { line_items: [] }, timestamp: 1 };
+  const route = type === 'update_quote' ? { id: '/api/v1/quotes?id=quote', method: 'POST', body: legacyAction.payload, maxAttempts: 1 } : { id: '/api/v1/quotes/quote/approve', method: 'PATCH', maxAttempts: 1 };
+  rows.set(legacyAction.id, { id: legacyAction.id, type, timestamp: 1, payload: JSON.stringify({ version: 2, adapter: 'powersync', owner, action: legacyAction, context: {}, routes: [{ plan: route, status: 'pending', attempts: 0 }] }) });
+  expect(await getActions()).toEqual([]);
+  expect((await getQueueSummary()).legacyHeld).toBe(1);
+  expect(await claimAction(legacyAction.id, route.id)).toBeNull();
+  expect(rows.size).toBe(1);
 });

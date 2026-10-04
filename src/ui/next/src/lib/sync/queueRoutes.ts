@@ -1,4 +1,5 @@
 import type { OfflineAction } from '../../app/utils/offlineQueue';
+import { isQuoteVersion } from '../quoteVersion';
 import { recordOrEmpty } from '../records';
 
 export type OutcomeStatus = 'acknowledged' | 'blocked' | 'reconciliation';
@@ -44,8 +45,14 @@ export function planRoutes(action: OfflineAction, context = captureRouteContext(
   }
   if (action.type === 'sync_event') return [post('/api/v1/sync/events', { events: [{ ...payload, id: action.id, base_version: payload.base_version ?? payload.version ?? 0, timestamp }] })];
   if (action.type === 'CRDT_MUTATION') return [post('/api/v1/sync/mcp-deltas', { deltas: [{ id: action.id, entity_id: payload.entity_id || 'unknown', data: typeof payload.data === 'string' ? payload.data : JSON.stringify(payload.data ?? {}), updated_at: timestamp }] })];
-  if (action.type === 'update_quote') return [post(`/api/v1/quotes?id=${pathId(action.quoteId)}`, action.payload)];
-  if (action.type === 'approve_quote') return [{ id: `/api/v1/quotes/${pathId(action.quoteId)}/approve`, method: 'PATCH', maxAttempts: 1 }];
+  if (action.type === 'update_quote' || action.type === 'approve_quote') {
+    const id = pathId(action.quoteId);
+    if (!isQuoteVersion(payload.expected_updated_at)) throw new Error('Missing reviewed quote version');
+    // Freeze the observed token. Old/versionless envelopes remain held rather
+    // than being rebased to a later quote when connectivity returns.
+    return action.type === 'update_quote' ? [post(`/api/v1/quotes?id=${id}`, action.payload)]
+      : [{ id: `/api/v1/quotes/${id}/approve`, method: 'PATCH', body: { expected_updated_at: payload.expected_updated_at }, maxAttempts: 1 }];
+  }
   if (action.type === 'approve_agent_feed') {
     const id = String(payload.id ?? '');
     if (payload.event_source === 'review') return [post('/api/v1/reviews/action', { action: payload.approved ? 'approve' : 'dismiss', responseId: id, content: payload.modified_content })];

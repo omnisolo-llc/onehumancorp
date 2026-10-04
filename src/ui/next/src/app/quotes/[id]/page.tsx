@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { isQuoteVersion } from '@/lib/quoteVersion';
 import { AppShell } from '../../components/AppShell';
 import {
   hasQuoteTerms, moneyInput, parseMoneyInput, parseQuoteDetail,
@@ -67,12 +68,13 @@ function QuoteReview({ id }: { id: string }) {
   const status = quote?.status.toUpperCase();
   const pending = status === 'DRAFTING' || status === 'PENDING';
   const ready = !!quote && !pending && hasQuoteTerms(quote);
-  const editable = ready && !quote?.acceptance && (status === 'DRAFT' || status === 'SENT' || status === 'APPROVED');
+  const versionAvailable = isQuoteVersion(quote?.updated_at);
+  const editable = ready && versionAvailable && !quote?.acceptance && (status === 'DRAFT' || status === 'SENT' || status === 'APPROVED');
   const approvable = editable && status === 'DRAFT';
 
   const mutate = async (kind: 'approve' | 'save') => {
     if (!quote || busyRef.current || reconcile || (kind === 'approve' ? !approvable : !editable || !edits)) return;
-    let body: string | undefined;
+    let body = JSON.stringify({ expected_updated_at: quote.updated_at });
     let reviewed = quote;
     if (kind === 'save' && edits) {
       const total = parseMoneyInput(edits.total);
@@ -86,6 +88,7 @@ function QuoteReview({ id }: { id: string }) {
         line_items: quote.line_items.map((line, index) => ({ ...line, unit_price_cents: prices[index]! })),
       };
       body = JSON.stringify({
+        expected_updated_at: quote.updated_at,
         total_amount_cents: total,
         required_deposit_cents: deposit,
         line_items: quote.line_items.map((line, index) => ({
@@ -102,16 +105,18 @@ function QuoteReview({ id }: { id: string }) {
     try {
       const response = await fetch(`/api/v1/quotes/${id}${kind === 'approve' ? '/approve' : ''}`, {
         method: kind === 'approve' ? 'PATCH' : 'PUT',
-        ...(body ? { headers: { 'Content-Type': 'application/json' }, body } : {}),
+        headers: { 'Content-Type': 'application/json' }, body,
       });
       if (!response.ok) throw new Error('Quote change failed');
       const receipt = await response.json();
       if (kind === 'save' ? receipt?.success !== true : receipt?.quote?.id?.toLowerCase() !== id) {
         throw new Error('Invalid quote change receipt');
       }
+      const committedVersion = kind === 'save' ? receipt.updated_at : receipt.quote?.updated_at;
+      if (!isQuoteVersion(committedVersion)) throw new Error('Missing committed quote version');
       if (current !== operation.current) return;
       const saved = await readQuote(id);
-      if (!saved || !sameQuoteTerms(saved, reviewed) || (kind === 'approve' && !['SENT', 'APPROVED', 'ACCEPTED'].includes(saved.status.toUpperCase()))) {
+      if (!saved || saved.updated_at !== committedVersion || !sameQuoteTerms(saved, reviewed) || (kind === 'approve' && !['SENT', 'APPROVED', 'ACCEPTED'].includes(saved.status.toUpperCase()))) {
         throw new Error('Quote change could not be verified');
       }
       if (current !== operation.current) return;
@@ -150,6 +155,7 @@ function QuoteReview({ id }: { id: string }) {
             <span className="text-xs font-bold px-2 py-1 rounded-full bg-blue-100 text-blue-700">{quote.status}</span>
           </div>
           {pending ? <p role="status">Quote preparation is pending. Refresh to check for saved terms.</p> : <>
+            {!versionAvailable && <p role="status">Quote version is unavailable. Refresh before making changes.</p>}
             {!ready && <p role="status">Quote terms are incomplete. Pricing and approval are unavailable until complete terms are saved.</p>}
             <div className="space-y-3">
               <div className="flex justify-between items-center">

@@ -10,10 +10,12 @@ vi.mock('../../components/AppShell', () => ({
 }));
 
 const id = '11111111-1111-4111-8111-111111111111';
+const version = '2026-10-04T00:00:00.123456Z';
+const savedVersion = '2026-10-04T00:00:00.123457Z';
 const otherId = '22222222-2222-4222-8222-222222222222';
 const item = { id: 'line-1', quote_id: id, description: 'Reviewed service', unit_price_cents: 10000, quantity: 1, is_optional: false, service_item_id: 'service-1' };
 function detail(quote: Record<string, unknown> = {}, lineItems = [item]) {
-  return { quote: { id, customer_id: 'owned-customer', status: 'DRAFT', total_amount_cents: 10000, required_deposit_cents: 2500, stripe_payment_link: null, ...quote }, line_items: lineItems, acceptance: null };
+  return { quote: { id, customer_id: 'owned-customer', status: 'DRAFT', total_amount_cents: 10000, required_deposit_cents: 2500, stripe_payment_link: null, updated_at: version, ...quote }, line_items: lineItems, acceptance: null };
 }
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -60,6 +62,28 @@ describe('Quote detail truthfulness', () => {
     fetcher.mockResolvedValue(Response.json(detail({ id: uuid }, [{ ...item, quote_id: uuid }])));
     render(<QuoteReviewPage />);
     await screen.findByText('Reviewed service (x1)');
+  });
+
+  it('keeps a versionless record readable but holds owner mutations', async () => {
+    fetcher.mockResolvedValue(Response.json(detail({ updated_at: null })));
+    await ready();
+    expect(screen.getByText(/Quote version is unavailable/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Approve|Edit/i })).not.toBeInTheDocument();
+  });
+
+  it('uses the post-save committed version for the next approval', async () => {
+    await ready();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit quote' }));
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, updated_at: savedVersion }))
+      .mockResolvedValueOnce(Response.json(detail({ updated_at: savedVersion })));
+    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
+    await screen.findByText('Quote changes saved.');
+    const approved = detail({ status: 'SENT', updated_at: '2026-10-04T00:00:00.123458Z' });
+    fetcher.mockResolvedValueOnce(Response.json({ quote: approved.quote })).mockResolvedValueOnce(Response.json(approved));
+    fireEvent.click(screen.getByRole('button', { name: /^Approve quote$/ }));
+    await screen.findByText('SENT');
+    const [, request] = fetcher.mock.calls.find(([, request]) => request?.method === 'PATCH')!;
+    expect(JSON.parse(request!.body as string)).toEqual({ expected_updated_at: savedVersion });
   });
 
   it('keeps loading distinct from missing and offers no approval before data arrives', async () => {
@@ -128,13 +152,13 @@ describe('Quote detail truthfulness', () => {
   it('approves once through the real approval route then reads the saved status without claiming delivery', async () => {
     await ready();
     const approval = deferred<Response>();
-    fetcher.mockReturnValueOnce(approval.promise).mockResolvedValueOnce(Response.json(detail({ status: 'SENT' })));
+    fetcher.mockReturnValueOnce(approval.promise).mockResolvedValueOnce(Response.json(detail({ status: 'SENT', updated_at: savedVersion })));
     const button = screen.getByRole('button', { name: /^Approve quote$/ });
     fireEvent.click(button);
     fireEvent.click(button);
     expect(fetcher).toHaveBeenCalledTimes(2);
-    expect(fetcher).toHaveBeenLastCalledWith(`/api/v1/quotes/${id}/approve`, expect.objectContaining({ method: 'PATCH' }));
-    await act(async () => approval.resolve(Response.json({ quote: detail({ status: 'SENT' }).quote })));
+    expect(fetcher).toHaveBeenLastCalledWith(`/api/v1/quotes/${id}/approve`, expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ expected_updated_at: version }) }));
+    await act(async () => approval.resolve(Response.json({ quote: detail({ status: 'SENT', updated_at: savedVersion }).quote })));
     await screen.findByText('SENT');
     expect(screen.getByText(/Message delivery to the customer is not confirmed/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Approve quote$/ })).not.toBeInTheDocument();
@@ -142,7 +166,7 @@ describe('Quote detail truthfulness', () => {
 
   it('does not confirm approval when readback contains unreviewed changed terms', async () => {
     await ready();
-    fetcher.mockResolvedValueOnce(Response.json({ quote: detail({ status: 'SENT' }).quote }))
+    fetcher.mockResolvedValueOnce(Response.json({ quote: detail({ status: 'SENT', updated_at: savedVersion }).quote }))
       .mockResolvedValueOnce(Response.json(detail({ status: 'SENT', total_amount_cents: 50000 })));
     fireEvent.click(screen.getByRole('button', { name: /^Approve quote$/ }));
     await screen.findByText(/Approval could not be confirmed/);
@@ -153,7 +177,7 @@ describe('Quote detail truthfulness', () => {
     await ready();
     if (failure === 'http') fetcher.mockResolvedValueOnce(new Response(null, { status: 500 }));
     else if (failure === 'network') fetcher.mockRejectedValueOnce(new Error('offline'));
-    else fetcher.mockResolvedValueOnce(Response.json({ quote: detail({ status: 'SENT' }).quote })).mockRejectedValueOnce(new Error('read failed'));
+    else fetcher.mockResolvedValueOnce(Response.json({ quote: detail({ status: 'SENT', updated_at: savedVersion }).quote })).mockRejectedValueOnce(new Error('read failed'));
     fireEvent.click(screen.getByRole('button', { name: /^Approve quote$/ }));
     await screen.findByText(/Approval could not be confirmed/);
     expect(screen.getByText('DRAFT')).toBeInTheDocument();
@@ -172,11 +196,11 @@ describe('Quote detail truthfulness', () => {
     expect(screen.getByLabelText('Required deposit')).toHaveValue(25);
     expect(screen.getByLabelText('Total amount')).toHaveValue(100);
     fireEvent.change(screen.getByLabelText('Total amount'), { target: { value: '115.00' } });
-    fetcher.mockResolvedValueOnce(Response.json({ success: true })).mockResolvedValueOnce(Response.json(detail({ total_amount_cents: 11500 }, [{ ...optionalItem, id: 'saved-discount' }, { ...item, id: 'saved-line', unit_price_cents: 12500 }])));
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, updated_at: savedVersion })).mockResolvedValueOnce(Response.json(detail({ total_amount_cents: 11500, updated_at: savedVersion }, [{ ...optionalItem, id: 'saved-discount' }, { ...item, id: 'saved-line', unit_price_cents: 12500 }])));
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await screen.findByText('Quote changes saved.');
     const [, options] = fetcher.mock.calls.find(([, options]) => options?.method === 'PUT')!;
-    expect(JSON.parse(options!.body as string)).toMatchObject({ total_amount_cents: 11500, required_deposit_cents: 2500, line_items: [expect.objectContaining({ unit_price_cents: 12500, service_item_id: 'service-1', is_optional: false }), expect.objectContaining({ unit_price_cents: -1000, is_optional: true })] });
+    expect(JSON.parse(options!.body as string)).toMatchObject({ total_amount_cents: 11500, required_deposit_cents: 2500, expected_updated_at: version, line_items: [expect.objectContaining({ unit_price_cents: 12500, service_item_id: 'service-1', is_optional: false }), expect.objectContaining({ unit_price_cents: -1000, is_optional: true })] });
     expect(screen.getByText('$115.00')).toBeInTheDocument();
   });
 
@@ -184,7 +208,7 @@ describe('Quote detail truthfulness', () => {
     await ready();
     fireEvent.click(screen.getByRole('button', { name: 'Edit quote' }));
     fireEvent.change(screen.getByLabelText('Total amount'), { target: { value: '120' } });
-    fetcher.mockResolvedValueOnce(Response.json({ success: true })).mockResolvedValueOnce(Response.json(detail()));
+    fetcher.mockResolvedValueOnce(Response.json({ success: true, updated_at: savedVersion })).mockResolvedValueOnce(Response.json(detail()));
     fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
     await screen.findByText(/Changes could not be confirmed/);
     expect(screen.queryByText('Quote changes saved.')).not.toBeInTheDocument();
@@ -200,7 +224,7 @@ describe('Quote detail truthfulness', () => {
     vi.mocked(useParams).mockReturnValue({ id: otherId });
     view.rerender(<QuoteReviewPage />);
     await screen.findByText('Quote not found');
-    await act(async () => mutation.resolve(Response.json({ quote: detail({ status: 'SENT' }).quote })));
+    await act(async () => mutation.resolve(Response.json({ quote: detail({ status: 'SENT', updated_at: savedVersion }).quote })));
     expect(fetcher).toHaveBeenCalledTimes(3);
     expect(screen.getByText('Quote not found')).toBeInTheDocument();
     expect(screen.queryByText('SENT')).not.toBeInTheDocument();

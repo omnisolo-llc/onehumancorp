@@ -85,7 +85,7 @@ describe("authenticated quote routes", () => {
         backendMethod: "PATCH",
         forwardQuery: false,
         requestContentType: "application/json",
-        suppressRequestBody: true,
+        transformRequestBody: quoteBackend.validateQuoteAcceptanceBody,
       }],
     ]);
   });

@@ -508,17 +508,19 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       window.addEventListener('pagehide', () => { disposed = true; }, { once: true });
       window.addEventListener('pageshow', event => { if (event.persisted) window.location.reload(); });
       const setNotice = message => { if (!disposed) actionStatus.textContent = message; };
+      const ownerMutationBlocked = () => disposed || viewMode !== 'owner' || !loaded || !quoteData.updatedAt
+        || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED';
       const refreshButtons = () => {
-        const accepted = quoteData.status === 'ACCEPTED';
+        const ownerBlocked = ownerMutationBlocked();
         btnPayCard.disabled = !loaded || !quoteData.updatedAt || mutationPending || acceptanceAttempted || quoteData.status === 'ACCEPTED';
-        btnApproveSend.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
-        btnEditQuote.disabled = !loaded || mutationPending || accepted;
-        btnSaveEdits.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
+        btnApproveSend.disabled = ownerBlocked;
+        btnEditQuote.disabled = ownerBlocked;
+        btnSaveEdits.disabled = ownerBlocked;
         btnCloseEdit.disabled = mutationPending;
-        btnAddLineItem.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
-        depositSlider.disabled = !loaded || mutationPending || mutationUnconfirmed || accepted;
-        for (const input of editQuoteSheet.querySelectorAll('input')) input.readOnly = mutationPending || mutationUnconfirmed || accepted;
-        for (const button of editQuoteSheet.querySelectorAll('.btn-remove-item')) button.disabled = mutationPending || mutationUnconfirmed || accepted;
+        btnAddLineItem.disabled = ownerBlocked;
+        depositSlider.disabled = ownerBlocked;
+        for (const input of editQuoteSheet.querySelectorAll('input')) input.readOnly = ownerBlocked;
+        for (const button of editQuoteSheet.querySelectorAll('.btn-remove-item')) button.disabled = ownerBlocked;
       };
       const paymentUrl = value => {
         try {
@@ -558,8 +560,21 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if (!Number.isSafeInteger(cents)) throw new Error('Amount is outside the supported range.');
         return cents;
       };
-      const savePayload = () => ({ total_amount: quoteData.totalCents,
-        required_deposit: quoteData.requiredDepositCents, line_items: quoteData.lineItems });
+      // Keep the observed server token unchanged; Date conversion loses sub-millisecond precision.
+      const savePayload = () => ({ expected_updated_at: quoteData.updatedAt, total_amount: quoteData.totalCents,
+        required_deposit: quoteData.requiredDepositCents, line_items: quoteData.lineItems.map(item => ({ ...item })) });
+
+      const lineTerms = items => items.map(item => {
+        if (typeof item?.description !== 'string' || !Number.isSafeInteger(item.unit_price_cents)
+            || !Number.isSafeInteger(item.quantity) || typeof item.is_optional !== 'boolean'
+            || (item.service_item_id != null && !validId(item.service_item_id))) throw new Error('Invalid quote line terms.');
+        return JSON.stringify([item.description, item.unit_price_cents, item.quantity,
+          item.is_optional, item.service_item_id ?? null]);
+      }).sort();
+      const matchesSubmittedTerms = (data, expected) => data.quote.total_amount_cents === expected.total_amount
+        && data.quote.required_deposit_cents === expected.required_deposit && data.quote.status === expected.status
+        // New line IDs and database ordering do not change the submitted commercial terms or their multiplicity.
+        && JSON.stringify(lineTerms(data.line_items)) === JSON.stringify(lineTerms(expected.line_items));
 
       // Format currency
       const formatCurrency = (cents) => {
@@ -569,7 +584,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         }).format(cents / 100);
       };
 
-      const loadQuote = async () => {
+      const loadQuote = async (expectedUpdatedAt = null, expectedTerms = null) => {
         loaded = false; refreshButtons(); quoteIdDisplay.textContent = quoteId || '';
         if (!validId(quoteId)) { setNotice('A valid quote reference is required.'); return; }
         try {
@@ -577,6 +592,9 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           const data = await res.json();
           if (disposed) return;
           if (!res.ok || !data.quote || data.quote.id !== quoteId || !Array.isArray(data.line_items)) throw new Error('Quote could not be loaded.');
+          // A concurrent edit cannot become authority for the next owner write.
+          if (expectedUpdatedAt !== null && data.quote.updated_at !== expectedUpdatedAt) throw new Error('Quote changed after saving.');
+          if (expectedTerms && !matchesSubmittedTerms(data, expectedTerms)) throw new Error('Saved quote terms were not confirmed.');
           quoteData.status = data.quote.status;
           quoteData.updatedAt = typeof data.quote.updated_at === 'string' ? data.quote.updated_at : null;
           quoteData.tenantId = typeof data.quote.tenant_id === 'string' ? data.quote.tenant_id : '';
@@ -637,18 +655,21 @@ window.renderWalkthroughStep = renderWalkthroughStep;
 
           document.querySelectorAll('.edit-desc').forEach(input => {
               input.addEventListener('change', (e) => {
+                  if (ownerMutationBlocked()) return;
                   const idx = e.target.getAttribute('data-index');
                   quoteData.lineItems[idx].description = e.target.value;
               });
           });
           document.querySelectorAll('.edit-price').forEach(input => {
               input.addEventListener('change', (e) => {
+                  if (ownerMutationBlocked()) return;
                   const idx = e.target.getAttribute('data-index');
                   try { quoteData.lineItems[idx].unit_price_cents = minorUnits(e.target.value); } catch (error) { setNotice(error.message); }
               });
           });
           document.querySelectorAll('.btn-remove-item').forEach(btn => {
               btn.addEventListener('click', (e) => {
+                  if (ownerMutationBlocked()) return;
                   const idx = e.target.getAttribute('data-index');
                   quoteData.lineItems.splice(idx, 1);
                   renderEditLineItems();
@@ -657,12 +678,13 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       };
 
       btnAddLineItem.addEventListener('click', () => {
+          if (ownerMutationBlocked()) return;
           quoteData.lineItems.push({ description: 'New Item', unit_price_cents: 0, quantity: 1, is_optional: false });
           renderEditLineItems();
       });
 
       const openEditSheet = () => {
-          if (disposed || !loaded || mutationPending || quoteData.status === 'ACCEPTED') return;
+          if (ownerMutationBlocked()) return;
           renderEditLineItems();
           editTotalAmount.value = quoteData.totalCents / 100;
           editRequiredDeposit.value = quoteData.requiredDepositCents / 100;
@@ -681,7 +703,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       editSheetOverlay.addEventListener('click', closeEditSheet);
 
       btnSaveEdits.addEventListener('click', async () => {
-        if (disposed || !loaded || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED') return;
+        if (ownerMutationBlocked()) return;
         try {
           quoteData.totalCents = minorUnits(editTotalAmount.value);
           quoteData.requiredDepositCents = minorUnits(editRequiredDeposit.value);
@@ -689,11 +711,16 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         } catch (error) { setNotice(error.message); return; }
         mutationPending = true; refreshButtons(); btnSaveEdits.textContent = 'Saving...';
         try {
-          const res = await fetch(`/api/v1/quotes/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(savePayload()) });
+          const payload = savePayload();
+          const expectedTerms = { ...payload, status: quoteData.status };
+          const res = await fetch(`/api/v1/quotes/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
           const result = await res.json();
           if (disposed) return;
-          if (!res.ok || result.success !== true || result.error != null) throw new Error('Unconfirmed save');
-          await loadQuote(); if (loaded) { mutationPending = false; closeEditSheet(); setNotice('Quote changes saved.'); }
+          if (!res.ok || result.success !== true || result.error != null
+              || typeof result.updated_at !== 'string' || !result.updated_at) throw new Error('Unconfirmed save');
+          await loadQuote(result.updated_at, expectedTerms);
+          if (!loaded) throw new Error('Unconfirmed saved version');
+          mutationPending = false; closeEditSheet(); setNotice('Quote changes saved.');
         } catch { mutationUnconfirmed = true; setNotice('Could not confirm saved changes. Reload the quote before retrying.'); }
         finally { if (!disposed) { mutationPending = false; btnSaveEdits.textContent = 'Save Changes'; refreshButtons(); } }
       });
@@ -701,21 +728,24 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       if (viewMode === 'owner') {
         ownerSliderContainer.classList.add('visible'); btnApproveSend.style.display = 'block'; btnEditQuote.style.display = 'block';
         depositSlider.addEventListener('input', e => {
-          if (disposed || !loaded || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED') return;
+          if (ownerMutationBlocked()) return;
           quoteData.depositPercent = Number(e.target.value);
           quoteData.requiredDepositCents = Math.round(quoteData.totalCents * quoteData.depositPercent / 100);
           updateTotals();
         });
         btnEditQuote.addEventListener('click', openEditSheet);
         btnApproveSend.addEventListener('click', async () => {
-          if (disposed || !loaded || mutationPending || mutationUnconfirmed || quoteData.status === 'ACCEPTED') return;
+          if (ownerMutationBlocked()) return;
           mutationPending = true; refreshButtons(); btnApproveSend.textContent = 'Saving approval...';
           try {
-            const res = await fetch(`/api/v1/quotes/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...savePayload(), status: 'SENT' }) });
+            const payload = { ...savePayload(), status: 'SENT' };
+            const res = await fetch(`/api/v1/quotes/${quoteId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await res.json();
             if (disposed) return;
-            if (!res.ok || result.success !== true || result.error != null) throw new Error('Unconfirmed approval');
-            await loadQuote();
+            if (!res.ok || result.success !== true || result.error != null
+                || typeof result.updated_at !== 'string' || !result.updated_at) throw new Error('Unconfirmed approval');
+            await loadQuote(result.updated_at, payload);
+            if (!loaded) throw new Error('Unconfirmed approved version');
             setNotice('Quote approval saved. Message delivery to the customer is not confirmed.');
           } catch { mutationUnconfirmed = true; setNotice('Could not confirm quote approval. Message delivery is not confirmed.'); }
           finally { if (!disposed) { mutationPending = false; btnApproveSend.textContent = 'Approve quote'; refreshButtons(); } }

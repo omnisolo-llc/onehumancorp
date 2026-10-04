@@ -31,7 +31,7 @@ GATES = {
     'link-bio-isolation': (14, 'OHC_BIO_TEST_DATABASE_URL'),
     'tenant-search': (13, 'OHC_SEARCH_TEST_DATABASE_URL'),
     'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
-    'quote-acceptance': (25, 'OHC_QUOTE_TEST_DATABASE_URL'),
+    'quote-acceptance': (36, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
     'agent-workflow-contract': (108, None),
     'agent-receipt-postgres-contract': (56, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),

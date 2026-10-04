@@ -1,3 +1,5 @@
+import { isQuoteVersion } from '@/lib/quoteVersion';
+
 // The detail endpoint returns the persisted quote and its tenant-scoped items
 // separately. Never treat a transport error or a partial envelope as a quote.
 export interface QuoteLineItem {
@@ -14,6 +16,7 @@ export interface QuoteDetail {
   id: string;
   customer_id: string;
   status: string;
+  updated_at?: string | null;
   total_amount_cents: number | null;
   required_deposit_cents: number | null;
   stripe_payment_link?: string | null;
@@ -38,6 +41,7 @@ export function parseQuoteDetail(value: unknown, id: string): QuoteDetail {
   if (typeof quote.id !== 'string' || quote.id.toLowerCase() !== id.toLowerCase()
       || typeof quote.customer_id !== 'string' || typeof quote.status !== 'string' || !quote.status.trim()
       || !amount(quote.total_amount_cents) || !amount(quote.required_deposit_cents)
+      || (quote.updated_at != null && !isQuoteVersion(quote.updated_at))
       || (quote.stripe_payment_link != null && typeof quote.stripe_payment_link !== 'string')
       || (value.acceptance !== null && !record(value.acceptance))) {
     throw new Error('Invalid quote response');

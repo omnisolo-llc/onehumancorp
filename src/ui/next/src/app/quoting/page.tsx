@@ -1,5 +1,6 @@
 "use client";
 import { Suspense } from "react";
+import { isQuoteVersion } from "@/lib/quoteVersion";
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { QuotePayload, BusinessLineItem } from '@/lib/business-records';
@@ -19,7 +20,11 @@ function QuotingContent() {
   const epoch = useRef(0);
   const busy = useRef(false);
   const accepted = quoteData?.quote.status?.toUpperCase() === 'ACCEPTED';
-  const readOnly = accepted || outcome !== 'idle';
+  const versionAvailable = isQuoteVersion(quoteData?.quote.updated_at);
+  const eligibleStatus = ['DRAFT', 'SENT', 'APPROVED'].includes(quoteData?.quote.status?.toUpperCase() ?? '');
+  const termsAvailable = !!quoteData && Number.isSafeInteger(quoteData.quote.total_amount_cents)
+    && Number.isSafeInteger(quoteData.quote.required_deposit_cents) && quoteData.line_items.length > 0;
+  const readOnly = accepted || !versionAvailable || !eligibleStatus || !termsAvailable || outcome !== 'idle';
 
   useEffect(() => {
     const current = ++epoch.current;
@@ -72,6 +77,7 @@ function QuotingContent() {
     const current = epoch.current;
     const active = () => epoch.current === current;
     const updatePayload = {
+      expected_updated_at: quoteData.quote.updated_at,
       total_amount_cents: totalAmountCents,
       line_items: lineItems.map(item => ({ description: item.description, unit_price_cents: item.unit_price_cents,
         quantity: item.quantity, is_optional: item.is_optional || false, service_item_id: item.service_item_id ?? null })),
@@ -86,7 +92,11 @@ function QuotingContent() {
       if (!active()) return;
       if (!update.ok || updated?.success !== true || updated.error != null) throw new Error('Unconfirmed changes');
       changesSaved = true;
-      const approval = await fetch(`/api/v1/quotes/${encodeURIComponent(id)}/approve`, { method: 'PATCH' });
+      if (!isQuoteVersion(updated.updated_at)) throw new Error('Missing committed quote version');
+      const approval = await fetch(`/api/v1/quotes/${encodeURIComponent(id)}/approve`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expected_updated_at: updated.updated_at }),
+      });
       const approved = await approval.json();
       if (!active()) return;
       if (!approval.ok || approved?.success === false || approved?.error != null
@@ -114,7 +124,7 @@ function QuotingContent() {
 
   const { quote } = quoteData;
   const totalCents = lineItems.reduce((sum, item) => sum + (item.unit_price_cents * item.quantity), 0);
-  const total = (totalCents / 100).toFixed(2);
+  const total = termsAvailable ? `$${(totalCents / 100).toFixed(2)}` : 'Not available';
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 font-inter">
@@ -173,12 +183,14 @@ function QuotingContent() {
               <div className="pt-6 mt-6 border-t border-gray-200">
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-bold text-[#1D1D1F] font-outfit">Total Estimate</span>
-                  <span className="text-2xl font-bold text-[#0066FF] font-outfit" data-testid="quote-total">${total}</span>
+                  <span className="text-2xl font-bold text-[#0066FF] font-outfit" data-testid="quote-total">{total}</span>
                 </div>
               </div>
             </div>
           </div>
 
+          {(!eligibleStatus || !termsAvailable) && !accepted && <p role="status" className="p-6 text-gray-700">This quote is not ready for approval. Reload when complete, eligible terms have been saved.</p>}
+          {!versionAvailable && <p role="alert" className="p-6 text-red-700">Quote version is unavailable. Reload before making changes.</p>}
           {mutationError && <p role="alert" className="p-6 text-red-700">{mutationError}</p>}
           {notice && <p role="status" className="p-6 text-gray-700">{notice}</p>}
           {!accepted && (
