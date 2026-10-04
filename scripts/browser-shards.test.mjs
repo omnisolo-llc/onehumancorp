@@ -11,14 +11,20 @@ test('complete CI accepts only owned three-way grouping, never a caller test lis
 
 import shards from './browser-shards.cjs';
 const source = { commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64) };
-test('groups fit the 15–20 minute testing target using observed original logical wall times', () => {
-  // Successful twelve-lifecycle run 37209169837: actual browser wall time.
-  const seconds = [515.711,583.814,592.806,636.707,169.255,176.713,177.645,151.762,131.271,97.056,84.588,168.227];
-  for (const group of shards.GROUPS) {
-    const estimate = group.reduce((sum,index) => sum + seconds[index-1],0);
-    assert.ok(estimate >= 15*60 && estimate <= 20*60, `group ${group}: ${estimate/60} modeled minutes`);
+test('groups balance two successful observations within the 15–20 minute testing target', () => {
+  // Original twelve-runner baseline 37209169837 and isolated three-runner
+  // run 37218212302: actual logical wall time, not summed test durations.
+  const observations = [
+    [515.711,583.814,592.806,636.707,169.255,176.713,177.645,151.762,131.271,97.056,84.588,168.227],
+    [520.936734,475.641143,574.614912,710.200950,198.374961,128.114481,130.298400,150.215440,133.160062,55.572656,104.618273,204.805025],
+  ];
+  for (const seconds of observations) {
+    const totals=shards.GROUPS.map(group=>group.reduce((sum,index)=>sum+seconds[index-1],0));
+    for(const estimate of totals) assert.ok(estimate>=15*60&&estimate<=20*60, `${estimate/60} modeled minutes`);
+    assert.ok(Math.max(...totals)-Math.min(...totals)<=75,'modeled active testing spread must stay within 75 seconds');
   }
 });
+
 function fixture() {
   const slices = Array.from({length:12}, (_,i) => [{id:`id-${i}`,title:`test ${i}`,file:`src/${i}.spec.ts`}]);
   const full = slices.flat();

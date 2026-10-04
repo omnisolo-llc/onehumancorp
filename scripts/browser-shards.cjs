@@ -4,11 +4,11 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 
-// Preserve the original twelve service/browser lifecycles. Bins use successful
-// run 37209169837's actual logical wall times (19.21/19.44/19.44 minutes), not
-// summed per-test durations or an allowlist. Rediscover all units every run.
+// Preserve all twelve service/browser lifecycles. Balance actual wall times
+// from successful runs 37209169837 and 37218212302; the newer observation
+// projects 18.35/19.44/18.65 active minutes. Rediscover every unit each run.
 const BROWSER_BUDGET_MS = 60 * 60 * 1000;
-const GROUPS = [[1, 4], [2, 6, 7, 9, 10], [3, 5, 8, 11, 12]];
+const GROUPS = [[1, 2, 11], [3, 5, 9, 10, 12], [4, 6, 7, 8]];
 const identity = ({ id, title, file }) => ({ id, title, file });
 function inventory(items) {
   assert.ok(Array.isArray(items) && items.length, 'missing complete browser inventory');
