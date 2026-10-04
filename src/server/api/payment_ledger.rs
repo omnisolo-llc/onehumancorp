@@ -1451,7 +1451,7 @@ async fn process_receipt(
         Json(ReceiptProcessedResponse {
             vendor,
             amount,
-            category,
+            category: category.to_string(),
         }),
     )
         .into_response()
