@@ -157,7 +157,12 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
     socket.pause();
     const upstream = connectSocket({ host: '127.0.0.1', port: Number(ownedApp.port) });
     upstreams.add(upstream);
-    upstream.once('close', () => { upstreams.delete(upstream); socket.destroy(); });
+    upstream.once('close', () => {
+      upstreams.delete(upstream);
+      // pipe() ends the browser's writable side on normal EOF. Let that end
+      // drain queued bytes; destroy() here can truncate a backpressured reply.
+      if (row.status === 200 && !upstream.readableEnded) socket.destroy();
+    });
     socket.once('close', () => upstream.destroy());
     socket.on('error', () => upstream.destroy());
     upstream.setTimeout(5000, () => upstream.destroy(new Error('Owned application tunnel timeout')));
@@ -165,7 +170,7 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
       if (row.status === 200) socket.destroy();
       else {
         row.status = 502;
-        socket.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+        socket.end('HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n', () => socket.destroy());
       }
     });
     upstream.once('connect', () => {

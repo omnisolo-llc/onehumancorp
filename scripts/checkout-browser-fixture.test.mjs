@@ -182,6 +182,51 @@ test('closing the owned proxy reaps an active application tunnel', async t => {
   assert.equal(socket.destroyed, true);
 });
 
+test('an owned app connection failure returns a complete 502 refusal', async t => {
+  const app = createServer();
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`, authority = new URL(appOrigin).host;
+  await new Promise(resolve => app.close(resolve));
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  assert.equal(await connectBytes(proxy, authority), 'HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+  assert.deepEqual(proxy.evidence().connects, [{ method: 'CONNECT', authority, status: 502 }]);
+});
+
+test('an owned upstream reset terminates the browser tunnel without a success body', async t => {
+  const app = createServer(request => request.socket.resetAndDestroy());
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { app.closeAllConnections(); app.close(resolve); }));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`, authority = new URL(appOrigin).host;
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  const response = await connectBytes(proxy, authority, `GET /reset HTTP/1.1\r\nHost: ${authority}\r\n\r\n`);
+  assert.equal(response, 'HTTP/1.1 200 Connection Established\r\n\r\n');
+  assert.deepEqual(proxy.evidence().connects, [{ method: 'CONNECT', authority, status: 200 }]);
+});
+
+test('a browser abort promptly reaps its owned upstream connection', async t => {
+  let reached, closed;
+  const requestReached = new Promise(resolve => { reached = resolve; });
+  const upstreamClosed = new Promise(resolve => { closed = resolve; });
+  const app = createServer(request => { request.socket.once('close', closed); reached(); });
+  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => { app.closeAllConnections(); app.close(resolve); }));
+  const appOrigin = `http://127.0.0.1:${app.address().port}`, authority = new URL(appOrigin).host;
+  const proxy = await startCheckoutEgressProxy({ appOrigin });
+  t.after(() => proxy.close());
+  const socket = connect(Number(new URL(proxy.server).port), '127.0.0.1');
+  t.after(() => socket.destroy());
+  let timeout;
+  const deadline = new Promise((_resolve, reject) => { timeout = setTimeout(() => reject(new Error('Browser abort left an owned upstream open')), 1000); });
+  t.after(() => clearTimeout(timeout));
+  socket.on('error', () => {});
+  socket.on('connect', () => socket.write(`CONNECT ${authority} HTTP/1.1\r\nHost: ${authority}\r\n\r\nGET /held HTTP/1.1\r\nHost: ${authority}\r\n\r\n`));
+  await Promise.race([requestReached, deadline]);
+  socket.destroy();
+  await Promise.race([upstreamClosed, deadline]);
+});
+
 test('an owned upstream EOF preserves the complete body for a backpressured tunnel reader', async t => {
   const body = Buffer.alloc(16 * 1024 * 1024, 'x');
   const app = createServer((_req, res) => { res.writeHead(200, { 'content-length': body.length }); res.end(body); });
