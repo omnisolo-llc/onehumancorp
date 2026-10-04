@@ -116,8 +116,15 @@ function POSTerminalMobileContent() {
           const response = await fetchForOwnedBusinessRead('/api/v1/pos/inventory', owner);
           const data: unknown = await response.json();
           if (!current()) return;
-          await waitForMobileLease(owner, controller.signal);
-          if (!current()) return;
+          // A readiness listener can start another verification before the
+          // prior wait resumes. Keep this body under the original lease's
+          // expiry timer and abort controller; never adopt a renewed lease.
+          do {
+            await waitForMobileLease(owner, controller.signal);
+            if (!current()) return;
+            if (leaseRef.current !== lease || lease.expiresAt <= Date.now()
+                || lease.storageEpoch !== localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)) throw new Error('Signed mobile lease expired');
+          } while (hasPendingQueueOwnerVerification());
           if (leaseRef.current !== lease || !usableMobileLease(lease)) throw new Error('Signed mobile lease expired');
           if (response.status !== 200 || !data || typeof data !== 'object' || !('inventory' in data) || !Array.isArray(data.inventory)) {
             throw new Error('Inventory could not be verified.');

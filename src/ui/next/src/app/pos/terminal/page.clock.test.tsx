@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import POSTerminal from './page';
-import { invalidateQueueOwner, readQueueOwner, QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
+import { invalidateQueueOwner, readQueueOwner, QUEUE_IDENTITY_EPOCH_KEY, currentVerifiedQueueOwner, subscribeQueueIdentityReadiness } from '@/lib/sync/queueIdentity';
 
 const queueLength = vi.hoisted(() => vi.fn<() => Promise<number>>());
 const clockSummary = vi.hoisted(() => vi.fn<() => Promise<{ confirmed: number; unconfirmed: number; legacyHeld: number }>>());
@@ -147,6 +147,109 @@ it('does not apply an old inventory body after locking and verifying a different
   await act(async () => release(Response.json({ inventory: [{ id: 'a', name: 'Previous private inventory', description: '', price_cents: 100, stock: 2 }] })));
   expect(screen.queryByText('Previous private inventory')).toBeNull();
   expect(screen.getByText('Current inventory')).toBeVisible();
+});
+
+it.each([200, 503])('retains the actual inventory outcome when clock-in revalidation overlaps its body (HTTP%s)', async status => {
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => {
+      controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'owned-product', name: 'Owned pending inventory', price_cents: 1999, stock: 1 }] })));
+      controller.close();
+    };
+  } }), { status });
+  enqueue.mockImplementation(async () => {
+    clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 0 });
+    window.dispatchEvent(new Event('omnisolo_queue_updated'));
+  });
+  render(<POSTerminal />); await unlock();
+  await waitFor(() => expect(finishBody).toBeDefined());
+  let finishVerification!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+  fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+  await waitFor(() => expect(finishVerification).toBeDefined());
+  await act(async () => finishBody());
+  expect(screen.queryByText('Owned pending inventory')).toBeNull();
+  await act(async () => finishVerification(identity()));
+  expect(await screen.findByRole('heading', { name: 'Clocked In' })).toBeVisible();
+  expect(await screen.findByText('1 saved clock change confirmed by the server.')).toBeVisible();
+  if (status === 200) expect(await screen.findByRole('button', { name: /Owned pending inventory/ })).toBeEnabled();
+  else expect(await screen.findByText('Inventory is unavailable. Verify your session and retry.')).toBeVisible();
+  expect(enqueue).toHaveBeenCalledTimes(1);
+  expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
+});
+
+it.each(['owner', 'epoch', 'unmount'] as const)('rejects a retained inventory body if %s changes during canonical verification', async change => {
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'old', name: 'Private old inventory', price_cents: 1999, stock: 1 }] }))); controller.close(); };
+  } }));
+  const view = render(<POSTerminal />); await unlock();
+  await waitFor(() => expect(finishBody).toBeDefined());
+  let finishVerification!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+  let pending!: Promise<unknown>;
+  act(() => { pending = readQueueOwner().catch(error => error); });
+  await act(async () => finishBody());
+  if (change === 'owner') owner = 'user-b';
+  else if (change === 'epoch') {
+    localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY, 'changed-epoch');
+    act(() => window.dispatchEvent(new Event('omnisolo_auth_changed')));
+  } else view.unmount();
+  await act(async () => { finishVerification(identity()); await pending; });
+  expect(screen.queryByText('Private old inventory')).toBeNull();
+  if (change !== 'unmount') expect(screen.getByText('Terminal Locked')).toBeVisible();
+});
+
+it('keeps the inventory outcome if another same-owner verification starts as the first one settles', async () => {
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'owned', name: 'Owned handoff inventory', price_cents: 1999, stock: 1 }] }))); controller.close(); };
+  } }));
+  render(<POSTerminal />); await unlock();
+  await waitFor(() => expect(finishBody).toBeDefined());
+  let finishFirst!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishFirst = resolve; }));
+  let first!: ReturnType<typeof readQueueOwner>;
+  act(() => { first = readQueueOwner(); });
+  await act(async () => finishBody());
+  let finishSecond!: (response: Response) => void;
+  let second!: ReturnType<typeof readQueueOwner>;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishSecond = resolve; }));
+  let startSecond = true;
+  const unsubscribe = subscribeQueueIdentityReadiness(() => {
+    if (startSecond && currentVerifiedQueueOwner()) { startSecond = false; second = readQueueOwner(); }
+  });
+  try {
+    await act(async () => { finishFirst(identity()); await first; });
+    expect(finishSecond).toBeDefined();
+    expect(screen.queryByText('Owned handoff inventory')).toBeNull();
+    await act(async () => { finishSecond(identity()); await second; });
+    expect(await screen.findByRole('button', { name: /Owned handoff inventory/ })).toBeEnabled();
+    expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
+  } finally { unsubscribe(); }
+});
+
+it.each(['lease expiry', 'readiness timeout'] as const)('does not turn a retained inventory body into empty success after %s', async boundary => {
+  ownerExpiry = Date.now() + (boundary === 'lease expiry' ? 1000 : 60_000);
+  let finishBody!: () => void;
+  inventoryRead = async () => new Response(new ReadableStream<Uint8Array>({ start(controller) {
+    finishBody = () => { controller.enqueue(new TextEncoder().encode(JSON.stringify({ inventory: [{ id: 'old', name: 'Private delayed inventory', price_cents: 1999, stock: 1 }] }))); controller.close(); };
+  } }));
+  render(<POSTerminal />); await unlock();
+  expect(finishBody).toBeDefined();
+  let finishVerification!: (response: Response) => void;
+  transport.mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+  let pending!: ReturnType<typeof readQueueOwner>;
+  act(() => { pending = readQueueOwner(); });
+  await act(async () => finishBody());
+  if (boundary === 'lease expiry') vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1001);
+  else await waitFor(() => expect(screen.getByText('Inventory is unavailable. Verify your session and retry.')).toBeInTheDocument(), { timeout: 3500 });
+  ownerExpiry = Date.now() + 60_000;
+  await act(async () => { finishVerification(identity()); await pending; });
+  expect(screen.queryByText('Private delayed inventory')).toBeNull();
+  if (boundary === 'lease expiry') expect(screen.getByText('Terminal Locked')).toBeVisible();
+  else expect(screen.getByText('Inventory is unavailable. Verify your session and retry.')).toBeVisible();
+  expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
 });
 
 it('hides private staff and retires the original lease at expiry during pending revalidation', async () => {

@@ -11,12 +11,13 @@ import { MutationService } from '../../../lib/sync/MutationService';
 
 type TerminalStaff = { id: string; name: string; role: string; tenant_id: string };
 type TerminalLease = NonNullable<ReturnType<typeof currentVerifiedQueueLease>>;
+const TERMINAL_IDENTITY_TIMEOUT_MS = 3000;
 
-function waitForTerminalLease(owner: QueueOwner, current: () => boolean): Promise<TerminalLease> {
+function waitForTerminalLease(owner: QueueOwner, current: () => boolean, timeoutMs = TERMINAL_IDENTITY_TIMEOUT_MS): Promise<TerminalLease> {
   return new Promise((resolve, reject) => {
     let settled = false;
     let unsubscribe = () => {};
-    const timer = window.setTimeout(() => finish(null), 3000);
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
     const finish = (lease: TerminalLease | null) => {
       if (settled) return;
       settled = true; window.clearTimeout(timer); unsubscribe();
@@ -290,10 +291,13 @@ export default function POSTerminal() {
     const lease = terminalLease.current;
     if (!lease) return;
     const version = ++inventoryVersion.current;
+    const leaseCurrent = () => {
+      try { return mounted.current && terminalLease.current === lease && version === inventoryVersion.current && lease.expiresAt > Date.now() && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+      catch { return false; }
+    };
     const current = () => {
       const owner = currentVerifiedQueueOwner();
-      try { return mounted.current && terminalLease.current === lease && version === inventoryVersion.current && lease.expiresAt > Date.now() && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && !!owner && sameOwner(owner, lease.owner); }
-      catch { return false; }
+      return leaseCurrent() && !!owner && sameOwner(owner, lease.owner);
     };
     if (isOffline) {
        if (current()) { setInventory([]); setInventoryError('Inventory is unavailable while offline.'); }
@@ -302,11 +306,24 @@ export default function POSTerminal() {
     try {
       const res = await fetchForOwnedBusinessRead('/api/v1/pos/inventory', lease.owner);
       const data = await res.json();
-      if (!current()) return;
+      // Clock/queue activity can revalidate the same owner while this body is
+      // arriving. Keep its real outcome until readiness settles, without
+      // replacing or extending the original terminal lease.
+      const deadline = Date.now() + TERMINAL_IDENTITY_TIMEOUT_MS;
+      while (true) {
+        await waitForTerminalLease(lease.owner, leaseCurrent, Math.max(0, deadline - Date.now()));
+        if (!leaseCurrent()) return;
+        if (current()) break;
+        // Another readiness listener may begin a check before this continuation.
+        // Retain the body, but never restart the original waiting budget.
+        if (!hasPendingQueueOwnerVerification() || Date.now() >= deadline) throw new Error('Inventory identity verification did not settle');
+      }
       if (res.status !== 200 || !data || !Array.isArray(data.inventory)) throw new Error('Inventory unavailable');
       setInventory(data.inventory); setInventoryError('');
     } catch (e) {
-      if (current()) { console.error("Failed to load inventory", e); setInventory([]); setInventoryError('Inventory is unavailable. Verify your session and retry.'); }
+      // An unresolved check must not become an apparently empty catalog when
+      // readiness later returns. This status stays behind the identity gate.
+      if (leaseCurrent()) { console.error("Failed to load inventory", e); setInventory([]); setInventoryError('Inventory is unavailable. Verify your session and retry.'); }
     }
   };
 
