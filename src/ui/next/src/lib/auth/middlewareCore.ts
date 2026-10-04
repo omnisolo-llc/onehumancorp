@@ -156,6 +156,16 @@ export async function evaluateAuthMiddleware(
   }
   if (
     (request.method === "GET" || request.method === "HEAD") &&
+    descriptor.pathname === "/login" &&
+    (descriptor.invocation === "rsc" || descriptor.invocation === "prefetch")
+  ) {
+    const nextParam = url.searchParams.get("next");
+    if (nextParam !== null && nextParam !== "") {
+      return redirect(safeReturnPath(nextParam));
+    }
+  }
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
     (descriptor.invocation === "page" || descriptor.invocation === "route-handler") &&
     request.headers.get("rsc") !== "1" &&
     !url.searchParams.has("_rsc") &&

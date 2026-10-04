@@ -153,6 +153,118 @@ describe("retired static page navigation", () => {
   });
 });
 
+describe("authenticated login RSC and prefetch navigation", () => {
+  const invocations: { name: string; query: string; headers: Record<string, string> }[] = [
+    { name: "RSC header", query: "", headers: { rsc: "1" } },
+    { name: "RSC query", query: "&_rsc=opaque", headers: {} },
+    { name: "purpose prefetch", query: "", headers: { purpose: "prefetch" } },
+    { name: "router prefetch", query: "", headers: { "next-router-prefetch": "1" } },
+  ];
+
+  it.each(invocations)("returns signed-in GET/HEAD $name to the complete safe target", async ({ query, headers }) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    const destination = "/changelog?tag=first&tag=second&label=hello+world&unicode=%E2%9C%93#latest";
+    for (const method of ["GET", "HEAD"]) {
+      const outcome = await evaluateAuthMiddleware(request(
+        `/login?next=${encodeURIComponent(destination)}${query}`, { method, headers }, session,
+      ), deps);
+      expect(outcome).toMatchObject({ kind: "redirect", location: destination, clearCookie: false });
+      expect(outcome.headers.get("cache-control")).toBe("private, no-store");
+      expect(outcome.headers.get("pragma")).toBe("no-cache");
+    }
+  });
+
+  it.each(invocations)("validates unsafe $name return targets before redirecting", async ({ query, headers }) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    for (const destination of ["https://evil.example/x", "//evil.example/x", "/%2f%2fevil.example", "/login?next=/orders"]) {
+      for (const method of ["GET", "HEAD"]) {
+        expect(await evaluateAuthMiddleware(request(
+          `/login?next=${encodeURIComponent(destination)}${query}`, { method, headers }, session,
+        ), deps)).toMatchObject({ kind: "redirect", location: "/dashboard", clearCookie: false });
+      }
+    }
+  });
+
+  it.each(invocations)("keeps $name protected without a valid sealed session", async ({ query, headers }) => {
+    const deps = await dependencies();
+    const sessions = [
+      undefined,
+      "__Host-omnisolo_session=not-a-jwe",
+      "__Host-omnisolo_session=one; __Host-omnisolo_session=two",
+      await cookie(deps, { iat: NOW - 7200, exp: NOW - 3600 }),
+    ];
+    for (const session of sessions) {
+      for (const method of ["GET", "HEAD"]) {
+        expect(await evaluateAuthMiddleware(request(
+          `/login?next=%2Fchangelog${query}`, { method, headers }, session,
+        ), deps)).toMatchObject({
+          kind: "redirect", location: "/login?next=%2Fdashboard", clearCookie: session !== undefined,
+        });
+      }
+    }
+  });
+
+  it.each(invocations)("preserves unsafe-method origin checks and OPTIONS for $name", async ({ query, headers }) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    const path = `/login?next=%2Fchangelog${query}`;
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      for (const originHeaders of [{}, { origin: "https://evil.example", "sec-fetch-site": "cross-site" }]) {
+        expect(await evaluateAuthMiddleware(request(path, {
+          method, headers: { ...headers, ...originHeaders },
+        }, session), deps)).toMatchObject({ kind: "response", status: 403, clearCookie: false });
+      }
+      expect(await evaluateAuthMiddleware(request(path, {
+        method, headers: { ...headers, origin: config.canonicalOrigin, "sec-fetch-site": "same-origin" },
+      }, session), deps)).toMatchObject({ kind: "next", clearCookie: false });
+    }
+    expect(await evaluateAuthMiddleware(request(path, { method: "OPTIONS", headers }, session), deps))
+      .toMatchObject({ kind: "next", clearCookie: false });
+  });
+
+  it.each(invocations)("requires the exact login path for $name", async ({ query, headers }) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    for (const pathname of ["/login/", "/Login", "/login/extra", "/%6cogin", "/register", "/verify-email", "/api/v1/auth/login"]) {
+      for (const method of ["GET", "HEAD"]) {
+        expect(await evaluateAuthMiddleware(request(
+          `${pathname}?next=%2Fchangelog${query}`, { method, headers }, session,
+        ), deps)).toMatchObject({ kind: "next", clearCookie: false });
+      }
+    }
+  });
+
+  it.each(invocations)("requires a nonempty next parameter for $name", async ({ query, headers }) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    for (const search of ["", "next="]) {
+      for (const method of ["GET", "HEAD"]) {
+        expect(await evaluateAuthMiddleware(request(
+          `/login?${search}${query}`, { method, headers }, session,
+        ), deps)).toMatchObject({ kind: "next", clearCookie: false });
+      }
+    }
+  });
+
+  it.each(["GET", "HEAD", "POST"])("never treats a %s server action as login navigation", async method => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    const input = {
+      method,
+      headers: {
+        "next-action": "action-id", rsc: "1", "next-router-prefetch": "1",
+        origin: config.canonicalOrigin, "sec-fetch-site": "same-origin",
+      },
+    };
+    expect(await evaluateAuthMiddleware(request("/login?next=%2Fchangelog&_rsc=opaque", input, session), deps))
+      .toMatchObject({ kind: "next", clearCookie: false });
+    expect(await evaluateAuthMiddleware(request("/login?next=%2Fchangelog&_rsc=opaque", input), deps))
+      .toMatchObject({ kind: "response", status: 401, clearCookie: false });
+  });
+});
+
 describe("protected-by-default auth middleware", () => {
   it.each([true, false])("telemetry write %s reaches operator policy only with a trusted browser origin", async enabled => {
     const deps = await dependencies();
