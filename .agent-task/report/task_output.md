@@ -1,0 +1,4 @@
+outcome: blocked
+issue_title: "Mission: AI-Native Unified Work Triage & Automated Action Proposals"
+issue_description: |
+  The requested feature for an AI-Native Unified Work Triage and Automated Action Proposals constitutes a new epic/product direction based on market mapping and competitor discovery. As per the OneHumanCorp operating contract (revision 2026-09-18-usage-audit) and `RESEARCH.md`, new verticals, channels, agent marketplaces, and unproven integrations require explicit evidence and passing the expansion gate. Existing authorized defect work may continue, but new segment, pricing, or feature epics require evidence and an explicit decision. The issue is marked P0, but as noted in the contract: "a desirable feature is not P0". Therefore, this task is blocked until the expansion gate and evidence requirements are satisfied.
