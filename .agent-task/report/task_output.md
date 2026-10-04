@@ -1,4 +1,0 @@
-{
-  "issue_title": "[Research] Architect Automated Omnichannel Review Acquisition & Reputation Management",
-  "issue_description": "Blocked finding: The implementation of Automated Omnichannel Review Acquisition & Reputation Management is blocked. The design doc requires an 'Omnichannel Dispatcher' for sending SMS/Emails to customers and routing to Google Business / Yelp links. We lack the necessary provider sandboxes, external gateway credentials, and explicit authorization to spend money on SMS/Emails or mutate live customer data. As per the constraints: 'A missing SDK, provider sandbox, signing credential or owner interview is a specific outstanding verification dependency, not permission to report success.'\n\nSuperpowers skill provenance: Revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d, loaded skills/using-superpowers/SKILL.md."
-}
