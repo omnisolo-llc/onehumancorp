@@ -3,10 +3,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import POSTerminal from './page';
 import { invalidateQueueOwner, readQueueOwner, QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
 
+const queueLength = vi.hoisted(() => vi.fn<() => Promise<number>>());
 const enqueue = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 vi.mock('./StripeTerminalClient', () => ({ default: () => <div>Payment controls</div> }));
 vi.mock('../../../components/LocalizationToggle', () => ({ LocalizationToggle: () => null }));
-vi.mock('../../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ enqueue, getQueueLength: async () => 0 }) } }));
+vi.mock('../../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ enqueue, getQueueLength: queueLength }) } }));
 vi.mock('../../../lib/sync/MutationService', () => ({ MutationService: { getInstance: () => ({ syncPendingMutations: vi.fn(), executeMutation: vi.fn() }) } }));
 
 let owner = 'user-a';
@@ -38,7 +39,7 @@ function pendingWrite() {
   return { resolve: () => resolve(), reject: () => reject(new Error('Local storage unavailable')) };
 }
 beforeEach(async () => {
-  vi.clearAllMocks(); enqueue.mockReset(); owner = 'user-a'; identityUnavailable = false; localStorage.clear(); invalidateQueueOwner();
+  vi.clearAllMocks(); enqueue.mockReset(); queueLength.mockResolvedValue(0); owner = 'user-a'; identityUnavailable = false; localStorage.clear(); invalidateQueueOwner();
   ownerExpiry = Date.now() + 60_000; inventoryRead = async () => Response.json({ inventory: [] });
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
   vi.stubGlobal('fetch', transport); await readQueueOwner();
@@ -162,4 +163,24 @@ it('hides private staff and retires the original lease at expiry during pending 
   }
   expect(screen.getByText('Terminal Locked')).toBeVisible();
   expect(screen.queryByText('Recorded Staff')).toBeNull();
+});
+
+it('keeps saved clock work visible without blocking product selection', async () => {
+  queueLength.mockResolvedValue(1); enqueue.mockResolvedValue();
+  inventoryRead = async () => Response.json({ inventory: [{ id: 'owned-last-unit', name: 'Owned last unit', price_cents: 1999, stock: 1 }] });
+  render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+  await screen.findByRole('heading', { name: 'Clocked In' });
+  const saved = screen.getByText('Saved transactions awaiting confirmation');
+  expect(saved).toBeVisible();
+  expect(getComputedStyle(saved.closest('div')!).pointerEvents).toBe('none');
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Owned last unit/ })); });
+  expect(screen.getByRole('button', { name: /1 item\s*Charge \$19\.99/ })).toBeEnabled();
+  expect(saved).toBeVisible();
+  expect(screen.queryByText('Synced')).toBeNull();
+  queueLength.mockResolvedValue(0);
+  await act(async () => window.dispatchEvent(new Event('omnisolo_queue_updated')));
+  const synced = screen.getByText('Synced');
+  expect(synced).toBeVisible();
+  expect(getComputedStyle(synced.closest('div')!).pointerEvents).toBe('none');
 });

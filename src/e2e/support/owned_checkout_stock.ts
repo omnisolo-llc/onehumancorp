@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { withOwnedBrowserContexts } from '../../../scripts/playwright/owned-contexts.mjs';
 import { expect, type Browser, type BrowserContextOptions, type Page, type Response } from '@playwright/test';
 import { authenticateRequest } from '../authenticate';
 import { e2eDbQuery } from '../db_utils';
@@ -15,11 +16,14 @@ export type OwnedStock = {
   amountCents: number;
 };
 
-export async function createOwnedCheckoutActors(browser: Browser, origin: string, contextOptions: BrowserContextOptions = {}) {
+export type OwnedCheckoutActors = { stock: OwnedStock; first: Page; second: Page; firstUserId: string; secondUserId: string };
+
+export async function withOwnedCheckoutActors<Result>(
+  browser: Browser, origin: string, contextOptions: BrowserContextOptions,
+  use: (actors: OwnedCheckoutActors) => Promise<Result>,
+): Promise<Result> {
   const options = { ...contextOptions, baseURL: origin, storageState: { cookies: [], origins: [] }, serviceWorkers: 'block' as const };
-  const firstContext = await browser.newContext(options);
-  const secondContext = await browser.newContext(options);
-  try {
+  return withOwnedBrowserContexts(browser, options, async ([firstContext, secondContext]) => {
     const first = await firstContext.newPage();
     const second = await secondContext.newPage();
     const owner = await createGrowthOwner(first, origin);
@@ -48,14 +52,8 @@ export async function createOwnedCheckoutActors(browser: Browser, origin: string
       [stock.productId, stock.tenantId, stock.title, stock.amountCents],
     );
     expect(products).toEqual([{ id: stock.productId }]);
-    return {
-      stock, first, second, firstUserId: owner.userId, secondUserId,
-      close: async () => { await firstContext.close(); await secondContext.close(); },
-    };
-  } catch (error) {
-    await firstContext.close(); await secondContext.close();
-    throw error;
-  }
+    return use({ stock, first, second, firstUserId: owner.userId, secondUserId });
+  });
 }
 
 export function waitForCheckoutPost(page: Page, path: string): Promise<Response> {

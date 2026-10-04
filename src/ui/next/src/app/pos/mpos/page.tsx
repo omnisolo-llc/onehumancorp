@@ -17,6 +17,30 @@ function usableMobileLease(lease: MobileLease | null): boolean {
   } catch { return false; }
 }
 
+/** A concurrent shell identity read holds private UI until all canonical checks settle. */
+function waitForMobileLease(owner: MobileLease['owner'], signal: AbortSignal): Promise<MobileLease> {
+  return new Promise((resolve, reject) => {
+    let unsubscribe = () => {};
+    let settled = false;
+    const finish = (lease?: MobileLease) => {
+      if (settled) return;
+      settled = true; unsubscribe(); signal.removeEventListener('abort', abort);
+      if (lease) resolve(lease); else reject(new Error('Signed mobile lease unavailable'));
+    };
+    const abort = () => finish();
+    const check = () => {
+      if (signal.aborted) { finish(); return; }
+      if (hasPendingQueueOwnerVerification()) return;
+      const lease = currentVerifiedQueueLease();
+      finish(lease && sameOwner(lease.owner, owner) ? lease : undefined);
+    };
+    signal.addEventListener('abort', abort, { once: true });
+    unsubscribe = subscribeQueueIdentityReadiness(check);
+    // Subscription reports current readiness synchronously as well as future changes.
+    if (settled) unsubscribe();
+  });
+}
+
 type MobileProduct = { id: string; name: string; price: number; price_cents: number; image?: string };
 function normalizeMobileCatalog(value: unknown): MobileProduct[] {
   if (!Array.isArray(value)) return [];
@@ -48,7 +72,9 @@ function POSTerminalMobileContent() {
     let active = true;
     let generation = 0;
     let expiryTimer: ReturnType<typeof setTimeout> | undefined;
+    let verificationController: AbortController | undefined;
     const clearOwnerView = () => {
+      verificationController?.abort();
       clearTimeout(expiryTimer); leaseRef.current = null; setOwnerReady(false);
       setTenantId(null); setCatalog([]); setCart([]); setShowPaymentSheet(false);
     };
@@ -74,12 +100,14 @@ function POSTerminalMobileContent() {
       const attempt = ++generation;
       const current = () => active && generation === attempt;
       clearOwnerView(); setCatalogLoading(true); setCatalogError('');
+      const controller = new AbortController();
+      verificationController = controller;
       try {
         const owner = await openOnboardingSession();
         if (!current()) return;
-        const lease = currentVerifiedQueueLease();
-        if (!lease || !sameOwner(lease.owner, owner)) throw new Error('Signed mobile lease unavailable');
-        leaseRef.current = lease; setOwnerReady(true); armExpiry(lease);
+        const lease = await waitForMobileLease(owner, controller.signal);
+        if (!current()) return;
+        leaseRef.current = lease; setOwnerReady(usableMobileLease(lease)); armExpiry(lease);
         const cacheKey = `omnisolo_pos_catalog_v1:${encodeURIComponent(JSON.stringify([owner.userId, owner.tenantId]))}`;
         let products: MobileProduct[];
         if (!navigator.onLine) {
@@ -87,6 +115,8 @@ function POSTerminalMobileContent() {
         } else {
           const response = await fetchForOwnedBusinessRead('/api/v1/pos/inventory', owner);
           const data: unknown = await response.json();
+          if (!current()) return;
+          await waitForMobileLease(owner, controller.signal);
           if (!current()) return;
           if (leaseRef.current !== lease || !usableMobileLease(lease)) throw new Error('Signed mobile lease expired');
           if (response.status !== 200 || !data || typeof data !== 'object' || !('inventory' in data) || !Array.isArray(data.inventory)) {
@@ -115,7 +145,7 @@ function POSTerminalMobileContent() {
     });
     void loadCatalog();
     return () => {
-      active = false; generation += 1; leaseRef.current = null; clearTimeout(expiryTimer); unsubscribe(); unsubscribeReadiness();
+      active = false; generation += 1; verificationController?.abort(); leaseRef.current = null; clearTimeout(expiryTimer); unsubscribe(); unsubscribeReadiness();
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };

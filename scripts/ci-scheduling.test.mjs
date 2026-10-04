@@ -40,6 +40,23 @@ function runnerBound(jobs) {
   search(0, [], 0); return { maximum, witness, ancestors };
 }
 
+// Deliberately support only this workflow's simple conjunctions. Without an
+// explicit status function, GitHub adds success() for all needed jobs.
+function allowsDocker(job, results, { cancelled = false, markdownOnly = 'false' } = {}) {
+  const expression = job.if.match(/^\$\{\{ (.*) \}\}$/)?.[1];
+  assert.ok(expression, 'expected an explicit job condition');
+  const clauses = expression.split(' && ');
+  const decisions = clauses.map(clause => {
+    if (clause === '!cancelled()') return !cancelled;
+    if (clause === "needs.check-changes.outputs.markdown-only == 'false'") return markdownOnly === 'false';
+    const match = clause.match(/^needs\.([a-z-]+)\.result == 'success'$/);
+    assert.ok(match, `unmodeled Docker condition: ${clause}`);
+    return results[match[1]] === 'success';
+  });
+  const implicitSuccess = clauses.includes('!cancelled()') || needs(job).every(name => results[name] === 'success');
+  return implicitSuccess && decisions.every(Boolean);
+}
+
 test('all possible CI job antichains stay within eight active runners', async () => {
   const bound = runnerBound((await workflow()).jobs);
   assert.ok(bound.maximum <= 8, `maximum ${bound.maximum}: ${bound.witness.join(', ')}`);
@@ -50,6 +67,42 @@ test('browser waves overlap independent PostgreSQL checks while the final gate s
   assert.ok(bound.ancestors.get('native-e2e').has('native-desktop'));
   for (const prerequisite of ['native-e2e', 'native-click-coverage', 'postgres-security', 'native-desktop']) assert.ok(bound.ancestors.get('ci-required').has(prerequisite), prerequisite);
   assert.ok(jobs['ci-required'].steps.some(step => step.run?.includes('require_success "postgres-security"')));
+});
+test('Node completion fences Docker instead of delaying browser shards', async () => {
+  const { jobs } = await workflow(); const bound = runnerBound(jobs);
+  assert.ok(!bound.ancestors.get('native-e2e').has('native-node'));
+  assert.ok(bound.ancestors.get('docker-e2e').has('native-node'));
+  assert.ok(!bound.ancestors.get('kind-e2e').has('native-node'));
+  assert.ok(bound.ancestors.get('ci-required').has('native-node'));
+  assert.ok(!jobs['native-node'].outputs);
+  assert.ok(!jobs['native-node'].steps.some(step => step.uses?.startsWith('actions/upload-artifact@')));
+});
+test('removing the Docker completion fence is detected as a nine-runner graph', async () => {
+  const { jobs } = await workflow();
+  jobs['docker-e2e'].needs = needs(jobs['docker-e2e']).filter(name => name !== 'native-node');
+  assert.equal(runnerBound(jobs).maximum, 9);
+});
+test('Docker still runs after Node failure but never after failed producers or cancellation', async () => {
+  const { jobs } = await workflow(); const docker = jobs['docker-e2e'];
+  assert.deepEqual(needs(docker), ['check-changes', 'native-images', 'native-build', 'native-node']);
+  assert.ok(docker.if.includes('!cancelled()'), 'avoid the implicit success-only dependency gate');
+  assert.ok(!docker.if.includes('needs.native-node.result'));
+  const success = Object.fromEntries(needs(docker).map(name => [name, 'success']));
+  for (const nodeResult of ['success', 'failure', 'cancelled', 'skipped']) {
+    const results = { ...success, 'native-node': nodeResult };
+    assert.ok(allowsDocker(docker, results), nodeResult);
+    assert.ok(!allowsDocker(docker, results, { cancelled: true }));
+    for (const markdownOnly of ['true', '']) {
+      assert.ok(!allowsDocker(docker, results, { markdownOnly }));
+    }
+    for (const producer of ['check-changes', 'native-images', 'native-build']) {
+      for (const result of ['failure', 'cancelled', 'skipped', undefined]) {
+        assert.ok(!allowsDocker(docker, { ...results, [producer]: result }), `${producer}: ${result}`);
+      }
+    }
+  }
+  const implicit = { ...docker, if: docker.if.replace('!cancelled() && ', '') };
+  assert.ok(!allowsDocker(implicit, { ...success, 'native-node': 'failure' }), 'the regression must detect implicit success()');
 });
 test('removing the desktop scheduling fence is detected as a nine-runner graph', async () => {
   const { jobs } = await workflow();

@@ -37,6 +37,113 @@ describe('POSTerminalMobile', () => {
     });
   });
 
+  it.each([0, 1])('waits for overlapping canonical identity reads before loading its owner catalog (first reply %s)', async firstReply => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    const replies: ((response: Response) => void)[] = [];
+    const transport = global.fetch;
+    vi.mocked(global.fetch).mockImplementation(input => {
+      if (String(input).endsWith('/session-identity') && replies.length < 2) {
+        return new Promise<Response>(resolve => { replies.push(resolve); });
+      }
+      if (String(input).endsWith('/session-identity')) return Promise.resolve(Response.json({ ...owner, expiresAt: Date.now() + 60_000 }));
+      if (String(input) === '/api/v1/pos/inventory') return Promise.resolve(Response.json({ inventory: products }));
+      throw new Error(`Unexpected mobile read: ${String(input)}`);
+    });
+    render(<POSTerminalMobile />);
+    let concurrent!: ReturnType<typeof readQueueOwner>;
+    act(() => { concurrent = readQueueOwner(); });
+    expect(replies).toHaveLength(2);
+    await act(async () => { replies[firstReply](Response.json({ ...owner, expiresAt: Date.now() + 60_000 })); });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quick Charge' })).toBeDisabled();
+    expect(screen.queryByText('Vegan Celebration Cake')).not.toBeInTheDocument();
+    await act(async () => {
+      replies[1 - firstReply](Response.json({ ...owner, expiresAt: Date.now() + 60_000 }));
+      await concurrent;
+    });
+    expect(await screen.findByText('Vegan Celebration Cake')).toBeVisible();
+    const inventory = vi.mocked(transport).mock.calls.find(([url]) => String(url) === '/api/v1/pos/inventory');
+    expect(inventory).toBeDefined();
+    expect(new Headers(inventory![1]?.headers).get('x-ohc-expected-tenant')).toBe(owner.tenantId);
+    expect(new Headers(inventory![1]?.headers).get('x-ohc-expected-user')).toBe(owner.userId);
+  });
+
+  it('waits for a concurrent identity check when the catalog response body finishes', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    let finishBody!: (value: unknown) => void;
+    vi.mocked(global.fetch).mockImplementation(async input => {
+      if (String(input).endsWith('/session-identity')) return Response.json({ ...owner, expiresAt: Date.now() + 60_000 });
+      if (String(input) === '/api/v1/pos/inventory') return { status: 200, json: () => new Promise(resolve => { finishBody = resolve; }) } as Response;
+      throw new Error('Unexpected mobile request');
+    });
+    await act(async () => { render(<POSTerminalMobile />); });
+    let finishVerification!: (response: Response) => void;
+    vi.mocked(global.fetch).mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+    let concurrent!: ReturnType<typeof readQueueOwner>;
+    act(() => { concurrent = readQueueOwner(); });
+    await act(async () => { finishBody({ inventory: products }); });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Vegan Celebration Cake')).not.toBeInTheDocument();
+    await act(async () => { finishVerification(Response.json({ ...owner, expiresAt: Date.now() + 60_000 })); await concurrent; });
+    expect(await screen.findByText('Vegan Celebration Cake')).toBeVisible();
+  });
+
+  it.each(['rejected', 'different owner', 'expired'])('does not load inventory when the remaining initial verification is %s', async outcome => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    const replies: ((response: Response) => void)[] = [];
+    vi.mocked(global.fetch).mockImplementation(() => new Promise<Response>(resolve => { replies.push(resolve); }));
+    render(<POSTerminalMobile />);
+    let concurrent!: Promise<unknown>;
+    act(() => { concurrent = readQueueOwner().catch(error => error); });
+    await act(async () => { replies[0](Response.json({ ...owner, expiresAt: Date.now() + 60_000 })); });
+    await act(async () => {
+      replies[1](outcome === 'rejected' ? new Response('{}', { status: 401 }) : Response.json({
+        ...owner, tenantId: outcome === 'different owner' ? 'other-tenant' : owner.tenantId,
+        expiresAt: Date.now() + (outcome === 'expired' ? -1 : 60_000),
+      }));
+      await concurrent;
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not be verified');
+    expect(screen.getByRole('button', { name: 'Quick Charge' })).toBeDisabled();
+    expect(screen.queryByText('Vegan Celebration Cake')).not.toBeInTheDocument();
+    expect(vi.mocked(global.fetch).mock.calls.every(([url]) => String(url).endsWith('/session-identity'))).toBe(true);
+  });
+
+  it('cancels an initial lease wait on unmount without dispatching a late inventory read', async () => {
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    const replies: ((response: Response) => void)[] = [];
+    vi.mocked(global.fetch).mockImplementation(() => new Promise<Response>(resolve => { replies.push(resolve); }));
+    const view = render(<POSTerminalMobile />);
+    let concurrent!: ReturnType<typeof readQueueOwner>;
+    act(() => { concurrent = readQueueOwner(); });
+    await act(async () => { replies[0](Response.json({ ...owner, expiresAt: Date.now() + 60_000 })); });
+    view.unmount();
+    await act(async () => { replies[1](Response.json({ ...owner, expiresAt: Date.now() + 60_000 })); await concurrent; });
+    expect(vi.mocked(global.fetch).mock.calls).toHaveLength(2);
+  });
+
+  it('retires the original lease if it expires while a catalog body waits for another identity read', async () => {
+    vi.useFakeTimers();
+    Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+    let finishBody!: (value: unknown) => void;
+    vi.mocked(global.fetch).mockImplementation(async input => {
+      if (String(input).endsWith('/session-identity')) return Response.json({ ...owner, expiresAt: Date.now() + 1000 });
+      if (String(input) === '/api/v1/pos/inventory') return { status: 200, json: () => new Promise(resolve => { finishBody = resolve; }) } as Response;
+      throw new Error('Unexpected mobile request');
+    });
+    await act(async () => { render(<POSTerminalMobile />); });
+    let finishVerification!: (response: Response) => void;
+    vi.mocked(global.fetch).mockImplementationOnce(() => new Promise<Response>(resolve => { finishVerification = resolve; }));
+    let concurrent!: ReturnType<typeof readQueueOwner>;
+    act(() => { concurrent = readQueueOwner(); });
+    await act(async () => { finishBody({ inventory: products }); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1001); });
+    expect(screen.getByRole('alert')).toHaveTextContent('could not be verified');
+    await act(async () => { finishVerification(Response.json({ ...owner, expiresAt: Date.now() + 60_000 })); await concurrent; });
+    expect(screen.queryByText('Vegan Celebration Cake')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Quick Charge' })).toBeDisabled();
+  });
+
   it('normalizes the backend catalog contract before rendering prices', async () => {
     Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
     render(<POSTerminalMobile />);

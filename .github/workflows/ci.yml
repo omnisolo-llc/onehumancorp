@@ -430,12 +430,12 @@ jobs:
     name: Native real-stack Playwright ${{ matrix.shard }}/12
     strategy:
       fail-fast: false
-      # Keep all twelve shards; the desktop fence leaves at most four other
-      # runners for Rust, PostgreSQL, Kind and Compose (DAG-tested total: eight).
+      # Keep all twelve shards; desktop and Docker's Node completion fence leave
+      # at most four other runners (exhaustive DAG-tested total: eight).
       max-parallel: 4
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
-    needs: [check-changes, native-build, native-web, dependency-audit, native-node, native-desktop]
+    needs: [check-changes, native-build, native-web, dependency-audit, native-desktop]
     # Browser setup owns its database; PostgreSQL correctness remains mandatory
     # in CI Required and can run concurrently. Desktop releases its runner first.
     # A quality failure must not conceal browser results for successfully built code.
@@ -690,7 +690,10 @@ jobs:
       - check-changes
       - native-images
       - native-build
-    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
+      - native-node
+    # Node releases one runner before Compose starts; a quality failure must
+    # not hide deployment results for this run's successfully built artifacts.
+    if: ${{ !cancelled() && needs.check-changes.result == 'success' && needs.check-changes.outputs.markdown-only == 'false' && needs.native-images.result == 'success' && needs.native-build.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:

@@ -1,7 +1,7 @@
 import { test, expect } from './fixtures';
 import { startConfiguredCheckoutFixture } from './support/configured_checkout_fixture';
 import {
-  CASH_COMMIT_PATH, CHECKOUT_SESSION_PATH, createOwnedCheckoutActors, prepareCashCart, prepareOnlineCart,
+  CASH_COMMIT_PATH, CHECKOUT_SESSION_PATH, withOwnedCheckoutActors, prepareCashCart, prepareOnlineCart,
   waitForCheckoutPost, assertCashReceipt, assertCashRejection, assertPersistedStockOutcome,
 } from './support/owned_checkout_stock';
 
@@ -20,8 +20,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
   });
 
   test('two cash terminals complete exactly one persisted sale of the owned last unit', async ({ browser, contextOptions }) => {
-    const actors = await createOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy });
-    try {
+    await withOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy }, async actors => {
       await prepareCashCart(actors.first, actors.stock, actors.firstUserId);
       await prepareCashCart(actors.second, actors.stock, actors.secondUserId);
       const firstResult = waitForCheckoutPost(actors.first, CASH_COMMIT_PATH);
@@ -35,18 +34,17 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
       await assertCashRejection(responses[1 - winner], pages[1 - winner]);
       await assertPersistedStockOutcome(actors.stock, receipt.order_id);
       expect(fixture.evidence().requests.filter(request => request.form?.client_reference_id === actors.stock.tenantId)).toEqual([]);
-    } finally { await actors.close(); }
+    });
   });
 
   for (const ordering of ['online-first', 'concurrent'] as const) {
     test(`${ordering} cash and online session attempts preserve exactly one last-unit allocation`, async ({ browser, contextOptions }) => {
-      const actors = await createOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy });
-      const redirects: string[] = [];
-      const previousCheckoutConnects = fixture.evidence().connects.filter(request => request.authority === 'checkout.stripe.com:443').length;
-      actors.second.on('request', request => {
-        if (new URL(request.url()).hostname === 'checkout.stripe.com') redirects.push(request.url());
-      });
-      try {
+      await withOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy }, async actors => {
+        const redirects: string[] = [];
+        const previousCheckoutConnects = fixture.evidence().connects.filter(request => request.authority === 'checkout.stripe.com:443').length;
+        actors.second.on('request', request => {
+          if (new URL(request.url()).hostname === 'checkout.stripe.com') redirects.push(request.url());
+        });
         await fixture.register(actors.stock);
         await prepareCashCart(actors.first, actors.stock, actors.firstUserId);
         await prepareOnlineCart(actors.second, actors.stock);
@@ -96,7 +94,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
           expect(fixture.evidence().connects.every(request => request.status === (request.authority === appAuthority ? 200 : 403))).toBe(true);
           await assertPersistedStockOutcome(actors.stock, null);
         }
-      } finally { await actors.close(); }
+      });
     });
   }
 });

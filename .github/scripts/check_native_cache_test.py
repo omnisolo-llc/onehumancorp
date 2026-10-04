@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise action-owned setup and bounded dependency caches without installing tools."""
+import copy
 import json
 from itertools import combinations
 import os
@@ -52,9 +53,7 @@ class NativeCacheTests(unittest.TestCase):
                         env=env, capture_output=True, text=True, timeout=10)
                     self.assertNotEqual(completed.returncode, 0)
 
-    def test_complete_ci_graph_uses_at_most_eight_concurrent_runners(self):
-        jobs = self.ci['jobs']
-
+    def runner_bound(self, jobs):
         def ancestors(name):
             needs = jobs[name].get('needs', [])
             if isinstance(needs, str):
@@ -77,7 +76,17 @@ class NativeCacheTests(unittest.TestCase):
                        for a, b in combinations(concurrent, 2)):
                     continue
                 peak = max(peak, sum(weights[name] for name in concurrent))
+        return peak
+
+    def test_complete_ci_graph_uses_at_most_eight_concurrent_runners(self):
+        peak = self.runner_bound(self.ci['jobs'])
         self.assertLessEqual(peak, 8, f'CI can occupy {peak} runners concurrently')
+
+    def test_removing_docker_completion_fence_requires_nine_runners(self):
+        jobs = copy.deepcopy(self.ci['jobs'])
+        jobs['docker-e2e']['needs'] = [name for name in jobs['docker-e2e']['needs']
+                                      if name != 'native-node']
+        self.assertEqual(self.runner_bound(jobs), 9)
 
     def test_browser_shards_keep_running_after_independent_quality_failure(self):
         job = self.ci['jobs']['native-e2e']
@@ -85,12 +94,24 @@ class NativeCacheTests(unittest.TestCase):
         self.assertIn('!cancelled()', job['if'])
         self.assertIn("needs.native-build.result == 'success'", job['if'])
         self.assertIn("needs.native-web.result == 'success'", job['if'])
-        for name in ('dependency-audit', 'native-node', 'native-desktop'):
+        for name in ('dependency-audit', 'native-desktop'):
             self.assertIn(name, job['needs'])
             self.assertNotIn(f'needs.{name}.result', job['if'])
         self.assertNotIn('postgres-security', job['needs'])
         self.assertNotIn('needs.postgres-security.result', job['if'])
         self.assertIn('postgres-security', self.ci['jobs']['ci-required']['needs'])
+        self.assertNotIn('native-node', job['needs'])
+        self.assertNotIn('needs.native-node.result', job['if'])
+        self.assertIn('native-node', self.ci['jobs']['ci-required']['needs'])
+
+    def test_docker_waits_for_node_completion_without_requiring_node_success(self):
+        job = self.ci['jobs']['docker-e2e']
+        self.assertEqual(job['needs'], ['check-changes', 'native-images', 'native-build', 'native-node'])
+        self.assertEqual(job['if'], "${{ !cancelled() && needs.check-changes.result == 'success' "
+                         "&& needs.check-changes.outputs.markdown-only == 'false' "
+                         "&& needs.native-images.result == 'success' && needs.native-build.result == 'success' }}")
+        self.assertFalse(job.get('continue-on-error', False))
+        self.assertNotIn('native-node', self.ci['jobs']['kind-e2e']['needs'])
 
     def test_action_pins_and_cargo_dependency_boundary(self):
         rust = next(step for step in self.steps if step.get('uses', '').startswith('dtolnay/rust-toolchain@'))

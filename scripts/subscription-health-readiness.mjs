@@ -23,7 +23,9 @@ export function requireSubscriptionHealthDraft(rows, expected) {
   assert.equal(plan.id, expected.planId, message('plan identity mismatch'));
   assert.ok(typeof feed.id === 'string' && feed.id.length > 0, message('canonical action identity missing'));
   assert.equal(request.id, feed.id, message('legacy and canonical actions differ'));
-  assert.equal(feed.event_source, 'CustomerSuccess', message('wrong department'));
+  // DepartmentType::Display is persisted by the orchestrator in both rows.
+  assert.equal(feed.event_source, 'customer_success', message('wrong department'));
+  assert.equal(request.department_type, 'customer_success', message('wrong legacy department'));
   assert.equal(feed.lifecycle_state, 'PENDING_APPROVAL', message('canonical draft is not awaiting approval'));
   assert.equal(request.status, 'DRAFT', message('legacy draft is not awaiting approval'));
   assert.equal(feed.context_payload?.description,
