@@ -1,0 +1,8 @@
+outcome: "blocked"
+issue_title: "Implement AI Work Triage Feed: The unified daily command center for owners"
+issue_description: "The AI Work Triage Feed is a newly proposed feature epic. According to RESEARCH.md and the business capability audit, missing or materially conflicting strategy is a blocker to new scope, and concrete evidence must come before another product plan. Additionally, the issue incorrectly identifies a desirable feature as P0, whereas P0 is strictly reserved for actual money/data/security incidents or release-blocking defects. Thus, this implementation is blocked pending explicit evidence-backed decision and strategic approval."
+issue_priority: "P0"
+issue_category: ""
+issue_type: ""
+issue_label: ""
+assignees: ""
