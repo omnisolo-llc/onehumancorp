@@ -105,9 +105,10 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
     if (!completeSelection) throw new Error('Grouped browser runs require the complete selection');
     const index = Number(groupFlag.match(/^--grouped-shard=([1-3])\/3$/)?.[1]);
     args = args.filter(arg => arg !== groupFlag);
-    grouped = await browserShards.prepareGroupedShard({ root, index, source: clickCoverage.sourceIdentity(root),
-      list: async selection => JSON.parse(await command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
-        '--list', '--reporter', './scripts/browser-inventory-reporter.cjs', ...args, ...selection], { env, quiet: true })),
+    grouped = await browserShards.prepareGroupedShard({ index, source: clickCoverage.sourceIdentity(root),
+      list: selection => browserShards.readDiscovery(filename => command(process.execPath, [playwright, 'test', '--config', 'playwright.config.ts',
+        '--list', '--reporter', './scripts/browser-inventory-reporter.cjs', ...args, ...selection],
+      { env: { ...env, OHC_BROWSER_INVENTORY_OUTPUT: filename }, quiet: true })),
     });
     args.push(...grouped.args);
   }
