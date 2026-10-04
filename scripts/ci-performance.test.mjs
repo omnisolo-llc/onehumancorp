@@ -35,18 +35,18 @@ test('CI wall time includes dependent-job waits and is not the sum of parallel r
   assert.equal(result.report.cache_hit_proven, false);
   assert.equal(result.report.within_budget, true);
 });
-test('the default budget accepts exactly 35 minutes and rejects the next second', async () => {
+test('the default budget accepts exactly 60 minutes and rejects the next second', async () => {
   const pages = fixture();
-  pages[0].jobs[3].started_at = '2026-09-19T10:35:00Z';
+  pages[0].jobs[3].started_at = '2026-09-19T11:00:00Z';
   const boundary = await run(pages);
   assert.equal(boundary.status, 0, boundary.stderr);
-  assert.equal(boundary.report.budget_seconds, 2100);
-  assert.equal(boundary.report.elapsed_seconds, 2100);
+  assert.equal(boundary.report.budget_seconds, 3600);
+  assert.equal(boundary.report.elapsed_seconds, 3600);
   assert.equal(boundary.report.within_budget, true);
-  pages[0].jobs[3].started_at = '2026-09-19T10:35:01Z';
+  pages[0].jobs[3].started_at = '2026-09-19T11:00:01Z';
   const exceeded = await run(pages);
   assert.equal(exceeded.status, 1);
-  assert.equal(exceeded.report.elapsed_seconds, 2101);
+  assert.equal(exceeded.report.elapsed_seconds, 3601);
   assert.equal(exceeded.report.within_budget, false);
 });
 test('core build timing includes Tauri and dependency waits without replacing the full gate', async () => {

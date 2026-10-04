@@ -11,11 +11,11 @@ test('complete CI accepts only owned three-way grouping, never a caller test lis
 
 import shards from './browser-shards.cjs';
 const source = { commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64) };
-test('groups fit the 15–20 minute testing target using observed logical work and scheduling overhead', () => {
-  // Run 37212397293: exact identities mapped back to their logical units.
-  const seconds = [823.252,1157.768,1092.200,1451.816,361.203,337.050,321.986,282.902,354.014,145.234,196.248,404.513];
+test('groups fit the 15–20 minute testing target using observed original logical wall times', () => {
+  // Successful twelve-lifecycle run 37209169837: actual browser wall time.
+  const seconds = [515.711,583.814,592.806,636.707,169.255,176.713,177.645,151.762,131.271,97.056,84.588,168.227];
   for (const group of shards.GROUPS) {
-    const estimate = group.reduce((sum,index) => sum + seconds[index-1],0) / 2 + 32;
+    const estimate = group.reduce((sum,index) => sum + seconds[index-1],0);
     assert.ok(estimate >= 15*60 && estimate <= 20*60, `group ${group}: ${estimate/60} modeled minutes`);
   }
 });
@@ -23,8 +23,8 @@ function fixture() {
   const slices = Array.from({length:12}, (_,i) => [{id:`id-${i}`,title:`test ${i}`,file:`src/${i}.spec.ts`}]);
   const full = slices.flat();
   const selections = shards.groupInventory(full,slices);
-  const receipts = selections.map((selection,i) => ({shard:{index:i+1,total:3},selection,tests:structuredClone(selection),
-    groupedInventory:{schemaVersion:1,source,shard:{current:i+1,total:3},groups:shards.GROUPS,inventory:full,slices}}));
+  const receipts = shards.GROUPS.flatMap((group,i) => group.map(logical => ({shard:{index:logical,total:12},selection:slices[logical-1],tests:structuredClone(slices[logical-1]),
+    groupedInventory:{schemaVersion:1,source,shard:{current:i+1,total:3},logicalShard:logical,groups:shards.GROUPS,inventory:full,slices}})));
   return {slices,full,selections,receipts};
 }
 test('grouping retains each complete logical unit and the exact full inventory', () => {
@@ -63,4 +63,63 @@ test('complete inventory transfer survives bounded native command output', async
       {env:{...process.env,OHC_BROWSER_INVENTORY_OUTPUT:filename},input:JSON.stringify(expected),quiet:true});
   });
   assert.deepEqual(actual,expected);
+});
+
+import { readFile, access } from 'node:fs/promises';
+function discoveryFixture() {
+  const {full,slices}=fixture();
+  return async selection => {
+    if (!selection.length) return full.map(t=>({...t,selector:t.id}));
+    const logical=Number(selection[0].match(/^--shard=(\d+)\/12$/)?.[1]);
+    if(logical) return slices[logical-1].map(t=>({...t,selector:t.id}));
+    const selected=(await readFile(selection[1],'utf8')).trim().split('\n');
+    return full.filter(t=>selected.includes(t.id));
+  };
+}
+test('grouped units retain separate proof, artifacts and lifecycle; later success cannot erase failure',async()=>{
+  const visited=[],proofs=[],directories=[];let active=0;
+  await assert.rejects(shards.runGroupedUnits({index:2,source,list:discoveryFixture(),
+    runUnit:async(logical,context)=>{
+      assert.equal(active++,0);visited.push(logical);directories.push(context.artifactSuffix);
+      const proof=JSON.parse(await readFile(context.proofFile,'utf8'));proofs.push(context.proofFile);
+      assert.deepEqual(shards.validateProof(proof,source,proof.slices[logical-1]),{current:logical,total:12});
+      await context.runBrowser(async({timeoutMs,signal})=>{assert.equal(signal.aborted,false);assert.ok(timeoutMs>0&&timeoutMs<=60*60*1000);if(visited.length===1)assert.equal(timeoutMs,60*60*1000);});
+      active--;if(logical===shards.GROUPS[1][0])throw new Error('original assertion failure');
+    }}),/original assertion failure/);
+  assert.deepEqual(visited,shards.GROUPS[1]);assert.equal(new Set(directories).size,visited.length);
+  for(const file of proofs)await assert.rejects(access(file));
+});
+test('grouped units share one active browser budget and stop launching on exhaustion',async()=>{
+  let clock=0;const visited=[],budgets=[];
+  await assert.rejects(shards.runGroupedUnits({index:2,source,list:discoveryFixture(),now:()=>clock,budgetMs:100,
+    runUnit:async(logical,context)=>{visited.push(logical);clock+=1000; // service initialization is separate
+      await context.runBrowser(async({timeoutMs})=>{budgets.push(timeoutMs);clock+=60;});
+    }}),/browser budget exhausted/);
+  assert.deepEqual(visited,shards.GROUPS[1].slice(0,2));assert.deepEqual(budgets,[100,40]);
+});
+test('group cancellation aborts the active lifecycle and prevents remaining units',async()=>{
+  const controller=new AbortController(),visited=[];
+  await assert.rejects(shards.runGroupedUnits({index:2,source,list:discoveryFixture(),signal:controller.signal,
+    runUnit:async(logical,context)=>{visited.push(logical);controller.abort(new Error('cancelled by owner'));context.signal.throwIfAborted();}
+  }),/cancelled by owner/);
+  assert.deepEqual(visited,shards.GROUPS[1].slice(0,1));
+});
+test('required grouped evidence refuses the old three shared lifecycles and wrong logical assignment',()=>{
+  const f=fixture();
+  const old=f.selections.map((selection,i)=>({shard:{index:i+1,total:3},selection,tests:selection,
+    groupedInventory:{...f.receipts[0].groupedInventory,logicalShard:undefined,shard:{current:i+1,total:3}}}));
+  assert.throws(()=>shards.validateGroupedReceipts(old,source,true));
+  const changed=fixture();changed.receipts[0].groupedInventory.logicalShard=shards.GROUPS[1][0];
+  assert.throws(()=>shards.validateGroupedReceipts(changed.receipts,source,true));
+});
+
+test('a real browser child deadline is bounded across units and cleanup retains earlier failure evidence',async()=>{
+  const {runNativeCommand}=await import('./native-process.mjs');
+  const visited=[];
+  await assert.rejects(shards.runGroupedUnits({index:2,source,list:discoveryFixture(),budgetMs:50,
+    runUnit:async(logical,context)=>{
+      visited.push(logical);
+      await context.runBrowser(options=>runNativeCommand(process.execPath,['-e','setInterval(()=>{},1000)'],{...options,quiet:true}));
+    }}),/browser budget exhausted/);
+  assert.deepEqual(visited,shards.GROUPS[1].slice(0,1));
 });

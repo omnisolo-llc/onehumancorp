@@ -119,7 +119,7 @@ test('removing the desktop scheduling fence is detected as an eight-runner graph
 test('all three grouped browser runners, action budgets and real artifact producers remain required', async () => {
   const { jobs } = await workflow(); const browser = jobs['native-e2e']; const bound = runnerBound(jobs);
   assert.deepEqual(browser.strategy.matrix.shard, [1, 2, 3]);
-  assert.equal(browser.strategy['max-parallel'], 3); assert.equal(browser.strategy['fail-fast'], false); assert.equal(browser['timeout-minutes'], 30);
+  assert.equal(browser.strategy['max-parallel'], 3); assert.equal(browser.strategy['fail-fast'], false); assert.equal(browser['timeout-minutes'], 65);
   const downloads = browser.steps.filter(step => step.uses?.startsWith('actions/download-artifact@')).map(step => step.with.name);
   assert.deepEqual(downloads, ['native-linux-binaries','native-web']);
   for (const artifact of downloads) {
@@ -127,7 +127,7 @@ test('all three grouped browser runners, action budgets and real artifact produc
     assert.equal(producers.length, 1, artifact); assert.ok(bound.ancestors.get('native-e2e').has(producers[0][0]), artifact);
   }
   assert.match(JSON.stringify(browser), /--ci --grouped-shard=\$\{\{ matrix\.shard \}\}\/3 --workers=2 --retries=0/);
-  assert.match(JSON.stringify(jobs['ci-required']), /--budget-minutes 35/);
+  assert.match(JSON.stringify(jobs['ci-required']), /--budget-minutes 60/);
   assert.equal(jobs['ci-required']['timeout-minutes'], 5, 'reporting has separate timeout headroom');
 });
 test('real browser setup owns its PostgreSQL schema and consumes no PG-gate outputs', async () => {

@@ -4,10 +4,11 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const os = require('node:os');
 
-// Whole Playwright logical shards preserve its serial-suite grouping. These
-// bins use run 37212397293's observed two-worker execution durations, not a
-// test allowlist. Every run rediscovers all tests and all twelve logical units.
-const GROUPS = [[1, 2, 6], [3, 7, 8, 11, 12], [4, 5, 9, 10]];
+// Preserve the original twelve service/browser lifecycles. Bins use successful
+// run 37209169837's actual logical wall times (19.21/19.44/19.44 minutes), not
+// summed per-test durations or an allowlist. Rediscover all units every run.
+const BROWSER_BUDGET_MS = 60 * 60 * 1000;
+const GROUPS = [[1, 4], [2, 6, 7, 9, 10], [3, 5, 8, 11, 12]];
 const identity = ({ id, title, file }) => ({ id, title, file });
 function inventory(items) {
   assert.ok(Array.isArray(items) && items.length, 'missing complete browser inventory');
@@ -37,18 +38,20 @@ function validateProof(proof, context, selected) {
   assert.deepEqual(proof.source, { commit: context.commit, sourceDigest: context.sourceDigest }, 'stale grouped inventory source');
   assert.ok(Number.isInteger(proof.shard?.current) && proof.shard.current >= 1 && proof.shard.current <= 3 && proof.shard.total === 3, 'invalid grouped shard');
   assert.deepEqual(proof.groups, GROUPS, 'changed logical grouping');
-  const selections = groupInventory(proof.inventory, proof.slices, proof.groups);
-  sameInventory(selected, selections[proof.shard.current-1]);
-  return proof.shard;
+  groupInventory(proof.inventory, proof.slices, proof.groups);
+  assert.ok(Number.isInteger(proof.logicalShard) && GROUPS[proof.shard.current-1].includes(proof.logicalShard), 'invalid logical shard assignment');
+  sameInventory(selected, proof.slices[proof.logicalShard-1]);
+  return { current: proof.logicalShard, total: 12 };
 }
 function validateGroupedReceipts(receipts, context, required = false) {
   if (required) assert.ok(receipts.every(receipt => receipt.groupedInventory), 'missing required full discovery proof');
   if (!receipts.some(receipt => receipt.groupedInventory)) return;
-  assert.equal(receipts.length, 3, 'all three grouped receipts required');
+  assert.equal(receipts.length, 12, 'all twelve logical receipts required');
+  assert.deepEqual(receipts.map(receipt => receipt.shard.index).sort((a,b)=>a-b), Array.from({length:12},(_,i)=>i+1), 'every logical receipt required exactly once');
   const full = receipts[0].groupedInventory?.inventory;
   for (const receipt of receipts) {
     validateProof(receipt.groupedInventory, context, receipt.selection);
-    assert.deepEqual(receipt.shard, { index: receipt.groupedInventory.shard.current, total: 3 }, 'receipt group identity mismatch');
+    assert.deepEqual(receipt.shard, { index: receipt.groupedInventory.logicalShard, total: 12 }, 'receipt logical identity mismatch');
     sameInventory(receipt.groupedInventory.inventory, full);
     sameInventory(receipt.tests, receipt.selection);
   }
@@ -73,17 +76,56 @@ async function prepareGroupedShard({ index, source, list }) {
   for (let logical = 1; logical <= 12; logical++) slices.push(await list([`--shard=${logical}/12`]));
   const selected = groupInventory(full, slices)[index-1];
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'ohc-browser-group-'));
-  const filename = path.join(directory, 'tests.txt');
-  for (const item of selected) assert.ok(typeof item.selector === 'string' && !/[\r\n]/.test(item.selector), 'invalid test selector');
-  await fs.writeFile(filename, selected.map(item => item.selector).join('\n')+'\n', { mode: 0o600 });
-  // Prove that the supported --test-list parser selects the exact identities,
-  // rather than trusting selector text or comparing only counts.
-  sameInventory(await list(['--test-list', filename]), selected);
-  const proof = { schemaVersion: 1, source, shard: { current: index, total: 3 }, groups: GROUPS,
-    inventory: full.map(identity), slices: slices.map(slice => slice.map(identity)) };
-  const proofFile = path.join(directory, 'inventory.json');
-  await fs.writeFile(proofFile, JSON.stringify(proof), { mode: 0o600 });
-  console.log(`Grouped browser inventory ${index}/3: ${selected.length}/${full.length} exact identities; logical shards ${GROUPS[index-1].join(',')}`);
-  return { args: ['--test-list', filename], proofFile, directory };
+  try {
+    const filename = path.join(directory, 'tests.txt');
+    for (const item of selected) assert.ok(typeof item.selector === 'string' && !/[\r\n]/.test(item.selector), 'invalid test selector');
+    await fs.writeFile(filename, selected.map(item => item.selector).join('\n')+'\n', { mode: 0o600 });
+    // Prove that the supported --test-list parser selects the exact identities,
+    // rather than trusting selector text or comparing only counts.
+    sameInventory(await list(['--test-list', filename]), selected);
+    const proof = { schemaVersion: 1, source, shard: { current: index, total: 3 }, groups: GROUPS,
+      inventory: full.map(identity), slices: slices.map(slice => slice.map(identity)) };
+    const proofFile = path.join(directory, 'inventory.json');
+    await fs.writeFile(proofFile, JSON.stringify(proof), { mode: 0o600 });
+    console.log(`Grouped browser inventory ${index}/3: ${selected.length}/${full.length} exact identities; logical shards ${GROUPS[index-1].join(',')}`);
+    return { args: ['--test-list', filename], proofFile, directory };
+  } catch (error) {
+    await fs.rm(directory, {recursive:true,force:true});
+    throw error;
+  }
 }
-module.exports = { GROUPS, sameInventory, groupInventory, validateProof, validateGroupedReceipts, readDiscovery, prepareGroupedShard };
+async function runGroupedUnits({index, source, list, runUnit, signal = new AbortController().signal,
+  budgetMs = BROWSER_BUDGET_MS, now = () => performance.now()}) {
+  signal.throwIfAborted();
+  const prepared = await prepareGroupedShard({index, source, list});
+  let remaining = budgetMs;
+  const failures = [];
+  try {
+    const proof = JSON.parse(await fs.readFile(prepared.proofFile, 'utf8'));
+    for (const logical of GROUPS[index-1]) {
+      signal.throwIfAborted();
+      assert.ok(remaining > 0, 'cumulative browser budget exhausted');
+      const proofFile = path.join(prepared.directory, `logical-${logical}.json`);
+      await fs.writeFile(proofFile, JSON.stringify({...proof, logicalShard:logical}), {mode:0o600,flag:'wx'});
+      const runBrowser = async execute => {
+        signal.throwIfAborted();
+        assert.ok(remaining > 0, 'cumulative browser budget exhausted');
+        const start = now();
+        try { return await execute({timeoutMs:Math.max(1,Math.floor(remaining)), signal}); }
+        finally { remaining -= Math.max(0, now()-start); }
+      };
+      console.log(`Starting isolated logical shard ${logical}/12 in physical runner ${index}/3`);
+      try { await runUnit(logical, {proofFile, signal, runBrowser, artifactSuffix:`logical-${logical}`}); }
+      catch (error) {
+        failures.push(error);
+        console.error(`Logical shard ${logical}/12 failed: ${error.message}`);
+      }
+      // An ordinary assertion failure still permits the other distinct units;
+      // owner cancellation and budget exhaustion never launch another unit.
+      signal.throwIfAborted();
+      assert.ok(remaining > 0, 'cumulative browser budget exhausted');
+    }
+    if (failures.length) throw new AggregateError(failures, failures.map(error=>error.message).join('\n'));
+  } finally { await fs.rm(prepared.directory, {recursive:true,force:true}); }
+}
+module.exports = { BROWSER_BUDGET_MS, GROUPS, sameInventory, groupInventory, validateProof, validateGroupedReceipts, readDiscovery, prepareGroupedShard, runGroupedUnits };

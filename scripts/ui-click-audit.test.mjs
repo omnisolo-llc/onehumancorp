@@ -136,7 +136,7 @@ test('required native selection cannot conceal filtering or reporter overrides',
   for (const args of [['one.spec.ts'], ['--grep=single'], ['--project=chromium'], ['--last-failed'], ['--reporter=html'], ['--shard=0/12'], ['--shard=13/12'], ['--workers']]) assert.equal(protocol.completeSelection(args), false);
 });
 
-test('required workflow aggregates all three inventory-verified grouped receipts', () => {
+test('required workflow aggregates all twelve inventory-verified logical receipts', () => {
   const root = path.resolve(import.meta.dirname, '..');
   const jobs = require('js-yaml').load(fs.readFileSync(path.join(root, '.github/workflows/ci.yml'), 'utf8')).jobs;
   const e2e = jobs['native-e2e'], aggregate = jobs['native-click-coverage'], required = jobs['ci-required'];
@@ -146,7 +146,7 @@ test('required workflow aggregates all three inventory-verified grouped receipts
   assert.deepEqual(aggregate.needs, ['check-changes', 'native-e2e']); assert.match(aggregate.if, /!cancelled\(\)/);
   const download = aggregate.steps.find(step => step.uses?.startsWith('actions/download-artifact@'));
   assert.equal(download.with.pattern, 'native-click-receipts-*'); assert.equal(download.with['merge-multiple'], false);
-  assert(aggregate.steps.some(step => /ui-click-audit\.cjs target\/click-receipts 3 --grouped/.test(step.run || '')));
+  assert(aggregate.steps.some(step => /ui-click-audit\.cjs target\/click-receipts 12 --grouped/.test(step.run || '')));
   assert(required.needs.includes('native-click-coverage'));
   assert(required.steps.some(step => /require_success "native-click-coverage"/.test(step.run || '')));
 });
