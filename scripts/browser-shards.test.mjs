@@ -29,6 +29,16 @@ test('groups balance observed variability within the 15–20 minute testing targ
   }
 });
 
+test('slower complete observation stays evenly distributed without relaxing historical targets', () => {
+  // Run 37225051173 passed all browser tests. Its 63.18 total active minutes
+  // cannot fit within three 20-minute bins; retain the historical checks above.
+  const seconds = [559.978027,825.794172,573.258538,615.061265,169.078037,141.788080,145.410142,157.279647,186.467892,98.301978,106.100368,212.047404];
+  const totals = shards.GROUPS.map(group => group.reduce((sum,index) => sum+seconds[index-1],0));
+  assert.ok(seconds.reduce((sum,value) => sum+value,0) > 3*20*60);
+  // Best spread among all partitions satisfying both historical guards: 206.44s.
+  assert.ok(Math.max(...totals)-Math.min(...totals)<=210, 'slower-run spread must stay within 210 seconds');
+});
+
 function fixture() {
   const slices = Array.from({length:12}, (_,i) => [{id:`id-${i}`,title:`test ${i}`,file:`src/${i}.spec.ts`}]);
   const full = slices.flat();

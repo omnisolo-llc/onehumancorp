@@ -5,10 +5,11 @@ const path = require('node:path');
 const os = require('node:os');
 
 // Preserve all twelve service/browser lifecycles. Balance actual wall times
-// across runs 37209169837, 37218212302 and 37220871509. All modeled bins fit
-// 15–20 active minutes; failed-run timings do not certify correctness.
+// across four observations while preserving the first three runs' 15–20m
+// bounds. Run 37225051173 totals 63.18m, so three 20m bins are impossible.
+// Failed-run timings do not certify correctness.
 const BROWSER_BUDGET_MS = 60 * 60 * 1000;
-const GROUPS = [[1, 8, 9, 10, 11, 12], [2, 3], [4, 5, 6, 7]];
+const GROUPS = [[1, 5, 7, 11, 12], [2, 3], [4, 6, 8, 9, 10]];
 const identity = ({ id, title, file }) => ({ id, title, file });
 function inventory(items) {
   assert.ok(Array.isArray(items) && items.length, 'missing complete browser inventory');
