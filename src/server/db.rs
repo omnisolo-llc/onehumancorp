@@ -2646,6 +2646,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         event_type TEXT NOT NULL, -- CLOCK_IN, CLOCK_OUT
                         event_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         sync_status TEXT NOT NULL DEFAULT 'SYNCED',
+                        request_identity TEXT,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
 
@@ -3233,6 +3234,13 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                     .execute(sqlite_pool)
                     .await?;
                 crate::api::fulfillment::storage::ensure_sqlite_schema(sqlite_pool).await?;
+                ensure_sqlite_column(
+                    sqlite_pool,
+                    "ohc_timecard_event",
+                    "request_identity",
+                    "TEXT",
+                )
+                .await?;
                 ensure_sqlite_column(
                     sqlite_pool,
                     "orders",

@@ -2,7 +2,7 @@ import { test, expect } from './fixtures';
 import type { Response } from '@playwright/test';
 import { startConfiguredCheckoutFixture } from './support/configured_checkout_fixture';
 import {
-  CASH_COMMIT_PATH, CHECKOUT_SESSION_PATH, withOwnedCheckoutActors, prepareCashCart, prepareOnlineCart,
+  CASH_COMMIT_PATH, CHECKOUT_SESSION_PATH, authenticateOwnedCheckoutPair, withOwnedCheckoutActors, prepareCashCart, prepareOnlineCart,
   waitForCheckoutPost, assertCashReceipt, assertCashRejection, assertPersistedStockOutcome,
 } from './support/owned_checkout_stock';
 
@@ -11,8 +11,12 @@ import {
 test.describe('Owned cash and online checkout session stock exclusion', () => {
   test.describe.configure({ mode: 'default' });
   let fixture: Awaited<ReturnType<typeof startConfiguredCheckoutFixture>>;
+  let actorPair: Awaited<ReturnType<typeof authenticateOwnedCheckoutPair>>;
 
-  test.beforeAll(async () => { fixture = await startConfiguredCheckoutFixture(); });
+  test.beforeAll(async ({ browser, contextOptions }) => {
+    fixture = await startConfiguredCheckoutFixture();
+    actorPair = await authenticateOwnedCheckoutPair(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy });
+  });
   test.afterAll(async () => { await fixture?.close(); });
   test.afterEach(async ({ browserName }, testInfo) => {
     if (fixture) await testInfo.attach(`configured-checkout-provider-evidence-${browserName}`, {
@@ -21,7 +25,8 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
   });
 
   test('two cash terminals complete exactly one persisted sale of the owned last unit', async ({ browser, contextOptions }) => {
-    await withOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy }, async actors => {
+    await withOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy }, actorPair, async actors => {
+      const previousProviderRequests = fixture.evidence().requests.length;
       await prepareCashCart(actors.first, actors.stock, actors.firstUserId);
       await prepareCashCart(actors.second, actors.stock, actors.secondUserId);
       const firstResult = waitForCheckoutPost(actors.first, CASH_COMMIT_PATH);
@@ -34,13 +39,14 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
       const receipt = await assertCashReceipt(responses[winner], pages[winner], actors.stock);
       await assertCashRejection(responses[1 - winner], pages[1 - winner]);
       await assertPersistedStockOutcome(actors.stock, receipt.order_id);
-      expect(fixture.evidence().requests.filter(request => request.form?.client_reference_id === actors.stock.tenantId)).toEqual([]);
+      expect(fixture.evidence().requests.slice(previousProviderRequests)).toEqual([]);
     });
   });
 
   for (const ordering of ['online-first', 'concurrent'] as const) {
     test(`${ordering} cash and online session attempts preserve exactly one last-unit allocation`, async ({ browser, contextOptions }) => {
-      await withOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy }, async actors => {
+      await withOwnedCheckoutActors(browser, fixture.origin, { ...contextOptions, proxy: fixture.proxy }, actorPair, async actors => {
+        const previousProviderRequests = fixture.evidence().requests.length;
         const redirects: string[] = [];
         const previousCheckoutConnects = fixture.evidence().connects.filter(request => request.authority === 'checkout.stripe.com:443').length;
         actors.second.on('request', request => {
@@ -95,7 +101,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
         expect([cash.status(), online.status()].sort()).toEqual([200, 409]);
         const requestBody = online.request().postDataJSON();
         expect(requestBody).toEqual({ is_subscription: false, product_id: actors.stock.productId, quantity: 1 });
-        const providerRequests = fixture.evidence().requests.filter(request => request.form?.client_reference_id === actors.stock.tenantId);
+        const providerRequests = fixture.evidence().requests.slice(previousProviderRequests);
         if (cash.status() === 200) {
           const receipt = await assertCashReceipt(cash, actors.first, actors.stock);
           expect(online.status()).toBe(409);

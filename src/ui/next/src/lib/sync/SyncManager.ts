@@ -1,7 +1,7 @@
-import { enqueueAction, getActions, getActionRoutes, claimAction, completeAction, getQueueSummary } from '../../app/utils/offlineQueue';
+import { enqueueAction, getActions, getActionRoutes, claimAction, completeAction, getQueueSummary, getClockQueueSummary, getClockReceiptCandidates, acknowledgeClockReceipt, isCurrentClockReceiptCandidate } from '../../app/utils/offlineQueue';
 import type { OfflineAction, MutationPayload } from '../../app/utils/offlineQueue';
 import { readQueueOwner, sameOwner, type QueueOwner } from './queueIdentity';
-import { readOutcome } from './queueRoutes';
+import { readOutcome, isHistoricalClock, TIMECARD_ROUTE, STAFF_CLOCK_TYPE } from './queueRoutes';
 
 type QueuedMutation = Omit<OfflineAction, 'id' | 'timestamp'> & { id?: string; timestamp?: number | string };
 type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
@@ -17,6 +17,7 @@ type MappedMutation = Omit<Partial<OfflineAction>, 'payload' | 'timestamp'> & {
 export class SyncManager {
   private static instance: SyncManager;
   private syncInProgress = false;
+  private clockReceiptCheckInProgress = false;
   private enqueueDuringSync = false;
   private syncingFieldOnly = false;
   private fullDrainRequested = false;
@@ -50,7 +51,7 @@ export class SyncManager {
     if (!mutation.id) {
         mutation.id = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : Date.now().toString() + Math.random().toString().substring(2);
     }
-    if (!mutation.timestamp) {
+    if (mutation.type === STAFF_CLOCK_TYPE ? mutation.timestamp === undefined : !mutation.timestamp) {
         mutation.timestamp = Date.now();
     }
 
@@ -72,6 +73,25 @@ export class SyncManager {
   }
 
   public async getQueueSummary() { return getQueueSummary(); }
+  public async getClockQueueSummary() { return getClockQueueSummary(); }
+
+  /** Explicit receipt-only recovery. Never sends mutations or drains other work. */
+  public async reconcileClockReceipts(): Promise<void> {
+    if (typeof window === 'undefined' || !navigator.onLine || this.clockReceiptCheckInProgress) return;
+    this.clockReceiptCheckInProgress = true;
+    try {
+      for (const candidate of await getClockReceiptCandidates()) {
+        if (!sameOwner(candidate.owner, await readQueueOwner()) || !isCurrentClockReceiptCandidate(candidate)) return;
+        const response = await fetch(`${TIMECARD_ROUTE}/receipts/${candidate.action.id}`, {
+          method: 'GET', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+          headers: { 'x-ohc-expected-user': candidate.owner.userId, 'x-ohc-expected-tenant': candidate.owner.tenantId },
+        });
+        let body: unknown;
+        try { body = await response.json(); } catch { body = undefined; }
+        if (await acknowledgeClockReceipt(candidate, response.status, body)) this.notifyListeners();
+      }
+    } finally { this.clockReceiptCheckInProgress = false; }
+  }
 
   public async getQueueLength(): Promise<number> {
     const queue = await this.getQueue();
@@ -160,6 +180,9 @@ export class SyncManager {
     try {
       const queue = await this.getQueue();
       for (const action of queue) {
+        // These historical envelopes describe incompatible generic routes. Keep
+        // their bytes and attempts untouched, including never-attempted routes.
+        if (isHistoricalClock(action)) continue;
         if (fieldCompletionOnly && !action.field_completion && !action.field_completion_parent_id) continue;
         for (const plan of await getActionRoutes(action.id)) {
           const claim = await claimAction(action.id, plan.id);

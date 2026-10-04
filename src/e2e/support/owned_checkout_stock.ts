@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { withOwnedBrowserContexts } from '../../../scripts/playwright/owned-contexts.mjs';
-import { expect, type Browser, type BrowserContextOptions, type Page, type Response } from '@playwright/test';
+import { expect, type Browser, type BrowserContext, type BrowserContextOptions, type Page, type Response } from '@playwright/test';
 import { authenticateRequest } from '../authenticate';
 import { e2eDbQuery } from '../db_utils';
 import { createGrowthOwner } from '../growth_owner';
 import { E2E_ADMIN_USER } from '../identities';
+import { assertConfirmedClockIn, waitForClockPost } from './clock_receipts';
 
 export const CASH_COMMIT_PATH = '/api/v1/payments/terminal/commit';
 export const CHECKOUT_SESSION_PATH = '/api/v1/billing/create-checkout-session';
@@ -14,14 +15,42 @@ export type OwnedStock = {
   productId: string;
   title: string;
   amountCents: number;
+  receiptOrderIdsBefore: string[];
 };
 
 export type OwnedCheckoutActors = { stock: OwnedStock; first: Page; second: Page; firstUserId: string; secondUserId: string };
 
-export async function withOwnedCheckoutActors<Result>(
+export type OwnedCheckoutPair = {
+  origin: string; tenantId: string; firstUserId: string; secondUserId: string;
+  firstCookies: Awaited<ReturnType<BrowserContext['cookies']>>;
+  secondCookies: Awaited<ReturnType<BrowserContext['cookies']>>;
+};
+
+async function verifyCheckoutActors(first: Page, second: Page, pair: Pick<OwnedCheckoutPair, 'tenantId' | 'firstUserId' | 'secondUserId'>) {
+  expect(pair.firstUserId).not.toBe(pair.secondUserId);
+  const pages: [Page, string][] = [[first, pair.firstUserId], [second, pair.secondUserId]];
+  await Promise.all(pages.map(async ([page, userId]) => {
+    const response = await page.request.get('/api/v1/auth/session-identity');
+    expect(response.status()).toBe(200);
+    expect(response.headers()['cache-control']).toBe('private, no-store');
+    const identity = await response.json();
+    expect(identity).toMatchObject({ userId, tenantId: pair.tenantId });
+    expect(Number.isSafeInteger(identity.expiresAt)).toBe(true);
+    expect(identity.expiresAt).toBeGreaterThan(Date.now());
+  }));
+  const users = [pair.firstUserId, pair.secondUserId].sort();
+  const roles = await e2eDbQuery(`SELECT u.id, u.tenant_id, u.active,
+    u.roles=ARRAY['ADMIN']::text[] AS admin_roles,
+    EXISTS(SELECT 1 FROM identity_user_roles r WHERE r.user_id=u.id AND r.tenant_id=u.tenant_id AND r.role_name='ADMIN') AS normalized_admin
+    FROM users u WHERE u.tenant_id=$1 AND u.id=ANY($2::text[]) ORDER BY u.id`, [pair.tenantId, users]);
+  expect(roles).toEqual(users.map(id => ({ id, tenant_id: pair.tenantId, active: true, admin_roles: true, normalized_admin: true })));
+}
+
+/** Authenticate two independent actors once per suite. Cookies stay in memory;
+ * localStorage, IndexedDB, carts and queue journals are never reused. */
+export async function authenticateOwnedCheckoutPair(
   browser: Browser, origin: string, contextOptions: BrowserContextOptions,
-  use: (actors: OwnedCheckoutActors) => Promise<Result>,
-): Promise<Result> {
+): Promise<OwnedCheckoutPair> {
   const options = { ...contextOptions, baseURL: origin, storageState: { cookies: [], origins: [] }, serviceWorkers: 'block' as const };
   return withOwnedBrowserContexts(browser, options, async ([firstContext, secondContext]) => {
     const first = await firstContext.newPage();
@@ -43,8 +72,36 @@ export async function withOwnedCheckoutActors<Result>(
     await authenticateRequest(second.request, {
       username: secondEmail, password: E2E_ADMIN_USER.password, organizationId: owner.tenantId,
     }, origin);
+    const pair = { origin, tenantId: owner.tenantId, firstUserId: owner.userId, secondUserId };
+    await verifyCheckoutActors(first, second, pair);
+    const firstCookies = await firstContext.cookies(origin), secondCookies = await secondContext.cookies(origin);
+    expect(firstCookies.length).toBeGreaterThan(0);
+    expect(secondCookies.length).toBeGreaterThan(0);
+    return { ...pair, firstCookies, secondCookies };
+  });
+}
+
+export async function withOwnedCheckoutActors<Result>(
+  browser: Browser, origin: string, contextOptions: BrowserContextOptions,
+  pair: OwnedCheckoutPair,
+  use: (actors: OwnedCheckoutActors) => Promise<Result>,
+): Promise<Result> {
+  if (pair.origin !== origin) throw new Error('Checkout sessions belong to a different owned origin');
+  const options = { ...contextOptions, baseURL: origin, storageState: { cookies: [], origins: [] }, serviceWorkers: 'block' as const };
+  return withOwnedBrowserContexts(browser, options, async ([firstContext, secondContext]) => {
+    for (const context of [firstContext, secondContext]) {
+      expect(await context.storageState({ indexedDB: true })).toEqual({ cookies: [], origins: [] });
+    }
+    await firstContext.addCookies(pair.firstCookies);
+    await secondContext.addCookies(pair.secondCookies);
+    const first = await firstContext.newPage();
+    const second = await secondContext.newPage();
+    // Revalidate expiry, revocation, tenant and roles rather than replaying login.
+    await verifyCheckoutActors(first, second, pair);
+    const previousReceipts = await e2eDbQuery('SELECT order_id FROM terminal_cash_receipts WHERE tenant_id=$1 ORDER BY order_id', [pair.tenantId]);
     const stock: OwnedStock = {
-      tenantId: owner.tenantId, productId: randomUUID(), title: `Owned last unit ${randomUUID()}`, amountCents: 1999,
+      tenantId: pair.tenantId, productId: randomUUID(), title: `Owned last unit ${randomUUID()}`, amountCents: 1999,
+      receiptOrderIdsBefore: previousReceipts.map(row => row.order_id),
     };
     const products = await e2eDbQuery(
       `INSERT INTO products (id, tenant_id, title, type, price, price_cents, inventory_count, available_quantity, locked_quantity)
@@ -52,7 +109,7 @@ export async function withOwnedCheckoutActors<Result>(
       [stock.productId, stock.tenantId, stock.title, stock.amountCents],
     );
     expect(products).toEqual([{ id: stock.productId }]);
-    return use({ stock, first, second, firstUserId: owner.userId, secondUserId });
+    return use({ stock, first, second, firstUserId: pair.firstUserId, secondUserId: pair.secondUserId });
   });
 }
 
@@ -81,8 +138,10 @@ export async function prepareCashCart(page: Page, stock: OwnedStock, userId: str
     expect.objectContaining({ id: stock.productId, name: stock.title, price_cents: stock.amountCents, stock: 1 }),
   ]));
   await expect(page.getByText('Offline queue ready for this session.', { exact: true })).toBeVisible();
+  const clockResponse = waitForClockPost(page);
   await page.getByRole('button', { name: 'Clock In', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Clocked In', exact: true })).toBeVisible();
+  await assertConfirmedClockIn(page, await clockResponse, { userId, tenantId: stock.tenantId });
   await page.getByRole('button', { name: new RegExp(stock.title) }).click();
   await page.getByRole('button', { name: '1 item Charge $19.99', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Current Order', exact: true })).toBeVisible();
@@ -154,5 +213,5 @@ export async function assertPersistedStockOutcome(stock: OwnedStock, cashOrderId
     expect(orders).toEqual([]);
   }
   const receipts = await e2eDbQuery('SELECT order_id FROM terminal_cash_receipts WHERE tenant_id=$1', [stock.tenantId]);
-  expect(receipts).toEqual(cashOrderId ? [{ order_id: cashOrderId }] : []);
+  expect(receipts.map(row => row.order_id).sort()).toEqual([...stock.receiptOrderIdsBefore, ...(cashOrderId ? [cashOrderId] : [])].sort());
 }

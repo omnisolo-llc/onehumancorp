@@ -263,12 +263,18 @@ jobs:
         env:
           PGPASSWORD: ignored_fixture
         run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_approval_test
+      - name: Create the isolated database required by native timecard tests
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+        run: createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_clock_timecard_test
       - name: Test complete headless Cargo workspace
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
         env:
           OHC_CHAT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_chat_service_test
           OHC_CHECKPOINT_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_checkpoint_test
           OHC_APPROVAL_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_approval_test
+          OHC_CLOCK_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_clock_timecard_test
         run: make test-backend
 
       - name: Verify task-scoped checkpoint restore safety
@@ -1056,6 +1062,19 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_shipping_integrity_test
           python3 scripts/focused_ci_gate.py shipping-integrity-contract
+
+      - name: Fetch locked staff timecard dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/staff-timecard-contract/fetch.sh
+
+      - name: Verify atomic staff timecards on PostgreSQL and SQLite
+        if: ${{ !cancelled() }}
+        env:
+          OHC_CLOCK_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_clock_timecard_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_clock_timecard_test
+          python3 scripts/focused_ci_gate.py staff-timecard-contract
 
       - name: Verify recorded staff reads and native staff migrations
         if: ${{ !cancelled() }}

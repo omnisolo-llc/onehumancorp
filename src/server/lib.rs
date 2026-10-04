@@ -8695,6 +8695,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let oauth_callback_router: axum::Router = axum::Router::new()
         .nest("/api/v1/oauth", api::oauth::proxy::router())
         .with_state(mesh_transport.clone());
+    let timecard_access =
+        api::staff_timecards::TimecardAccess::configured(&db, http_auth_store.clone()).await;
     let shipping_access = std::sync::Arc::new(
         crate::api::shipping::authority::ShippingAccess::configured(&db, http_auth_store.clone())
             .await,
@@ -9136,7 +9138,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                     ::server_auth::strict_bearer_auth_middleware,
                 )),
         )
-        .nest("/api/v1/staff", api::staff_mesh::router(db.clone()))
+        .nest("/api/v1/staff", api::staff_mesh::router(db.clone()).layer(axum::Extension(timecard_access)))
         .nest("/api/v1/builder", crate::builder::api::router(canonical_builder_pool(auth_database, db.postgres_pool()).await).layer(axum::Extension(std::sync::Arc::new(crate::builder::generation::GenerationContext::from_environment(workflow_execution.clone())))))
         .route("/api/v1/agents/workflows", axum::routing::get(list_workflows_handler).post(create_workflow_handler).layer(axum::Extension(workflow_execution.clone())))
         .route("/api/v1/agents/workflows/{id}",axum::routing::get(workflow_receipt_handler).layer(axum::Extension(workflow_execution.clone())))

@@ -4,17 +4,19 @@ import POSTerminal from './page';
 import { invalidateQueueOwner, readQueueOwner, QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
 
 const queueLength = vi.hoisted(() => vi.fn<() => Promise<number>>());
+const clockSummary = vi.hoisted(() => vi.fn<() => Promise<{ confirmed: number; unconfirmed: number; legacyHeld: number }>>());
+const reconcileClockReceipts = vi.hoisted(() => vi.fn<() => Promise<void>>());
 const enqueue = vi.hoisted(() => vi.fn<(...args: unknown[]) => Promise<void>>());
 vi.mock('./StripeTerminalClient', () => ({ default: () => <div>Payment controls</div> }));
 vi.mock('../../../components/LocalizationToggle', () => ({ LocalizationToggle: () => null }));
-vi.mock('../../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ enqueue, getQueueLength: queueLength }) } }));
+vi.mock('../../../lib/sync/SyncManager', () => ({ SyncManager: { getInstance: () => ({ enqueue, getQueueLength: queueLength, getClockQueueSummary: clockSummary, reconcileClockReceipts }) } }));
 vi.mock('../../../lib/sync/MutationService', () => ({ MutationService: { getInstance: () => ({ syncPendingMutations: vi.fn(), executeMutation: vi.fn() }) } }));
 
 let owner = 'user-a';
 let identityUnavailable = false;
 let ownerExpiry: number;
 let inventoryRead: () => Promise<Response>;
-const staff = { id: 'staff-a', name: 'Recorded Staff', role: 'STAFF', tenant_id: 'tenant-a' };
+const staff = { id: 'user-a', name: 'Recorded Staff', role: 'OWNER', tenant_id: 'tenant-a' };
 const identity = () => Response.json({ userId: owner, tenantId: 'tenant-a', expiresAt: ownerExpiry });
 const transport = vi.fn<typeof fetch>(async (input) => {
   const path = String(input);
@@ -22,7 +24,7 @@ const transport = vi.fn<typeof fetch>(async (input) => {
     if (identityUnavailable) throw new Error('Identity read unavailable');
     return identity();
   }
-  if (path === '/api/v1/pos/auth') return Response.json({ success: true, staff });
+  if (path === '/api/v1/pos/auth') return Response.json({ success: true, staff: { ...staff, id: owner } });
   if (path === '/api/v1/payments/terminal/session/start') return Response.json({ success: true, session_id: 'local-session' });
   if (path === '/api/v1/pos/inventory') return inventoryRead();
   throw new Error(`Unexpected fixture request: ${path}`);
@@ -39,7 +41,7 @@ function pendingWrite() {
   return { resolve: () => resolve(), reject: () => reject(new Error('Local storage unavailable')) };
 }
 beforeEach(async () => {
-  vi.clearAllMocks(); enqueue.mockReset(); queueLength.mockResolvedValue(0); owner = 'user-a'; identityUnavailable = false; localStorage.clear(); invalidateQueueOwner();
+  vi.clearAllMocks(); clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 }); reconcileClockReceipts.mockResolvedValue(); enqueue.mockReset(); queueLength.mockResolvedValue(0); owner = 'user-a'; identityUnavailable = false; localStorage.clear(); invalidateQueueOwner();
   ownerExpiry = Date.now() + 60_000; inventoryRead = async () => Response.json({ inventory: [] });
   vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
   vi.stubGlobal('fetch', transport); await readQueueOwner();
@@ -183,4 +185,58 @@ it('keeps saved clock work visible without blocking product selection', async ()
   const synced = screen.getByText('Synced');
   expect(synced).toBeVisible();
   expect(getComputedStyle(synced.closest('div')!).pointerEvents).toBe('none');
+});
+
+
+it('produces a versioned clock event with the signed actor and no duplicate payload timestamp', async () => {
+  enqueue.mockResolvedValue(); render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
+  await screen.findByRole('heading', { name: 'Clocked In' });
+  expect(enqueue.mock.calls[0][0]).toEqual({ type: 'staff_clock_event_v1', payload: { staff_id: 'user-a', event_type: 'CLOCK_IN' } });
+});
+it('checks saved clock receipts explicitly and distinguishes held historical and unconfirmed local work', async () => {
+  clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 1, legacyHeld: 1 });
+  enqueue.mockResolvedValue();
+  let finish!: () => void;
+  reconcileClockReceipts.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+  render(<POSTerminal />); await unlock();
+  expect(screen.getByText('1 saved clock change awaiting server confirmation.')).toBeVisible();
+  expect(screen.getByText('1 historical clock change requires review. Original records are preserved.')).toBeVisible();
+  const button = screen.getByRole('button', { name: 'Check saved clock status' });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(reconcileClockReceipts).toHaveBeenCalledTimes(1); expect(button).toBeDisabled();
+  clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 1 });
+  await act(async () => finish());
+  expect(screen.getByText('1 saved clock change confirmed by the server.')).toBeVisible();
+  expect(screen.queryByText('1 saved clock change awaiting server confirmation.')).toBeNull();
+  expect(enqueue).not.toHaveBeenCalled();
+});
+it('keeps missing receipt checks honest instead of confirming a locally saved event', async () => {
+  clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 1, legacyHeld: 0 });
+  render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved clock status' }));
+  await waitFor(() => expect(reconcileClockReceipts).toHaveBeenCalledOnce());
+  expect(screen.getByText('1 saved clock change awaiting server confirmation.')).toBeVisible();
+  expect(screen.queryByText(/saved clock change confirmed by the server/)).toBeNull();
+});
+
+
+it.each(['lock', 'owner', 'epoch'] as const)('never reports an old status check as confirmed after the terminal %s changes', async change => {
+  clockSummary.mockResolvedValue({ confirmed: 0, unconfirmed: 1, legacyHeld: 0 });
+  let finish!: () => void;
+  reconcileClockReceipts.mockImplementation(() => new Promise<void>(resolve => { finish = resolve; }));
+  render(<POSTerminal />); await unlock();
+  fireEvent.click(screen.getByRole('button', { name: 'Check saved clock status' }));
+  await waitFor(() => expect(reconcileClockReceipts).toHaveBeenCalledOnce());
+  if (change === 'owner') { owner = 'user-b'; await act(async () => { await readQueueOwner(); }); }
+  else if (change === 'epoch') {
+    localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY, 'new-session');
+    await act(async () => window.dispatchEvent(new StorageEvent('storage', { key: QUEUE_IDENTITY_EPOCH_KEY })));
+  } else fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+  await unlock();
+  // Even an old read completing with confirmation cannot update the new lease.
+  clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 0 });
+  await act(async () => finish());
+  expect(screen.queryByText('1 saved clock change confirmed by the server.')).toBeNull();
+  expect(screen.getByRole('heading', { name: 'Not Clocked In' })).toBeVisible();
 });

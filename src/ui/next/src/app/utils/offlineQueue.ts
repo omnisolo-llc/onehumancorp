@@ -1,6 +1,6 @@
 import { queueTransaction, readOtherAdapter, selectedQueueAdapter, type QueueAdapter, type StoredQueueRow } from '../../lib/sync/queueStorage';
-import { readQueueOwner, sameOwner, type QueueOwner } from '../../lib/sync/queueIdentity';
-import { captureRouteContext, planRoutes, validRoutePlan, type RouteContext, type RoutePlan, type OutcomeStatus } from '../../lib/sync/queueRoutes';
+import { readQueueOwner, sameOwner, currentVerifiedQueueOwner, queueIdentityGeneration, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '../../lib/sync/queueIdentity';
+import { captureRouteContext, planRoutes, validRoutePlan, isHistoricalClock, STAFF_CLOCK_TYPE, TIMECARD_ROUTE, readOutcome, type RouteContext, type RoutePlan, type OutcomeStatus } from '../../lib/sync/queueRoutes';
 /** Payload fields consumed by the existing queue adapters. Unknown extension
  * fields remain opaque JSON and cannot be read without narrowing. */
 export interface MutationPayload {
@@ -122,13 +122,13 @@ export async function enqueueActions(actions: OfflineAction[], expectedOwner?: Q
   });
 }
 
-async function ownedEnvelopes(): Promise<{ values: Envelope[]; summary: QueueSummary }> {
+async function ownedEnvelopes(includeAcknowledged = false): Promise<{ values: Envelope[]; summary: QueueSummary }> {
   const owner = await readQueueOwner();
   const adapter = await selectedQueueAdapter();
   const other = await readOtherAdapter(adapter);
   checkOtherRows(other.rows);
   const rows = await queueTransaction(adapter, rows => ({ result: rows }));
-  const values = rows.map(envelope).filter((value): value is Envelope => value !== null && sameOwner(value.owner, owner) && value.adapter === adapter && !acknowledged(value));
+  const values = rows.map(envelope).filter((value): value is Envelope => value !== null && sameOwner(value.owner, owner) && value.adapter === adapter && (includeAcknowledged || !acknowledged(value)));
   return { values, summary: {
     pending: values.filter(value => value.routes.some(route => route.status === 'pending')).length,
     needsAttention: values.filter(value => value.routes.some(route => route.status === 'blocked')).length,
@@ -151,7 +151,7 @@ export async function claimAction(id: string, routeId: string): Promise<ActionCl
   return queueTransaction(adapter, rows => {
     const row = rows.find(row => row.id === id);
     const value = row && envelope(row);
-    if (!value || value.adapter !== adapter || !sameOwner(value.owner, owner)) return { result: null };
+    if (!value || value.adapter !== adapter || !sameOwner(value.owner, owner) || isHistoricalClock(value.action)) return { result: null };
     const route = value.routes.find(route => route.plan.id === routeId);
     if (!route || route.status !== 'pending' || route.attempts !== 0) return { result: null };
     route.status = 'inflight'; route.attempts += 1; route.attemptToken = crypto.randomUUID();
@@ -195,5 +195,79 @@ export async function removeAction(id: string): Promise<void> {
     const value = row && envelope(row);
     if (row && (!value || !sameOwner(value.owner, owner) || !acknowledged(value))) throw new Error('Unacknowledged offline actions cannot be removed');
     return { result: undefined };
+  });
+}
+
+
+export type ClockQueueSummary = { confirmed: number; unconfirmed: number; legacyHeld: number };
+export async function getClockQueueSummary(): Promise<ClockQueueSummary> {
+  const { values } = await ownedEnvelopes(true);
+  return {
+    confirmed: values.filter(value => value.action.type === STAFF_CLOCK_TYPE && acknowledged(value)).length,
+    unconfirmed: values.filter(value => value.action.type === STAFF_CLOCK_TYPE && !acknowledged(value)).length,
+    legacyHeld: values.filter(value => isHistoricalClock(value.action)).length,
+  };
+}
+
+export type ClockReceiptCandidate = Readonly<{ action: OfflineAction; owner: QueueOwner; adapter: QueueAdapter; route: RouteState }>;
+type IdentityFence = { generation: number; storageEpoch: string | null };
+const clockReceiptSnapshots = new WeakMap<ClockReceiptCandidate, { value: Envelope; fence: IdentityFence }>();
+function identityFence(): IdentityFence { return { generation: queueIdentityGeneration(), storageEpoch: localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) }; }
+function sameFence(fence: IdentityFence): boolean {
+  try { return fence.generation === queueIdentityGeneration() && fence.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY); }
+  catch { return false; }
+}
+function freeze<T>(value: T): T {
+  if (value && typeof value === 'object') { for (const nested of Object.values(value)) freeze(nested); Object.freeze(value); }
+  return value;
+}
+function attemptedClock(value: Envelope): boolean {
+  const route = value.routes[0];
+  return value.action.type === STAFF_CLOCK_TYPE && value.routes.length === 1 && route.plan.id === TIMECARD_ROUTE
+    && route.attempts === 1 && typeof route.attemptToken === 'string' && !!route.attemptToken
+    && ['inflight', 'blocked', 'reconciliation'].includes(route.status);
+}
+/** Fresh copied snapshots only; no claim, rewrite, migration or retry is performed. */
+export async function getClockReceiptCandidates(): Promise<ClockReceiptCandidate[]> {
+  const fence = identityFence();
+  const { values } = await ownedEnvelopes();
+  const owner = currentVerifiedQueueOwner();
+  if (!sameFence(fence) || !owner) return [];
+  return values.filter(value => sameOwner(owner, value.owner) && attemptedClock(value)).map(value => {
+    const candidate = freeze(clone({ action: value.action, owner: value.owner, adapter: value.adapter, route: value.routes[0] }));
+    clockReceiptSnapshots.set(candidate, { value: clone(value), fence });
+    return candidate;
+  });
+}
+/** Fence receipt access and the original-row CAS; this is not commit-wide cancellation. */
+export function isCurrentClockReceiptCandidate(candidate: ClockReceiptCandidate): boolean {
+  const snapshot = clockReceiptSnapshots.get(candidate);
+  const current = currentVerifiedQueueOwner();
+  return !!snapshot && sameFence(snapshot.fence) && !!current && sameOwner(current, snapshot.value.owner);
+}
+/** Exact receipt plus compare-and-set of the original envelope; never resets an attempt. */
+export async function acknowledgeClockReceipt(candidate: ClockReceiptCandidate, httpStatus: number, body: unknown): Promise<boolean> {
+  const snapshot = clockReceiptSnapshots.get(candidate);
+  if (!snapshot || !isCurrentClockReceiptCandidate(candidate) || !attemptedClock(snapshot.value)) return false;
+  const { action, owner } = snapshot.value;
+  const result = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
+  const expected = { version: 1, actor_id: owner.userId, id: action.id, staff_id: action.payload?.staff_id,
+    event_type: action.payload?.event_type, offline_timestamp: new Date(action.timestamp).toISOString() };
+  if (httpStatus !== 200 || result.success !== true || readOutcome(action.id, TIMECARD_ROUTE, httpStatus, result).status !== 'acknowledged'
+    || canonical(result.receipt) !== canonical(expected)) return false;
+  if (!sameOwner(owner, await readQueueOwner()) || !isCurrentClockReceiptCandidate(candidate)) return false;
+  const adapter = await selectedQueueAdapter();
+  if (adapter !== snapshot.value.adapter) return false;
+  checkOtherRows((await readOtherAdapter(adapter)).rows);
+  return queueTransaction(adapter, rows => {
+    const row = rows.find(row => row.id === action.id);
+    const current = row && envelope(row);
+    if (!isCurrentClockReceiptCandidate(candidate) || !current || canonical(current) !== canonical(snapshot.value)) return { result: false };
+    // This is the local acknowledgment linearization point. The exact server
+    // effect already exists. As with completeAction, a later logout may allow
+    // this original-owner commit to finish, but cannot acknowledge a replacement
+    // envelope, mutate another account, or authorize a server write/replay.
+    current.routes[0].status = 'acknowledged'; delete current.routes[0].reason;
+    return { writes: [stored(current)], result: true };
   });
 }

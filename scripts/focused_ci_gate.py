@@ -22,6 +22,7 @@ GATES = {
     'field-boundary-contract': (89, 'OHC_FIELD_TEST_DATABASE_URL'),
     'checkpoint-restore-contract': (37, 'OHC_CHECKPOINT_TEST_DATABASE_URL'),
     'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
+    'staff-timecard-contract': (96, 'OHC_CLOCK_TEST_DATABASE_URL'),
     'proactive-worker-contract': (11, 'OHC_OPS_PROBE_DB'),
     'builder-generation-contract': (90, 'OHC_BUILDER_GENERATION_TEST_DATABASE_URL'),
     'widget-chat-contract': (51, 'OHC_WIDGET_TEST_DATABASE_URL'),

@@ -71,6 +71,109 @@ class FocusedGateTests(unittest.TestCase):
         for source in ['.github/workflows/ci.yml', 'scripts/focused_ci_gate.py', 'scripts/test_focused_ci_gate.py', 'scripts/agent-feed-decision-contract/database_guard.py']:
             self.assertIn(source, manifest)
 
+    def test_clock_gate_requires_both_stores_and_locked_fetch(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        minimum, database = gate.GATES['staff-timecard-contract']
+        self.assertGreaterEqual(minimum, 96)
+        self.assertEqual(database, 'OHC_CLOCK_TEST_DATABASE_URL')
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/staff-timecard-contract/fetch.sh')
+        execute = next(i for i, step in enumerate(steps) if 'focused_ci_gate.py staff-timecard-contract' in step.get('run', ''))
+        self.assertLess(fetch, execute)
+        self.assertIn('!cancelled()', steps[fetch]['if'])
+        self.assertIn('!cancelled()', steps[execute]['if'])
+        self.assertEqual(steps[execute]['env'][database], 'postgres://postgres:postgres@127.0.0.1:5432/ohc_clock_timecard_test')
+        self.assertIn('createdb ', steps[execute]['run'])
+        folder = root/'scripts/staff-timecard-contract'
+        fetch_script = (folder/'fetch.sh').read_text()
+        self.assertLess(fetch_script.index('verify_lock.py'), fetch_script.index('cargo fetch --locked'))
+        self.assertNotIn('cargo metadata', fetch_script)
+        runner = (folder/'run.sh').read_text()
+        self.assertIn('--locked --offline', runner)
+        self.assertNotIn('--ignored', runner)
+        self.assertNotIn('--include-ignored', runner)
+        self.assertIn(' -- --test-threads=1', runner)
+        self.assertNotIn('cargo metadata', runner)
+        self.assertIn('test-staff-timecards:', (root/'Makefile').read_text())
+        native_steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['native-test']['steps']
+        workspace = next(step for step in native_steps if step.get('run') == 'make test-backend')
+        self.assertIn(database, workspace['env'])
+        earlier = native_steps[:native_steps.index(workspace)]
+        self.assertTrue(any('createdb ' in step.get('run', '') and 'ohc_clock_timecard_test' in step['run'] for step in earlier))
+
+    def test_clock_runner_rejects_unavailable_postgres_before_native_execution(self):
+        import os
+        import shutil
+        import subprocess
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            sandbox = Path(directory)
+            folder = sandbox/'scripts/staff-timecard-contract'
+            folder.mkdir(parents=True)
+            for name in ['run.sh', 'database_guard.py']:
+                shutil.copyfile(root/'scripts/staff-timecard-contract'/name, folder/name)
+            shared = sandbox/'scripts/agent-feed-decision-contract'
+            shared.mkdir()
+            shutil.copyfile(root/'scripts/agent-feed-decision-contract/database_guard.py', shared/'database_guard.py')
+            binaries = sandbox/'bin'
+            binaries.mkdir()
+            capture = sandbox/'native-started'
+            (binaries/'cargo').write_text('#!/bin/sh\ntouch "$CLOCK_NATIVE_CAPTURE"\n')
+            (binaries/'psql').write_text('#!/bin/sh\nexit 1\n')
+            (binaries/'cargo').chmod(0o755)
+            (binaries/'psql').chmod(0o755)
+            environment = dict(os.environ, PATH=str(binaries)+os.pathsep+os.environ['PATH'],
+                CLOCK_NATIVE_CAPTURE=str(capture),
+                OHC_CLOCK_TEST_DATABASE_URL='postgres://fixture@127.0.0.1:5432/ohc_clock_test')
+            result = subprocess.run(['bash', str(folder/'run.sh')], cwd=sandbox, env=environment,
+                                    capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertFalse(capture.exists(), 'fixture outage must fail before Cargo can start')
+            self.assertIn('Owned PostgreSQL fixture is unavailable', result.stderr)
+
+    def test_clock_lock_rejects_registry_and_local_package_drift(self):
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        verify = runpy.run_path(str(root/'scripts/staff-timecard-contract/verify_lock.py'))['verify']
+        dependency = dict(name='dependency', version='1', source='registry+example', checksum='original')
+        local = dict(name='server_auth', version='0.1.0')
+        harness = dict(name='ohc-clock-receipt-regressions', version='0.1.0')
+        repository = {'package': [dependency, local]}
+        verify(repository, {'package': [dependency, local, harness]})
+        for changed in [dict(dependency, checksum='changed'), dict(local, version='0.2.0')]:
+            with self.subTest(changed=changed), self.assertRaises(ValueError):
+                verify(repository, {'package': [changed, harness]})
+
+    def test_clock_generator_binds_whole_runtime_and_actual_schema_fragments(self):
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        folder = root/'scripts/staff-timecard-contract'
+        prepare = runpy.run_path(str(folder/'prepare.py'))['prepare']
+        prepare()
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        fragments = {item['label']: item for item in manifest['production_fragments']}
+        for label in ['whole module: staff_timecards', 'whole module: sync_transaction',
+                      'whole module: staff_timecards_test', 'timecard method route', 'receipt recovery method route',
+                      'canonical access configuration', 'actual staff parent mount',
+                      'actual global protected bearer layer',
+                      'actual SQLite ohc_timecard_event bootstrap',
+                      'actual SQLite receipt upgrade',
+                      'actual PostgreSQL migration: 1035_staff_timecard_receipts.sql']:
+            item = fragments[label]
+            exact = (root/item['path']).read_bytes()[item['start_byte']:item['end_byte_exclusive']]
+            self.assertEqual(exact.decode(), item['literal'])
+            import hashlib
+            self.assertEqual(hashlib.sha256(exact).hexdigest(), item['sha256'])
+        generated = (folder/'generated.rs').read_text()
+        self.assertIn('mod staff_timecards;', generated)
+        self.assertNotIn('pub async fn sync_timecard_handler(', generated,
+                         'the POST implementation must be imported whole, never copied')
+        for source in ['.github/workflows/ci.yml', 'scripts/focused_ci_gate.py',
+                       'scripts/test_focused_ci_gate.py', 'src/server/db.rs',
+                       'src/server/api/staff_timecards_test/fixture.rs']:
+            self.assertIn(source, manifest['input_hashes'])
+
     def test_nats_metadata_fetch_precedes_required_offline_gate(self):
         import yaml
         root = Path(__file__).resolve().parents[1]

@@ -126,6 +126,96 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
   const connects = [], blockedHttp = [], forwardedHttp = [];
   const checkoutResponses = [], registeredCheckoutProducts = new Set(), captures = new Set();
   let checkoutCaptureError = null;
+  let clockRegistration, clockResponseLoss = null;
+  const clockPath = '/api/v1/staff/timecard';
+  // Explicit, one-shot test fault for an already durable offline self-clock.
+  // It is disabled unless this owned fixture arms the exact event. Observe the
+  // single real upstream request; never create, retry or replace an acknowledgment.
+  const captureClockLoss = request => {
+    if (!clockRegistration || clockResponseLoss.requestBody !== null || request.method !== 'POST'
+        || request.url !== `${appOrigin}${clockPath}`
+        || request.headers['x-ohc-expected-user'] !== clockRegistration.actorId
+        || request.headers['x-ohc-expected-tenant'] !== clockRegistration.tenantId
+        || request.headers['idempotency-key'] !== clockRegistration.event.id) return null;
+    let chunks = [], length = 0, matched = false, incompleteReply;
+    request.on('data', chunk => {
+      length += chunk.length;
+      if (length <= 4096) chunks.push(Buffer.from(chunk)); else chunks = [];
+    });
+    request.once('end', () => {
+      if (!request.complete || length > 4096 || clockResponseLoss.requestBody !== null) return;
+      const raw = Buffer.concat(chunks).toString('utf8'); chunks = [];
+      let parsed;
+      try { parsed = JSON.parse(raw); } catch { return; }
+      if (!isDeepStrictEqual(parsed, { events: [clockRegistration.event] })) return;
+      clockResponseLoss.requestBody = raw; matched = true;
+    });
+    return { response(incoming, response) {
+      if (!matched) return false;
+      const row = clockResponseLoss;
+      row.status = incoming.statusCode;
+      if (incoming.statusCode !== 200) {
+        incoming.once('end', () => { row.complete = incoming.complete; });
+        return false;
+      }
+      let bytes = 0, buffered = [], streaming = false, terminating = false;
+      const incomplete = reason => {
+        if (terminating) return;
+        terminating = true; row.complete = false; row.error ??= reason;
+        const prefix = Buffer.concat(buffered); buffered = [];
+        if (response.destroyed) return;
+        // This reply never qualified for deliberate loss. Preserve every genuine
+        // header and byte we already observed before propagating upstream failure.
+        if (!response.headersSent) response.writeHead(incoming.statusCode, incoming.headers);
+        response.flushHeaders();
+        response.write(prefix, () => response.destroy());
+      };
+      incompleteReply = incomplete;
+      incoming.once('aborted', () => incomplete('Clock upstream reply was incomplete'));
+      incoming.once('error', () => incomplete('Clock upstream reply failed'));
+      const write = chunk => {
+        if (!response.write(chunk)) { incoming.pause(); response.once('drain', () => incoming.resume()); }
+      };
+      incoming.on('data', chunk => {
+        if (streaming) { write(chunk); return; }
+        bytes += chunk.length; buffered.push(Buffer.from(chunk));
+        if (bytes > 65536) {
+          row.error = 'Clock upstream reply exceeded the observation limit'; streaming = true;
+          response.writeHead(incoming.statusCode, incoming.headers);
+          write(Buffer.concat(buffered)); buffered = [];
+        }
+      });
+      incoming.once('end', () => {
+        if (terminating) return;
+        row.complete = incoming.complete;
+        if (streaming) { response.end(); return; }
+        const original = Buffer.concat(buffered); buffered = [];
+        let decoded = original, acknowledgment;
+        try {
+          const options = { maxOutputLength: 65536 }, encoding = incoming.headers['content-encoding'];
+          if (encoding === 'gzip') decoded = gunzipSync(original, options);
+          else if (encoding === 'deflate') decoded = inflateSync(original, options);
+          else if (encoding === 'br') decoded = brotliDecompressSync(original, options);
+          else if (encoding && encoding !== 'identity') throw new Error('Unsupported encoding');
+          acknowledgment = JSON.parse(decoded.toString('utf8'));
+        } catch { row.error ??= 'Clock upstream reply was not a bounded acknowledgment'; }
+        const exact = { success: true, outcomes: [{ id: clockRegistration.event.id, route: clockPath, status: 'acknowledged' }] };
+        response.writeHead(incoming.statusCode, incoming.headers);
+        if (incoming.complete && !row.error && isDeepStrictEqual(acknowledgment, exact)) {
+          row.dropped = true;
+          // Flush genuine headers and a literal incomplete prefix, preventing a
+          // stale-socket retry without inventing any application response bytes.
+          response.flushHeaders();
+          response.write(original.subarray(0, 1), () => response.destroy());
+        } else response.end(original);
+      });
+      return true;
+    }, upstreamError() {
+      if (!incompleteReply) return false;
+      incompleteReply('Clock upstream request failed after reply started');
+      return true;
+    } };
+  };
   // Observe only this fixture's registered checkout requests. Browser response
   // bodies may be evicted as soon as the real app navigates to provider checkout.
   // These copies come from the single existing upstream request, before forwarding
@@ -205,16 +295,23 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
     }
     forwardedHttp.push({ method: request.method, path: `${url.pathname}${url.search}` });
     const capture = captureCheckout(request, url);
+    const clockLoss = captureClockLoss(request);
     const headers = { ...request.headers, host: url.host };
     delete headers['proxy-authorization']; delete headers['proxy-connection'];
     const upstream = httpRequest(url, { method: request.method, headers, agent: false, timeout: 5000 }, incoming => {
       capture?.response(incoming);
-      response.writeHead(incoming.statusCode, incoming.headers); incoming.pipe(response);
-      incoming.on('error', () => response.destroy());
+      if (!clockLoss?.response(incoming, response)) {
+        response.writeHead(incoming.statusCode, incoming.headers); incoming.pipe(response);
+        incoming.on('error', () => response.destroy());
+      }
     });
     upstreams.add(upstream); upstream.once('close', () => upstreams.delete(upstream));
     upstream.on('timeout', () => upstream.destroy(new Error('Owned application proxy timeout')));
-    upstream.on('error', () => { capture?.fail('Checkout upstream request failed'); if (!response.headersSent) json(response, 502, { error: 'Owned application request failed' }); else response.destroy(); });
+    upstream.on('error', () => {
+      capture?.fail('Checkout upstream request failed');
+      if (clockLoss?.upstreamError()) return;
+      if (!response.headersSent) json(response, 502, { error: 'Owned application request failed' }); else response.destroy();
+    });
     response.once('close', () => {
       if (!response.writableFinished) { capture?.fail('Checkout client closed before forwarding finished'); upstream.destroy(); }
     });
@@ -267,7 +364,23 @@ export async function startCheckoutEgressProxy({ appOrigin }) {
       }
       registeredCheckoutProducts.add(product.productId);
     },
-    evidence: () => structuredClone({ connects, blockedHttp, forwardedHttp, checkoutResponses, checkoutCaptureError }),
+    armClockResponseLoss(registration) {
+      if (clockRegistration) throw new Error('The owned clock response-loss hook is one-shot');
+      const event = registration?.event;
+      if (!/^e2e-[a-zA-Z0-9-]{1,180}$/.test(registration?.tenantId ?? '')
+          || !/^e2e-[a-zA-Z0-9-]{1,180}$/.test(registration?.actorId ?? '')
+          || !event || typeof event.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(event.id)
+          || event.staff_id !== registration.actorId || !['CLOCK_IN', 'CLOCK_OUT'].includes(event.event_type)
+          || typeof event.offline_timestamp !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(event.offline_timestamp)
+          || !Number.isSafeInteger(Date.parse(event.offline_timestamp)) || new Date(event.offline_timestamp).toISOString() !== event.offline_timestamp
+          || !isDeepStrictEqual(Object.keys(event).sort(), ['event_type', 'id', 'offline_timestamp', 'staff_id'])) {
+        throw new Error('An exact bounded owned clock registration is required');
+      }
+      clockRegistration = structuredClone(registration);
+      clockResponseLoss = { tenantId: registration.tenantId, actorId: registration.actorId, eventId: event.id,
+        requestBody: null, status: null, dropped: false, complete: false, error: null };
+    },
+    evidence: () => structuredClone({ connects, blockedHttp, forwardedHttp, checkoutResponses, checkoutCaptureError, clockResponseLoss }),
     async close() {
       for (const capture of captures) capture.fail('Checkout proxy closed before observation completed');
       for (const request of upstreams) request.destroy(); await stop();
@@ -406,6 +519,7 @@ export async function startConfiguredCheckoutFixture({ environment = process.env
     await waitReady(`${origin}/login`, frontend);
     return { origin, apiOrigin, proxy: { server: proxy.server, bypass: proxy.bypass },
       register(product) { provider.register(product); proxy.registerCheckout(product); },
+      armClockResponseLoss(registration) { proxy.armClockResponseLoss(registration); },
       evidence,
       close,
     };
