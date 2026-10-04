@@ -1,0 +1,3 @@
+outcome: no_work
+issue_title: "Architecture & Design: Unified Mobile-First Agent Feed & Proactive Actions"
+issue_description: "The assigned issue (#32030) requests a major new epic (Unified Mobile-First Agent Feed & Proactive Actions). According to RESEARCH.md and the final OHC scope instructions, new epics and UI rewrites require an explicit evidence-backed decision and expansion gate approval. Since this feature lacks the required prior validation and contradicts the instruction not to invent follow-up features or dummy changes, this task is evaluated as a no-work/blocked outcome. No unsupported new scope has been implemented."
