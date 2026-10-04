@@ -1,0 +1,5 @@
+{
+  "issue_title": "Implement Autonomous Universal Subscription & Retainer Engine",
+  "issue_description": "Skill provenance: Superpowers revision 8ca22dba9a94f28898bbce59f2537ff4d87c747d loaded (using-superpowers, brainstorming, systematic-debugging). The requested Autonomous Universal Subscription & Retainer Engine is a blocked/no-work finding because it relies on the suspended hypotheses of fixed recurring billing, exclusive service segments, and untested pricing structures. Per RESEARCH.md (2026-09-18), the previous fixed $99 offer, 300-step allowance, $299 setup, and exclusive web/design/marketing segment remain suspended hypotheses. New epics require an explicit evidence-backed decision, and public owner anecdotes (like 'Leo the Music Tutor' or 'Nora') do not establish willingness to pay or authorize new product scopes. The codebase already contains foundational subscription logic (`src/server/services/subscription/service.rs`, `src/server/domain/subscription.rs`), but expanding it into a full autonomous retainer engine for a specific unvalidated persona requires explicit RESEARCH.md authorization.",
+  "outcome": "blocked"
+}
