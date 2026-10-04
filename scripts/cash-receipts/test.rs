@@ -41,9 +41,15 @@ impl Fixture {
 CREATE TABLE orders(id TEXT PRIMARY KEY,tenant_id TEXT,customer_id TEXT REFERENCES customers(id),total_amount NUMERIC,status TEXT);
 CREATE TABLE order_items(id TEXT PRIMARY KEY,tenant_id TEXT,order_id TEXT REFERENCES orders(id),product_id TEXT REFERENCES products(id),quantity INT,price NUMERIC);
 CREATE TABLE department_tasks(id TEXT PRIMARY KEY,tenant_id TEXT,department TEXT,event_type TEXT,payload JSONB,status TEXT);
-CREATE TABLE ohc_universal_ledger(id TEXT PRIMARY KEY,tenant_id TEXT,department TEXT,action_type TEXT,state_change JSONB);
 CREATE TABLE agent_action_requests(id TEXT PRIMARY KEY,tenant_id TEXT,action_type TEXT,status TEXT,confidence_score FLOAT,product_id TEXT,payload JSONB,source TEXT,agent_type TEXT,created_at TIMESTAMPTZ,updated_at TIMESTAMPTZ);
 CREATE TABLE agent_feed_items(id TEXT PRIMARY KEY,tenant_id TEXT,event_source TEXT,context_payload JSONB,proposed_action JSONB,lifecycle_state TEXT);").execute(&pool).await.unwrap();
+        // Exercise the same ledger schema embedded by the PostgreSQL migrator.
+        sqlx::raw_sql(include_str!(
+            "../../src/server/migrations/060_job_queue_and_ledger.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
         sqlx::raw_sql(include_str!(
             "../../src/server/migrations/210_centralized_inventory.sql"
         ))
@@ -312,10 +318,7 @@ async fn rejected_transaction(trigger: &str) {
     let sale = f.sale(&lock);
     sqlx::raw_sql(&format!("CREATE FUNCTION reject_cash() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'owned cash failure'; END $$;{trigger}")).execute(&f.pool).await.unwrap();
     let (s, b) = f.request("POST", "/commit", sale.clone()).await;
-    assert!(
-        !s.is_success(),
-        "failed transaction must not report success: {b}"
-    );
+    assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE, "{b}");
     assert_ne!(b["success"], true);
     assert_eq!(
         f.stock().await,
@@ -323,6 +326,21 @@ async fn rejected_transaction(trigger: &str) {
         "stock must roll back with order"
     );
     assert_eq!(f.counts().await, (0, 0));
+    for table in [
+        "terminal_cash_receipts",
+        "terminal_cash_receipt_items",
+        "ohc_universal_ledger",
+        "department_tasks",
+        "agent_action_requests",
+        "agent_feed_items",
+        "inventory_transactions",
+    ] {
+        let count: i64 = sqlx::query_scalar(&format!("SELECT COUNT(*) FROM {table}"))
+            .fetch_one(&f.pool)
+            .await
+            .unwrap();
+        assert_eq!(count, 0, "failed sale must roll back {table}");
+    }
     assert_eq!(
         f.redis_lock().await.as_deref(),
         Some(lock.as_str()),
@@ -358,6 +376,10 @@ async fn order_insert_failure_rolls_back_stock() {
 #[tokio::test]
 async fn item_insert_failure_rolls_back_stock_and_order() {
     rejected_transaction("CREATE TRIGGER reject_item BEFORE INSERT ON order_items FOR EACH ROW EXECUTE FUNCTION reject_cash();").await;
+}
+#[tokio::test]
+async fn ledger_insert_failure_rolls_back_sale_and_preserves_reservation() {
+    rejected_transaction("CREATE TRIGGER reject_ledger BEFORE INSERT ON ohc_universal_ledger FOR EACH ROW EXECUTE FUNCTION reject_cash();").await;
 }
 #[tokio::test]
 async fn deferred_commit_failure_rolls_back_stock_and_order() {
@@ -458,15 +480,62 @@ async fn concurrent_cash_requests_compete_for_last_available_item() {
         f.request("POST", "/commit", direct_sale(&f, 1)),
         f.request("POST", "/commit", direct_sale(&f, 1))
     );
-    let statuses = [a.0, b.0];
-    assert_eq!(
-        statuses.iter().filter(|s| s.is_success()).count(),
-        1,
-        "{a:?} {b:?}"
-    );
-    assert!(statuses.contains(&StatusCode::CONFLICT));
+    let mut statuses = [a.0.as_u16(), b.0.as_u16()];
+    statuses.sort();
+    assert_eq!(statuses, [200, 409], "{a:?} {b:?}");
+    let completed = if a.0 == StatusCode::OK { &a.1 } else { &b.1 };
+    assert_eq!(completed["status"], "completed");
     assert_eq!(f.stock().await, (0, 0, 0));
     assert_eq!(f.counts().await, (1, 1));
+    let ledger: Vec<(String, String, String, serde_json::Value)> =
+        sqlx::query_as("SELECT tenant_id,department,event_type,payload FROM ohc_universal_ledger")
+            .fetch_all(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(ledger.len(), 1, "persist only the winning allocation");
+    assert_eq!(ledger[0].0, f.tenant);
+    assert_eq!(ledger[0].1, "Operations");
+    assert_eq!(ledger[0].2, "INVENTORY_DEDUCTION");
+    assert_eq!(ledger[0].3["product_id"], "product-a");
+    assert_eq!(ledger[0].3["quantity_deducted"], 1);
+    assert_eq!(ledger[0].3["remaining_stock"], 0);
+    let receipt_counts: (i64, i64) = sqlx::query_as(
+        "SELECT (SELECT COUNT(*) FROM terminal_cash_receipts),(SELECT COUNT(*) FROM terminal_cash_receipt_items)",
+    )
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(receipt_counts, (1, 1));
+    let task_types: Vec<String> =
+        sqlx::query_scalar("SELECT event_type FROM department_tasks ORDER BY event_type")
+            .fetch_all(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(task_types, ["InventoryUpdated", "LowStockAlert"]);
+    let action_types: Vec<String> =
+        sqlx::query_scalar("SELECT action_type FROM agent_action_requests ORDER BY action_type")
+            .fetch_all(&f.pool)
+            .await
+            .unwrap();
+    assert_eq!(action_types, ["InventoryCheck", "Reorder"]);
+    let feed_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM agent_feed_items")
+        .fetch_one(&f.pool)
+        .await
+        .unwrap();
+    assert_eq!(feed_count, 1);
+    assert_eq!(f.hub.events.lock().unwrap().len(), 1);
+    let (status, readback) = f
+        .request(
+            "GET",
+            &format!(
+                "/commit/{}",
+                completed["receipt"]["operation_id"].as_str().unwrap()
+            ),
+            serde_json::Value::Null,
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK, "{readback}");
+    assert_eq!(readback["receipt"], completed["receipt"]);
     f.finish().await;
 }
 #[tokio::test]

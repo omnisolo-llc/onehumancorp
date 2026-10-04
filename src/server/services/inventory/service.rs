@@ -693,7 +693,7 @@ impl InventoryService {
             })
             .to_string();
 
-            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, action_type, state_change) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
+            sqlx::query("INSERT INTO ohc_universal_ledger (id, tenant_id, department, event_type, payload) VALUES ($1, $2, 'Operations', 'INVENTORY_DEDUCTION', $3::jsonb)")
                 .bind(Uuid::new_v4().to_string())
                 .bind(tenant_id)
                 .bind(&payload_str)

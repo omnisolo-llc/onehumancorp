@@ -46,7 +46,7 @@ class FocusedGateTests(unittest.TestCase):
         import yaml
         root = Path(__file__).resolve().parents[1]
         self.assertIn('cash-receipts', gate.GATES)
-        self.assertEqual(gate.GATES['cash-receipts'], (44, 'OHC_CASH_TEST_DATABASE_URL'))
+        self.assertEqual(gate.GATES['cash-receipts'], (45, 'OHC_CASH_TEST_DATABASE_URL'))
         steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
         fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/cash-receipts/fetch.sh')
         execute = next(i for i, step in enumerate(steps) if 'focused_ci_gate.py cash-receipts' in step.get('run', ''))

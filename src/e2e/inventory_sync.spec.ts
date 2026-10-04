@@ -1,4 +1,6 @@
 import { test, expect } from './fixtures';
+import type { Response } from '@playwright/test';
+import { captureResponseBody, type CapturedResponse } from '../../scripts/playwright/response-body.mjs';
 import { startConfiguredCheckoutFixture } from './support/configured_checkout_fixture';
 import {
   CASH_COMMIT_PATH, CHECKOUT_SESSION_PATH, withOwnedCheckoutActors, prepareCashCart, prepareOnlineCart,
@@ -48,22 +50,32 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
         await fixture.register(actors.stock);
         await prepareCashCart(actors.first, actors.stock, actors.firstUserId);
         await prepareOnlineCart(actors.second, actors.stock);
-        const cashResult = waitForCheckoutPost(actors.first, CASH_COMMIT_PATH);
-        const onlineResult = waitForCheckoutPost(actors.second, CHECKOUT_SESSION_PATH);
+        const onlineResult = captureResponseBody(waitForCheckoutPost(actors.second, CHECKOUT_SESSION_PATH));
+        let cash: Response;
+        let capturedOnline: CapturedResponse<Response>;
         if (ordering === 'online-first') {
-          await actors.second.getByRole('button', { name: 'Pay', exact: true }).click();
-          const held = await onlineResult;
-          expect(held.status()).toBe(200);
-          await held.body();
-          await assertPersistedStockOutcome(actors.stock, null);
-          await actors.first.locator('#cash-btn-offline').click();
-        } else {
-          await Promise.all([
-            actors.first.locator('#cash-btn-offline').click(),
+          [capturedOnline] = await Promise.all([
+            onlineResult,
             actors.second.getByRole('button', { name: 'Pay', exact: true }).click(),
           ]);
+          expect(capturedOnline.response.status()).toBe(200);
+          await capturedOnline.body();
+          await assertPersistedStockOutcome(actors.stock, null);
+          [cash] = await Promise.all([
+            waitForCheckoutPost(actors.first, CASH_COMMIT_PATH),
+            actors.first.locator('#cash-btn-offline').click(),
+          ]);
+        } else {
+          [cash, capturedOnline] = await Promise.all([
+            waitForCheckoutPost(actors.first, CASH_COMMIT_PATH),
+            onlineResult,
+            Promise.all([
+              actors.first.locator('#cash-btn-offline').click(),
+              actors.second.getByRole('button', { name: 'Pay', exact: true }).click(),
+            ]),
+          ]);
         }
-        const [cash, online] = await Promise.all([cashResult, onlineResult]);
+        const online = capturedOnline.response;
         expect([cash.status(), online.status()].sort()).toEqual([200, 409]);
         const requestBody = online.request().postDataJSON();
         expect(requestBody).toEqual({ is_subscription: false, product_id: actors.stock.productId, quantity: 1 });
@@ -71,7 +83,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
         if (cash.status() === 200) {
           const receipt = await assertCashReceipt(cash, actors.first, actors.stock);
           expect(online.status()).toBe(409);
-          await online.body();
+          await capturedOnline.body();
           await expect(actors.second.getByText('The selected product just sold out.', { exact: true })).toBeVisible();
           expect(providerRequests).toEqual([]);
           expect(redirects).toEqual([]);
@@ -86,7 +98,7 @@ test.describe('Owned cash and online checkout session stock exclusion', () => {
             receipt: { payment_status: 'unpaid', amount_total: actors.stock.amountCents, currency: 'usd' } });
           expect(issued.receipt.id).toMatch(/^cs_test_[a-f0-9_]+$/);
           const checkoutUrl = `https://checkout.stripe.com/c/pay/${issued.receipt.id}`;
-          expect(await online.json()).toEqual({ checkout_url: checkoutUrl });
+          expect(JSON.parse((await capturedOnline.body()).toString('utf8'))).toEqual({ checkout_url: checkoutUrl });
           await expect.poll(() => redirects).toContain(checkoutUrl);
           await expect.poll(() => fixture.evidence().connects.filter(request => request.authority === 'checkout.stripe.com:443').length).toBeGreaterThan(previousCheckoutConnects);
           const appAuthority = new URL(fixture.origin).host;
