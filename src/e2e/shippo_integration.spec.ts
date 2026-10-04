@@ -34,7 +34,15 @@ async function prepareOrder(page: Page, baseURL: string | undefined) {
   const user = await authenticateRequest(page.request, {
     username: E2E_ADMIN_USER.email, password: E2E_ADMIN_USER.password, organizationId: provider.tenantId,
   }, origin.origin);
-  expect(user).toMatchObject({ id: 'e2e-admin-user', organization_id: provider.tenantId, roles: expect.arrayContaining(['ADMIN']) });
+  // The web login returns the canonical sealed-session shape, not the backend
+  // wire user (organization_id). Verify both the response and its issued cookie.
+  expect(user).toMatchObject({ id: 'e2e-admin-user', username: E2E_ADMIN_USER.email, organizationId: provider.tenantId, roles: expect.arrayContaining(['ADMIN']) });
+  const identityResponse = await page.request.get(new URL('/api/v1/auth/session-identity', origin).href);
+  expect(identityResponse.status()).toBe(200);
+  const identity = await identityResponse.json();
+  expect(identity).toEqual({ userId: 'e2e-admin-user', tenantId: provider.tenantId, expiresAt: expect.any(Number) });
+  expect(Number.isFinite(identity.expiresAt)).toBe(true);
+  expect(identity.expiresAt).toBeGreaterThan(Date.now());
 
   // Both parallel tests and every retry own fresh rows. Never reset a shared
   // order, reuse its paid lifecycle, or rely on the retired production fallback.
