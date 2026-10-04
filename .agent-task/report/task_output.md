@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "Autonomous Voice Order Interceptor & Multilingual KDS Engine"
+issue_description: "The prompt instructs implementing an Autonomous Voice Order Interceptor with a Twilio SIP connection, Voice Gateway, and a Multilingual KDS Engine. However, the required foundational capabilities (Twilio Gateway SIP integration, LLM streaming pipelines, translated KDS mobile UI endpoints) do not exist in the current native backend codebase, and the task scope overrides the legacy mandate to concurrently build all missing features. According to the OneHumanCorp operating contract, a 'blocked' or 'no-work' outcome must be reported when lacking prerequisite evidence and authorization for new vertical capabilities."
