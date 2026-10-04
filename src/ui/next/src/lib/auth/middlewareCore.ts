@@ -6,6 +6,7 @@ import { parseSessionCookieHeader, sessionCodecContext } from "./sessionCookie";
 import type { AuthRuntimeConfig } from "./runtimeConfig";
 import type { Invocation, RequestDescriptor } from "./types";
 import { safeReturnPath } from "./url";
+import { retiredPageDestination } from "./retiredPageRoutes";
 
 export type MiddlewareDependencies = Readonly<{
   config: AuthRuntimeConfig;
@@ -152,6 +153,17 @@ export async function evaluateAuthMiddleware(
     !isTrustedMutationOrigin(request.headers, dependencies.config.canonicalOrigin)
   ) {
     return response(403, "forbidden");
+  }
+  if (
+    (request.method === "GET" || request.method === "HEAD") &&
+    (descriptor.invocation === "page" || descriptor.invocation === "route-handler") &&
+    request.headers.get("rsc") !== "1" &&
+    !url.searchParams.has("_rsc") &&
+    request.headers.get("purpose")?.toLowerCase() !== "prefetch" &&
+    !request.headers.has("next-router-prefetch")
+  ) {
+    const destination = retiredPageDestination(descriptor.pathname);
+    if (destination !== null) return redirect(`${destination}${url.search}`);
   }
   return next();
 }

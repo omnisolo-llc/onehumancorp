@@ -54,7 +54,7 @@ export default function ApiDocsPage() {
       `}} />
       <div data-testid="api-docs-title" className="w-full max-w-6xl bg-[#FFCC00]/10 border border-[#FFCC00]/30 backdrop-blur-[30px] saturate-[210%] border-l-4 border-l-[#FFCC00] p-4 mb-8 rounded-r-xl shadow-sm font-inter">
         <div className="text-yellow-800 dark:text-yellow-400 text-sm font-medium">
-          <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations.">
+          <WithTooltip id="api-docs-tooltip" defaultText="Direct API access is only for custom integrations." tabIndex={0}>
             <span className="font-outfit cursor-help font-bold">Advanced:</span>
           </WithTooltip>{" "}This section is for developers directly integrating with our APIs. Not required for normal use.
         </div>

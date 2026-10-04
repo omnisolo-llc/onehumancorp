@@ -11,6 +11,14 @@ import {
 } from "./middlewareCore";
 
 const NOW = 1_800_000_000;
+const retiredPages = [
+  ["/integrations.html", "/integrations"],
+  ["/ui/integrations.html", "/integrations"],
+  ["/api-docs.html", "/api-docs"],
+  ["/ui/api-docs.html", "/api-docs"],
+  ["/api/ui/api-docs.html", "/api-docs"],
+  ["/api/v1/ui/api-docs.html", "/api-docs"],
+] as const;
 const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
   backendOrigin: "https://api.example.com",
@@ -81,6 +89,59 @@ describe("middleware request description", () => {
     [request("/dashboard"), "page"],
   ] as const)("classifies invocation %#", (input, invocation) => {
     expect(describeMiddlewareRequest(input).invocation).toBe(invocation);
+  });
+});
+
+describe("retired static page navigation", () => {
+  it.each(retiredPages)("redirects authenticated GET/HEAD %s to %s without dropping queries", async (oldPath, canonical) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    for (const method of ["GET", "HEAD"]) {
+      const outcome = await evaluateAuthMiddleware(request(`${oldPath}?tab=connections&next=https%3A%2F%2Fother.example`, { method }, session), deps);
+      expect(outcome).toMatchObject({ kind: "redirect", location: `${canonical}?tab=connections&next=https%3A%2F%2Fother.example`, clearCookie: false });
+      expect(outcome.headers.get("cache-control")).toBe("private, no-store");
+    }
+  });
+
+  it.each(retiredPages)("preserves anonymous and expired-session protection for %s", async (oldPath) => {
+    const deps = await dependencies();
+    const expired = await cookie(deps, { iat: NOW - 7200, exp: NOW - 3600 });
+    for (const session of [undefined, expired]) {
+      const outcome = await evaluateAuthMiddleware(request(oldPath, {}, session), deps);
+      expect(outcome).toMatchObject(oldPath.startsWith("/api/")
+        ? { kind: "response", status: 401 }
+        : { kind: "redirect", location: `/login?next=${encodeURIComponent(oldPath)}` });
+      expect(outcome.clearCookie).toBe(session !== undefined);
+    }
+  });
+
+  it("does not turn mutation, prefetch or server-action requests into page redirects", async () => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    for (const method of ["POST", "PUT", "DELETE", "OPTIONS"]) {
+      const outcome = await evaluateAuthMiddleware(request("/api-docs.html", {
+        method, headers: { origin: config.canonicalOrigin, "sec-fetch-site": "same-origin" },
+      }, session), deps);
+      expect(outcome.kind).toBe("next");
+    }
+    for (const headers of [{ rsc: "1" }, { purpose: "prefetch" }, { "next-action": "action-id" }]) {
+      expect((await evaluateAuthMiddleware(request("/api-docs.html", { headers }, session), deps)).kind).toBe("next");
+    }
+    expect(await evaluateAuthMiddleware(request("/api-docs.html", { method: "POST" }, session), deps)).toMatchObject({ kind: "response", status: 403 });
+  });
+
+  it.each(retiredPages)("preserves RSC and prefetch handling for %s", async (oldPath) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    for (const headers of [{ rsc: "1" }, { purpose: "prefetch" }, { "next-router-prefetch": "1" }]) {
+      expect((await evaluateAuthMiddleware(request(oldPath, { headers }, session), deps)).kind).toBe("next");
+    }
+    expect((await evaluateAuthMiddleware(request(`${oldPath}?_rsc=opaque`, {}, session), deps)).kind).toBe("next");
+  });
+
+  it.each(["/api-docs", "/api-docs.html/extra", "/api-docs%2ehtml", "/ui/other.html", "/booking.html"])("does not retire an unlisted path %s", async (pathname) => {
+    const deps = await dependencies();
+    expect((await evaluateAuthMiddleware(request(pathname, {}, await cookie(deps)), deps)).kind).not.toBe("redirect");
   });
 });
 
