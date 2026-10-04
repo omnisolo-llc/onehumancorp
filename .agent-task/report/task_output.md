@@ -1,0 +1,3 @@
+outcome: blocked
+issue_title: "[Architecture Design] Multi-Channel Inventory & Distributed POS Synchronization System"
+issue_description: "New verticals, channels, agent marketplaces, payroll/tax/MRP/POS engines and harness adapters require evidence and the expansion gate in RESEARCH.md. The issue requires implementing a new Multi-Channel Inventory & Distributed POS Synchronization System epic, which is blocked pending explicit evidence-backed decisions for expansion. Additionally, the core mechanics such as offline POS sync resolution and Redis Redlock for inventory are already present in the existing architecture (src/server/workers/pos_sync_worker.rs, src/server/orchestration/locks.rs)."
