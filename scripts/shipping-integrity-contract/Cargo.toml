@@ -1,0 +1,29 @@
+[package]
+name = "ohc-shipping-integrity-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+chrono = { version = "0.4", features = ["serde"] }
+sha2 = "0.10"
+hmac = "0.12"
+hex = "0.4"
+url = "2"
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
+server_auth = { path = "../../src/server/auth" }
+server_common = { path = "../../src/server/common" }
+server_integrations_shippo = { path = "../../src/server/integrations/shippo" }
+tower = { version = "0.5", features = ["util"] }
+temp-env = { version = "0.3.6", features = ["async_closure"] }
+sea-orm = { version = "=1.1.19", default-features = false, features = ["macros", "runtime-tokio-native-tls", "sqlx-postgres", "sqlx-sqlite", "with-chrono"] }
+[lib]
+path = "generated.rs"
+[profile.dev]
+debug = 0
+incremental = false

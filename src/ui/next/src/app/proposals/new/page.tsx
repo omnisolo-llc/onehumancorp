@@ -19,7 +19,10 @@ export default function NewProposalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic }),
       });
-      if (!res.ok) throw new Error("Proposal request failed");
+      if (!res.ok) {
+        await res.text();
+        throw new Error("Proposal request failed");
+      }
       const data = (await res.json()) as { proposal?: unknown };
       if (typeof data.proposal !== "string" || !data.proposal.trim()) {
         throw new Error("Proposal response was invalid");

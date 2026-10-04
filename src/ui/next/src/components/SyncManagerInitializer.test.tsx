@@ -1,5 +1,5 @@
 import React from 'react';
-import { render } from '@testing-library/react';
+import { fireEvent, render } from '@testing-library/react';
 import { SyncManagerInitializer } from './SyncManagerInitializer';
 import { SyncManager } from '../lib/sync/SyncManager';
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
@@ -8,10 +8,12 @@ import { QUEUE_IDENTITY_EPOCH_KEY } from '../lib/sync/queueIdentity';
 beforeEach(() => { localStorage.clear(); window.history.replaceState(null, '', '/'); vi.clearAllMocks(); });
 afterEach(() => { window.history.replaceState(null, '', '/'); });
 
+const resume = vi.hoisted(() => vi.fn(async () => undefined));
+
 vi.mock('../lib/sync/SyncManager', () => {
   return {
     SyncManager: {
-      getInstance: vi.fn(),
+      getInstance: vi.fn(() => ({ resumeFieldCompletionWork: resume })),
     },
   };
 });
@@ -50,4 +52,12 @@ it('consumes an explicit OIDC completion once, preserves the return URL, and inv
     expect(localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY)).toBe(epoch);
     expect(signal).toHaveBeenCalledTimes(1);
   } finally { window.removeEventListener('omnisolo_auth_changed', signal); }
+});
+
+it('resumes durable field handoffs after mount and identity changes without keeping unmounted listeners', () => {
+  const view = render(<SyncManagerInitializer />);
+  expect(resume).toHaveBeenCalledTimes(1);
+  fireEvent(window, new Event('omnisolo_auth_changed')); expect(resume).toHaveBeenCalledTimes(2);
+  fireEvent(window, new StorageEvent('storage', { key: QUEUE_IDENTITY_EPOCH_KEY })); expect(resume).toHaveBeenCalledTimes(3);
+  view.unmount(); fireEvent(window, new Event('omnisolo_auth_changed')); expect(resume).toHaveBeenCalledTimes(3);
 });

@@ -13,6 +13,7 @@ import { runNativeCommand } from './native-process.mjs';
 import clickCoverage from './ui-click-audit.cjs';
 import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
 import { verifyProductionFixtureBoundary } from './verify-production-fixture-boundary.mjs';
+import { startShippoBrowserFixture } from './shippo-browser-fixture.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(path.join(root, 'package.json'));
@@ -75,6 +76,16 @@ async function stop(child) {
   if (child.exitCode === null && child.signalCode === null) child.kill('SIGKILL');
 }
 
+export async function finishShippoBrowserFixture(fixture, cleanup, runFailed) {
+  let closeError;
+  try { await fixture?.close(); } catch (error) { closeError = error; }
+  // Provider teardown must not prevent removal of this run's database/cache or
+  // temporary state. Keep an existing application/test failure as the primary one.
+  await cleanup();
+  if (closeError && !runFailed) throw closeError;
+  return closeError;
+}
+
 export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const ciSelection = inputArgs.includes('--ci');
   const args = inputArgs.filter((arg) => arg !== '--ci');
@@ -106,6 +117,8 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   const suffix = randomUUID().replaceAll('-', '').slice(0, 12);
   const pg = `ohc-e2e-pg-${suffix}`, cache = `ohc-e2e-cache-${suffix}`;
   const processes = [], logs = [];
+  let shippoFixture;
+  let runFailed = false;
   const start = (binary, arguments_, name, environment) => {
     const output = createWriteStream(path.join(temp, name), { mode: 0o600 });
     logs.push(output);
@@ -173,6 +186,9 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       runId: suffix, containerName: pg, containerId: container.Id, port: pgPort,
     }), { mode: 0o600, flag: 'wx' });
     verifiedFixtureDatabaseUrl(env);
+    // A real HTTP provider boundary, owned by this run; never inherited live credentials.
+    shippoFixture = await startShippoBrowserFixture({ runId: suffix, tenantId: 'e2e-tenant' });
+    Object.assign(env, shippoFixture.environment);
     const backend = start(server, [], 'server.log', env);
     await waitHttp(`${apiOrigin}/readyz`, backend, 120, execution.signal);
     await execute('docker', ['exec', '-i', pg, 'psql', '-v', 'ON_ERROR_STOP=1', '-U', 'ohc', '-d', 'ohc'], {
@@ -205,6 +221,7 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
       }
     }
   } catch (error) {
+    runFailed = true;
     // The database contains only this run's synthetic seed. Its bounded error
     // tail makes migration/type failures diagnosable instead of a bare HTTP 503.
     try {
@@ -222,9 +239,12 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2)) {
   } finally {
     for (const child of processes.reverse()) await stop(child);
     for (const log of logs) log.end();
-    await command('docker', ['rm', '-f', pg, cache], { env, quiet: true }).catch(() => {});
-    await rm(temp, { recursive: true, force: true });
-    process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
+    const closeError = await finishShippoBrowserFixture(shippoFixture, async () => {
+      await command('docker', ['rm', '-f', pg, cache], { env, quiet: true }).catch(() => {});
+      await rm(temp, { recursive: true, force: true });
+      process.removeListener('SIGINT', interrupt); process.removeListener('SIGTERM', interrupt);
+    }, runFailed);
+    if (closeError) console.error('Shippo fixture shutdown also failed; owned-container and temporary-file cleanup was attempted.');
   }
 }
 

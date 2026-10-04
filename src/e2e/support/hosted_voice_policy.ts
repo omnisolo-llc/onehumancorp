@@ -1,4 +1,4 @@
-import { isSonaRuntimeUnavailable, runtimeUnavailableMessage } from './runtime_policy';
+import { isRuntimeReadUnavailable, runtimeUnavailableMessage } from './runtime_policy';
 
 /** The real hosted deployment denies instance-global voice authority. */
 export function isHostedVoiceUnavailable(input: {
@@ -28,13 +28,13 @@ export function recordSmokeHttpResponse(response: {
 }, origin: string, results: { failures: string[]; httpFailures: string[]; verifiedPolicyUrls: Set<string>; policyChecks: Promise<void>[] }): void {
   if (response.status() >= 500) {
     const input = { url: response.url(), origin, method: response.request().method(), status: response.status() };
-    if (!isSonaRuntimeUnavailable({ ...input, body: { error: runtimeUnavailableMessage } })) {
+    if (!isRuntimeReadUnavailable({ ...input, body: { error: runtimeUnavailableMessage } })) {
       results.failures.push(`${response.status()} ${response.url()}`);
       return;
     }
     results.policyChecks.push((async () => {
       const body: unknown = await response.json().catch(() => null);
-      if (isSonaRuntimeUnavailable({ ...input, body })) results.verifiedPolicyUrls.add(response.url());
+      if (isRuntimeReadUnavailable({ ...input, body })) results.verifiedPolicyUrls.add(response.url());
       else results.failures.push(`${response.status()} ${response.url()}`);
     })());
   }

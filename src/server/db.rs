@@ -3232,6 +3232,7 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 sqlx::raw_sql(include_str!("persistence/agent_definitions_sqlite.sql"))
                     .execute(sqlite_pool)
                     .await?;
+                crate::api::fulfillment::storage::ensure_sqlite_schema(sqlite_pool).await?;
                 ensure_sqlite_column(
                     sqlite_pool,
                     "orders",

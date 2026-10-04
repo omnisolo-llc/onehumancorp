@@ -47,8 +47,23 @@ async fn fixture() -> Option<(sqlx::PgPool, HeaderMap)> {
         .execute(&pool)
         .await
         .unwrap();
-    let store = crate::auth::Store::with_repo(Arc::new(
-        crate::auth::postgres_store::PgUserRepository::new(pool.clone()),
+    use sea_orm::{ConnectionTrait, Schema};
+    let orm = sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone());
+    let backend = sea_orm::DatabaseBackend::Postgres;
+    for statement in [
+        Schema::new(backend)
+            .create_table_from_entity(server_auth::seaorm_store::entities::user::Entity),
+        Schema::new(backend).create_table_from_entity(
+            server_auth::seaorm_store::entities::identity_user_role::Entity,
+        ),
+        Schema::new(backend)
+            .create_table_from_entity(server_auth::seaorm_store::entities::revoked_token::Entity),
+    ] {
+        orm.execute(backend.build(&statement)).await.unwrap();
+    }
+    sqlx::raw_sql("INSERT INTO users(id,username,email,password_hash,active,tenant_id,created_at,updated_at)VALUES('owner','owner','owner@example.test','',true,'tenant-a',now(),now());INSERT INTO identity_user_roles(user_id,role_name,tenant_id,position)VALUES('owner','OWNER','tenant-a',0);").execute(&pool).await.unwrap();
+    let store = crate::auth::Store::with_portable_repo(Arc::new(
+        crate::auth::seaorm_store::SeaOrmAuthRepository::new(orm),
     ));
     let user = crate::auth::User {
         id: "owner".into(),
@@ -66,6 +81,23 @@ async fn fixture() -> Option<(sqlx::PgPool, HeaderMap)> {
     let mut headers = HeaderMap::new();
     headers.insert("authorization", format!("Bearer {token}").parse().unwrap());
     Some((pool, headers))
+}
+fn canonical_store(pool: &sqlx::PgPool) -> Arc<server_auth::Store> {
+    Arc::new(server_auth::Store::with_portable_repo(Arc::new(
+        server_auth::seaorm_store::SeaOrmAuthRepository::new(
+            sea_orm::SqlxPostgresConnector::from_sqlx_postgres_pool(pool.clone()),
+        ),
+    )))
+}
+fn sync_state(pool: sqlx::PgPool) -> SyncEventsState {
+    let store = canonical_store(&pool);
+    SyncEventsState {
+        pool,
+        access: crate::api::field_ops::records::FieldAccess { pool: None, store },
+    }
+}
+async fn write_state(pool: sqlx::PgPool) -> SyncWriteState {
+    SyncWriteState::new(canonical_store(&pool), Some(&pool)).await
 }
 async fn body(response: impl IntoResponse) -> serde_json::Value {
     serde_json::from_slice(
@@ -111,7 +143,7 @@ async fn test_sync_events_success() {
     };
     let value = body(
         sync_events_handler(
-            State(pool.clone()),
+            State(sync_state(pool.clone())),
             headers,
             Json(SyncEventsRequest {
                 events: vec![event("success", false)],
@@ -136,7 +168,7 @@ async fn test_sync_events_idempotency() {
     for _ in 0..2 {
         let value = body(
             sync_events_handler(
-                State(pool.clone()),
+                State(sync_state(pool.clone())),
                 headers.clone(),
                 Json(SyncEventsRequest {
                     events: vec![event("replay", false)],
@@ -161,7 +193,7 @@ async fn test_sync_events_conflict() {
     for _ in 0..2 {
         let value = body(
             sync_events_handler(
-                State(pool.clone()),
+                State(sync_state(pool.clone())),
                 headers.clone(),
                 Json(SyncEventsRequest {
                     events: vec![event("conflict", true)],
@@ -191,7 +223,10 @@ async fn test_offline_sync_unauthorized() {
         "spiffe://ohc/org/tenant-a/agent/owner".parse().unwrap(),
     );
     let response = offline_sync_handler(
-        State((pool, mesh())),
+        State((
+            SyncWriteState::new(Arc::new(server_auth::Store::new()), Some(&pool)).await,
+            mesh(),
+        )),
         headers,
         Json(OfflineSyncRequest { mutations: vec![] }),
     )
@@ -208,7 +243,7 @@ async fn test_offline_sync_success_and_negative_guard() {
     missing.product_id = "nonexistent".into();
     let value = body(
         offline_sync_handler(
-            State((pool.clone(), mesh())),
+            State((write_state(pool.clone()).await, mesh())),
             headers,
             Json(OfflineSyncRequest {
                 mutations: vec![mutation("valid", 3), mutation("negative", -1), missing],
@@ -241,7 +276,7 @@ async fn test_offline_sync_field_service_mutations() {
     for _ in 0..2 {
         let value = body(
             offline_sync_handler(
-                State((pool.clone(), mesh())),
+                State((write_state(pool.clone()).await, mesh())),
                 headers.clone(),
                 Json(OfflineSyncRequest {
                     mutations: vec![quote.clone(), intent.clone()],

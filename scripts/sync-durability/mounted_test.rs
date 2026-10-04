@@ -11,16 +11,7 @@ async fn forged_headers_do_not_authorize_any_mounted_sync_route() {
         .acquire_timeout(std::time::Duration::from_millis(20))
         .connect_lazy("postgres://localhost/unused")
         .unwrap();
-    let app = Router::new()
-        .route(
-            "/api/v1/sync/events",
-            post(crate::offline_sync::sync_events_handler),
-        )
-        .route(
-            "/api/v1/sync/operation-intents",
-            post(crate::offline_sync::operation_intents_handler),
-        )
-        .with_state(pool);
+    let app = router(pool);
     for (route, body) in [
         ("events", r#"{"events":[]}"#),
         ("operation-intents", r#"{"intents":[]}"#),
@@ -97,16 +88,31 @@ fn user(tenant: Option<&str>) -> server_auth::User {
     }
 }
 fn router(pool: sqlx::PgPool) -> Router {
+    let store = std::sync::Arc::new(server_auth::Store::with_repo(std::sync::Arc::new(
+        server_auth::postgres_store::PgUserRepository::new(pool.clone()),
+    )));
+    let state = crate::offline_sync::SyncEventsState {
+        pool: pool.clone(),
+        access: crate::api::field_ops::records::FieldAccess { pool: None, store },
+    };
+    let write_state = crate::offline_sync::SyncWriteState {
+        mutations: state.access.clone(),
+        intents: state.access.clone(),
+    };
     Router::new()
         .route(
             "/api/v1/sync/events",
             post(crate::offline_sync::sync_events_handler),
         )
-        .route(
-            "/api/v1/sync/operation-intents",
-            post(crate::offline_sync::operation_intents_handler),
+        .with_state(state)
+        .merge(
+            Router::new()
+                .route(
+                    "/api/v1/sync/operation-intents",
+                    post(crate::offline_sync::operation_intents_handler),
+                )
+                .with_state(write_state),
         )
-        .with_state(pool)
 }
 async fn request(
     app: &Router,

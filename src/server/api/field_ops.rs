@@ -1,502 +1,231 @@
-use axum::{Json, Router, extract::State};
+use axum::{
+    Json, Router,
+    extract::{Extension, State},
+    http::HeaderMap,
+};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use std::sync::Arc;
+
+pub mod appointments;
+mod planning;
+pub mod records;
+pub use appointments::Appointment;
+pub use planning::{
+    OptimizeRouteRequest, OptimizeRouteResponse, RunningLateRequest, RunningLateResponse,
+    optimize_route, running_late,
+};
+pub use records::canonical_pool;
+use records::{
+    FieldAccess, FieldError, Receipt, authority_error, check_transition, conflict, coordinates,
+    expected, invalid, missing, unavailable,
+};
 
 #[derive(Clone)]
 pub struct FieldOpsState {
     pub pool: PgPool,
-    pub mesh: std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
+    pub mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
+    pub access: FieldAccess,
 }
-
-pub mod appointments;
-pub use appointments::Appointment;
 
 #[derive(Serialize, Deserialize)]
 pub struct UpdateAppointmentRequest {
     pub id: String,
     pub status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expected_updated_at: Option<DateTime<Utc>>,
     pub location_lat: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub location_lng: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    pub scheduled_start_time: Option<DateTime<Utc>>,
+    pub scheduled_end_time: Option<DateTime<Utc>>,
 }
-
-#[derive(Serialize)]
+#[derive(Serialize, Deserialize, sqlx::FromRow)]
 pub struct UpdateAppointmentResponse {
     pub success: bool,
     pub id: String,
     pub status: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub location_lat: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub location_lng: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub notes: Option<String>,
+    pub scheduled_start_time: Option<DateTime<Utc>>,
+    pub scheduled_end_time: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(sqlx::FromRow)]
+struct AppointmentVersion {
+    status: String,
+    updated_at: Option<DateTime<Utc>>,
+    scheduled_start_time: Option<DateTime<Utc>>,
+    scheduled_end_time: Option<DateTime<Utc>>,
 }
 
 pub async fn update_appointment(
-    headers: axum::http::HeaderMap,
+    headers: HeaderMap,
     State(state): State<Arc<FieldOpsState>>,
+    Extension(claims): Extension<server_common::Claims>,
     Json(payload): Json<UpdateAppointmentRequest>,
-) -> Result<Json<UpdateAppointmentResponse>, (axum::http::StatusCode, String)> {
-    let mut tx = state
-        .pool
-        .begin()
-        .await
-        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    // Extract tenant_id from spiffe-id or fallback to x-tenant-id header securely.
-    // Ensure we do not arbitrarily fall back to a hardcoded "default" if neither exists,
-    // unless authorized or explicitly checking the DB based on identity.
-    let spiffe_id_str = headers
-        .get("x-spiffe-id")
-        .and_then(|v| v.to_str().ok())
-        .unwrap_or("");
-    let (spiffe_tenant_id, _) =
-        crate::auth::parse_spiffe_id(spiffe_id_str).unwrap_or(("".to_string(), "".to_string()));
-
-    let header_tenant_id = headers
-        .get("x-tenant-id")
-        .and_then(|h| h.to_str().ok())
-        .map(|s| s.to_string())
-        .unwrap_or_default();
-
-    let mut tenant_id = if !spiffe_tenant_id.is_empty() {
-        spiffe_tenant_id
-    } else {
-        header_tenant_id
-    };
-
-    if tenant_id.is_empty() {
-        let tenant_query: Result<(String,), sqlx::Error> =
-            sqlx::query_as("SELECT tenant_id FROM appointments WHERE id = $1")
-                .bind(&payload.id)
-                .fetch_one(&mut *tx)
-                .await;
-
-        if let Ok((t_id,)) = tenant_query {
-            tenant_id = t_id;
-        } else {
-            let _ = tx.rollback().await;
-            return Err((
-                axum::http::StatusCode::UNAUTHORIZED,
-                "Missing tenant identity".to_string(),
-            ));
-        }
+) -> Result<Json<UpdateAppointmentResponse>, FieldError> {
+    let owner = state.access.authorize(&claims, &headers).await?;
+    let tenant = owner.tenant_id().to_owned();
+    let actor = owner.actor_id().to_owned();
+    if !records::valid_id(&payload.id)
+        || ![
+            "Requested",
+            "Pending",
+            "Scheduled",
+            "Confirmed",
+            "En-Route",
+            "In-Progress",
+            "Completed",
+            "Cancelled",
+        ]
+        .contains(&payload.status.as_str())
+    {
+        return Err(invalid("Invalid appointment identifier or status"));
     }
-
-    if let Some(idempotency_key) = headers.get("Idempotency-Key").and_then(|h| h.to_str().ok()) {
-        let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
-            .bind(idempotency_key)
-            .bind(&tenant_id)
-            .fetch_one(&mut *tx)
-            .await
-            .unwrap_or((0,));
-
-        if exists.0 > 0 {
-            tracing::info!(
-                "Idempotency key hit for client_mutation_id: {}, skipping.",
-                idempotency_key
-            ); // pii-safe
-            let _ = tx.rollback().await;
-            return Ok(Json(UpdateAppointmentResponse {
-                success: true,
-                id: payload.id.clone(),
-                status: payload.status.clone(),
-                location_lat: payload.location_lat,
-                location_lng: payload.location_lng,
-                notes: payload.notes.clone(),
-            }));
-        }
+    if payload
+        .notes
+        .as_ref()
+        .is_some_and(|notes| notes.len() > 16_384 || notes.contains('\0'))
+    {
+        return Err(invalid("Appointment notes exceed the supported limit"));
     }
-
-    sqlx::query(
-        r#"
-        UPDATE appointments
-        SET status = $1, notes = COALESCE($2, notes), updated_at = CURRENT_TIMESTAMP
-        WHERE id = $3
-        "#,
-    )
-    .bind(&payload.status)
-    .bind(&payload.notes)
-    .bind(&payload.id)
-    .execute(&mut *tx)
-    .await
-    .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    if let Some(idempotency_key) = headers.get("Idempotency-Key").and_then(|h| h.to_str().ok()) {
-        let _ = sqlx::query(
-            "INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)",
-        )
-        .bind(idempotency_key)
-        .bind(&tenant_id)
-        .execute(&mut *tx)
-        .await;
+    coordinates(payload.location_lat, payload.location_lng)?;
+    let observed = expected(payload.expected_updated_at)?;
+    let receipt = Receipt::new(&headers, &owner, "appointment", &payload)?;
+    let mut tx = owner.begin().await.map_err(authority_error)?;
+    if let Some(receipt) = &receipt
+        && let Some(saved) = receipt.replay(tx.connection()).await?
+    {
+        tx.commit().await.map_err(authority_error)?;
+        return Ok(Json(saved));
     }
-
-    if payload.status == "Completed" {
-        let task_id = uuid::Uuid::new_v4().to_string();
-        let ai_payload = serde_json::json!({
-            "appointment_id": payload.id,
-            "status": "Completed",
-            "message": "Field Ops job marked completed. Operations Agent please verify if travel time needs recalculation for subsequent jobs or text next customer."
-        }).to_string();
-
-        sqlx::query(
-            "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-             VALUES ($1, $2, 'operations', 'field_ops.job_completed', $3::jsonb, 'PENDING')",
-        )
-        .bind(&task_id)
-        .bind(&tenant_id)
-        .bind(&ai_payload)
-        .execute(&mut *tx)
-        .await
-        .map_err(|e| {
-            tracing::error!("Failed to insert into department_tasks: {}", e);
-            (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })?;
+    let current = sqlx::query_as::<_,AppointmentVersion>(
+        "SELECT status,updated_at,scheduled_start_time,scheduled_end_time FROM appointments WHERE id=$1 AND tenant_id=$2 FOR UPDATE"
+    ).bind(&payload.id).bind(&tenant).fetch_optional(tx.connection()).await.map_err(unavailable)?;
+    let AppointmentVersion {
+        status: old_status,
+        updated_at,
+        scheduled_start_time: start,
+        scheduled_end_time: end,
+    } = current.ok_or_else(missing)?;
+    if updated_at != Some(observed) {
+        return Err(conflict());
     }
-
-    tx.commit()
-        .await
-        .map_err(|e| (axum::http::StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-    let event = ::server_omnisolo::orchestration::TeammateMeshEvent {
-        agent_id: "system".into(),
+    check_transition(&old_status, &payload.status)?;
+    let start = payload.scheduled_start_time.or(start);
+    let end = payload.scheduled_end_time.or(end);
+    if start.zip(end).is_some_and(|(start, end)| end < start) {
+        return Err(invalid("Appointment end cannot precede its start"));
+    }
+    let saved = sqlx::query_as::<_, UpdateAppointmentResponse>(
+        "UPDATE appointments SET status=$1,notes=COALESCE($2,notes),location_lat=COALESCE($3,location_lat),location_lng=COALESCE($4,location_lng),scheduled_start_time=$5,scheduled_end_time=$6,updated_at=GREATEST(clock_timestamp(),updated_at+INTERVAL '1 microsecond') WHERE id=$7 AND tenant_id=$8 AND updated_at=$9 RETURNING TRUE AS success,id,status,location_lat,location_lng,notes,scheduled_start_time,scheduled_end_time,updated_at"
+    ).bind(&payload.status).bind(&payload.notes).bind(payload.location_lat).bind(payload.location_lng)
+        .bind(start).bind(end).bind(&payload.id).bind(&tenant).bind(observed)
+        .fetch_optional(tx.connection()).await.map_err(unavailable)?.ok_or_else(conflict)?;
+    if payload.status == "Completed" && !old_status.eq_ignore_ascii_case("Completed") {
+        sqlx::query("INSERT INTO department_tasks(id,tenant_id,department,event_type,payload,status)VALUES($1,$2,'operations','field_ops.job_completed',$3,'PENDING')")
+            .bind(uuid::Uuid::new_v4().to_string()).bind(&tenant)
+            .bind(serde_json::json!({"appointment_id":saved.id,"status":saved.status,"updated_at":saved.updated_at,"actor_id":actor,"message":"Owner recorded this appointment as completed. Any further external action requires its own authority."}))
+            .execute(tx.connection()).await.map_err(unavailable)?;
+    }
+    if let Some(receipt) = &receipt {
+        receipt.save(tx.connection(), &saved).await?;
+    }
+    tx.commit().await.map_err(authority_error)?;
+    // Keep the historical flat event shape. Publish the caller's supplied fields,
+    // never unrelated stored notes or coordinates returned by the record read.
+    let mut notification = serde_json::to_value(&payload).map_err(unavailable)?;
+    notification["tenant_id"] = serde_json::json!(tenant);
+    notification["id"] = serde_json::json!(saved.id);
+    notification["status"] = serde_json::json!(saved.status);
+    notification["updated_at"] = serde_json::json!(saved.updated_at);
+    let event = server_omnisolo::orchestration::TeammateMeshEvent {
+        agent_id: actor,
         action: "job:status_changed".into(),
         status: "ok".into(),
         msg_id: uuid::Uuid::new_v4().to_string(),
-        payload: serde_json::to_vec(&payload).unwrap_or_default(),
+        payload: serde_json::to_vec(&notification).map_err(unavailable)?,
     };
-    let _ = state.mesh.publish("job:status_changed", event).await;
-
-    Ok(Json(UpdateAppointmentResponse {
-        success: true,
-        id: payload.id,
-        status: payload.status,
-        notes: payload.notes,
-        location_lat: payload.location_lat,
-        location_lng: payload.location_lng,
-    }))
-}
-
-#[derive(Deserialize)]
-pub struct OptimizeRouteRequest {
-    #[serde(rename = "tenantId")]
-    pub tenant_id: Option<String>,
-    pub appointments: Vec<Appointment>,
-    #[serde(rename = "currentLocationLat")]
-    pub current_location_lat: Option<f64>,
-    #[serde(rename = "currentLocationLng")]
-    pub current_location_lng: Option<f64>,
-}
-
-#[derive(Serialize)]
-pub struct OptimizeRouteResponse {
-    pub success: bool,
-    #[serde(rename = "optimizedRoute")]
-    pub optimized_route: Vec<Appointment>,
-    #[serde(rename = "agentSuggestion", skip_serializing_if = "Option::is_none")]
-    pub agent_suggestion: Option<String>,
-}
-
-fn haversine_distance(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
-    let to_rad = |x: f64| x * std::f64::consts::PI / 180.0;
-    let r = 6371.0; // km
-    let d_lat = to_rad(lat2 - lat1);
-    let d_lon = to_rad(lon2 - lon1);
-    let a = (d_lat / 2.0).sin() * (d_lat / 2.0).sin()
-        + to_rad(lat1).cos() * to_rad(lat2).cos() * (d_lon / 2.0).sin() * (d_lon / 2.0).sin();
-    let c = 2.0 * a.sqrt().atan2((1.0 - a).sqrt());
-    r * c
-}
-
-pub async fn optimize_route(
-    State(state): State<Arc<FieldOpsState>>,
-    Json(payload): Json<OptimizeRouteRequest>,
-) -> Result<Json<OptimizeRouteResponse>, (axum::http::StatusCode, String)> {
-    let mut completed = Vec::new();
-    let mut pending = Vec::new();
-
-    for appt in payload.appointments {
-        if appt.status == "Completed" || appt.status == "Cancelled" {
-            completed.push(appt);
-        } else {
-            pending.push(appt);
-        }
+    if let Err(error) = state.mesh.publish("job:status_changed", event).await {
+        tracing::warn!(%error, "Committed field status notification unavailable");
     }
-
-    let mut current_lat = payload.current_location_lat.unwrap_or(0.0);
-    let mut current_lng = payload.current_location_lng.unwrap_or(0.0);
-
-    let mut optimized_pending = Vec::new();
-
-    while !pending.is_empty() {
-        let mut nearest_index = 0;
-        let mut min_distance = f64::INFINITY;
-
-        for (i, appt) in pending.iter().enumerate() {
-            let appt_lat = appt.location_lat.unwrap_or(0.0);
-            let appt_lng = appt.location_lng.unwrap_or(0.0);
-            let dist = haversine_distance(current_lat, current_lng, appt_lat, appt_lng);
-            if dist < min_distance {
-                min_distance = dist;
-                nearest_index = i;
-            }
-        }
-
-        let mut next_job = pending.remove(nearest_index);
-        let travel_time_mins = (min_distance * 2.0).round() as i32 + 5;
-
-        if min_distance > 0.0 {
-            let note_addition = format!("[Travel: ~{} mins]", travel_time_mins);
-            next_job.notes = match next_job.notes {
-                Some(n) if !n.is_empty() => Some(format!("{}\n{}", n, note_addition)),
-                _ => Some(note_addition),
-            };
-        }
-
-        current_lat = next_job.location_lat.unwrap_or(0.0);
-        current_lng = next_job.location_lng.unwrap_or(0.0);
-
-        optimized_pending.push(next_job);
-    }
-
-    let mut optimized = completed;
-    optimized.extend(optimized_pending);
-
-    if let Some(tenant_id) = payload.tenant_id {
-        let route_id = uuid::Uuid::new_v4().to_string();
-
-        let staff_profile_id =
-            match sqlx::query("SELECT id FROM staff_profiles WHERE tenant_id = $1 LIMIT 1")
-                .bind(&tenant_id)
-                .fetch_optional(&state.pool)
-                .await
-            {
-                Ok(Some(row)) => row
-                    .try_get::<String, _>("id")
-                    .unwrap_or_else(|_| "default-staff".to_string()),
-                _ => "default-staff".to_string(),
-            };
-
-        let route_date = chrono::Utc::now().date_naive();
-
-        let _ = sqlx::query(
-            "INSERT INTO service_routes (id, tenant_id, staff_profile_id, route_date, status) VALUES ($1, $2, $3, $4, 'active') ON CONFLICT DO NOTHING"
-        )
-        .bind(&route_id)
-        .bind(&tenant_id)
-        .bind(&staff_profile_id)
-        .bind(route_date)
-        .execute(&state.pool)
-        .await;
-
-        if !optimized.is_empty() {
-            let mut query_builder = sqlx::QueryBuilder::new(
-                "INSERT INTO job_locations (id, tenant_id, service_route_id, appointment_id, sequence_order, status) ",
-            );
-
-            query_builder.push_values(optimized.iter().enumerate(), |mut b, (i, appt)| {
-                b.push_bind(uuid::Uuid::new_v4().to_string())
-                    .push_bind(tenant_id.clone())
-                    .push_bind(route_id.clone())
-                    .push_bind(appt.id.clone())
-                    .push_bind(i as i32)
-                    .push_bind("pending");
-            });
-
-            query_builder.push(" ON CONFLICT (service_route_id, sequence_order) DO NOTHING");
-
-            let _ = query_builder.build().execute(&state.pool).await;
-        }
-    }
-
-    let agent_suggestion = if optimized.iter().any(|a| a.status == "Completed") {
-        Some(
-            "You finished early! Should I text the next client to see if we can arrive early?"
-                .to_string(),
-        )
-    } else {
-        None
-    };
-
-    Ok(Json(OptimizeRouteResponse {
-        success: true,
-        optimized_route: optimized,
-        agent_suggestion,
-    }))
-}
-
-#[derive(Deserialize)]
-pub struct RunningLateRequest {
-    pub appointments: Vec<Appointment>,
-    #[serde(rename = "delayJobId")]
-    pub delay_job_id: String,
-}
-
-#[derive(Serialize)]
-pub struct RunningLateResponse {
-    pub success: bool,
-    #[serde(rename = "optimizedRoute")]
-    pub optimized_route: Vec<Appointment>,
-    #[serde(rename = "subsequentCount")]
-    pub subsequent_count: i32,
-    #[serde(rename = "agentSuggestion", skip_serializing_if = "Option::is_none")]
-    pub agent_suggestion: Option<String>,
-}
-
-pub async fn running_late(
-    Json(payload): Json<RunningLateRequest>,
-) -> Result<Json<RunningLateResponse>, (axum::http::StatusCode, String)> {
-    let mut delay_index = None;
-    for (i, appt) in payload.appointments.iter().enumerate() {
-        if appt.id == payload.delay_job_id {
-            delay_index = Some(i);
-            break;
-        }
-    }
-
-    if delay_index.is_none() {
-        return Err((
-            axum::http::StatusCode::NOT_FOUND,
-            "Job not found".to_string(),
-        ));
-    }
-    let delay_index = delay_index.unwrap();
-
-    let delay_minutes = 30;
-    let delay_duration = chrono::Duration::minutes(delay_minutes);
-
-    let mut subsequent_count = 0;
-    let mut optimized_route = Vec::new();
-
-    for (i, mut appt) in payload.appointments.into_iter().enumerate() {
-        if i > delay_index && appt.status != "Completed" && appt.status != "Cancelled" {
-            subsequent_count += 1;
-            if let Some(start) = appt.scheduled_start_time {
-                appt.scheduled_start_time = Some(start + delay_duration);
-            }
-            if let Some(end) = appt.scheduled_end_time {
-                appt.scheduled_end_time = Some(end + delay_duration);
-            }
-        }
-        optimized_route.push(appt);
-    }
-
-    let agent_suggestion = if subsequent_count > 0 {
-        Some(format!(
-            "Drafting delay notifications for the next {} clients. Approve?",
-            subsequent_count
-        ))
-    } else {
-        Some("No subsequent appointments to notify.".to_string())
-    };
-
-    Ok(Json(RunningLateResponse {
-        success: true,
-        optimized_route,
-        subsequent_count,
-        agent_suggestion,
-    }))
+    Ok(Json(saved))
 }
 
 pub fn router<S: Clone + Send + Sync + 'static>(
     pool: PgPool,
-    mesh: std::sync::Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
+    mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
     auth_store: Arc<server_auth::Store>,
 ) -> Router<S> {
-    let reads = appointments::router(pool.clone(), auth_store);
-    let state = Arc::new(FieldOpsState { pool, mesh });
+    configured_router(pool.clone(), Some(pool), mesh, auth_store)
+}
+pub fn configured_router<S: Clone + Send + Sync + 'static>(
+    pool: PgPool,
+    canonical: Option<PgPool>,
+    mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport>,
+    auth_store: Arc<server_auth::Store>,
+) -> Router<S> {
+    let reads = appointments::optional_router(canonical.clone(), auth_store.clone());
+    let state = Arc::new(FieldOpsState {
+        pool,
+        mesh,
+        access: FieldAccess {
+            pool: canonical,
+            store: auth_store.clone(),
+        },
+    });
     Router::new()
-        .merge(reads)
         .route("/appointments", axum::routing::post(update_appointment))
         .route("/optimize-route", axum::routing::post(optimize_route))
         .route("/running-late", axum::routing::post(running_late))
+        .route_layer(axum::middleware::from_fn_with_state(
+            auth_store,
+            server_auth::strict_bearer_auth_middleware,
+        ))
         .with_state(state)
+        .merge(reads)
+        .layer(axum::extract::DefaultBodyLimit::max(256 * 1024))
+        .layer(axum::middleware::map_response(records::private_response))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{body::Body, http::Request};
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+    };
     use tower::ServiceExt;
-
+    async fn assert_unsigned(method: &str, path: &str, body: &str) {
+        let pool = PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
+        let mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
+            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
+        let app = router(pool, mesh, Arc::new(server_auth::Store::new()));
+        let request = Request::builder()
+            .method(method)
+            .uri(path)
+            .header("Content-Type", "application/json")
+            .body(Body::from(body.to_owned()))
+            .unwrap();
+        assert_eq!(
+            app.oneshot(request).await.unwrap().status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
     #[tokio::test]
     async fn test_get_appointments_rejects_anonymous_before_database() {
-        // Anonymous reads are rejected before touching the unavailable database.
-        let pool =
-            sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
-            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
-        let app = router(pool, mesh, Arc::new(server_auth::Store::new()));
-        let req = Request::builder()
-            .uri("/appointments?tenant_id=t1")
-            .body(Body::empty())
-            .unwrap();
-
-        let res = app.oneshot(req).await.unwrap();
-        assert_eq!(res.status(), axum::http::StatusCode::UNAUTHORIZED);
+        assert_unsigned("GET", "/appointments?tenant_id=t1", "null").await;
     }
-
     #[tokio::test]
-    async fn test_optimize_route_parallel_execution() {
-        // Verify code compiles and execution does not panic.
-        // Actual db interaction will fail with INTERNAL_SERVER_ERROR due to lazy invalid connection,
-        // but we verify the parallel setup doesn't break basic request handling.
-        let pool =
-            sqlx::PgPool::connect_lazy("postgres://invalid:invalid@localhost/invalid").unwrap();
-        let mesh: Arc<dyn omnisolo_builtin_agent::mesh::transport::MeshTransport> =
-            Arc::new(omnisolo_builtin_agent::mesh::transport::InProcessTransport::new());
-        let app = router(pool, mesh, Arc::new(server_auth::Store::new()));
-
-        let payload = serde_json::json!({
-            "tenantId": "t1",
-            "appointments": [
-                {
-                    "id": "job_1",
-                    "customer_id": "cust_1",
-                    "customer_name": "John Doe",
-                    "job_template_id": "tpl_1",
-                    "job_name": "Fix A/C",
-                    "location_address": "123 Main St",
-                    "location_lat": 37.7749,
-                    "location_lng": -122.4194,
-                    "status": "Pending"
-                },
-                {
-                    "id": "job_2",
-                    "customer_id": "cust_1",
-                    "customer_name": "John Doe",
-                    "job_template_id": "tpl_1",
-                    "job_name": "Fix A/C",
-                    "location_address": "123 Main St",
-                    "location_lat": 37.7749,
-                    "location_lng": -122.4194,
-                    "status": "Pending"
-                }
-            ],
-            "currentLocationLat": 37.7750,
-            "currentLocationLng": -122.4190
-        });
-
-        let req = Request::builder()
-            .method("POST")
-            .uri("/optimize-route")
-            .header("Content-Type", "application/json")
-            .body(Body::from(serde_json::to_vec(&payload).unwrap()))
-            .unwrap();
-
-        let res = app.oneshot(req).await.unwrap();
-        // Since we pass appointments, it will execute the bulk insert.
-        // The lazy pool will return an error internally, but the API handler maps some of these or unwraps.
-        // Actually, our API handler ignores `job_locations` insert errors with `let _ = ...`,
-        // but `service_routes` insertion might fail and bubble up? No, `let _ = sqlx::query(...).execute().await;`
-        // is also used for `service_routes`.
-        // Let's assert it returns 200 OK since errors are ignored.
-        assert_eq!(res.status(), axum::http::StatusCode::OK);
+    async fn optimizer_rejects_unsigned_requests_before_storage() {
+        assert_unsigned(
+            "POST",
+            "/optimize-route",
+            r#"{"tenantId":"t1","appointments":[]}"#,
+        )
+        .await;
     }
 }

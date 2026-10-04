@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { AppShell } from "../../components/AppShell";
 
 type Order = { id: string; customer_name?: string; total_amount?: number; status?: string; created_at?: string };
 type ShippingRate = { id: string; carrier: string; service: string; amount: number; days?: number };
-type ShippingLabel = { url: string; trackingNumber: string; carrier: string };
+type ShippingLabel = { url: string; trackingNumber?: string; carrier?: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const nonEmptyString = (value: unknown) => typeof value === "string" && value.trim() ? value.trim() : undefined;
@@ -49,7 +49,7 @@ function parseLabel(value: unknown): ShippingLabel | null {
   const rawUrl = nonEmptyString(value.labelUrl);
   const trackingNumber = nonEmptyString(value.trackingNumber);
   const carrier = nonEmptyString(value.carrier);
-  if (!rawUrl || !trackingNumber || !carrier) return null;
+  if (!rawUrl) return null;
   try {
     const url = new URL(rawUrl);
     const trustedShippoHost = url.hostname === "goshippo.com"
@@ -78,19 +78,10 @@ export default function OrderDetailsPage() {
   const [shippingError, setShippingError] = useState("");
   const [shippingPending, setShippingPending] = useState(false);
   const [label, setLabel] = useState<ShippingLabel | null>(null);
+  const [reconciliationRequired, setReconciliationRequired] = useState(false);
+  const purchaseInFlight = useRef(false);
 
   useEffect(() => {
-    if (orderId === "e2e-shippo-order") {
-      setOrder({
-        id: "e2e-shippo-order",
-        customer_name: "Alice Johnson",
-        total_amount: 45.0,
-        status: "unfulfilled",
-        created_at: new Date().toISOString(),
-      });
-      setStatus("ready");
-      return;
-    }
     fetch("/api/v1/ui/orders")
       .then((res) => {
         if (!res.ok) throw new Error();
@@ -109,34 +100,18 @@ export default function OrderDetailsPage() {
           setStatus("missing");
         }
       })
-      .catch(() => {
-        if (orderId === "e2e-shippo-order") {
-          setOrder({
-            id: "e2e-shippo-order",
-            customer_name: "Alice Johnson",
-            total_amount: 45.0,
-            status: "unfulfilled",
-            created_at: new Date().toISOString(),
-          });
-          setStatus("ready");
-        } else {
-          setStatus("error");
-        }
-      });
+      .catch(() => setStatus("error"));
   }, [orderId]);
 
   const fetchRates = async () => {
+    if (label || reconciliationRequired || purchaseInFlight.current) return;
     setShippingError("");
     setRates([]);
     setSelectedRate("");
-    setLabel(null);
+
     const weightNumber = Number(weight);
     if (!Number.isFinite(weightNumber) || weightNumber <= 0 || !/^\d+(?:\.\d+)?x\d+(?:\.\d+)?x\d+(?:\.\d+)?$/i.test(dimensions.trim())) {
       setShippingError("Enter a valid positive weight and dimensions such as 10x8x6.");
-      return;
-    }
-    if (weightNumber === 9999) {
-      setShippingError("Address validation error or parcel size exceeded.");
       return;
     }
     setShippingPending(true);
@@ -156,23 +131,16 @@ export default function OrderDetailsPage() {
       }
       throw new Error();
     } catch {
-      if (orderId === "e2e-shippo-order") {
-        const fallbackRates: ShippingRate[] = [
-          { id: "rate_usps_priority", carrier: "USPS", service: "Priority Mail", amount: 7.95, days: 2 },
-          { id: "rate_ups_ground", carrier: "UPS", service: "Ground", amount: 9.50, days: 3 },
-        ];
-        setRates(fallbackRates);
-        setSelectedRate(fallbackRates[0].id);
-      } else {
-        setShippingError("Shipping rates are unavailable.");
-      }
+      setShippingError("Shipping rates are unavailable.");
     } finally {
       setShippingPending(false);
     }
   };
 
   const buyLabel = async () => {
-    if (!selectedRate) return;
+    if (!selectedRate || label || reconciliationRequired || purchaseInFlight.current) return;
+    purchaseInFlight.current = true;
+    setReconciliationRequired(true);
     setShippingError("");
     setShippingPending(true);
     try {
@@ -181,28 +149,23 @@ export default function OrderDetailsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId, rateId: selectedRate }),
       });
+      const body: unknown = await response.json();
       if (response.ok) {
-        const parsed = parseLabel(await response.json());
+        const parsed = parseLabel(body);
         if (parsed) {
           setLabel(parsed);
-          setOrder((prev) => (prev ? { ...prev, status: "Shipped" } : null));
+          setReconciliationRequired(false);
           return;
         }
       }
-      throw new Error();
+      setShippingError(isRecord(body) && body.reconciliationRequired === true
+        ? nonEmptyString(body.error) || "The purchase outcome is unknown. Reconcile before retrying."
+        : "The shipping label could not be confirmed.");
     } catch {
-      if (orderId === "e2e-shippo-order") {
-        setLabel({
-          url: "https://goshippo.com/label-mock.pdf",
-          trackingNumber: "9400111899562537624128",
-          carrier: "USPS",
-        });
-        setOrder((prev) => (prev ? { ...prev, status: "Shipped" } : null));
-      } else {
-        setShippingError("The shipping label could not be confirmed.");
-      }
+      setShippingError("The shipping label could not be confirmed.");
     } finally {
       setShippingPending(false);
+      purchaseInFlight.current = false;
     }
   };
 
@@ -240,8 +203,9 @@ export default function OrderDetailsPage() {
                 <label className="text-sm font-medium">Weight (oz)<input aria-label="Package weight in ounces" type="number" value={weight} onChange={(event) => setWeight(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
                 <label className="text-sm font-medium">Dimensions<input aria-label="Package dimensions" placeholder="e.g. 10x8x6" value={dimensions} onChange={(event) => setDimensions(event.target.value)} className="mt-1 w-full rounded-lg border p-2" /></label>
               </div>
-              <button onClick={fetchRates} disabled={shippingPending} className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
+              <button onClick={fetchRates} disabled={shippingPending || reconciliationRequired || Boolean(label)} className="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-white">Get Shipping Rates</button>
               {shippingError && <p className="mt-3 text-sm text-red-600" role="alert">{shippingError}</p>}
+              {reconciliationRequired && !shippingPending && <p className="mt-2 text-sm text-amber-800">Do not purchase another label until this provider outcome is reconciled. Reloading does not establish whether a purchase occurred.</p>}
               {rates.length > 0 && (
                 <div className="mt-4 space-y-2">
                   <h3 className="text-sm font-semibold text-gray-700">Select a Service</h3>
@@ -251,20 +215,20 @@ export default function OrderDetailsPage() {
                       <span>${rate.amount.toFixed(2)}</span>
                     </label>
                   ))}
-                  <button onClick={buyLabel} disabled={!selectedRate || shippingPending} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">
-                    {orderId === "e2e-shippo-order" ? "Buy Label & Print" : "Buy Label"}
+                  <button onClick={buyLabel} disabled={!selectedRate || shippingPending || reconciliationRequired || Boolean(label)} className="rounded-lg bg-indigo-600 px-4 py-2 text-white disabled:opacity-50">
+                    Buy Label
                   </button>
                 </div>
               )}
               {label && (
                 <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 space-y-2">
                   <p className="font-semibold text-green-800">Label Purchased Successfully</p>
-                  <p className="text-sm text-gray-700">{label.carrier} tracking: <strong>{label.trackingNumber}</strong></p>
+                  <p className="text-sm text-gray-700">{label.carrier ? `${label.carrier} tracking` : "Tracking"}: <strong>{label.trackingNumber || "Not available yet"}</strong></p>
                   <div className="flex items-center gap-3">
                     <a href={label.url} target="_blank" rel="noopener noreferrer" className="text-indigo-700 underline font-medium">
-                      {orderId === "e2e-shippo-order" ? "Print Label" : "Open Shipping Label"}
+                      Open Shipping Label
                     </a>
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-green-100 text-green-800">Shipped</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-green-100 text-green-800">Label created</span>
                   </div>
                 </div>
               )}

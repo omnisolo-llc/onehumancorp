@@ -13,6 +13,10 @@ export function PublicAwareApplicationFrame({
 }) {
   const pathname = usePathname();
 
+  // The share preview keeps server metadata and a redirect/fallback link only.
+  // Starting the shell here races its fetches and queue work against document
+  // replacement. The destination mounts the normal application frame.
+  if (pathname === "/share-card") return <>{children}</>;
   if (isPublicPagePath(pathname)) return <>{children}</>;
 
   return (
