@@ -78,15 +78,15 @@ class NativeCacheTests(unittest.TestCase):
                 peak = max(peak, sum(weights[name] for name in concurrent))
         return peak
 
-    def test_complete_ci_graph_uses_at_most_eight_concurrent_runners(self):
+    def test_complete_ci_graph_uses_at_most_ten_concurrent_runners(self):
         peak = self.runner_bound(self.ci['jobs'])
-        self.assertLessEqual(peak, 8, f'CI can occupy {peak} runners concurrently')
+        self.assertLessEqual(peak, 10, f'CI can occupy {peak} runners concurrently')
 
-    def test_removing_docker_completion_fence_requires_nine_runners(self):
+    def test_removing_docker_completion_fence_requires_eleven_runners(self):
         jobs = copy.deepcopy(self.ci['jobs'])
         jobs['docker-e2e']['needs'] = [name for name in jobs['docker-e2e']['needs']
                                       if name != 'native-node']
-        self.assertEqual(self.runner_bound(jobs), 9)
+        self.assertEqual(self.runner_bound(jobs), 11)
 
     def test_browser_shards_keep_running_after_independent_quality_failure(self):
         job = self.ci['jobs']['native-e2e']

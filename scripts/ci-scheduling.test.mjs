@@ -57,9 +57,19 @@ function allowsDocker(job, results, { cancelled = false, markdownOnly = 'false' 
   return implicitSuccess && decisions.every(Boolean);
 }
 
-test('all possible CI job antichains stay within eight active runners', async () => {
+test('all possible CI job antichains stay within ten active runners', async () => {
   const bound = runnerBound((await workflow()).jobs);
-  assert.ok(bound.maximum <= 8, `maximum ${bound.maximum}: ${bound.witness.join(', ')}`);
+  assert.ok(bound.maximum <= 10, `maximum ${bound.maximum}: ${bound.witness.join(', ')}`);
+});
+test('six browser shards use the ten-runner allowance without duplicating work', async () => {
+  const { jobs } = await workflow();
+  assert.equal(runnerBound(jobs).maximum, 10);
+  const original = structuredClone(jobs);
+  original['native-e2e'].strategy['max-parallel'] = 4;
+  assert.equal(runnerBound(original).maximum, 8);
+  const excessive = structuredClone(jobs);
+  excessive['native-e2e'].strategy['max-parallel'] = 7;
+  assert.equal(runnerBound(excessive).maximum, 11);
 });
 test('browser waves overlap independent PostgreSQL checks while the final gate still requires them', async () => {
   const { jobs } = await workflow(); const bound = runnerBound(jobs);
@@ -77,10 +87,10 @@ test('Node completion fences Docker instead of delaying browser shards', async (
   assert.ok(!jobs['native-node'].outputs);
   assert.ok(!jobs['native-node'].steps.some(step => step.uses?.startsWith('actions/upload-artifact@')));
 });
-test('removing the Docker completion fence is detected as a nine-runner graph', async () => {
+test('removing the Docker completion fence is detected as an eleven-runner graph', async () => {
   const { jobs } = await workflow();
   jobs['docker-e2e'].needs = needs(jobs['docker-e2e']).filter(name => name !== 'native-node');
-  assert.equal(runnerBound(jobs).maximum, 9);
+  assert.equal(runnerBound(jobs).maximum, 11);
 });
 test('Docker still runs after Node failure but never after failed producers or cancellation', async () => {
   const { jobs } = await workflow(); const docker = jobs['docker-e2e'];
@@ -104,15 +114,15 @@ test('Docker still runs after Node failure but never after failed producers or c
   const implicit = { ...docker, if: docker.if.replace('!cancelled() && ', '') };
   assert.ok(!allowsDocker(implicit, { ...success, 'native-node': 'failure' }), 'the regression must detect implicit success()');
 });
-test('removing the desktop scheduling fence is detected as a nine-runner graph', async () => {
+test('removing the desktop scheduling fence is detected as an eleven-runner graph', async () => {
   const { jobs } = await workflow();
   jobs['native-e2e'].needs = needs(jobs['native-e2e']).filter(name => !['native-desktop','postgres-security'].includes(name));
-  assert.equal(runnerBound(jobs).maximum, 9);
+  assert.equal(runnerBound(jobs).maximum, 11);
 });
 test('all twelve browser shards, action budgets and real artifact producers remain required', async () => {
   const { jobs } = await workflow(); const browser = jobs['native-e2e']; const bound = runnerBound(jobs);
   assert.deepEqual(browser.strategy.matrix.shard, Array.from({ length: 12 }, (_, i) => i + 1));
-  assert.equal(browser.strategy['max-parallel'], 4); assert.equal(browser.strategy['fail-fast'], false); assert.equal(browser['timeout-minutes'], 25);
+  assert.equal(browser.strategy['max-parallel'], 6); assert.equal(browser.strategy['fail-fast'], false); assert.equal(browser['timeout-minutes'], 25);
   const downloads = browser.steps.filter(step => step.uses?.startsWith('actions/download-artifact@')).map(step => step.with.name);
   assert.deepEqual(downloads, ['native-linux-binaries','native-web']);
   for (const artifact of downloads) {

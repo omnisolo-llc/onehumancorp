@@ -436,9 +436,11 @@ jobs:
     name: Native real-stack Playwright ${{ matrix.shard }}/12
     strategy:
       fail-fast: false
-      # Keep all twelve shards; desktop and Docker's Node completion fence leave
-      # at most four other runners (exhaustive DAG-tested total: eight).
-      max-parallel: 4
+      # Keep all twelve shards and two workers per isolated runner. Six slots
+      # reduce queued browser waves without adding jobs or repeated builds.
+      # Desktop and Docker's Node fence bound other overlap to four runners
+      # (exhaustive DAG-tested workflow total: ten).
+      max-parallel: 6
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
     needs: [check-changes, native-build, native-web, dependency-audit, native-desktop]
