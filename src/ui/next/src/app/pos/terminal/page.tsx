@@ -6,6 +6,7 @@ import { LocalizationToggle } from '../../../components/LocalizationToggle';
 import { SyncManager } from '../../../lib/sync/SyncManager';
 import { QUEUE_IDENTITY_EPOCH_KEY, currentVerifiedQueueOwner, currentVerifiedQueueLease, hasPendingQueueOwnerVerification, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '../../../lib/sync/queueIdentity';
 import { fetchForOwnedBusinessRead, openOnboardingSession } from '../../onboarding/draftSession';
+import type { ClockQueueSummary } from '../../utils/offlineQueue';
 import { MutationService } from '../../../lib/sync/MutationService';
 
 type TerminalStaff = { id: string; name: string; role: string; tenant_id: string };
@@ -53,6 +54,10 @@ export default function POSTerminal() {
   const [clockPending, setClockPending] = useState(false);
   const [clockError, setClockError] = useState('');
   const clockPendingRef = useRef(false);
+  const clockCheckPendingRef = useRef(false);
+  const [clockCheckPending, setClockCheckPending] = useState(false);
+  const [clockCheckError, setClockCheckError] = useState('');
+  const [clockSummary, setClockSummary] = useState<ClockQueueSummary>({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 });
   const mounted = useRef(true);
   const terminalVersion = useRef(0);
   const terminalLease = useRef<TerminalLease | null>(null);
@@ -93,6 +98,8 @@ export default function POSTerminal() {
     clearTimeout(leaseTimer.current); inventoryVersion.current += 1; setInventoryError('');
     authenticationPending.current = false; setAuthenticating(false); setPin('');
     clockPendingRef.current = false; setClockPending(false); setClockError('');
+    clockCheckPendingRef.current = false; setClockCheckPending(false); setClockCheckError('');
+    setClockSummary({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 });
     setQueueIdentityReady(false); setClockedIn(false); setLocked(true); setActiveStaff(null);
     setInventory([]); setCart([]); setCheckoutComplete(false); setCheckoutQueued(false);
   };
@@ -129,11 +136,12 @@ export default function POSTerminal() {
       const version = ++readVersion;
       try {
         const qLen = await SyncManager.getInstance().getQueueLength();
+        const clocks = await SyncManager.getInstance().getClockQueueSummary();
         if (!active || version !== readVersion) return;
         clearTimeout(successTimer);
         const cleared = navigator.onLine && lastKnownCount !== null && lastKnownCount > 0 && qLen === 0;
         lastKnownCount = qLen;
-        setPendingSyncCount(qLen); setQueueError(''); setQueueAccessible(true);
+        setPendingSyncCount(qLen); setClockSummary(clocks); setQueueError(''); setQueueAccessible(true);
         setSyncSuccess(cleared); setSyncing(navigator.onLine && qLen > 0);
         if (cleared) successTimer = setTimeout(() => { if (active) setSyncSuccess(false); }, 3000);
       } catch {
@@ -227,7 +235,7 @@ export default function POSTerminal() {
             const owner = await readQueueOwner();
             await waitForTerminalLease(expectedOwner, current);
             if (!current()) return;
-            if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
+            if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || owner.userId !== staff.id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
             terminalLease.current = lease;
             clearTimeout(leaseTimer.current);
             leaseTimer.current = setTimeout(() => { if (terminalLease.current === lease) retireTerminal(); }, Math.min(lease.expiresAt - Date.now(), 2_147_483_647));
@@ -320,8 +328,8 @@ export default function POSTerminal() {
     let committed = false;
     try {
       await SyncManager.getInstance().enqueue({
-        type: action,
-        payload: { staff_id: activeStaff.id, timestamp: new Date().toISOString() },
+        type: 'staff_clock_event_v1',
+        payload: { staff_id: lease.owner.userId, event_type: action },
       }, lease.owner);
       committed = true;
       if (!current()) { if (mounted.current && terminalLease.current === lease) retireTerminal(); return; }
@@ -337,6 +345,30 @@ export default function POSTerminal() {
       else if (mounted.current && terminalLease.current === lease) retireTerminal();
     } finally {
       if (current()) { clockPendingRef.current = false; setClockPending(false); }
+    }
+  };
+
+  const handleCheckClockStatus = async () => {
+    const lease = terminalLease.current;
+    if (!lease || clockCheckPendingRef.current || !queueAccessible || !hasVerifiedOfflineQueueOwner(lease.owner) || !navigator.onLine) return;
+    const version = terminalVersion.current;
+    const current = () => {
+      const owner = currentVerifiedQueueOwner();
+      try { return mounted.current && version === terminalVersion.current && terminalLease.current === lease && lease.expiresAt > Date.now()
+        && lease.storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY) && !!owner && sameOwner(owner, lease.owner); }
+      catch { return false; }
+    };
+    clockCheckPendingRef.current = true; setClockCheckPending(true); setClockCheckError('');
+    try {
+      await SyncManager.getInstance().reconcileClockReceipts();
+      const summary = await SyncManager.getInstance().getClockQueueSummary();
+      if (current()) setClockSummary(summary);
+    } catch {
+      if (current()) setClockCheckError('Saved clock status could not be verified. Unconfirmed records remain held.');
+    } finally {
+      if (mounted.current && version === terminalVersion.current && terminalLease.current === lease) {
+        clockCheckPendingRef.current = false; setClockCheckPending(false);
+      }
     }
   };
 
@@ -548,9 +580,16 @@ export default function POSTerminal() {
                {clockedIn ? t('Clocked In') : t('Not Clocked In')}
              </h2>
              <p className="text-sm text-gray-500 mb-6">
-                {clockedIn ? t('Your time is being tracked locally.') : t('Clock in to start your shift.')}
+                {clockedIn ? t('Clock-in saved on this device. Server confirmation is shown below.') : t('Clock in to start your shift.')}
              </p>
              <p role="status" className="text-sm mb-3">{queueAccessible && queueIdentityReady ? 'Offline queue ready for this session.' : 'Verify this session and local storage before offline work.'}</p>
+             {clockSummary.unconfirmed > 0 && <p role="status">{clockSummary.unconfirmed} saved clock {clockSummary.unconfirmed === 1 ? 'change' : 'changes'} awaiting server confirmation.</p>}
+             {clockSummary.confirmed > 0 && <p role="status">{clockSummary.confirmed} saved clock {clockSummary.confirmed === 1 ? 'change' : 'changes'} confirmed by the server.</p>}
+             {clockSummary.legacyHeld > 0 && <p role="status">{clockSummary.legacyHeld} historical clock {clockSummary.legacyHeld === 1 ? 'change requires' : 'changes require'} review. Original records are preserved.</p>}
+             <button type="button" onClick={handleCheckClockStatus} disabled={clockCheckPending || isOffline || !queueAccessible || !queueIdentityReady} className="text-sm underline mb-3">
+               {clockCheckPending ? 'Checking saved clock status...' : 'Check saved clock status'}
+             </button>
+             {clockCheckError && <p role="alert">{clockCheckError}</p>}
              {clockPending && <p role="status">Saving clock change...</p>}
              {clockError && <p role="alert">{clockError}</p>}
              {committedClock.current && <button type="button" onClick={() => { void readQueueOwner().catch(() => {}); }}>Reverify saved clock change</button>}

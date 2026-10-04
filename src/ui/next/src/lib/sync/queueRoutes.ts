@@ -2,6 +2,11 @@ import type { OfflineAction } from '../../app/utils/offlineQueue';
 import { isQuoteVersion } from '../quoteVersion';
 import { recordOrEmpty } from '../records';
 
+export const STAFF_CLOCK_TYPE = 'staff_clock_event_v1';
+export const TIMECARD_ROUTE = '/api/v1/staff/timecard';
+export function isSafeClockId(value: unknown): value is string { return typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value); }
+export function isHistoricalClock(action: OfflineAction): boolean { return action.type === 'CLOCK_IN' || action.type === 'CLOCK_OUT'; }
+
 export type OutcomeStatus = 'acknowledged' | 'blocked' | 'reconciliation';
 export type RouteContext = { terminalId?: string; sessionId?: string };
 export type RoutePlan = { id: string; method: 'POST' | 'PATCH' | 'PUT'; body?: unknown; maxAttempts: number };
@@ -24,11 +29,25 @@ function pathId(value: unknown): string {
   if (!id || id === '.' || id === '..') throw new Error('Invalid offline route identifier');
   return encodeURIComponent(id);
 }
+function clockTimestamp(value: number): string {
+  if (!Number.isSafeInteger(value) || !Number.isFinite(new Date(value).getTime())) throw new Error('Invalid clock timestamp');
+  const timestamp = new Date(value).toISOString();
+  // The timecard endpoint accepts four-digit RFC3339 years. Never silently
+  // truncate fractions or freeze an expanded-year body it cannot persist.
+  if (!/^[0-9]{4}-/.test(timestamp)) throw new Error('Invalid clock timestamp');
+  return timestamp;
+}
 /** All URLs, payloads and terminal metadata are captured before the first send. */
 export function planRoutes(action: OfflineAction, context = captureRouteContext(action)): RoutePlan[] {
   const payload = recordOrEmpty(action.payload);
-  const timestamp = new Date(action.timestamp).toISOString();
+  const timestamp = action.type === STAFF_CLOCK_TYPE ? clockTimestamp(action.timestamp) : new Date(action.timestamp).toISOString();
   const post = (id: string, body?: unknown): RoutePlan => ({ id, method: 'POST', body, maxAttempts: 1 });
+  if (action.type === STAFF_CLOCK_TYPE) {
+    if (!isSafeClockId(action.id) || typeof payload.staff_id !== 'string' || !payload.staff_id.trim()
+      || typeof payload.event_type !== 'string' || !['CLOCK_IN', 'CLOCK_OUT'].includes(payload.event_type)
+      || Object.keys(payload).some(key => key !== 'staff_id' && key !== 'event_type')) throw new Error('Invalid clock event');
+    return [post(TIMECARD_ROUTE, { events: [{ id: action.id, staff_id: payload.staff_id, event_type: payload.event_type, offline_timestamp: timestamp }] })];
+  }
   if (action.type === 'cash_sale' || action.type === 'tap_to_pay') {
     const device = context.terminalId;
     if (!device) throw new Error('Missing frozen terminal identifier');
@@ -89,6 +108,7 @@ export function readOutcome(id: string, route: string, httpStatus: number, body:
 export function validRoutePlan(value: unknown): value is RoutePlan {
   const plan = recordOrEmpty(value);
   if (typeof plan.id !== 'string' || !['POST', 'PUT', 'PATCH'].includes(String(plan.method)) || plan.maxAttempts !== 1) return false;
+  if (plan.id === TIMECARD_ROUTE) return plan.method === 'POST';
   const exact = new Set(['/api/v1/payments/terminal/sync_offline', '/api/v1/sync/events', '/api/v1/sync/mcp-deltas', '/api/v1/sync/operation-intents', '/api/v1/sync/offline', '/api/v1/ui/triage/action', '/api/v1/triage/action', '/api/v1/reviews/action', '/api/v1/field-ops/appointments', '/api/v1/invoices/generate']);
   return exact.has(plan.id) || /^\/api\/v1\/quotes\?id=[A-Za-z0-9%_.!~*'()-]*$/.test(plan.id) || /^\/api\/v1\/(?:quotes\/[A-Za-z0-9%_.!~*'()-]*\/approve|agents\/approvals\/[A-Za-z0-9%_.!~*'()-]*|fulfillment\/execute\/[A-Za-z0-9%_.!~*'()-]*|agent-feed\/[A-Za-z0-9%_.!~*'()-]*)$/.test(plan.id);
 }

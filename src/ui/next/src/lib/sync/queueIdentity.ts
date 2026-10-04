@@ -2,6 +2,8 @@ export type QueueOwner = { userId: string; tenantId: string };
 export const QUEUE_IDENTITY_EPOCH_KEY = 'omnisolo_queue_identity_epoch_v2';
 let verified: { owner: QueueOwner; expiresAt: number; storageEpoch: string | null } | undefined;
 let generation = 0;
+/** Opaque same-tab invalidation fence; never supplies an owner or authority. */
+export function queueIdentityGeneration(): number { return generation; }
 let sequence = 0;
 let lastResolved = 0;
 let latestResolvedOwner: QueueOwner | undefined;
