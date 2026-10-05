@@ -57,3 +57,23 @@ cargo run --locked -p ohc-rust-source-extract -- path/to/source.rs function meth
 `--expect-source-sha256 HASH` rejects a source that changed since the caller's
 inventory. No generated file is written by this tool. A consumer can preserve
 its existing output path and before/after source-manifest checks.
+
+## Python consumer rollout
+
+`scripts/rust_source.py` builds this exact root-locked package offline, obtains
+its executable from Cargo's artifact JSON, and verifies every returned source
+hash, fragment hash and byte range. Cash receipts and Stripe webhook preparation
+include the adapter and parser source inputs in their existing before/after
+manifests. The cash harness retains its test serialization adapters separately
+from the unchanged production derives. These callers reconstruct only plain
+inherent impls; an added enclosing attribute or changed impl shape fails closed
+until the caller explicitly preserves that context.
+
+The agent workflow consumer remains on its existing implementation: the locked
+Rust grammar rejects `src/server/lib.rs` inside the 310,475-byte `run_server`
+function, although Rust 1.95 rustfmt accepts the full source. The rest of that
+file parses when the function is removed in an isolated diagnostic probe.
+Production extraction never drops or reparses a selected part to hide errors.
+The exact grammar incompatibility needs resolution and whole-file parity before
+that consumer can migrate. This is an outstanding prerequisite, not a completed
+scanner fix.
