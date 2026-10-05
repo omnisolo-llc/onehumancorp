@@ -60,3 +60,76 @@ describe('ChangelogPage', () => {
     expect(screen.getByText('Faster loading times for product images.').closest('p')).not.toBeNull();
   });
 });
+
+// Component contract tests use controlled API responses; these are not real-stack E2E.
+describe('Changelog response states', () => {
+  it('announces loading until the request resolves', () => {
+    global.fetch = vi.fn(() => new Promise<Response>(() => {}));
+    render(<ChangelogPage />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading changelog');
+    expect(screen.queryByText('No changelog available.')).not.toBeInTheDocument();
+  });
+
+  it('uses the empty state only for a valid empty array', async () => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json([]));
+    render(<ChangelogPage />);
+    expect(await screen.findByText('No changelog available.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it.each([401, 403, 500])('shows HTTP %s as unavailable instead of empty', async (status) => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json({ error: 'unavailable' }, { status }));
+    render(<ChangelogPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(`HTTP ${status}`);
+    expect(screen.queryByText('No changelog available.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+  });
+
+  it.each([
+    { error: 'not changelog content' },
+    [{ version: 'v1', contentLines: 'not an array' }],
+    [{ version: 1, contentLines: [] }],
+    [{ version: 'v1', contentLines: [null] }],
+    [{ version: 'v1', contentLines: [], screenshot_url: 123 }],
+  ].map((payload) => [payload]))('rejects a malformed success payload: %j', async (payload) => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json(payload));
+    render(<ChangelogPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('invalid changelog response');
+    expect(screen.queryByText('No changelog available.')).not.toBeInTheDocument();
+  });
+
+  it('shows malformed JSON as an error rather than empty history', async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response('{broken-json', { status: 200 }));
+    render(<ChangelogPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Unable to load changelog.');
+    expect(screen.queryByText('No changelog available.')).not.toBeInTheDocument();
+  });
+
+  it('recovers from a network failure only after a successful retry', async () => {
+    global.fetch = vi.fn()
+      .mockRejectedValueOnce(new Error('Network disconnected'))
+      .mockResolvedValueOnce(Response.json([{ version: 'Recorded release', contentLines: ['Recorded change'] }]));
+    render(<ChangelogPage />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Network disconnected');
+    const { fireEvent } = await import('@testing-library/react');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(await screen.findByText('Recorded release')).toBeInTheDocument();
+    expect(screen.getByText('Recorded change')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('preserves headings, links, screenshots and literal markup from the API', async () => {
+    global.fetch = vi.fn().mockResolvedValue(Response.json([{
+      version: 'Recorded release',
+      contentLines: ['### Release details', '- See [documentation](/help)', '<script>inert</script>'],
+      screenshot_url: '/recorded-image.png',
+    }]));
+    const { container } = render(<ChangelogPage />);
+    expect(await screen.findByRole('heading', { name: 'Release details' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'documentation' })).toHaveAttribute('href', '/help');
+    expect(screen.getByRole('img', { name: 'Recorded release Screenshot' })).toHaveAttribute('src', '/recorded-image.png');
+    expect(screen.getByText('<script>inert</script>')).toBeInTheDocument();
+    expect(container.querySelector('script')).toBeNull();
+  });
+});

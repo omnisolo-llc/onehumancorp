@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { PublicAuthShell } from "@/app/components/PublicAuthShell";
+import { navigateToPublicAuth } from "@/lib/auth/publicNavigation";
 
 type PublicSettings = Readonly<{
   registration_mode: "closed" | "open" | "invite_only";
@@ -14,7 +13,6 @@ type PublicSettings = Readonly<{
 const CHALLENGE_STORAGE_KEY = "omnisolo-registration-challenge";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [settings, setSettings] = useState<PublicSettings | null>(null);
   const [email, setEmail] = useState("");
   const [invitationToken, setInvitationToken] = useState("");
@@ -67,7 +65,7 @@ export default function RegisterPage() {
         CHALLENGE_STORAGE_KEY,
         JSON.stringify({ challengeId, email: email.trim().toLowerCase() }),
       );
-      router.push("/verify-email");
+      navigateToPublicAuth("/verify-email");
     } catch {
       setError("We could not send a verification code. Check your details and try again.");
     } finally {
@@ -126,7 +124,7 @@ export default function RegisterPage() {
           )}
           {error && <p className="mt-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800" role="alert">{error}</p>}
           <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
-            Already have an account? <Link className="font-semibold text-[#0066FF]" href="/login">Sign in</Link>
+            Already have an account? <a className="font-semibold text-[#0066FF]" href="/login">Sign in</a>
           </p>
     </PublicAuthShell>
   );

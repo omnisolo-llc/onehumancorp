@@ -11,14 +11,16 @@ describe("page rendering resilience", () => {
     expect(page("subscriptions/manage/page.tsx")).not.toContain("window.location.search");
   });
 
-  it("normalizes failed collection responses before rendering lists", () => {
+  it("validates collection responses before rendering lists", () => {
     expect(page("agent-debug-trace/page.tsx"))
       .toContain("setEvents(Array.isArray(data) ? data : [])");
     const kds = page("pos/kds/page.tsx");
     expect(kds).toContain("setOrders(normalizedOrders)");
     expect(kds).toContain("setInventory(normalizedInventory)");
-    expect(page("changelog/page.tsx"))
-      .toContain("setSections(Array.isArray(data) ? data : [])");
+    const changelog = page("changelog/page.tsx");
+    expect(changelog).toContain("if (!isChangelog(data)) throw");
+    expect(changelog).toContain('status: "error"');
+    // Rendered changelog tests also verify malformed/failed responses stay distinct from empty success.
   });
 
   it("uses a stable initial origin for share-link hydration", () => {

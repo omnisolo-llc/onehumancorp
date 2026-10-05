@@ -355,7 +355,7 @@ test.describe('comprehensive UI contract', () => {
     });
   }
 
-  test('every app page loads without visible crash output', async ({ page }) => {
+  test('every app page loads without visible crash output', async ({ page, anonymousPage }) => {
     expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
     test.setTimeout(180000);
     const failures: string[] = [];
@@ -363,16 +363,22 @@ test.describe('comprehensive UI contract', () => {
     console.info(`Discovered ${appRoutes.length} app routes for load audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
-    page.on('pageerror', (error) => {
-      failures.push(`uncaught page error: ${error.message}`);
-    });
+    if (page.context() === anonymousPage.context()) throw new Error('Load audit lanes require independent browser contexts');
+    for (const lanePage of [page, anonymousPage]) {
+      lanePage.on('pageerror', (error) => {
+        failures.push(`uncaught page error: ${error.message}`);
+      });
+    }
 
     type LoadPhase = 'navigation' | 'final-document' | 'rendered-content';
-    type LoadProgress = { route: string; phase: LoadPhase; elapsedMs: number; completed: boolean; status?: number; documentPath?: string };
+    type LoadProgress = { route: string; routeIndex: number; lane: number; phase: LoadPhase; elapsedMs: number; completed: boolean; status?: number; documentPath?: string };
     const started = Date.now();
     const phaseTotalsMs: Record<LoadPhase, number> = { navigation: 0, 'final-document': 0, 'rendered-content': 0 };
     const recentPhases: LoadProgress[] = [];
     let completedRoutes = 0;
+    const laneRoutes = [0, 1].map(lane => appRoutes.filter((_, index) => index % 2 === lane));
+    const completedByLane = [0, 0];
+    const routeIndices = new Map(appRoutes.map((route, index) => [route, index + 1]));
     let phaseCount = 0;
     // These labels come from source discovery, never finalUrl or error text.
     // Replace the source inventory's dynamic examples with their templates.
@@ -395,12 +401,13 @@ test.describe('comprehensive UI contract', () => {
       } catch { /* Unknown destinations carry no safe document identity. */ }
       return '/[redacted]';
     };
-    const timed = async <T>(route: string, phase: LoadPhase, operation: () => Promise<T>, documentPath?: string): Promise<T> => {
+    const timed = async <T>(route: string, lane: number, phase: LoadPhase, operation: (progress: LoadProgress) => Promise<T>, documentPath?: string): Promise<T> => {
       const template = templates.get(route) ?? '/[redacted]';
-      const progress: LoadProgress = { route: template, phase, elapsedMs: 0, completed: false, ...(documentPath ? { documentPath } : {}) };
+      const routeIndex = routeIndices.get(route)!;
+      const progress: LoadProgress = { route: template, routeIndex, lane, phase, elapsedMs: 0, completed: false, ...(documentPath ? { documentPath } : {}) };
       const phaseStarted = Date.now();
       try {
-        const result = await test.step(`load ${completedRoutes + 1}/${appRoutes.length} ${template}: ${phase}`, operation);
+        const result = await test.step(`load ${routeIndex}/${appRoutes.length} lane ${lane + 1} ${template}: ${phase}`, () => operation(progress));
         progress.completed = true;
         return result;
       } finally {
@@ -412,21 +419,25 @@ test.describe('comprehensive UI contract', () => {
       }
     };
 
-    try {
+    const auditLane = async (page: Page, appRoutes: string[], lane: number) => {
       for (const route of appRoutes) {
-        const navigation = await timed(route, 'navigation', () => gotoReady(page, route));
+        const navigation = await timed(route, lane, 'navigation', () => gotoReady(page, route));
         // Check the verified final document with the same authenticated context.
         // The share-card's initial shell is not the document being audited.
-        const response = await timed(route, 'final-document', () => page.request.get(navigation.finalUrl, { failOnStatusCode: false }), documentPathFor(route, navigation.finalUrl));
+        const response = await timed(route, lane, 'final-document', async progress => {
+          const response = await page.request.get(navigation.finalUrl, { failOnStatusCode: false });
+          progress.status = response?.status() ?? 0;
+          return response;
+        }, documentPathFor(route, navigation.finalUrl));
         const status = response?.status() ?? 0;
-        recentPhases[recentPhases.length - 1].status = status;
         if (status >= 400) {
           failures.push(`${routeLabel(route)}: HTTP ${status}`);
           completedRoutes += 1;
+          completedByLane[lane] += 1;
           continue;
         }
 
-        await timed(route, 'rendered-content', async () => {
+        await timed(route, lane, 'rendered-content', async () => {
           if (route === '/orders/e2e-seeded-record') {
             // The dynamic example is a persisted order, not a tolerated missing
             // record. Wait for its actual read instead of accepting a loading shell.
@@ -440,9 +451,24 @@ test.describe('comprehensive UI contract', () => {
           }
         });
         completedRoutes += 1;
+        completedByLane[lane] += 1;
       }
+    };
+    try {
+      // Overlap two independent read-only sweeps within the same 180s budget.
+      // The native fixtures own separate cookies/storage, and gotoReady still
+      // authenticates each context through the real backend before navigation.
+      // A failed lane cannot leave another lane running past the final receipt.
+      const outcomes = await Promise.allSettled([
+        auditLane(page, laneRoutes[0], 0),
+        auditLane(anonymousPage, laneRoutes[1], 1),
+      ]);
+      const rejected = outcomes.find(outcome => outcome.status === 'rejected');
+      if (rejected?.status === 'rejected') throw rejected.reason;
     } finally {
       const progress = { routeCount: appRoutes.length, completedRoutes, elapsedMs: Math.max(0, Date.now() - started),
+        lanes: laneRoutes.map((routes, lane) => ({ lane, routeCount: routes.length, completedRoutes: completedByLane[lane] })),
+        // These totals sum work across both lanes, so they may exceed wall time.
         phaseTotalsMs, omittedPhases: phaseCount - recentPhases.length, recentPhases };
       console.info(`Load audit progress: ${JSON.stringify(progress)}`);
       // Console evidence survives even if timeout teardown rejects attachment.

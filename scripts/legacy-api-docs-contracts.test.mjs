@@ -5,7 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { JSDOM, VirtualConsole } from './test-support/offline-dom.mjs';
 import { build } from 'esbuild';
 
-const roots = ['src/ui/tauri/src/ui', 'src/ui/next/public', 'src/ui/next/public/ui', 'src/ui/next/public/api/ui', 'src/ui/next/public/api/v1/ui'];
+// Keep the historical standalone contract. Next now serves one real React page;
+// its tooltip/provider and served alias behavior are covered by ApiDocsPage,
+// TooltipRegistry and static-route-retirement browser tests.
+const roots = ['src/ui/tauri/src/ui'];
 for (const root of roots) {
  for (const moduleFirst of [false, true]) {
   test(`${root}: API reference and actual Help module share one tooltip, module first=${moduleFirst}`, async () => {
