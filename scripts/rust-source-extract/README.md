@@ -6,12 +6,12 @@ identity, then returns an unchanged range of the original UTF-8 bytes. Outer
 attributes and doc comments belong to that range; inner module/impl attributes
 remain in their enclosing item. Selecting an impl returns that entire impl.
 Inherent and trait impl methods have separate identities. Duplicate matches,
-missing items, unsupported selections, invalid UTF-8, and parse ERROR/missing
-nodes fail closed. Macro token contents are never treated as declarations.
+missing items, unsupported selections, invalid UTF-8, parse errors and opaque
+syntax nodes fail closed. Macro token contents are never treated as declarations.
 
 The result records the original source SHA-256, selected range SHA-256, offsets,
 and the enclosing module/impl byte ranges. The caller must still preserve its
-route/mount/auth checks, compile the generated Rust, bind the helper and grammar
+route/mount/auth checks, compile the generated Rust, bind the helper and parser
 versions in its source manifest, compare every fragment before use, and check
 all source fingerprints again after execution. Parsing does not certify macro
 expansion, Rust types, authorization, or mounted behavior.
@@ -21,17 +21,28 @@ expansion, Rust types, authorization, or mounted behavior.
 1. Record valid-Rust truncation in current scanner fixtures before implementation.
 2. Exercise comments, nested comments, chars, raw/byte strings, macros, const
    generics, Unicode, CRLF, attrs, modules and impl identities against exact bytes.
-3. Reject malformed syntax, missing nodes, missing names and ambiguous matches.
-4. Implement shared Tree-sitter traversal using original byte ranges only.
+3. Reject malformed or opaque syntax, missing names and ambiguous matches.
+4. Traverse the whole parsed source using original byte ranges only.
 5. Compare each proposed consumer's current selected fragments/digests, then
    migrate one consumer with its full existing source-drift and focused checks.
    Specialty harnesses remain unchanged until their selection policy is verified.
 
-Dependencies reuse root-locked Tree-sitter 0.26.9 and Rust grammar 0.24.2 (MIT),
-SHA-2 0.10.9 and serde_json 1.0.150 (MIT OR Apache-2.0). This is a build tool,
-not a new application runtime dependency. No compiler or performance improvement
-is claimed. API sources: [byte ranges and syntax nodes](https://tree-sitter.github.io/tree-sitter/using-parsers/2-basic-parsing.html),
-[Rust grammar API](https://docs.rs/tree-sitter-rust/0.24.2/tree_sitter_rust/).
+Dependencies reuse root-locked syn 2.0.117 (`full`, `visit`) and proc-macro2
+1.0.106 (`span-locations`), SHA-2 0.10.9 and serde_json 1.0.150, all MIT OR
+Apache-2.0. This is a build tool, not a new application runtime dependency.
+No compiler or performance improvement is claimed. The initial Tree-sitter Rust
+grammar rejected the actual complete server source; Syn parses that same source.
+There is one parser for every extraction and no recovery fallback.
+
+[Syn parse_file](https://docs.rs/syn/2.0.117/syn/fn.parse_file.html) removes a
+leading UTF-8 BOM and the shebang text (while retaining its newline). The extractor
+adds their exact UTF-8 byte lengths back to every returned range. It never
+reformats or serializes the syntax tree as Rust source. [proc-macro2 byte_range](https://docs.rs/proc-macro2/latest/proc_macro2/struct.Span.html#method.byte_range)
+provides accurate byte offsets on stable Rust outside procedural macros, including
+this executable and a consumer's build script. Tests cover Unicode, CRLF,
+attributes, BOM/shebang combinations and the complete current server source.
+Syn's opaque `Verbatim` nodes are rejected across items, associated/foreign items,
+expressions, patterns, types and type bounds, including outside the selection.
 
 ## Use from a verified consumer
 
@@ -69,11 +80,6 @@ from the unchanged production derives. These callers reconstruct only plain
 inherent impls; an added enclosing attribute or changed impl shape fails closed
 until the caller explicitly preserves that context.
 
-The agent workflow consumer remains on its existing implementation: the locked
-Rust grammar rejects `src/server/lib.rs` inside the 310,475-byte `run_server`
-function, although Rust 1.95 rustfmt accepts the full source. The rest of that
-file parses when the function is removed in an isolated diagnostic probe.
-Production extraction never drops or reparses a selected part to hide errors.
-The exact grammar incompatibility needs resolution and whole-file parity before
-that consumer can migrate. This is an outstanding prerequisite, not a completed
-scanner fix.
+The agent workflow consumer remains on its existing implementation until its
+full generated-source and focused checks are repeated using the uniform parser.
+Production extraction never drops or reparses selected parts to hide file errors.
