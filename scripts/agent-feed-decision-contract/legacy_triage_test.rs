@@ -688,7 +688,7 @@ async fn product_booking_alias(postgres: bool, foreign: bool) {
     } else {
         local_fixture("product-booking", "Draft Booking", payload).await
     };
-    f.execute("INSERT INTO products(id,tenant_id,name) VALUES('product-a','tenant-a','Synthetic product'),('product-b','tenant-b','Foreign product')").await;
+    f.execute("INSERT INTO products(id,tenant_id,title) VALUES('product-a','tenant-a','Synthetic product'),('product-b','tenant-b','Foreign product')").await;
     let (status, body) = f.decide(&f.owner, "product-booking", true, None).await;
     if foreign {
         assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
