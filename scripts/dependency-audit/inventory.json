@@ -1,0 +1,55 @@
+{
+  "npm": [".", "src/ui/next", "src/cli", ".github/test-tools", "scripts/agent-workflow-contract", "scripts/site-publication"],
+  "cargo_focused": [
+    "scripts/agent-receipt-postgres-contract",
+    "scripts/builder-generation-contract",
+    "scripts/catalog-edit",
+    "scripts/checkpoint-restore-contract",
+    "scripts/marketplace-contract",
+    "scripts/minimax-provider-contract",
+    "scripts/proactive-worker-contract",
+    "scripts/quote-taxjar",
+    "scripts/site-publication",
+    "scripts/staff-read-contract",
+    "scripts/staff-timecard-contract"
+  ],
+  "python": [
+    {"lock": "docs/requirements_lock.txt", "hashed": false},
+    {"lock": "deploy/harness/kimi/requirements.lock", "hashed": true},
+    {"lock": "deploy/harness/openharness/requirements.lock", "hashed": true},
+    {"lock": "deploy/harness/plandex/requirements.lock", "hashed": true}
+  ],
+  "inactive_cargo_locks": {
+    "src/server/Cargo.lock": "Historical orphan: no adjacent Cargo.toml or identified build consumer. Not audited as an active graph; activation requires explicit inventory review."
+  },
+  "audit_tool_locks": ["scripts/dependency-audit/requirements.lock"],
+  "desktop_targets": [
+    "x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-gnu", "x86_64-pc-windows-msvc", "aarch64-pc-windows-msvc",
+    "x86_64-apple-darwin", "aarch64-apple-darwin"
+  ],
+  "android_targets": ["aarch64-linux-android", "armv7-linux-androideabi", "i686-linux-android", "x86_64-linux-android"],
+  "cargo_deny": {
+    "version": "0.20.2",
+    "url": "https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz",
+    "archive_sha256": "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f",
+    "binary_sha256": "b329e25933d01c36dd7c47d84ea5716694f9b7caf53a5003d45674703a8ed54a"
+  },
+  "image_boundaries": [
+    {
+      "source": "deploy/docker/Dockerfile.harness-worker",
+      "state": "not_audited",
+      "reason": "Global npm CLI transitive trees, un-hashed Python installations, downloaded binaries and copied prebuilt agent images require actual image inventory/SBOM. Repository lock scans do not establish their installed graphs."
+    },
+    {
+      "source": "deploy/docker/Dockerfile.plandex-server",
+      "state": "not_audited",
+      "reason": "Declared Python lock is audited separately; the assembled image, OS packages and non-Python binaries require actual image inventory."
+    },
+    {
+      "source": "deploy/docker/web/Dockerfile",
+      "state": "not_audited",
+      "reason": "Repository npm lock coverage does not scan assembled image OS packages or establish final standalone trace contents."
+    }
+  ]
+}
