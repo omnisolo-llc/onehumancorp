@@ -325,7 +325,7 @@ pub struct LlmJudgeSensor {
     pub confidence_threshold: f32,
 }
 
-#[derive(Deserialize, serde::Serialize)]
+#[derive(Deserialize, serde::Serialize, schemars::JsonSchema)]
 struct JudgeEvaluation {
     status: String,
     reason: String,
@@ -798,6 +798,60 @@ mod tests {
         assert!(err.contains("Reason: Bad"));
         assert!(err.contains("Missing Elements: element1"));
         assert!(err.contains("Suggested Fixes:\n- fix1"));
+    }
+
+    #[tokio::test]
+    async fn judge_schema_preserves_required_lists_and_confidence_policy() {
+        struct Capture {
+            requests: tokio::sync::Mutex<Vec<ChatRequest>>,
+            inner: MockLlmClient,
+        }
+        #[async_trait::async_trait]
+        impl LlmClient for Capture {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.requests.lock().await.push(req.clone());
+                LlmClient::chat(&self.inner, req).await
+            }
+        }
+        let llm = Arc::new(Capture {
+            requests: tokio::sync::Mutex::new(vec![]),
+            inner: MockLlmClient {
+                response_text: r#"{"status":"approve","reason":"checked","confidence":0.8,"missing_elements":[],"suggested_fixes":[]}"#.into(),
+            },
+        });
+        let mut judge = LlmJudgeSensor {
+            llm: llm.clone(),
+            model: "fixture".into(),
+            criteria: None,
+            confidence_threshold: 0.7,
+        };
+        assert!(judge.verify_inferential("output", "task").await.is_ok());
+        judge.confidence_threshold = 0.9;
+        assert!(
+            judge
+                .verify_inferential("output", "task")
+                .await
+                .unwrap_err()
+                .contains("below threshold")
+        );
+        let requests = llm.requests.lock().await;
+        assert_eq!(requests.len(), 2);
+        let data = &requests[0].tools[0].parameters["properties"]["data"];
+        let required = data["required"].as_array().unwrap();
+        for key in [
+            "status",
+            "reason",
+            "confidence",
+            "missing_elements",
+            "suggested_fixes",
+        ] {
+            assert!(required.contains(&serde_json::json!(key)));
+        }
+        assert_eq!(data["properties"]["status"]["type"], "string");
+        assert!(data["properties"]["status"].get("enum").is_none());
     }
 
     #[tokio::test]
