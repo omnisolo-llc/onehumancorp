@@ -67,6 +67,21 @@ describe('feed read lifecycle', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it('reloads a restored back-forward cache document through session verification', async () => {
+    const reload = vi.fn();
+    vi.stubGlobal('location', { reload });
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(feed()));
+    await act(async () => { render(<FeedPage />); });
+    expect(screen.getByText('Owner proposal')).toBeInTheDocument();
+    await act(async () => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })); });
+    expect(reload).not.toHaveBeenCalled();
+    await act(async () => { window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })); });
+    expect(screen.queryByText('Owner proposal')).not.toBeInTheDocument();
+    await act(async () => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('Owner proposal')).not.toBeInTheDocument();
+  });
+
   it('aborts an initial read when the page unmounts', async () => {
     const pending = deferred<Response>();
     const fetchMock = vi.fn().mockReturnValue(pending.promise);
