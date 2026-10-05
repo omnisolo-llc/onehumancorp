@@ -212,7 +212,7 @@ export default function TriagePage() {
             <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
           </div>
         ) : !error && items.length === 0 ? (
-          <div className="app-empty flex flex-col items-center justify-center py-16 px-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[24px] border border-white/40 dark:border-white/10" data-testid="triage-feed-empty">
+          <div className="app-empty flex flex-col items-center justify-center py-16 px-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/40 dark:border-white/10" data-testid="triage-feed-empty">
             <div className="text-5xl mb-6">✨</div>
             <div className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
               Inbox Zero Achieved
@@ -230,7 +230,7 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="omnisolo-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="omnisolo-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
                 <div
