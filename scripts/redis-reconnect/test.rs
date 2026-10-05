@@ -290,6 +290,34 @@ async fn post_pop_processing_write_uses_the_command_connection() {
 mod fault;
 
 #[tokio::test]
+async fn startup_ping_timeout_preserves_typed_redacted_error() {
+    const SECRET: &str = "startup-ping-canary-password-never-log";
+    let server = fault::FaultServer::start("PING", true).await;
+    let url = server
+        .url
+        .replacen("redis://", &format!("redis://:{SECRET}@"), 1);
+    let result = tokio::time::timeout(
+        Duration::from_secs(8),
+        RedisTaskQueue::connect_for_startup(&url, "startup-ping-timeout"),
+    )
+    .await
+    .expect("startup exceeded its hard test deadline");
+    let Err(error) = result else {
+        panic!("startup cannot succeed without a PING response")
+    };
+    let rendered = format!("{error:?} {error}");
+    assert!(!rendered.contains(SECRET));
+    assert!(!rendered.contains(&url));
+    assert_eq!(server.count("PING"), 1, "startup must not replay PING");
+    assert_eq!(error.kind(), std::io::ErrorKind::TimedOut);
+    assert_eq!(
+        error.to_string(),
+        "Configured Redis task queue startup timed out",
+        "the inner response deadline must retain its own safe diagnostic"
+    );
+}
+
+#[tokio::test]
 async fn lost_enqueue_reply_is_reported_and_never_replayed() {
     let server = fault::FaultServer::start("RPUSH", false).await;
     let queue = RedisTaskQueue::connect_for_startup(&server.url, "fault-queue")

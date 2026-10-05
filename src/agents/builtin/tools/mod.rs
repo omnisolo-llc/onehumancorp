@@ -13,6 +13,7 @@ pub mod bash;
 pub mod edit;
 pub mod glob;
 pub mod grep;
+mod html_parser;
 pub mod network_policy;
 pub mod python;
 pub mod read;

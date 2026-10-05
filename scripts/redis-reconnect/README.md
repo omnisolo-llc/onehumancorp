@@ -10,7 +10,7 @@ script owns, PID-verifies, and cleans up its loopback process. Supplied service
 URLs are rejected, including shared CI services. First run
 `bash scripts/redis-reconnect/fetch.sh` to fetch the repository-locked dependencies.
 The required CI command is `python3 scripts/focused_ci_gate.py redis-reconnect`;
-it rejects fewer than 19 tests, failures, ignored tests, and filters. Source and
+it rejects fewer than 20 tests, failures, ignored tests, and filters. Source and
 selection hashes are verified after execution against unchanged input snapshots. The
 real service tests serialize connection termination and use unique keys; they
 never flush shared data. They issue `CLIENT KILL` and must not target a shared
