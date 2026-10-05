@@ -14,7 +14,7 @@ struct LlmJudgeArgs {
     task_description: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, schemars::JsonSchema)]
 struct JudgeEvaluation {
     status: String,
     reason: String,
@@ -138,14 +138,16 @@ mod tests {
 
     struct MockLlmClient {
         response_text: String,
+        requests: tokio::sync::Mutex<Vec<ChatRequest>>,
     }
 
     #[async_trait::async_trait]
     impl LlmClient for MockLlmClient {
         async fn chat(
             &self,
-            _req: ChatRequest,
+            req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
             let tool_call = omnisolo_builtin_agent_core::types::ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
@@ -174,9 +176,11 @@ mod tests {
     #[tokio::test]
     async fn test_llm_judge_tool_approve() {
         let pass_llm = Arc::new(MockLlmClient {
-            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9, "missing_elements": [], "suggested_fixes": []}"#.to_string(),
+            response_text: r#"{"status": "APPROVE", "reason": "Looks good", "confidence": 0.9}"#
+                .to_string(),
+            requests: tokio::sync::Mutex::new(vec![]),
         });
-        let tool = llm_judge_tool(pass_llm, "test-model".to_string());
+        let tool = llm_judge_tool(pass_llm.clone(), "test-model".to_string());
 
         let args = json!({
             "output": "The sky is blue.",
@@ -187,12 +191,25 @@ mod tests {
         assert!(res.is_ok());
         let result_str = res.unwrap();
         assert!(result_str.contains("APPROVED"));
+        let requests = pass_llm.requests.lock().await;
+        assert_eq!(requests.len(), 1);
+        let data = &requests[0].tools[0].parameters["properties"]["data"];
+        let required = data["required"].as_array().unwrap();
+        for key in ["status", "reason", "confidence"] {
+            assert!(required.contains(&json!(key)));
+        }
+        for key in ["missing_elements", "suggested_fixes"] {
+            assert!(!required.contains(&json!(key)));
+        }
+        assert_eq!(data["properties"]["status"]["type"], "string");
+        assert!(data["properties"]["status"].get("enum").is_none());
     }
 
     #[tokio::test]
     async fn test_llm_judge_tool_reject() {
         let fail_llm = Arc::new(MockLlmClient {
             response_text: r#"{"status": "REJECT", "reason": "Bad answer", "confidence": 0.8, "missing_elements": ["Correct color"], "suggested_fixes": ["Say blue"]}"#.to_string(),
+            requests: tokio::sync::Mutex::new(vec![]),
         });
         let tool = llm_judge_tool(fail_llm, "test-model".to_string());
 
