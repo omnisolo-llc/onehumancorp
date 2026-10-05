@@ -15,6 +15,8 @@ const destinations = new Map<string, string>([
   ["/api/v1/ui/changelog.html", "/changelog"],
   ["/unified-feed.html", "/unified-feed"],
   ["/ui/unified-feed.html", "/unified-feed"],
+  ["/booking-create.html", "/services/new"],
+  ["/ui/booking-create.html", "/services/new"],
 ]);
 
 export function retiredPageDestination(pathname: string): string | null {
