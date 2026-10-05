@@ -89,6 +89,12 @@ export default function FeedPage() {
     const storage = (event: StorageEvent) => {
       if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) retire();
     };
+    const restore = (event: PageTransitionEvent) => {
+      // A restored document must pass the session boundary again before reads
+      // resume; pagehide has already removed its private data and authority.
+      if (event.persisted) globalThis.location.reload();
+    };
+    window.addEventListener('pageshow', restore);
     window.addEventListener('omnisolo_auth_changed', retire);
     window.addEventListener('pagehide', retire);
     window.addEventListener('storage', storage);
@@ -99,6 +105,7 @@ export default function FeedPage() {
       readGeneration.current += 1;
       pendingRead.current?.abort();
       pendingRead.current = null;
+      window.removeEventListener('pageshow', restore);
       window.removeEventListener('omnisolo_auth_changed', retire);
       window.removeEventListener('pagehide', retire);
       window.removeEventListener('storage', storage);
