@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 /// A Planner agent first generates a complete DAG of tasks, then an Executor
 /// runs them concurrently resolving dependencies.
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct TaskNode {
     pub task_id: String,
     pub tool_name: String,
@@ -21,7 +21,7 @@ pub struct TaskNode {
     pub dependencies: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, schemars::JsonSchema)]
 pub struct ExecutionPlan {
     pub tasks: Vec<TaskNode>,
 }
@@ -299,14 +299,16 @@ mod tests {
 
     struct MockPlannerLlm {
         plan_json: String,
+        requests: tokio::sync::Mutex<Vec<ChatRequest>>,
     }
 
     #[async_trait::async_trait]
     impl crate::output_parser::LlmClientForParser for MockPlannerLlm {
         async fn chat(
             &self,
-            _req: ChatRequest,
+            req: ChatRequest,
         ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+            self.requests.lock().await.push(req);
             let tc = ToolCall {
                 id: "call_1".to_string(),
                 name: "structured_output".to_string(),
@@ -373,20 +375,33 @@ mod tests {
                 {
                     "task_id": "task_1",
                     "tool_name": "tool_a",
-                    "arguments": {},
-                    "dependencies": []
+                    "arguments": {}
                 }
             ]
         }"#;
 
         let llm = Arc::new(MockPlannerLlm {
             plan_json: plan_json.to_string(),
+            requests: tokio::sync::Mutex::new(vec![]),
         });
-        let planner = Planner { llm };
+        let planner = Planner { llm: llm.clone() };
 
         let plan = planner.create_plan("do something", &[]).await.unwrap();
         assert_eq!(plan.tasks.len(), 1);
         assert_eq!(plan.tasks[0].task_id, "task_1");
+        assert!(plan.tasks[0].dependencies.is_empty());
+        let requests = llm.requests.lock().await;
+        assert_eq!(requests.len(), 1);
+        let data = &requests[0].tools[0].parameters["properties"]["data"];
+        assert_eq!(data["required"], serde_json::json!(["tasks"]));
+        assert_eq!(data["properties"]["tasks"]["type"], "array");
+        let task = &data["properties"]["tasks"]["items"];
+        let required = task["required"].as_array().unwrap();
+        for key in ["task_id", "tool_name", "arguments"] {
+            assert!(required.contains(&serde_json::json!(key)));
+        }
+        assert!(!required.contains(&serde_json::json!("dependencies")));
+        assert_eq!(task["properties"]["dependencies"]["type"], "array");
     }
 
     #[tokio::test]
@@ -404,6 +419,7 @@ mod tests {
 
         let llm = Arc::new(MockPlannerLlm {
             plan_json: plan_json.to_string(),
+            requests: tokio::sync::Mutex::new(vec![]),
         });
         let planner = Planner { llm };
 

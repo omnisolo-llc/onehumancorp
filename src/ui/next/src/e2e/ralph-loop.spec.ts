@@ -1,40 +1,49 @@
 import { test, expect } from '../../../../e2e/fixtures';
+import { runtimeAcceptance } from '../../../../e2e/generation-acceptance';
+
+const runtimeUnavailable = 'Agent runtime is not configured; no work was dispatched';
 
 test.describe('The Ralph Loop UI E2E', () => {
-  test('Owner can navigate to Ralph Loop, enter task, and see execution', async ({ page }) => {
-    // Navigate to the Ralph Loop page
+  test('Owner submits a Ralph Loop task and sees the actual runtime response', async ({ page }) => {
     await page.goto('/ralph-loop');
-
-    // Wait for the page to load
     await expect(page.getByRole('heading', { name: /The Ralph Loop/ })).toBeVisible();
 
-    // Interact with the text area
+    const task = 'Implement an end-to-end feature spanning multiple sessions';
     const taskInput = page.getByLabel(/Long-Running Task Description/i);
-    await taskInput.fill('Implement an end-to-end feature spanning multiple sessions');
-
-    // Verify button is enabled
+    await taskInput.fill(task);
     const executeButton = page.getByRole('button', { name: /Start Ralph Loop/i });
     await expect(executeButton).toBeEnabled();
 
-    // In a real live service test without mocking backend, we don't necessarily want
-    // the full 2-minute ralph loop to run here unless the backend handles it quickly.
-    // Assuming the backend is running and responds with a success status or handled error.
-
-    // We will just verify the button changes state and an API request is made
-    const requestPromise = page.waitForRequest(req => req.url().includes('/api/v1/ralph-loop') && req.method() === 'POST');
-
+    // Observe the real response before clicking. Loading may finish before the
+    // next Playwright command; its intermediate state is owned by component tests.
+    const responsePromise = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/ralph-loop'
+      && response.request().method() === 'POST');
     await executeButton.click();
+    const response = await responsePromise;
 
-    // Verify loading state
-    await expect(page.getByRole('button', { name: /Ralph Loop Executing/i })).toBeVisible();
-
-    // Wait for the request to complete
-    await requestPromise;
-
-    // Depending on backend response (which we cannot mock per instructions, must be real),
-    // we expect either a success block or an error block.
-    // If backend is down or not configured fully locally, it might show error.
-    // We just verify that one of them appears.
-    await expect(page.locator('[data-testid="success-message"], [data-testid="error-message"]')).toBeVisible({ timeout: 10000 });
+    expect(response.request().postDataJSON()).toEqual({
+      task,
+      progress_file: '.ralph_progress.json',
+    });
+    const body = await response.json();
+    if (runtimeAcceptance) {
+      expect(response.status()).toBe(200);
+      expect(body.error).toBeUndefined();
+      expect(body.result).toBeTruthy();
+      await expect(page.getByTestId('success-message')).toBeVisible();
+      await expect(page.getByTestId('success-message').locator('pre'))
+        .toHaveText(JSON.stringify(body.result, null, 2));
+      await expect(page.getByTestId('error-message')).toHaveCount(0);
+    } else {
+      // The native E2E fixture owns an unconfigured workspace runtime.
+      expect(response.status()).toBe(503);
+      expect(body).toEqual({ error: runtimeUnavailable });
+      await expect(page.getByTestId('error-message')).toBeVisible();
+      await expect(page.getByTestId('error-message')).toContainText(runtimeUnavailable);
+      await expect(page.getByTestId('success-message')).toHaveCount(0);
+    }
+    await expect(taskInput).toHaveValue(task);
+    await expect(executeButton).toBeEnabled();
   });
 });

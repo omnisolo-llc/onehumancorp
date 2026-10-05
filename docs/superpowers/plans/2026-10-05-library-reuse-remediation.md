@@ -112,6 +112,120 @@ contracts. Schema generation, metrics lifecycle and dependency-policy expansion
 remain separate work. Broader Cargo/Python scans found pre-existing advisories;
 adding a blanket failure policy or arbitrary major upgrades is not a completed fix.
 
+## Subsequent reviewed checkpoints
+
+This section supersedes the historical initial-batch status above. Each result
+belongs to its named source checkpoint; combining branches requires fresh
+verification. None of the following focused results replaces full acceptance.
+
+Draft [#40272](https://github.com/omnisolo-llc/onehumancorp/pull/40272) adds B2
+ConnectionManager reuse and resubscription, S1 Reqwest harness adapters, uniform
+Syn/proc-macro2 source extraction, FE06 metadata/zoom, bounded FE07 extraction
+errors and INT7 required provider receipts. The original integrated checkpoint
+is `7d8b2287596c6eb74d19c25e28d0568057e5d986`. Subsequent Make fixture repair and
+incoming-main ancestry are recorded separately. The reviewed Redis timeout
+repair is `bf473608e5d3999da83fe94c1f72f47828c65867`; startup and reconnect steps
+passed in hosted run `37263010178`, which was still running at this update.
+
+Draft [#40285](https://github.com/omnisolo-llc/onehumancorp/pull/40285) adds the
+manual dependency reporter, reverse-tunnel identity binding and bounded public
+HTML parsing. Its focused checkpoint is `a24603bd01c967a0eae67b51772c98546c8bf596`.
+HTML verification covers 65 tests, 308 parity comparisons and 25 isolated
+resource probes, with strict Clippy. This bounded implementation supersedes the
+earlier blocked DOM-parser proposal; the unbounded WIP remains excluded. Tunnel
+verification covers nine tests and strict Clippy. The reporter completed 30
+scans: 14 clean, 16 with findings and no operational errors. It reports existing
+advisories; it does not establish vulnerability or license clearance. Current
+head `b6add2a4945139999dc5d7cd3c8635d4b3bbf395` includes the Redis repair. Hosted
+run `37263019992` has passed startup and reconnect but is not yet complete.
+
+The next bounded batch combines two independently reviewed components:
+
+- INT3a at `e3ba7a51d28541e44d14c166588f7ba018df5d50` derives complete response
+  schemas from the existing DTOs using Schemars 1.2.1. Core and LLM complete
+  suites plus selected real agent/tools callers passed 129 tests; strict
+  four-crate Clippy and reconciled locks passed. The only new root registry
+  package is `schemars_derive` 1.2.1. Serde/domain authority, native-only
+  behavior and the two-correction limit remain. Local adapters do not certify
+  live model providers. INT3b nested-path diagnostics remain a separate slice.
+- Dynamic-workflow tenant/owner checks and four PostgreSQL payload casts passed
+  the complete 97-case receipt contract, 50 validation-guard tests, strict
+  Clippy and formatting. Independent review verified the complete 14-file
+  patch and unchanged source/generated-input hashes. The manager uses verified
+  canonical owner/tenant identity and validates plan IDs before lookup; reads
+  remain available to authenticated same-tenant members. Existing String
+  bindings cast through PostgreSQL `json`, and dequeue reads payload as text,
+  preserving both current JSONB and tested legacy TEXT behavior. Escaped NUL
+  remains unsupported by the existing TEXT dequeue role parser. These changes
+  do not establish atomic plan/queue admission, transaction-fenced revocation,
+  exactly-once execution or forced queue RLS. The existing batch queue's
+  missing tenant-context setup remains open.
+
+These two components require verification after integration with hardening.
+Their earlier source receipts are not a pass claim for the combined branch.
+The relevant gate floors remain Redis reconnect 20 and receipt contract 97;
+source/generated-input checks and discovery must remain intact.
+
+Full native acceptance remains open. The latest complete native attempt passed
+`make lint` in 86.283 seconds, then failed `make test` after 786.020 seconds on
+one dashboard navigation timeout: 4,068 of 4,069 Next tests passed, and browser
+execution had not started. An unchanged focused run passed all three navigation
+tests with two Vitest workers; this suggests contention but does not prove its
+cause. The next complete attempt uses `VITEST_MAX_WORKERS=2` without changing
+timeouts or assertions. Two separate offline OpenHands native checks passed;
+they certify only those two paths. Initial/followup hosted browser group 3 also
+failed the incoming-main feed approval test. Feed persistence/reload, its DB
+assertions and all Help copies remain exclusively with the UI owner.
+
+Durable Redis claims, deployed SQL and credential-envelope compatibility,
+MCP legacy transport migration, accessible UI/form parity, public URL aliases,
+verified Gmail sender/MIME behavior and consent-bound metrics lifecycle remain
+explicit prerequisites. Read-only metrics design identified SDK shutdown and
+revocation constraints; no exporter was activated. The parent coordinates full
+acceptance and merging. This lane has performed no PR merge, deployment, release,
+live provider action or UI-owned feed/Help edit.
+
+## Combined checkpoint and UI-owned acceptance repair
+
+The schema and tenant/queue components were combined and independently reviewed
+at `5858301796e0880d3a726479fb860d53a68f21a8`, tree
+`3a2fbc0e7ea239e82507fac1999e736c06be40f9`. All 6,077 source hashes remained
+unchanged during verification. Actual-crate selections passed 129 tests and
+strict four-crate Clippy. Complete focused contracts passed builder 90, receipt
+97, Redis startup 23, reconnect 20 and MiniMax 24, with no ignored or filtered
+cases in those complete contracts. Receipt all-target Clippy, 50 validation
+guards, workspace formatting and root/three focused locked offline metadata
+also passed. These counts overlap in coverage and must not be summed as unique
+application tests.
+
+Two validation-runner incidents remain in the evidence: an owned compiler run
+was interrupted to correct a test-profile mismatch, and a later outer runner
+incorrectly expected 57 MiniMax tests. Independent source and actual binary
+inventory confirmed all 24 MiniMax tests executed and passed; 57 belonged to
+the separate provider-truthfulness harness. The failed outer result is retained,
+with separately recorded recovery checks. No repository assertion, test
+selection, source guard or discovery was weakened.
+
+After the earlier hosted runs finished, the parent supplied UI owner commit
+`c969fd8cff9ffa234cc7827570b3da126cfbc006` and UI head
+`04a5bbabbd1ef6d516faa5ee8bb5418fe3844dd9`. Independent review approved the
+canonical repository read, no-store responses, new standard/mobile freshness
+regressions and the exact owned approval test blob
+`abd0b81503b47def4e181e7e9fcee85a27aa74ea`. The three adopted files match the
+owner's published source. The approval test retains real PUT and SQL checks,
+reload, single-request and remaining-card assertions. No Help or other UI
+production changes were authored in this lane.
+
+Initial adopted head `c85524f9bb638f8ed66e453921e4db42a2f0dd96` passed E2E type
+checking, targeted lint and 20 native-contract groups with 6,033 source hashes
+unchanged. Followup `1951b87cfe36a5ce7da62be653068951db6ab619` and hardening
+`2533b0f5644535f7f98784b2a53a0e6c84db1cf3` preserve that exact ancestry. Their
+new full hosted runs are `37265718711`, `37265722692` and `37265725999`.
+This combined branch also adopts that ancestry; the prior 585 checkpoint does
+not certify later source. Fresh combined-source focused, full native and hosted
+results must be recorded separately before the parent merges. The native run
+uses two Vitest workers with unchanged timeouts, assertions and discovery.
+
 ## Review focus
 
 Lossy money conversion; provider replay after unknown outcome; raw signed body preservation; tenant/algorithm/identity confusion; unbounded allocation; process cleanup; persisted-format compatibility; dependency feature/toolchain/platform fit; exact final-source test evidence. Estimate benefits as fewer custom edge-case paths and known defects; do not invent performance/bundle savings.

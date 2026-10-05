@@ -609,7 +609,7 @@ mod tests {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
-    async fn read_http_request(stream: &mut tokio::net::TcpStream) {
+    async fn read_http_request(stream: &mut tokio::net::TcpStream) -> Value {
         let mut request = Vec::new();
         let mut buffer = [0_u8; 4096];
         let mut expected_len = None;
@@ -641,6 +641,58 @@ mod tests {
             if expected_len.is_some_and(|len| request.len() >= len) {
                 break;
             }
+        }
+        let header_end = request
+            .windows(4)
+            .position(|window| window == b"\r\n\r\n")
+            .unwrap();
+        serde_json::from_slice(&request[header_end + 4..expected_len.unwrap()]).unwrap()
+    }
+
+    #[tokio::test]
+    async fn generated_array_schema_survives_openai_and_minimax_wire_roundtrip() {
+        use omnisolo_builtin_agent_core::output_parser::{
+            AdvancedPydanticOutputParser, OutputParser,
+        };
+        for minimax in [false, true] {
+            let request = super::super::structured_output_test::array_request().await;
+            let expected = request.tools[0].parameters.clone();
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                let (mut stream, _) = listener.accept().await.unwrap();
+                let body = read_http_request(&mut stream).await;
+                write_json_response(&mut stream, r#"{"id":"schema-receipt","choices":[{"message":{"role":"assistant","content":null,"tool_calls":[{"id":"call-schema","type":"function","function":{"name":"structured_output","arguments":"{\"data\":[{\"tool\":\"lookup\",\"args\":{}}]}"}}]},"finish_reason":"tool_calls"}],"usage":{"prompt_tokens":1,"completion_tokens":1}}"#).await;
+                body
+            });
+            let endpoint = format!("http://{address}/v1");
+            let mut client = if minimax {
+                OpenAIClient::minimax("fixture", Some(endpoint))
+            } else {
+                OpenAIClient::with_base_url("fixture", endpoint)
+            };
+            // Fixture-only proxy isolation; no external request is made.
+            client.client = Client::builder()
+                .no_proxy()
+                .timeout(Duration::from_secs(2))
+                .build()
+                .unwrap();
+            let response = tokio::time::timeout(Duration::from_secs(3), client.chat(request))
+                .await
+                .unwrap()
+                .unwrap();
+            let body = server.await.unwrap();
+            assert_eq!(body["tools"].as_array().unwrap().len(), 1);
+            assert_eq!(body["tools"][0]["function"]["parameters"], expected);
+            assert_eq!(
+                body["tools"][0]["function"]["parameters"]["properties"]["data"]["type"],
+                "array"
+            );
+            assert!(body["tools"][0]["function"].get("strict").is_none());
+            let parsed: Vec<Value> = AdvancedPydanticOutputParser::new()
+                .parse_message(&response.message)
+                .unwrap();
+            assert_eq!(parsed, vec![serde_json::json!({"tool":"lookup","args":{}})]);
         }
     }
 

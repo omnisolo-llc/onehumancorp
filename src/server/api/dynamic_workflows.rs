@@ -1,16 +1,26 @@
 use axum::{
     Json, Router,
-    extract::{Path, State},
-    http::StatusCode,
+    extract::{Extension, Path, State},
+    http::{HeaderMap, StatusCode},
     response::IntoResponse,
     routing::{get, post},
 };
 use serde_json::json;
+use server_auth::commit_authority::{AuthorityError, verify_owner};
+use server_common::{Claims, auth_utils::signed_tenant_id};
 use std::sync::Arc;
 
-use crate::orchestration::dynamic_workflows::{DynamicWorkflowManager, DynamicWorkflowRequest};
+use crate::orchestration::dynamic_workflows::{
+    DynamicWorkflowError, DynamicWorkflowManager, DynamicWorkflowRequest,
+};
 
-pub fn router<S>(manager: Arc<DynamicWorkflowManager>) -> Router<S>
+#[derive(Clone)]
+struct WorkflowState {
+    manager: Arc<DynamicWorkflowManager>,
+    auth: Arc<server_auth::Store>,
+}
+
+pub fn router<S>(manager: Arc<DynamicWorkflowManager>, auth: Arc<server_auth::Store>) -> Router<S>
 where
     S: Clone + Send + Sync + 'static,
 {
@@ -18,16 +28,19 @@ where
         .route("/", post(start_workflow))
         .route("/{id}", get(get_workflow))
         .route("/{id}/confirm", post(confirm_workflow))
-        .with_state(manager)
+        .with_state(WorkflowState { manager, auth })
 }
 
 async fn start_workflow(
-    State(manager): State<Arc<DynamicWorkflowManager>>,
-    axum::extract::Extension(auth_info): axum::extract::Extension<
-        ::server_auth::orchestration::AuthInfo,
-    >,
-    Json(mut request): Json<DynamicWorkflowRequest>,
+    State(state): State<WorkflowState>,
+    Extension(claims): Extension<Claims>,
+    headers: HeaderMap,
+    Json(request): Json<DynamicWorkflowRequest>,
 ) -> axum::response::Response {
+    let owner = match verify_owner(&state.auth, &claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority_error(error),
+    };
     if request.prompt.trim().is_empty() {
         return (
             StatusCode::BAD_REQUEST,
@@ -36,49 +49,68 @@ async fn start_workflow(
             .into_response();
     }
 
-    // OVERRIDE the request body's tenant_id with the one from the authenticated session
-    // to prevent multi-tenant safety issue where tenant_id is read from request body
-    if !auth_info.spiffe_id.is_empty() {
-        request.tenant_id = auth_info.spiffe_id;
-    } else {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Json(json!({ "error": "missing tenant identity in session" })),
-        )
-            .into_response();
-    }
-
-    match manager.start_workflow(request).await {
+    match state.manager.start_workflow(&owner, request).await {
         Ok(start) => (StatusCode::OK, Json(json!(start))).into_response(),
-        Err(error) => (StatusCode::BAD_REQUEST, Json(json!({ "error": error }))).into_response(),
+        Err(error) => workflow_error(error),
     }
 }
 
 async fn confirm_workflow(
-    State(manager): State<Arc<DynamicWorkflowManager>>,
+    State(state): State<WorkflowState>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
+    headers: HeaderMap,
 ) -> axum::response::Response {
-    match manager.confirm_workflow(&id).await {
+    let owner = match verify_owner(&state.auth, &claims, &headers).await {
+        Ok(owner) => owner,
+        Err(error) => return authority_error(error),
+    };
+    match state.manager.confirm_workflow(&owner, &id).await {
         Ok(start) => (StatusCode::OK, Json(json!(start))).into_response(),
-        Err(error) => (StatusCode::NOT_FOUND, Json(json!({ "error": error }))).into_response(),
+        Err(error) => workflow_error(error),
     }
 }
 
 async fn get_workflow(
-    State(manager): State<Arc<DynamicWorkflowManager>>,
+    State(state): State<WorkflowState>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
 ) -> axum::response::Response {
-    match manager.get_workflow(&id) {
+    let Some(tenant) = signed_tenant_id(&claims) else {
+        return StatusCode::UNAUTHORIZED.into_response();
+    };
+    match state.manager.get_workflow(&tenant, &id) {
         Ok(Some(plan)) => (StatusCode::OK, Json(json!(plan))).into_response(),
-        Ok(None) => (
-            StatusCode::NOT_FOUND,
-            Json(json!({ "error": "workflow not found" })),
-        )
-            .into_response(),
-        Err(error) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": error })),
-        )
-            .into_response(),
+        Ok(None) => workflow_error(DynamicWorkflowError::NotFound),
+        Err(error) => workflow_error(error),
     }
+}
+
+fn authority_error(error: AuthorityError) -> axum::response::Response {
+    let (status, message) = match error {
+        AuthorityError::Forbidden => (StatusCode::FORBIDDEN, "current owner authority is required"),
+        AuthorityError::Unavailable | AuthorityError::Database(_) => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "owner authority is unavailable",
+        ),
+    };
+    (status, Json(json!({ "error": message }))).into_response()
+}
+
+fn workflow_error(error: DynamicWorkflowError) -> axum::response::Response {
+    let (status, message) = match error {
+        DynamicWorkflowError::NotFound => (StatusCode::NOT_FOUND, "workflow not found"),
+        DynamicWorkflowError::NotTriggered => (
+            StatusCode::BAD_REQUEST,
+            "task does not require a dynamic workflow",
+        ),
+        DynamicWorkflowError::Internal(error) => {
+            tracing::warn!(%error, "Dynamic workflow operation failed");
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "workflow operation failed",
+            )
+        }
+    };
+    (status, Json(json!({ "error": message }))).into_response()
 }

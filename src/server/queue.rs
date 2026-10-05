@@ -217,7 +217,7 @@ impl TaskQueue for PostgresTaskQueue {
         set_org_context(&mut *tx, &job.tenant_id)
             .await
             .map_err(|e| e.to_string())?;
-        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3, scheduled_at = $4 WHERE id = $1 AND tenant_id = $2")
+        sqlx::query("UPDATE sub_agent_queue SET status = 'QUEUED', payload = $3::json, scheduled_at = $4 WHERE id = $1 AND tenant_id = $2")
             .bind(&job.id)
             .bind(&job.tenant_id)
             .bind(new_payload)
@@ -311,6 +311,7 @@ impl TaskQueue for PostgresTaskQueue {
                     .push_bind(org_id)
                     .push_bind(parent_task_id)
                     .push_bind(new_payload)
+                    .push_unseparated("::json")
                     .push_bind("QUEUED")
                     .push_bind(run_after);
             },
@@ -363,7 +364,7 @@ impl TaskQueue for PostgresTaskQueue {
             run_after += chrono::Duration::seconds(delay_seconds);
         }
 
-        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4, $5, $6)")
+        sqlx::query("INSERT INTO sub_agent_queue (id, tenant_id, parent_task_id, payload, status, scheduled_at) VALUES ($1, $2, $3, $4::json, $5, $6)")
             .bind(job.id)
             .bind(org_id)
             .bind(job.parent_task_id)
@@ -386,7 +387,7 @@ impl TaskQueue for PostgresTaskQueue {
             .execute(&mut *tx)
             .await
             .map_err(|e| e.to_string())?;
-        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload, status, scheduled_at")
+        let row = sqlx::query("UPDATE sub_agent_queue SET status = 'RUNNING' WHERE id = (SELECT id FROM sub_agent_queue WHERE status = 'QUEUED' AND scheduled_at <= CURRENT_TIMESTAMP AND payload::json->>'agent_role' = ANY($1) ORDER BY scheduled_at ASC LIMIT 1 FOR UPDATE SKIP LOCKED) RETURNING id, tenant_id, parent_task_id, payload::text AS payload, status, scheduled_at")
             .bind(&roles)
             .fetch_optional(&mut *tx)
             .await

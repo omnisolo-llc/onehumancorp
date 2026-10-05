@@ -62,6 +62,9 @@ pub mod gemini;
 pub mod ollama;
 pub mod openai;
 
+#[cfg(test)]
+mod structured_output_test;
+
 use serde_json::Value;
 
 /// MinifyJSONString takes a string, checks if it is valid JSON, and returns

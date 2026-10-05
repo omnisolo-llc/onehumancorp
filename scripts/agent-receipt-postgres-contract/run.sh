@@ -13,8 +13,12 @@ python3 scripts/agent-workflow-contract/verify_node_lock.py
 python3 scripts/agent-receipt-postgres-contract/verify_lock.py
 python3 scripts/agent-receipt-postgres-contract/prepare.py
 before=$(sha256sum scripts/agent-receipt-postgres-contract/source-manifest.json)
+generated_before=$(sha256sum scripts/agent-receipt-postgres-contract/generated.rs scripts/agent-receipt-postgres-contract/core_pg.sql)
+echo "$generated_before"
 status=0
 cargo test --locked --offline --manifest-path scripts/agent-receipt-postgres-contract/Cargo.toml -- --test-threads=1 || status=$?
+test "$generated_before" = "$(sha256sum scripts/agent-receipt-postgres-contract/generated.rs scripts/agent-receipt-postgres-contract/core_pg.sql)"
 python3 scripts/agent-receipt-postgres-contract/prepare.py
 test "$before" = "$(sha256sum scripts/agent-receipt-postgres-contract/source-manifest.json)"
+test "$generated_before" = "$(sha256sum scripts/agent-receipt-postgres-contract/generated.rs scripts/agent-receipt-postgres-contract/core_pg.sql)"
 exit "$status"

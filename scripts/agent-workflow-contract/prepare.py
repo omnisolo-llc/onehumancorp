@@ -103,6 +103,7 @@ wire.append(next(line for line in llm.splitlines() if line.startswith('pub const
 wire.append(extract_item(llm, 'function', 'read_provider_json'))
 for name in ['anthropic','openai','ollama']:
  wire.append(f'#[path={json.dumps(str(ROOT / "src/agents/builtin/llm" / (name+".rs")))}] pub mod {name};')
+wire.append('#[cfg(test)]\n#[path='+json.dumps(str(ROOT/'src/agents/builtin/llm/structured_output_test.rs'))+']\nmod structured_output_test;')
 parts.append('pub mod llm_wire_contract {\n'+'\n'.join(wire)+'\n}')
 parts += ['#[cfg(test)]#[path="test.rs"]mod tests;']
 (HERE/'generated.rs').write_text('\n\n'.join(parts)+'\n')
