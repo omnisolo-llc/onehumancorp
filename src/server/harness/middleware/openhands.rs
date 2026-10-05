@@ -8,17 +8,16 @@ use std::task::{Context, Poll};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value, json};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::net::TcpStream;
 use tokio::sync::{Mutex, mpsc, oneshot};
 use tokio::time::{Instant, sleep, timeout};
 use tokio_stream::Stream;
 use tokio_stream::wrappers::ReceiverStream;
 
+use super::http_client::{self, ResponseError};
 use super::http_runtime::{HttpProcessConfig, HttpProcessError, HttpProcessRuntime};
 use super::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
 
-const MAX_HTTP_RESPONSE_BYTES: usize = 16 * 1024 * 1024;
+const MAX_HTTP_BODY_BYTES: usize = 16 * 1024 * 1024;
 const EVENT_PAGE_LIMIT: usize = 100;
 pub const OPENHANDS_AGENT_SERVER_VERSION: &str = "1.43.1";
 static ISOLATED_HOME_SEQUENCE: AtomicU64 = AtomicU64::new(1);
@@ -1005,6 +1004,7 @@ impl Drop for OpenHandsIsolatedHome {
 
 #[derive(Clone)]
 struct OpenHandsHttpClient {
+    http: reqwest::Client,
     address: SocketAddr,
     request_timeout: Duration,
     launched_process: bool,
@@ -1023,7 +1023,18 @@ impl OpenHandsHttpClient {
                 "HTTP path is invalid".to_owned(),
             ));
         }
-        let operation = self.request_inner(method, path, body);
+        let url = reqwest::Url::parse(&format!("http://{}{path}", self.address))
+            .map_err(|_| OpenHandsError::InvalidRequest("HTTP path is invalid".to_owned()))?;
+        let target = match url.query() {
+            Some(query) => format!("{}?{query}", url.path()),
+            None => url.path().to_owned(),
+        };
+        if target != path {
+            return Err(OpenHandsError::InvalidRequest(
+                "HTTP path changes during URL normalization".to_owned(),
+            ));
+        }
+        let operation = self.request_inner(method, url, body);
         timeout(self.request_timeout, operation)
             .await
             .map_err(|_| OpenHandsError::Timeout)?
@@ -1032,47 +1043,40 @@ impl OpenHandsHttpClient {
     async fn request_inner(
         &self,
         method: &str,
-        path: &str,
+        url: reqwest::Url,
         body: Option<&Value>,
     ) -> Result<Value, OpenHandsError> {
-        let mut stream = TcpStream::connect(self.address)
-            .await
-            .map_err(|error| self.transport_error(error))?;
+        let method = reqwest::Method::from_bytes(method.as_bytes())
+            .map_err(|_| OpenHandsError::InvalidRequest("HTTP method is invalid".to_owned()))?;
         let body = body
             .map(serde_json::to_vec)
             .transpose()
             .map_err(OpenHandsError::Json)?
             .unwrap_or_default();
-        let mut request = format!(
-            "{method} {path} HTTP/1.1\r\nHost: {}\r\nAccept: application/json\r\nConnection: close\r\n",
-            self.address
-        );
+        let mut request = self
+            .http
+            .request(method, url)
+            .header(reqwest::header::ACCEPT, "application/json")
+            .header(reqwest::header::CONNECTION, "close");
         if !body.is_empty() {
-            request.push_str("Content-Type: application/json\r\n");
+            request = request.header(reqwest::header::CONTENT_TYPE, "application/json");
         }
-        request.push_str(&format!("Content-Length: {}\r\n\r\n", body.len()));
-        stream
-            .write_all(request.as_bytes())
+        let response =
+            request.body(body).send().await.map_err(|error| {
+                self.transport_error(std::io::Error::other(error.without_url()))
+            })?;
+        let status = response.status().as_u16();
+        let body = http_client::bounded_body(response, MAX_HTTP_BODY_BYTES)
             .await
-            .map_err(|error| self.transport_error(error))?;
-        if !body.is_empty() {
-            stream
-                .write_all(&body)
-                .await
-                .map_err(|error| self.transport_error(error))?;
-        }
-        let mut response = Vec::new();
-        stream
-            .take((MAX_HTTP_RESPONSE_BYTES + 1) as u64)
-            .read_to_end(&mut response)
-            .await
-            .map_err(|error| self.transport_error(error))?;
-        if response.len() > MAX_HTTP_RESPONSE_BYTES {
-            return Err(OpenHandsError::InvalidResponse(
-                "HTTP response exceeded size limit".to_owned(),
-            ));
-        }
-        parse_http_response(&response, &self.redaction_secrets)
+            .map_err(|error| match error {
+                ResponseError::Transport(error) => {
+                    self.transport_error(std::io::Error::other(error.without_url()))
+                }
+                ResponseError::Invalid(message) => {
+                    OpenHandsError::InvalidResponse(message.to_owned())
+                }
+            })?;
+        decode_http_response(status, &body, &self.redaction_secrets)
     }
 
     fn transport_error(&self, error: std::io::Error) -> OpenHandsError {
@@ -1084,38 +1088,15 @@ impl OpenHandsHttpClient {
     }
 }
 
-fn parse_http_response(response: &[u8], secrets: &[String]) -> Result<Value, OpenHandsError> {
-    let header_index = response
-        .windows(4)
-        .position(|part| part == b"\r\n\r\n")
-        .ok_or_else(|| OpenHandsError::InvalidResponse("missing HTTP headers".to_owned()))?;
-    let headers = std::str::from_utf8(&response[..header_index])
-        .map_err(|_| OpenHandsError::InvalidResponse("HTTP headers are not UTF-8".to_owned()))?;
-    let mut lines = headers.lines();
-    let status_line = lines
-        .next()
-        .ok_or_else(|| OpenHandsError::InvalidResponse("missing HTTP status line".to_owned()))?;
-    let status = status_line
-        .split_whitespace()
-        .nth(1)
-        .and_then(|value| value.parse::<u16>().ok())
-        .ok_or_else(|| OpenHandsError::InvalidResponse("invalid HTTP status".to_owned()))?;
-    let chunked = lines.any(|line| {
-        line.split_once(':').is_some_and(|(name, value)| {
-            name.eq_ignore_ascii_case("transfer-encoding")
-                && value.to_ascii_lowercase().contains("chunked")
-        })
-    });
-    let encoded_body = &response[header_index + 4..];
-    let decoded_body = if chunked {
-        decode_chunked_body(encoded_body)?
-    } else {
-        encoded_body.to_vec()
-    };
-    let body = if decoded_body.is_empty() {
+fn decode_http_response(
+    status: u16,
+    bytes: &[u8],
+    secrets: &[String],
+) -> Result<Value, OpenHandsError> {
+    let body = if bytes.is_empty() {
         Value::Null
     } else {
-        serde_json::from_slice::<Value>(&decoded_body).map_err(OpenHandsError::Json)?
+        serde_json::from_slice::<Value>(bytes).map_err(OpenHandsError::Json)?
     };
     if matches!(status, 404 | 422) && !has_provider_error_shape(&body) {
         return Err(OpenHandsError::Router(OpenHandsRouterError {
@@ -1156,36 +1137,6 @@ fn has_provider_error_shape(body: &Value) -> bool {
     visit(body, None)
 }
 
-fn decode_chunked_body(mut bytes: &[u8]) -> Result<Vec<u8>, OpenHandsError> {
-    let mut decoded = Vec::new();
-    loop {
-        let line_end = bytes
-            .windows(2)
-            .position(|part| part == b"\r\n")
-            .ok_or_else(|| {
-                OpenHandsError::InvalidResponse("invalid chunked response".to_owned())
-            })?;
-        let size_text = std::str::from_utf8(&bytes[..line_end])
-            .map_err(|_| OpenHandsError::InvalidResponse("invalid chunk size".to_owned()))?
-            .split(';')
-            .next()
-            .unwrap_or_default();
-        let size = usize::from_str_radix(size_text.trim(), 16)
-            .map_err(|_| OpenHandsError::InvalidResponse("invalid chunk size".to_owned()))?;
-        bytes = &bytes[line_end + 2..];
-        if size == 0 {
-            return Ok(decoded);
-        }
-        if bytes.len() < size + 2 || &bytes[size..size + 2] != b"\r\n" {
-            return Err(OpenHandsError::InvalidResponse(
-                "truncated chunked response".to_owned(),
-            ));
-        }
-        decoded.extend_from_slice(&bytes[..size]);
-        bytes = &bytes[size + 2..];
-    }
-}
-
 pub struct OpenHandsHttpAdapter {
     config: OpenHandsAdapterConfig,
     client: OpenHandsHttpClient,
@@ -1213,6 +1164,8 @@ impl std::fmt::Debug for OpenHandsHttpAdapter {
 
 impl OpenHandsHttpAdapter {
     pub async fn launch(launch: OpenHandsLaunchConfig) -> Result<Self, OpenHandsError> {
+        let http = http_client::local_client()
+            .map_err(|error| OpenHandsError::Io(std::io::Error::other(error.without_url())))?;
         let home = OpenHandsIsolatedHome::create()?;
         let mut process = launch.process;
         process.working_directory = Some(home.root().join("server-workspace"));
@@ -1229,6 +1182,7 @@ impl OpenHandsHttpAdapter {
         }
         let runtime = HttpProcessRuntime::spawn(process).await?;
         let client = OpenHandsHttpClient {
+            http,
             address: runtime.address(),
             request_timeout: launch.adapter.request_timeout,
             launched_process: true,
@@ -1254,6 +1208,8 @@ impl OpenHandsHttpAdapter {
             return Err(OpenHandsError::NonLoopbackAddress(address));
         }
         let client = OpenHandsHttpClient {
+            http: http_client::local_client()
+                .map_err(|error| OpenHandsError::Io(std::io::Error::other(error.without_url())))?,
             address,
             request_timeout: config.request_timeout,
             launched_process: false,

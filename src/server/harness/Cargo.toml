@@ -21,7 +21,7 @@ tracing-opentelemetry = "0.33"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 tokio = { workspace = true }
 tokio-stream = "0.1"
-tokio-util = { version = "0.7.18", features = ["codec"] }
+tokio-util = { version = "0.7.18", features = ["codec", "io"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }

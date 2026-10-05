@@ -3,7 +3,6 @@
 
 import { errorMessage } from '@/lib/errors';
 import { useState,Suspense } from "react";
-import Head from "next/head";
 import { useSearchParams } from "next/navigation";
 
 function SubscriptionsPortalContent() {
@@ -79,9 +78,6 @@ function SubscriptionsPortalContent() {
   if (token && action) {
     return (
       <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
-        <Head>
-          <title>Manage Subscription | OmniSolo OneHumanCorp</title>
-        </Head>
 
         <div className="max-w-2xl w-full">
           {success ? (
@@ -133,9 +129,6 @@ function SubscriptionsPortalContent() {
   if ((!token || !action) && hasQuery) {
     return (
       <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
-        <Head>
-          <title>Manage Subscription | OmniSolo OneHumanCorp</title>
-        </Head>
 
         <div className="max-w-2xl w-full">
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center text-center">
@@ -153,9 +146,6 @@ function SubscriptionsPortalContent() {
   // Default Portal Flow
   return (
     <div className="min-h-screen bg-[#F7F9FC] flex flex-col items-center py-20 px-4 font-sans text-gray-900">
-      <Head>
-        <title>Manage Subscriptions | OmniSolo OneHumanCorp</title>
-      </Head>
 
       <div className="max-w-2xl w-full">
         <h1 className="text-3xl font-extrabold mb-2 text-center text-gray-900">
