@@ -586,6 +586,28 @@ if sys.argv[1] == 'test':
         runner = Path(__file__).resolve().parents[1]/'scripts/agent-workflow-contract/run.sh'
         self.assertTrue(runner.is_file())
 
+    def test_agent_workflow_generated_provider_tests_keep_the_real_schema_helper(self):
+        import hashlib
+        import re
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        folder = root/'scripts/agent-workflow-contract'
+        prepared = runpy.run_path(str(folder/'prepare.py'))
+        generated = (folder/'generated.rs').read_text()
+        wire = prepared['extract_item'](generated, 'mod', 'llm_wire_contract')
+        helper = root/'src/agents/builtin/llm/structured_output_test.rs'
+        self.assertRegex(wire, r'#\[cfg\(test\)\]\s*#\[path='
+                         + re.escape(json.dumps(str(helper)))
+                         + r'\]\s*mod structured_output_test;')
+        self.assertNotIn('async fn array_request', wire, 'include the canonical helper, not a copied schema fixture')
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        for relative in ['src/agents/builtin/llm/structured_output_test.rs',
+                         'src/agents/builtin/llm/mod.rs',
+                         'src/agents/builtin/llm/anthropic.rs',
+                         'src/agents/builtin/llm/openai.rs',
+                         'src/agents/builtin/output_parser.rs']:
+            self.assertEqual(manifest.get(relative), hashlib.sha256((root/relative).read_bytes()).hexdigest())
+
     def test_checkpoint_restore_gate_requires_all_cases_and_owned_database(self):
         minimum, database = gate.GATES['checkpoint-restore-contract']
         self.assertGreaterEqual(minimum, 37)
