@@ -25,7 +25,7 @@ pub struct HybridCacheInner<T> {
     local_tags: OnceLock<DashMap<String, DashSet<String>>>,
     flight_group: OnceLock<DashMap<String, tokio::sync::watch::Sender<Option<T>>>>,
     redis_client: Option<redis::Client>,
-    redis_conn: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    redis_conn: tokio::sync::OnceCell<redis::aio::ConnectionManager>,
     max_local_capacity: usize,
 }
 
@@ -77,7 +77,9 @@ where
         }
     }
 
-    async fn get_redis_conn(&self) -> Option<redis::aio::MultiplexedConnection> {
+    // A dropped socket is replaced for later operations. The failing command
+    // is not replayed; the cache keeps its existing best-effort L2 behavior.
+    async fn get_redis_conn(&self) -> Option<redis::aio::ConnectionManager> {
         if let Some(client) = &self.inner.redis_client {
             let conn = self
                 .inner
@@ -85,7 +87,13 @@ where
                 .get_or_try_init(|| async {
                     match tokio::time::timeout(
                         std::time::Duration::from_millis(250),
-                        client.get_multiplexed_tokio_connection(),
+                        redis::aio::ConnectionManager::new_with_config(
+                            client.clone(),
+                            redis::aio::ConnectionManagerConfig::new()
+                                .set_number_of_retries(0)
+                                .set_connection_timeout(Duration::from_millis(250))
+                                .set_response_timeout(Duration::from_millis(250)),
+                        ),
                     )
                     .await
                     {

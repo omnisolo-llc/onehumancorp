@@ -27,7 +27,7 @@ test.describe('Dashboard Core', () => {
     await expect(page).toHaveURL(/\/onboarding\/?(?:\?.*)?$/);
     // The verified owner's saved draft may resume beyond the welcome screen.
     // This heading is mounted only after the owned setup state has loaded.
-    await expect(page.getByRole('heading', { name: 'Setup', exact: true, level: 1 })).toBeVisible();
+    await expect(page.locator('#setup-screen').getByRole('heading', { name: 'Setup', exact: true, level: 1 })).toBeVisible();
     await expect(page.getByRole('status', { name: 'Loading onboarding' })).toHaveCount(0);
   });
 

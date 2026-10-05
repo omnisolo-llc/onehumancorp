@@ -11,6 +11,11 @@ use sqlx::{
 use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
 use uuid::Uuid;
 
+#[path = "dynamic_queue_test.rs"]
+mod dynamic_queue_tests;
+#[path = "dynamic_workflow_test.rs"]
+mod dynamic_workflow_tests;
+
 struct NeverInfer;
 impl TextInference for NeverInfer {
     fn infer<'a>(

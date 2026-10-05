@@ -7,6 +7,7 @@ pub mod deepseek_harness;
 pub mod events;
 pub mod grpc;
 pub mod harness;
+mod http_client;
 pub mod http_runtime;
 pub mod inference;
 pub mod json_rpc;

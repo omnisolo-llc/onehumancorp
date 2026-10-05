@@ -6,7 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { verifyNativeBinaryProof } from './native-binary-proof.mjs';
 
-async function runMake(target, fail = '', { cargoTarget = 'target', fault = '' } = {}) {
+async function runMake(target, fail = '', { cargoTarget = 'target', fault = '', e2eArgs = '', environment = process.env } = {}) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'ohc-make-'));
   try {
     await copyFile(new URL('../Makefile', import.meta.url), path.join(dir, 'Makefile'));
@@ -40,10 +40,12 @@ if (command === 'npm run build:web' && fs.existsSync(path.join(output, 'native-s
 }
 `);
     const runner = `${JSON.stringify(process.execPath)} ${JSON.stringify(stub)}`;
+    // An outer make exports command-line variables separately from MAKEFLAGS.
+    // Own the fixture's browser selection, including its unconfigured default.
     const result = spawnSync('make', ['--no-print-directory', '-j8', target,
-      `CARGO=${runner} cargo`, `NPM=${runner} npm`], {
+      `CARGO=${runner} cargo`, `NPM=${runner} npm`, `E2E_ARGS=${e2eArgs}`], {
       cwd: dir, encoding: 'utf8', timeout: 15000,
-      env: { ...process.env, PATH: `${path.dirname(process.execPath)}${path.delimiter}${process.env.PATH ?? ''}`,
+      env: { ...environment, PATH: `${path.dirname(process.execPath)}${path.delimiter}${environment.PATH ?? ''}`,
         MAKEFLAGS: '', CARGO_TARGET_DIR: cargoTarget, COMMAND_LOG: path.join(dir, 'commands'),
         FAIL_COMMAND: fail, MAKE_FIXTURE_FAULT: fault },
     });
@@ -79,6 +81,20 @@ test('make test covers Rust, Node, CLI, desktop UI, contracts and fresh real-sta
     'npm run build:web',
     'npm run test:e2e --',
   ]);
+});
+
+test('make fixture defaults ignore inherited browser settings and explicit settings reach only E2E', async () => {
+  const environment = { ...process.env, E2E_ARGS: '--headed --workers=8 --retries=3' };
+  const defaults = await runMake('test', '', { environment });
+  assert.equal(defaults.status, 0, defaults.stderr);
+  assert.equal(defaults.commands.at(-1), 'npm run test:e2e --');
+
+  const explicit = await runMake('test', '', {
+    environment, e2eArgs: '--ci --workers=2 --retries=0',
+  });
+  assert.equal(explicit.status, 0, explicit.stderr);
+  assert.equal(explicit.commands.at(-1), 'npm run test:e2e -- --ci --workers=2 --retries=0');
+  assert.deepEqual(explicit.commands.slice(0, -1), defaults.commands.slice(0, -1));
 });
 
 for (const failed of ['desktop:prepare', 'cargo test', 'test:web', 'test:contracts', 'build:web', 'cargo build', 'test:e2e']) {
