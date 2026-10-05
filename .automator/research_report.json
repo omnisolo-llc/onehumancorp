@@ -1,5 +1,0 @@
-{
-  "kind": "artifact",
-  "provenance": "research",
-  "findings": "The requested feature is already fully implemented in the current codebase.\n  - BYOK credential vault flow for Twilio is implemented in `src/server/api/tool_integrations.rs` and the frontend UI (`src/ui/next/src/app/integrations/page.tsx`).\n  - An authenticated incoming webhook (`twilio_webhook_post_handler` in `src/server/api/twilio_webhook.rs`) is implemented, parses incoming WhatsApp messages via Twilio, and routes them to the unified inbox (`omni_inbox_messages` table and `ohc_job_queue` triage).\n  - Webhooks are securely tied to the user's provided API key and authenticated via `twilio_signature_middleware`.\n  No further work is necessary as the requirements are already met."
-}
