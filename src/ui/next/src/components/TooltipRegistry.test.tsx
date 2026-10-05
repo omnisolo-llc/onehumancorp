@@ -42,6 +42,31 @@ describe('TooltipRegistry', () => {
     vi.useRealTimers();
   });
 
+  it('supports a focusable explanation with one associated tooltip and Escape dismissal', async () => {
+    await act(async () => {
+      render(<TooltipProvider><WithTooltip id="api-explanation" defaultText="Real API reference" tabIndex={0}>
+        <span>Advanced explanation</span>
+      </WithTooltip></TooltipProvider>);
+    });
+    const target = screen.getByText('Advanced explanation').parentElement!;
+    expect(target.tabIndex).toBe(0);
+    act(() => target.focus());
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Real API reference');
+    expect(target).toHaveAttribute('aria-describedby', tooltip.id);
+    fireEvent.mouseEnter(target);
+    expect(screen.getAllByRole('tooltip')).toHaveLength(1);
+    fireEvent.keyDown(target, { key: 'Escape' });
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(target).toHaveFocus();
+    expect(target).not.toHaveAttribute('aria-describedby');
+    act(() => target.blur());
+    act(() => target.focus());
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
+    act(() => target.blur());
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
   it('renders default text on hover', async () => {
     const ui = (
       <TooltipProvider>

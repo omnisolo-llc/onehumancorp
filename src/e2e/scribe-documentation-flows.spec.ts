@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Documentation Features Flow', () => {
 
@@ -19,9 +19,27 @@ test.describe('Documentation Features Flow', () => {
         await expect(page.locator('h1').filter({ hasText: 'Release Notes & Changelog' })).toBeVisible();
     });
 
-    test('API Docs UI loads', async ({ page }) => {
-        await page.goto('/api-docs.html');
-        await expect(page.locator('title').filter({ hasText: 'API Documentation' })).toBeVisible({ timeout: 1000 });
+    test('API Docs alias loads the maintained reference and survives reload', async ({ page }) => {
+        const loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/api-docs-spec' && response.request().method() === 'GET');
+        await page.goto('/api-docs.html?source=scribe&tag=one&tag=two#reference');
+        await expect(page).toHaveURL(url => url.pathname === '/api-docs'
+            && url.hash === '#reference'
+            && JSON.stringify([...url.searchParams]) === JSON.stringify([['source', 'scribe'], ['tag', 'one'], ['tag', 'two']]));
+        const response = await loaded;
+        expect(response.status()).toBe(200);
+        const spec = await response.json();
+        expect(spec.info.title).toBe('API Documentation (for Advanced Users)');
+        await expect(page.getByTestId('api-docs-title')).toContainText('Advanced:');
+        await expect(page.locator('.swagger-ui .info .title')).toBeVisible();
+        await expect(page.locator('.swagger-ui .info .title')).toContainText(spec.info.title);
+
+        const reloaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/api-docs-spec' && response.request().method() === 'GET');
+        await page.reload();
+        const refresh = await reloaded;
+        expect(refresh.status()).toBe(200);
+        expect(await refresh.json()).toEqual(spec);
+        await expect(page.locator('.swagger-ui .info .title')).toBeVisible();
+        await expect(page.locator('.swagger-ui .info .title')).toContainText(spec.info.title);
     });
 
 });

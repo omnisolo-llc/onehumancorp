@@ -229,7 +229,7 @@
       <h2>Configure Widget</h2>
 
       <label for="tenant-input">Tenant ID</label>
-      <input type="text" id="tenant-input" placeholder="e.g. my-business" value="demo-tenant" />
+      <input type="text" id="tenant-input" placeholder="Verified account" value="" readonly />
 
       <label for="title-input">Form Title</label>
       <input type="text" id="title-input" placeholder="e.g. Work Request" value="Work Request" />
@@ -241,11 +241,12 @@
       </select>
 
       <div class="checkbox-container">
-        <input type="checkbox" id="remove-branding-checkbox" />
+        <input type="checkbox" id="remove-branding-checkbox" disabled />
         <label for="remove-branding-checkbox" style="margin-bottom: 0; font-weight: normal;">Remove "OmniSolo" branding</label>
       </div>
 
-      <button class="btn-primary" id="get-code-btn">Get Widget Code</button>
+      <p id="entitlement-status" role="status">Checking your current account and plan...</p>
+      <button class="btn-primary" id="get-code-btn" disabled>Get Widget Code</button>
     </div>
 
     <div class="preview-panel">
@@ -262,13 +263,13 @@
   <div class="modal-overlay" id="paywall-modal">
     <div class="modal-content">
       <h3>Upgrade to Pro</h3>
-      <p>Make the Work Intake Widget 100% yours. Upgrade to Pro to remove the "OmniSolo" watermark.</p>
+      <p>A verified Pro or Business plan can remove the "OmniSolo" watermark. Sharing does not change your plan.</p>
       <div class="modal-actions" style="flex-direction: column; align-items: stretch; gap: 12px;">
-        <button class="btn-primary" id="share-to-unlock-btn" style="background-color: #1DA1F2;">Share on X to Unlock</button>
+        <button class="btn-primary" id="share-to-unlock-btn" disabled>Check trial availability</button>
         <button class="btn-primary" id="upgrade-btn" style="width: auto;">Upgrade Now</button>
         <button class="btn-secondary" id="close-paywall-btn" style="width: auto;">Cancel</button>
       </div>
-      <p id="soft-paywall-status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
+      <p id="soft-paywall-status" role="status" style="display: none; color: #1D1D1F; margin-top: 16px; font-weight: 500; text-align: center;">Verifying...</p>
     </div>
   </div>
 
@@ -280,7 +281,7 @@
       <textarea id="embed-textarea" readonly></textarea>
       <div class="modal-actions">
         <button class="btn-secondary" id="close-code-btn">Close</button>
-        <button class="btn-primary" id="copy-code-btn" style="width: auto;">Copy to Clipboard</button>
+        <button class="btn-primary" id="copy-code-btn" disabled style="width: auto;">Copy to Clipboard</button>
       </div>
     </div>
   </div>
@@ -291,137 +292,173 @@
     const themeSelect = document.getElementById('theme-select');
     const removeBrandingCheckbox = document.getElementById('remove-branding-checkbox');
     const previewIframe = document.getElementById('preview-iframe');
-
     const paywallModal = document.getElementById('paywall-modal');
     const closePaywallBtn = document.getElementById('close-paywall-btn');
     const upgradeBtn = document.getElementById('upgrade-btn');
-    const shareToUnlockBtn = document.getElementById('share-to-unlock-btn');
+    const trialBtn = document.getElementById('share-to-unlock-btn');
     const softPaywallStatus = document.getElementById('soft-paywall-status');
-
+    const entitlementStatus = document.getElementById('entitlement-status');
     const codeModal = document.getElementById('code-modal');
     const closeCodeBtn = document.getElementById('close-code-btn');
     const copyCodeBtn = document.getElementById('copy-code-btn');
     const embedTextarea = document.getElementById('embed-textarea');
     const getCodeBtn = document.getElementById('get-code-btn');
+    const identityEpochKey = 'omnisolo_queue_identity_epoch_v2';
+    const sameOwner = (a, b) => a.userId === b.userId && a.tenantId === b.tenantId;
+    let owner = null;
+    let ownerStorageEpoch = null;
+    let hasPro = false;
+    let removeBranding = false;
+    let epoch = 0;
+    let embedRequest = 0;
+    let trialRequest = 0;
+    let refreshing = false;
+    let expiry;
 
+    function clearCode() {
+      embedTextarea.value = ''; copyCodeBtn.disabled = true;
+      codeModal.style.display = 'none'; copyCodeBtn.textContent = 'Copy to Clipboard';
+    }
     function updatePreview() {
-      const tenant = encodeURIComponent(tenantInput.value || 'demo-tenant');
-      const title = encodeURIComponent(titleInput.value || 'Work Request');
-      const theme = themeSelect.value;
+      if (!owner) { previewIframe.src = 'about:blank'; return; }
+      const query = new URLSearchParams({
+        tenant: owner.tenantId, title: titleInput.value || 'Work Request',
+        theme: themeSelect.value, branding: String(!removeBranding),
+      });
+      previewIframe.src = `/api/v1/growth/work-intake/embed?${query}`;
+    }
+    function retire(message = 'Your session changed. Reload to verify widget access.') {
+      epoch += 1; embedRequest += 1; trialRequest += 1;
+      owner = null; ownerStorageEpoch = null; hasPro = false; removeBranding = false;
+      clearTimeout(expiry); removeBrandingCheckbox.checked = false;
+      removeBrandingCheckbox.disabled = true; getCodeBtn.disabled = true; trialBtn.disabled = true;
+      clearCode(); paywallModal.style.display = 'none';
+      entitlementStatus.textContent = message; updatePreview();
+    }
+    window.addEventListener('omnisolo_auth_changed', () => retire());
+    window.addEventListener('pagehide', () => retire());
+    window.addEventListener('storage', event => { if (event.key === null || event.key === identityEpochKey) retire(); });
 
-      const srcUrl = `/api/v1/growth/work-intake/embed?tenant=${tenant}&title=${title}&theme=${theme}`;
-      previewIframe.src = srcUrl;
+    async function identity() {
+      const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+      const value = await response.json();
+      if (response.status !== 200 || !value || typeof value !== 'object' || Array.isArray(value)
+        || value.error != null || ('success' in value && value.success !== true)
+        || typeof value.userId !== 'string' || !value.userId || typeof value.tenantId !== 'string' || !value.tenantId
+        || !Number.isSafeInteger(value.expiresAt) || value.expiresAt <= Date.now()) throw new Error('Identity unavailable');
+      return value;
+    }
+    async function refreshPlan() {
+      if (refreshing) return false;
+      refreshing = true;
+      const expectedEpoch = epoch;
+      removeBrandingCheckbox.disabled = true; getCodeBtn.disabled = true; trialBtn.disabled = true;
+      clearCode();
+      try {
+        const storageEpoch = localStorage.getItem(identityEpochKey);
+        const verified = await identity();
+        if (expectedEpoch !== epoch) return false;
+        if (owner && (!sameOwner(owner, verified) || ownerStorageEpoch !== storageEpoch)) throw new Error('Owner changed');
+        const response = await fetch('/api/v1/billing/my-plan', {
+          credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+          headers: { 'x-ohc-expected-user': verified.userId, 'x-ohc-expected-tenant': verified.tenantId },
+        });
+        const plan = await response.json();
+        const latest = await identity();
+        if (expectedEpoch !== epoch) return false;
+        if (storageEpoch !== localStorage.getItem(identityEpochKey) || !sameOwner(verified, latest)) throw new Error('Owner changed');
+        if (response.status !== 200 || !plan || typeof plan !== 'object' || Array.isArray(plan)
+          || plan.error != null || ('success' in plan && plan.success !== true)
+          || typeof plan.current_plan !== 'string' || !['free', 'starter', 'pro', 'business'].includes(plan.current_plan.toLowerCase())) throw new Error('Plan unavailable');
+        owner = latest; ownerStorageEpoch = storageEpoch;
+        tenantInput.value = owner.tenantId;
+        hasPro = ['pro', 'business'].includes(plan.current_plan.toLowerCase());
+        if (!hasPro) { removeBranding = false; removeBrandingCheckbox.checked = false; }
+        removeBrandingCheckbox.disabled = false; getCodeBtn.disabled = false; trialBtn.disabled = false;
+        entitlementStatus.textContent = `Current verified plan: ${plan.current_plan}. Sharing does not change your plan.`;
+        clearTimeout(expiry); expiry = setTimeout(() => retire(), Math.min(latest.expiresAt - Date.now(), 2147483647));
+        updatePreview(); return true;
+      } catch {
+        if (expectedEpoch === epoch) retire('Current account or plan is unavailable. Reload to retry.');
+        return false;
+      } finally { refreshing = false; }
     }
 
-    tenantInput.addEventListener('input', updatePreview);
-    titleInput.addEventListener('input', updatePreview);
-    themeSelect.addEventListener('change', updatePreview);
-
-    removeBrandingCheckbox.addEventListener('change', (e) => {
-      const hasPro = localStorage.getItem('has_pro') === 'true';
-      if (e.target.checked && !hasPro) {
-        e.target.checked = false;
-        paywallModal.style.display = 'flex';
+    titleInput.addEventListener('input', () => { clearCode(); updatePreview(); });
+    themeSelect.addEventListener('change', () => { clearCode(); updatePreview(); });
+    removeBrandingCheckbox.addEventListener('change', async event => {
+      const requested = event.target.checked;
+      event.target.checked = removeBranding;
+      if (!await refreshPlan()) return;
+      if (requested && !hasPro) {
+        softPaywallStatus.style.display = 'none'; paywallModal.style.display = 'flex'; return;
       }
+      removeBranding = requested; removeBrandingCheckbox.checked = requested; updatePreview();
     });
-
     closePaywallBtn.addEventListener('click', () => {
-      paywallModal.style.display = 'none';
+      trialRequest += 1; paywallModal.style.display = 'none';
+      trialBtn.disabled = !owner || refreshing;
     });
-
-    if (upgradeBtn) {
-      upgradeBtn.addEventListener('click', () => {
-        window.location.href = '/pricing';
-      });
-    }
-
-    if (shareToUnlockBtn) {
-      shareToUnlockBtn.addEventListener('click', async () => {
-        const tenantId = tenantInput.value || 'demo-tenant';
-        const message = `Check out my new Work Intake Widget built with OmniSolo! 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
-        const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
-
-        // Open share dialog
-        window.open(shareUrl, '_blank');
-
-        shareToUnlockBtn.style.display = 'none';
-        softPaywallStatus.style.display = 'block';
-        softPaywallStatus.innerText = 'Verifying Share...';
-
-        try {
-          let url = '/api/v1/growth/trial-extension/claim';
-          if (window.__TAURI__ && window.__TAURI__.core) {
-              url = 'http://127.0.0.1:18789/api/v1/growth/trial-extension/claim';
-          }
-          const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            }
-          });
-
-          if (response.ok) {
-            softPaywallStatus.innerText = 'Unlocked!';
-            localStorage.setItem('has_pro', 'true');
-
-            setTimeout(() => {
-              paywallModal.style.display = 'none';
-              removeBrandingCheckbox.checked = true;
-
-              // reset state for next time
-              shareToUnlockBtn.style.display = 'block';
-              softPaywallStatus.style.display = 'none';
-            }, 300);
-          } else {
-            paywallModal.style.display = 'none';
-            removeBrandingCheckbox.checked = true;
-          }
-        } catch (e) {
-          paywallModal.style.display = 'none';
-          removeBrandingCheckbox.checked = true;
-          console.error(e);
-          softPaywallStatus.innerText = 'Error claiming trial extension.';
-          setTimeout(() => {
-              shareToUnlockBtn.style.display = 'block';
-              softPaywallStatus.style.display = 'none';
-          }, 3000);
+    upgradeBtn.addEventListener('click', () => { window.location.href = '/pricing'; });
+    trialBtn.addEventListener('click', async () => {
+      const request = ++trialRequest;
+      const expectedEpoch = epoch;
+      if (!await refreshPlan() || request !== trialRequest || expectedEpoch !== epoch) return;
+      trialBtn.disabled = true;
+      softPaywallStatus.style.display = 'block';
+      softPaywallStatus.textContent = 'Checking trial availability...';
+      try {
+        const response = await fetch('/api/v1/growth/trial-extension/claim', {
+          method: 'POST', credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+          headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+        });
+        const result = await response.json();
+        if (expectedEpoch !== epoch || request !== trialRequest) return;
+        // A claim response is never proof of a current branding entitlement.
+        softPaywallStatus.textContent = response.status === 501 && result?.code === 'capability_unavailable' && result?.capability === 'trial_entitlement'
+          ? 'Trial activation is unavailable. No action was completed. Branding remains enabled.'
+          : 'Trial activation was not verified. Branding remains enabled. Review your current plan.';
+      } catch {
+        if (expectedEpoch !== epoch || request !== trialRequest) return;
+        softPaywallStatus.textContent = 'Trial availability is unavailable. Branding remains enabled. Try again or review your current plan.';
+      } finally {
+        if (expectedEpoch === epoch && request === trialRequest) {
+          removeBranding = false; removeBrandingCheckbox.checked = false;
+          trialBtn.disabled = false; updatePreview();
         }
-      });
-    }
-
-    getCodeBtn.addEventListener('click', () => {
-      const tenant = encodeURIComponent(tenantInput.value || 'demo-tenant');
-      const title = encodeURIComponent(titleInput.value || 'Work Request');
-      const theme = themeSelect.value;
-      const removeBranding = removeBrandingCheckbox.checked;
-
-      const iframeSrc = `https://omnisolo.co/api/v1/growth/work-intake/embed?tenant=${tenant}&title=${title}&theme=${theme}`;
-      let embedCode = `<iframe src="${iframeSrc}" width="100%" height="500" style="border:none; border-radius:16px;"></iframe>`;
-
-      if (!removeBranding) {
-        const referralLink = `https://omnisolo.co/api/v1/growth/referrals/click?target=/setup.html&ref=${tenant}`;
-        embedCode += `\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 12px;">\n  <a href="${referralLink}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>\n</div>`;
       }
-
-      embedTextarea.value = embedCode;
-      codeModal.style.display = 'flex';
     });
 
-    closeCodeBtn.addEventListener('click', () => {
-      codeModal.style.display = 'none';
+    getCodeBtn.addEventListener('click', async () => {
+      const request = ++embedRequest;
+      if (!await refreshPlan() || request !== embedRequest) return;
+      const query = new URLSearchParams({
+        tenant: owner.tenantId, title: titleInput.value || 'Work Request',
+        theme: themeSelect.value, branding: String(!removeBranding),
+      });
+      const iframeSrc = `${window.location.origin}/api/v1/growth/work-intake/embed?${query}`;
+      let embedCode = `<iframe src="${iframeSrc}" width="100%" height="500" style="border:none; border-radius:16px;"></iframe>`;
+      if (!removeBranding) {
+        const referralLink = `${window.location.origin}/api/v1/growth/referrals/click?target=/setup.html&ref=${encodeURIComponent(owner.tenantId)}`;
+        embedCode += `\n<div style="text-align: center; margin-top: 8px; font-family: sans-serif; font-size: 12px;">\n  <a href="${referralLink}" target="_blank" rel="noopener noreferrer" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ OmniSolo</a>\n</div>`;
+      }
+      embedTextarea.value = embedCode; copyCodeBtn.disabled = false; codeModal.style.display = 'flex';
     });
-
+    closeCodeBtn.addEventListener('click', () => { embedRequest += 1; clearCode(); });
     copyCodeBtn.addEventListener('click', () => {
-      embedTextarea.select();
-      document.execCommand('copy');
-      copyCodeBtn.textContent = 'Copied!';
-      setTimeout(() => {
-        copyCodeBtn.textContent = 'Copy to Clipboard';
-      }, 2000);
+      let storageEpoch;
+      try { storageEpoch = localStorage.getItem(identityEpochKey); }
+      catch { retire(); return; }
+      if (!owner || owner.expiresAt <= Date.now() || refreshing || !embedTextarea.value || ownerStorageEpoch !== storageEpoch) { retire(); return; }
+      const expectedEpoch = epoch;
+      try {
+        embedTextarea.select();
+        if (typeof document.execCommand !== 'function' || !document.execCommand('copy')) throw new Error('Clipboard unavailable');
+        copyCodeBtn.textContent = 'Copied!';
+        setTimeout(() => { if (expectedEpoch === epoch) copyCodeBtn.textContent = 'Copy to Clipboard'; }, 2000);
+      } catch { copyCodeBtn.textContent = 'Copy failed. Copy manually.'; }
     });
-
-    // Initialize preview
-    updatePreview();
+    void refreshPlan();
   </script>
   <script src="help-widget.mjs" type="module"></script>
   </body>

@@ -40,6 +40,8 @@ export function allowedDevOrigins(environment = process.env) {
 const nextConfig = {
   allowedDevOrigins: allowedDevOrigins(),
   devIndicators: false,
+  // Preserve RSC and prefetch signals for the authenticated request boundary.
+  skipProxyUrlNormalize: true,
   // Keep authenticated server routes. A static export would silently remove
   // the Node backend-for-frontend used by web and desktop clients.
   output: 'standalone',

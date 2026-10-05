@@ -111,6 +111,7 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
       {activeTooltip && tooltipRect && (
         <motion.div
           role="tooltip"
+          id={`${activeTooltip}-description`}
           initial={{ opacity: 0, y: 5, x: "-50%" }}
           animate={{ opacity: 1, y: 0, x: "-50%" }}
           exit={{ opacity: 0 }}
@@ -141,8 +142,8 @@ export function useTooltip() {
   return context;
 }
 
-export function WithTooltip({ children, id, defaultText, className }: { children: ReactNode, id: string, defaultText?: string, className?: string }) {
-  const { setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
+export function WithTooltip({ children, id, defaultText, className, tabIndex }: { children: ReactNode, id: string, defaultText?: string, className?: string, tabIndex?: number }) {
+  const { activeTooltip, setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const text = getTooltip(id) || defaultText || DEFAULT_TOOLTIPS[id] || id;
 
@@ -190,6 +191,15 @@ export function WithTooltip({ children, id, defaultText, className }: { children
   return (
     <div
       ref={wrapperRef}
+      tabIndex={tabIndex}
+      aria-describedby={activeTooltip === id ? `${id}-description` : undefined}
+      onFocus={handleMouseEnter}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) handleMouseLeave();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') handleMouseLeave();
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
