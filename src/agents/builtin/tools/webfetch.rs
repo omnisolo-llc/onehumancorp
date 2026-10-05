@@ -150,21 +150,26 @@ impl PydanticToolExecutor<WebFetchArgs> for WebFetchExecutor {
 }
 
 fn strip_html(html: &str) -> String {
-    let mut result = String::with_capacity(html.len());
-    let mut in_tag = false;
-    for c in html.chars() {
-        match c {
-            '<' => in_tag = true,
-            '>' => {
-                in_tag = false;
+    let document = dom_query::Document::from(html);
+    let mut result = String::new();
+    // Preserve the all-text policy, including title/script/style text, with
+    // whitespace collapsed and a space between text nodes. HTML5 parsing repairs
+    // malformed markup and decodes entities; comments and inert template contents
+    // are excluded. This is text extraction, not HTML sanitization.
+    for node in document
+        .root()
+        .descendants_it()
+        .filter(|node| node.is_text())
+    {
+        let text = node.text();
+        for word in text.split_whitespace() {
+            if !result.is_empty() {
                 result.push(' ');
             }
-            _ if !in_tag => result.push(c),
-            _ => {}
+            result.push_str(word);
         }
     }
-    // Collapse whitespace
-    result.split_whitespace().collect::<Vec<_>>().join(" ")
+    result
 }
 
 pub fn webfetch_tool() -> Tool {

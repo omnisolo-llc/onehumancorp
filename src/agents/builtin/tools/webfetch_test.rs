@@ -189,6 +189,33 @@ async fn webfetch_truncates_multibyte_text_on_a_character_boundary() {
 }
 
 #[tokio::test]
+async fn webfetch_decodes_html_before_unicode_display_limit() {
+    temp_env::async_with_vars(
+        [("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("true"))],
+        async {
+            let html = format!("<p title='a > b'>{}</p>", "🧪&amp;".repeat(5_001));
+            let app = Router::new().route(
+                "/html",
+                get(move || async move { axum::response::Html(html.clone()) }),
+            );
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                axum::serve(listener, app).await.unwrap();
+            });
+
+            let result = execute_webfetch(format!("http://{address}/html"))
+                .await
+                .unwrap();
+            server.abort();
+
+            assert_eq!(result, format!("{}... (truncated)", "🧪&".repeat(5_000)));
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
 async fn test_webfetch_strip_html() {
     let html =
         "<html><head><title>Test</title></head><body><h1>Hello</h1><p>World</p></body></html>";
@@ -216,6 +243,41 @@ fn test_strip_html_complex() {
     assert!(text.contains("Link"));
     assert!(text.contains("Text"));
     assert!(text.contains("let x = 1;"));
+}
+
+#[test]
+fn strip_html_parses_quoted_attributes_and_character_references() {
+    assert_eq!(
+        strip_html(r#"<P title="a > b">Fish &amp; Chips&nbsp;&#x1F9EA; &#233;</P>"#),
+        "Fish & Chips 🧪 é"
+    );
+}
+
+#[test]
+fn strip_html_repairs_unclosed_tags_and_ignores_comments() {
+    assert_eq!(
+        strip_html("<!-- > hidden --><p>First <b>bold<p>Second &lt;third&gt;"),
+        "First bold Second <third>"
+    );
+}
+
+#[test]
+fn strip_html_preserves_all_text_policy_and_separates_text_nodes() {
+    assert_eq!(
+        strip_html(
+            "<title>Title</title><style>.x > p { color: red; }</style>\
+             <script>if (a < b) run();</script><p>ice<b>cream</b>\n  today</p>"
+        ),
+        "Title .x > p { color: red; } if (a < b) run(); ice cream today"
+    );
+}
+
+#[test]
+fn strip_html_excludes_inert_template_contents() {
+    assert_eq!(
+        strip_html("<p>Visible</p><template><p>Inert</p></template><p>After</p>"),
+        "Visible After"
+    );
 }
 
 #[tokio::test]
