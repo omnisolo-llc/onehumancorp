@@ -2,10 +2,14 @@
 //! No provider calls, real credentials, or success substitutions are used.
 #![allow(dead_code)]
 extern crate self as server_omnisolo;
+#[path = "../../src/server/integrations/daily/client.rs"]
+pub mod daily_client;
 #[path = "../../src/server/api/integrations_settings.rs"]
 pub mod integrations_settings;
 #[path = "../../src/server/integrations/twilio/client.rs"]
 pub mod twilio_client;
+#[path = "../../src/server/integrations/zoom/client.rs"]
+pub mod zoom_client;
 
 pub mod orchestration {
     // The mounted handler's transport DTO; unrelated application modules are
