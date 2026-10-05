@@ -131,6 +131,63 @@ async fn authentic_billing_body_reaches_the_existing_dispatch_boundary() {
     assert_eq!(redis.calls.load(Ordering::SeqCst), 1);
     task.abort();
 }
+
+#[tokio::test]
+async fn billing_acknowledgement_does_not_replay_a_downstream_unknown_sms_outcome() {
+    configure();
+    let effects = Arc::new(AtomicUsize::new(0));
+    let finished = Arc::new(tokio::sync::Notify::new());
+    let redis = Arc::new(crate::api::billing_webhook::NoRedis {
+        calls: AtomicUsize::new(0),
+    });
+    let state = crate::api::billing_webhook::WebhookState {
+        rate_limiter: redis.clone(),
+    };
+    let app = Router::new()
+        .route(
+            "/api/v1/webhooks/stripe",
+            post({
+                let effects = effects.clone();
+                let finished = finished.clone();
+                move || {
+                    let effects = effects.clone();
+                    let finished = finished.clone();
+                    async move {
+                        effects.fetch_add(1, Ordering::SeqCst);
+                        finished.notify_one();
+                        // The current billing handler maps an unconfirmed SMS
+                        // result to 500. This sentinel performs no provider I/O.
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    }
+                }
+            }),
+        )
+        .route_layer(axum::middleware::from_fn_with_state(
+            state,
+            crate::api::billing_webhook::webhook_security_middleware,
+        ));
+    let (origin, task) = serve(app).await;
+    let raw = billing_payload();
+    let signature = sign(&raw, BILLING_SECRET, chrono::Utc::now().timestamp());
+    let response = client()
+        .post(format!("{origin}/api/v1/webhooks/stripe"))
+        .header("content-type", "application/json")
+        .header("Stripe-Signature", signature)
+        .body(raw)
+        .send()
+        .await
+        .unwrap();
+    // This is only the middleware's delivery acknowledgement, never evidence
+    // of a successful SMS. Its detached handler result cannot trigger replay.
+    assert_eq!(response.status(), StatusCode::OK);
+    tokio::time::timeout(std::time::Duration::from_secs(1), finished.notified())
+        .await
+        .unwrap();
+    assert_eq!(effects.load(Ordering::SeqCst), 1);
+    assert_eq!(redis.calls.load(Ordering::SeqCst), 1);
+    task.abort();
+}
+
 #[tokio::test]
 async fn billing_rejects_modified_bytes_and_stale_or_future_signed_events_before_dispatch() {
     configure();
