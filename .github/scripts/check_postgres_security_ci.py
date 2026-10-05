@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-"""Indentation-aware contract for the required PostgreSQL/RLS CI lane.
-
-This intentionally validates only the job and step shapes used by ci.yml. It is
-not a general YAML parser.
-"""
+"""PyYAML structure and OHC policy for the required PostgreSQL/RLS CI lane."""
 
 from dataclasses import dataclass
 from pathlib import Path
 import re
-import shutil
-import subprocess
 import sys
 
 
@@ -97,8 +91,8 @@ EXPECTED_POSTGRES_TOOLCHAIN_LINES = (
 
 ADMIN_PSQL_HEREDOC = 'psql "$OMNISOLO_POSTGRES_ADMIN_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
 APP_PSQL_HEREDOC = 'psql "$OMNISOLO_DATABASE_URL" --set ON_ERROR_STOP=1 <<\'SQL\''
-EXPECTED_WORKFLOW_DEFAULTS = ("defaults:", "  run:", "    shell: bash")
-EXPECTED_WORKFLOW_ENV = ("env:", '  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"')
+EXPECTED_WORKFLOW_DEFAULTS = {"run": {"shell": "bash"}}
+EXPECTED_WORKFLOW_ENV = {"FORCE_JAVASCRIPT_ACTIONS_TO_NODE24": "true"}
 EXPECTED_POSTGRES_JOB_KEYS = (
     "name",
     "needs",
@@ -111,160 +105,110 @@ EXPECTED_POSTGRES_JOB_KEYS = (
 )
 EXPECTED_REQUIRED_JOB_KEYS = ("name", "needs", "if", "runs-on", "timeout-minutes", "permissions", "steps")
 EXPECTED_CHANGES_JOB_KEYS = ("name", "runs-on", "timeout-minutes", "outputs", "steps")
-EXPECTED_POSTGRES_ENV = (
-    "    env:",
-    '      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"',
-    "      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
-    "      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
-)
-EXPECTED_REQUIRED_ENV = (
-    "        env:",
-    "          EVENT_NAME: ${{ github.event_name }}",
-    "          MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}",
-    "          DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}",
-    "          CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}",
-    "          NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}",
-    "          NATIVE_TEST_RESULT: ${{ needs.native-test.result }}",
-    "          NATIVE_E2E_RESULT: ${{ needs.native-e2e.result }}",
-    "          NATIVE_CLICK_COVERAGE_RESULT: ${{ needs.native-click-coverage.result }}",
-    "          NATIVE_WEB_RESULT: ${{ needs.native-web.result }}",
-    "          NATIVE_NODE_RESULT: ${{ needs.native-node.result }}",
-    "          NATIVE_IMAGES_RESULT: ${{ needs.native-images.result }}",
-    "          NATIVE_DESKTOP_RESULT: ${{ needs.native-desktop.result }}",
-    "          KIND_E2E_RESULT: ${{ needs.kind-e2e.result }}",
-    "          DOCKER_E2E_RESULT: ${{ needs.docker-e2e.result }}",
-    "          POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}",
-)
+EXPECTED_POSTGRES_ENV = {
+    "OMNISOLO_REQUIRE_POSTGRES_TESTS": "1",
+    "OMNISOLO_POSTGRES_ADMIN_URL": "postgresql://postgres:postgres@127.0.0.1:5432/ohc_security",
+    "OMNISOLO_DATABASE_URL": "postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security",
+}
+EXPECTED_REQUIRED_ENV = {
+    "EVENT_NAME": "${{ github.event_name }}",
+    "MARKDOWN_ONLY": "${{ needs.check-changes.outputs.markdown-only }}",
+    **{
+        job.upper().replace("-", "_") + "_RESULT": "${{ needs." + job + ".result }}"
+        for job in (
+            "dependency-audit", "check-changes", "native-build", "native-test", "native-e2e",
+            "native-click-coverage", "native-web", "native-node", "native-images",
+            "native-desktop", "kind-e2e", "docker-e2e", "postgres-security",
+        )
+    },
+}
+
+
+def mapping(node, context: str) -> dict:
+    if node is None or node.id != "mapping":
+        raise ContractError(f"{context}: expected a YAML mapping")
+    return {key.value: value for key, value in node.value}
+
+
+def field(node, name: str):
+    values = mapping(node, name)
+    if name not in values:
+        raise ContractError(f"missing active field {name!r} at line {node.start_mark.line + 1}")
+    return values[name]
+
+
+def plain(node):
+    """Compare parsed structure without YAML 1.1 coercion of Actions keys/scalars."""
+    if node.id == "mapping":
+        return {key.value: plain(value) for key, value in node.value}
+    if node.id == "sequence":
+        return [plain(value) for value in node.value]
+    return node.value
+
+
+def require_value(node, expected, context: str) -> None:
+    if plain(node) != expected:
+        raise ContractError(f"{context}: expected {expected!r} at line {node.start_mark.line + 1}")
+
+
+def require_exact_keys(node, expected: tuple[str, ...], context: str) -> None:
+    actual = tuple(mapping(node, context))
+    if actual != expected:
+        raise ContractError(f"{context}: expected keys {expected!r}, found {actual!r}")
 
 
 @dataclass(frozen=True)
 class Step:
     name: str
-    lines: tuple[str, ...]
+    node: object
 
     def run(self) -> tuple[str, str]:
-        for index, line in enumerate(self.lines):
-            match = re.fullmatch(r"        run:\s*(.*)", line)
-            if match is None:
-                continue
-            value = match.group(1)
-            if value not in ("|", "|-", ">", ">-"):
-                return "scalar", value
-            body: list[str] = []
-            for body_line in self.lines[index + 1 :]:
-                if body_line.strip() and indentation(body_line) <= 8:
-                    break
-                body.append(body_line[10:] if body_line.startswith("          ") else body_line)
-            return "block", "\n".join(body)
-        raise ContractError(f"step {self.name!r} has no active run field")
+        node = field(self.node, "run")
+        if node.id != "scalar":
+            raise ContractError(f"step {self.name!r} run must be a scalar")
+        # Folded scalars change shell line boundaries; only literal blocks carry
+        # the exact protected script, regardless of YAML chomping indicators.
+        return ("block" if node.style == "|" else "scalar"), node.value
 
 
-def indentation(line: str) -> int:
-    return len(line) - len(line.lstrip(" "))
-
-
-def active_config_lines(lines: tuple[str, ...]) -> tuple[str, ...]:
-    return tuple(line for line in lines if line.strip() and not line.lstrip().startswith("#"))
-
-
-def canonical_mapping_key(line: str, indent: int) -> str | None:
-    if indentation(line) != indent or not line.strip() or line.lstrip().startswith("#"):
-        return None
-    content = line[indent:]
-    if content.startswith("? "):
-        explicit = content[2:].strip()
-        if len(explicit) >= 2 and explicit[0] == explicit[-1] and explicit[0] in ("'", '"'):
-            explicit = explicit[1:-1]
-        return explicit
-    match = re.match(r'(?:(?:"([^"]+)")|(?:\'([^\']+)\')|([^:]+?))\s*:', content)
-    if match is None:
-        return None
-    return next(group.strip() for group in match.groups() if group is not None)
-
-
-def mapping_keys(lines: tuple[str, ...], indent: int) -> tuple[str, ...]:
-    return tuple(
-        key for line in lines if (key := canonical_mapping_key(line, indent)) is not None
-    )
-
-
-def require_exact_keys(
-    lines: tuple[str, ...], indent: int, expected: tuple[str, ...], context: str
-) -> None:
-    actual = mapping_keys(lines, indent)
-    if actual != expected:
-        raise ContractError(f"{context}: expected keys {expected!r}, found {actual!r}")
-
-
-def mapping_block(lines: tuple[str, ...], name: str, indent: int) -> tuple[str, ...]:
-    header = " " * indent + name + ":"
-    try:
-        start = lines.index(header)
-    except ValueError as error:
-        raise ContractError(f"missing active mapping {name!r} at indentation {indent}") from error
-    end = len(lines)
-    for index in range(start + 1, len(lines)):
-        line = lines[index]
-        if line.strip() and indentation(line) <= indent:
-            end = index
-            break
-    return lines[start:end]
-
-
-def steps(job: tuple[str, ...]) -> tuple[Step, ...]:
-    try:
-        start = job.index("    steps:") + 1
-    except ValueError as error:
-        raise ContractError("job has no active steps mapping") from error
-    found: list[Step] = []
-    index = start
-    while index < len(job):
-        line = job[index]
-        if not line.startswith("      - "):
-            index += 1
-            continue
-        end = index + 1
-        while end < len(job) and not job[end].startswith("      - "):
-            end += 1
-        block = job[index:end]
-        name_line = block[0]
-        if name_line.startswith("      - name: "):
-            found.append(Step(name_line.removeprefix("      - name: "), tuple(block)))
-        index = end
+def steps(job) -> tuple[Step, ...]:
+    node = field(job, "steps")
+    if node.id != "sequence":
+        raise ContractError("job steps must be a sequence")
+    found = []
+    for item in node.value:
+        values = mapping(item, "step")
+        if "name" in values:
+            name = values["name"]
+            if name.id != "scalar":
+                raise ContractError("step name must be a scalar")
+            found.append(Step(name.value, item))
     return tuple(found)
 
 
-def named_step(job: tuple[str, ...], name: str) -> Step:
+def named_step(job, name: str) -> Step:
     matches = [step for step in steps(job) if step.name == name]
     if len(matches) != 1:
         raise ContractError(f"expected exactly one active step named {name!r}, found {len(matches)}")
     return matches[0]
 
 
-def require_non_ignorable_job(job: tuple[str, ...], context: str) -> None:
-    if any(line.startswith("    continue-on-error:") for line in active_config_lines(job)):
-        raise ContractError(f"{context}: job-level continue-on-error is forbidden")
-    if "    defaults:" in active_config_lines(job):
-        raise ContractError(f"{context}: job-level run defaults are forbidden")
+def require_non_ignorable_job(job, context: str) -> None:
+    values = mapping(job, context)
+    for key in ("continue-on-error", "defaults"):
+        if key in values:
+            raise ContractError(f"{context}: job-level {key} is forbidden")
 
 
 def require_unconditional_step(step: Step, context: str) -> None:
-    for line in active_config_lines(step.lines):
-        if line.startswith("        if:"):
-            raise ContractError(f"{context}: step-level if condition is forbidden")
-        if line.startswith("        continue-on-error:"):
-            raise ContractError(f"{context}: continue-on-error is forbidden")
-        if line.startswith("        shell:"):
-            raise ContractError(f"{context}: shell override is forbidden")
+    values = mapping(step.node, context)
+    for key in ("if", "continue-on-error", "shell"):
+        if key in values:
+            raise ContractError(f"{context}: step-level {key} is forbidden")
 
 
 def require_exact_step_keys(step: Step, expected: tuple[str, ...], context: str) -> None:
-    require_exact_keys(step.lines, 8, expected, context)
-
-
-def require_active(lines: tuple[str, ...], exact: str, context: str) -> None:
-    if exact not in active_config_lines(lines):
-        raise ContractError(f"{context}: missing active line {exact!r}")
+    require_exact_keys(step.node, ("name", *expected), context)
 
 
 def active_script(script: str, context: str) -> tuple[str, ...]:
@@ -316,118 +260,79 @@ def exact_psql_heredocs(lines: tuple[str, ...]) -> tuple[tuple[str, ...], tuple[
     return lines[1:admin_end], lines[admin_end + 2 : app_end]
 
 
-def validate_yaml(path: Path) -> None:
+def validate_yaml(path: Path):
     try:
         import yaml
-    except ImportError:
-        ruby = shutil.which("ruby")
-        if ruby is None:
-            raise ContractError("no real YAML parser is available (need PyYAML or Ruby Psych)")
-        ruby_program = r'''
-require "psych"
-root = Psych.parse_file(ARGV.fetch(0))
-walk = nil
-walk = lambda do |node|
-  case node
-  when Psych::Nodes::Mapping
-    seen = {}
-    node.children.each_slice(2) do |key, value|
-      abort "non-scalar YAML mapping key is forbidden" unless key.is_a?(Psych::Nodes::Scalar)
-      abort "duplicate YAML mapping key: #{key.value}" if seen.key?(key.value)
-      seen[key.value] = true
-      walk.call(value)
-    end
-  when Psych::Nodes::Sequence, Psych::Nodes::Document, Psych::Nodes::Stream
-    node.children.each { |child| walk.call(child) }
-  end
-end
-walk.call(root)
-'''
-        result = subprocess.run(
-            [ruby, "-e", ruby_program, str(path)],
-            capture_output=True,
-            check=False,
-            text=True,
-        )
-        if result.returncode != 0:
-            diagnostic = result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "parse failed"
-            raise ContractError(f"workflow is not valid YAML: {diagnostic}")
-        return
+    except ImportError as error:
+        raise ContractError("PyYAML is required; install the native python3-yaml prerequisite") from error
 
-    class UniqueKeyLoader(yaml.SafeLoader):
-        pass
-
-    def construct_unique_mapping(loader, node, deep=False):
-        seen = set()
-        for key_node, _value_node in node.value:
-            key = loader.construct_object(key_node, deep=False)
-            try:
-                duplicate = key in seen
-            except TypeError as error:
-                raise yaml.constructor.ConstructorError(
-                    "while constructing a mapping",
-                    node.start_mark,
-                    "non-scalar YAML mapping key is forbidden",
-                    key_node.start_mark,
-                ) from error
-            if duplicate:
-                raise yaml.constructor.ConstructorError(
-                    "while constructing a mapping",
-                    node.start_mark,
-                    f"duplicate YAML mapping key: {key!r}",
-                    key_node.start_mark,
-                )
-            seen.add(key)
-        return yaml.SafeLoader.construct_mapping(loader, node, deep=deep)
-
-    UniqueKeyLoader.add_constructor(
-        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_unique_mapping
-    )
+    source = path.read_text(encoding="utf-8")
     try:
-        yaml.load(path.read_text(encoding="utf-8"), Loader=UniqueKeyLoader)
+        # Explicit key and alias syntax are outside the supported workflow shape.
+        # Inspect parser tokens, not source indentation or guessed key spelling.
+        for token in yaml.scan(source):
+            if isinstance(token, yaml.tokens.AliasToken):
+                raise ContractError(f"YAML alias is forbidden at line {token.start_mark.line + 1}")
+            if isinstance(token, yaml.tokens.KeyToken) and source[token.start_mark.index:token.end_mark.index] == "?":
+                raise ContractError(f"explicit YAML key is forbidden at line {token.start_mark.line + 1}")
+        root = yaml.compose(source, Loader=yaml.SafeLoader)
     except yaml.YAMLError as error:
         raise ContractError(f"workflow is not valid YAML: {error}") from error
 
+    allowed_tags = {"tag:yaml.org,2002:" + kind for kind in (
+        "map", "seq", "str", "null", "bool", "int", "float", "timestamp",
+    )}
+
+    def validate(node):
+        if node.tag not in allowed_tags:
+            label = "merge key" if node.tag == "tag:yaml.org,2002:merge" else "tag"
+            raise ContractError(f"unsupported YAML {label} {node.tag!r} at line {node.start_mark.line + 1}")
+        if node.id == "mapping":
+            seen = set()
+            for key, value in node.value:
+                if key.id != "scalar":
+                    raise ContractError(f"non-scalar YAML mapping key at line {key.start_mark.line + 1}")
+                validate(key)
+                if key.value in seen:
+                    raise ContractError(f"duplicate YAML mapping key {key.value!r} at line {key.start_mark.line + 1}")
+                seen.add(key.value)
+                validate(value)
+        elif node.id == "sequence":
+            for value in node.value:
+                validate(value)
+
+    if root is None:
+        raise ContractError("workflow is empty")
+    validate(root)
+    mapping(root, "workflow")
+    return root
+
 
 def check_workflow(path: Path) -> None:
-    validate_yaml(path)
-    workflow = tuple(path.read_text(encoding="utf-8").splitlines())
-    workflow_env = mapping_block(workflow, "env", 0)
-    if active_config_lines(workflow_env) != EXPECTED_WORKFLOW_ENV:
-        raise ContractError("workflow env must contain only FORCE_JAVASCRIPT_ACTIONS_TO_NODE24")
-    workflow_defaults = mapping_block(workflow, "defaults", 0)
-    if active_config_lines(workflow_defaults) != EXPECTED_WORKFLOW_DEFAULTS:
-        raise ContractError("workflow defaults must be exactly defaults.run.shell: bash")
-    jobs = mapping_block(workflow, "jobs", 0)
-    security = mapping_block(jobs, "postgres-security", 2)
-    required = mapping_block(jobs, "ci-required", 2)
-    changes = mapping_block(jobs, "check-changes", 2)
-    require_exact_keys(security, 4, EXPECTED_POSTGRES_JOB_KEYS, "postgres-security job")
-    require_exact_keys(required, 4, EXPECTED_REQUIRED_JOB_KEYS, "ci-required job")
-    if active_config_lines(mapping_block(required, "permissions", 4)) != (
-        "    permissions:", "      contents: read", "      actions: read"
-    ):
-        raise ContractError("ci-required timing inspection requires read-only contents/actions permissions")
-    require_exact_keys(changes, 4, EXPECTED_CHANGES_JOB_KEYS, "check-changes job")
+    workflow = validate_yaml(path)
+    require_value(field(workflow, "env"), EXPECTED_WORKFLOW_ENV, "workflow env allowlist")
+    require_value(field(workflow, "defaults"), EXPECTED_WORKFLOW_DEFAULTS, "workflow shell defaults")
+    jobs = field(workflow, "jobs")
+    security = field(jobs, "postgres-security")
+    required = field(jobs, "ci-required")
+    changes = field(jobs, "check-changes")
+    require_exact_keys(security, EXPECTED_POSTGRES_JOB_KEYS, "postgres-security job")
+    require_exact_keys(required, EXPECTED_REQUIRED_JOB_KEYS, "ci-required job")
+    require_value(field(required, "permissions"), {"contents": "read", "actions": "read"}, "ci-required read-only permissions")
+    require_exact_keys(changes, EXPECTED_CHANGES_JOB_KEYS, "check-changes job")
     require_non_ignorable_job(security, "postgres-security")
     require_non_ignorable_job(required, "ci-required")
     require_non_ignorable_job(changes, "check-changes")
-    require_active(changes, "    runs-on: ubuntu-latest", "reliable check-changes runner")
-
-    for exact, context in (
-        ("      - check-changes", "change dependency"),
-        ("    if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}", "markdown-only skip policy"),
-        ("    services:", "PostgreSQL service"),
-        ("        image: pgvector/pgvector:pg16", "pgvector image"),
-        ('      OMNISOLO_REQUIRE_POSTGRES_TESTS: "1"', "required test environment"),
-        ("      OMNISOLO_POSTGRES_ADMIN_URL: postgresql://postgres:postgres@127.0.0.1:5432/ohc_security", "admin URL"),
-        ("      OMNISOLO_DATABASE_URL: postgresql://ohc_security_test:ohc_security_test@127.0.0.1:5432/ohc_security", "application-role URL"),
-    ):
-        require_active(security, exact, context)
-    postgres_env = mapping_block(security, "env", 4)
-    if active_config_lines(postgres_env) != EXPECTED_POSTGRES_ENV:
-        raise ContractError("postgres-security job env does not match the exact required allowlist")
-    if not any("pg_isready" in line for line in active_config_lines(security)):
+    require_value(field(changes, "runs-on"), "ubuntu-latest", "reliable check-changes runner")
+    needs = plain(field(security, "needs"))
+    if not isinstance(needs, list) or "check-changes" not in needs:
+        raise ContractError("postgres-security must depend on check-changes")
+    require_value(field(security, "if"), "${{ needs.check-changes.outputs.markdown-only == 'false' }}", "markdown-only skip policy")
+    postgres = field(field(security, "services"), "postgres")
+    require_value(field(postgres, "image"), "pgvector/pgvector:pg16", "pgvector image")
+    require_value(field(security, "env"), EXPECTED_POSTGRES_ENV, "postgres-security env allowlist")
+    health = field(postgres, "options")
+    if health.id != "scalar" or "pg_isready" not in health.value:
         raise ContractError("service health check: missing active pg_isready configuration")
 
     toolchain_step = named_step(security, "Install PostgreSQL client")
@@ -472,25 +377,17 @@ def check_workflow(path: Path) -> None:
     suite_style, suite_run = suite_step.run()
     exact_suite = "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"
     quoted_suite = f'"{exact_suite}"'
-    if suite_style != "scalar" or suite_run != quoted_suite:
+    if suite_style != "scalar" or suite_run != exact_suite or field(suite_step.node, "run").style != '"':
         raise ContractError(f"exact multitenancy suite must be active quoted scalar `run: {quoted_suite}`")
 
-    require_active(required, "      - dependency-audit", "ci-required dependency audit")
-    require_active(required, "      - native-node", "ci-required independent Node quality gates")
-    require_active(required, "      - native-images", "ci-required production image build")
-    require_active(required, "      - native-build", "ci-required executable build")
-    require_active(required, "      - postgres-security", "ci-required dependency")
-    require_active(required, "    if: ${{ always() }}", "ci-required always-run policy")
-    require_active(
-        required,
-        "          POSTGRES_SECURITY_RESULT: ${{ needs.postgres-security.result }}",
-        "ci-required result propagation",
-    )
+    required_needs = plain(field(required, "needs"))
+    for dependency in ("dependency-audit", "native-node", "native-images", "native-build", "postgres-security"):
+        if not isinstance(required_needs, list) or dependency not in required_needs:
+            raise ContractError(f"ci-required is missing dependency {dependency!r}")
+    require_value(field(required, "if"), "${{ always() }}", "ci-required always-run policy")
     required_step = named_step(required, "Check required CI results")
     require_exact_step_keys(required_step, ("env", "run"), "required-result enforcement")
-    required_env = mapping_block(required_step.lines, "env", 8)
-    if active_config_lines(required_env) != EXPECTED_REQUIRED_ENV:
-        raise ContractError("required-result step env does not match the exact result allowlist")
+    require_value(field(required_step.node, "env"), EXPECTED_REQUIRED_ENV, "required-result env allowlist")
     require_unconditional_step(required_step, "required-result enforcement")
     required_style, required_run = required_step.run()
     if required_style != "block":
@@ -522,9 +419,7 @@ def check_workflow(path: Path) -> None:
         raise ContractError("PyYAML bootstrap does not match the exact install command")
 
     hygiene_step = named_step(changes, "Check tracked artifacts")
-    if changes.index("      - name: Install PyYAML") >= changes.index(
-        "      - name: Check tracked artifacts"
-    ):
+    if pyyaml_step.node.start_mark.index >= hygiene_step.node.start_mark.index:
         raise ContractError("PyYAML bootstrap must run before tracked-artifact checks")
     require_exact_step_keys(hygiene_step, ("run",), "check-changes hygiene")
     require_unconditional_step(hygiene_step, "check-changes hygiene")

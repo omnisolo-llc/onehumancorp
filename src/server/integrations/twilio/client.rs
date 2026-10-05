@@ -1,9 +1,64 @@
 use async_trait::async_trait;
+use std::time::Duration;
+
+/// A confirmed message resource, not a claim that the message was delivered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MessageReceipt {
+    pub sid: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MessageSendError {
+    OptedOut,
+    Rejected {
+        status: u16,
+    },
+    /// The request may have taken effect. Reconcile with Twilio before retrying.
+    UnknownOutcome {
+        reason: &'static str,
+    },
+}
+
+impl std::fmt::Display for MessageSendError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::OptedOut => f.write_str("User opted out"),
+            Self::Rejected { status } => write!(f, "Twilio rejected the message (HTTP {status})"),
+            Self::UnknownOutcome { reason } => write!(
+                f,
+                "Twilio message outcome is unknown ({reason}); reconcile before retrying"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for MessageSendError {}
+
+#[derive(serde::Deserialize)]
+struct MessageResponse {
+    sid: String,
+    account_sid: String,
+    status: Option<String>,
+    error_code: Option<serde_json::Value>,
+    error_message: Option<String>,
+    success: Option<bool>,
+    error: Option<serde_json::Value>,
+}
 
 #[async_trait]
 pub trait TwilioClientWrapper: Send + Sync {
-    async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
-    async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String>;
+    async fn send_sms(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError>;
+    async fn send_whatsapp(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError>;
     async fn provision_number(&self, area_code: &str) -> Result<String, String>;
 }
 
@@ -21,9 +76,89 @@ impl RealTwilioClient {
         RealTwilioClient {
             account_sid,
             auth_token,
-            http_client: Client::new(),
+            http_client: Self::http_client_builder()
+                .build()
+                .expect("Twilio HTTP client configuration must be valid"),
             provisioning_api: "https://api.twilio.com".into(),
         }
+    }
+
+    fn http_client_builder() -> reqwest::ClientBuilder {
+        Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .read_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(30))
+            .retry(reqwest::retry::never())
+            .redirect(reqwest::redirect::Policy::none())
+    }
+
+    async fn send_message(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError> {
+        const RECEIPT_LIMIT: usize = 64 * 1024;
+        let unknown = |reason| MessageSendError::UnknownOutcome { reason };
+        let url = format!(
+            "{}/2010-04-01/Accounts/{}/Messages.json",
+            self.provisioning_api, self.account_sid
+        );
+        // Message creation has no replay guarantee. A transport error, timeout,
+        // redirect or 5xx can follow acceptance, so never automatically resend.
+        let mut response = self
+            .http_client
+            .post(url)
+            .basic_auth(&self.account_sid, Some(&self.auth_token))
+            .form(&[("To", to), ("From", from), ("Body", body)])
+            .send()
+            .await
+            .map_err(|_| unknown("response unavailable"))?;
+        if response.status().is_client_error() {
+            return Err(MessageSendError::Rejected {
+                status: response.status().as_u16(),
+            });
+        }
+        if !response.status().is_success() {
+            return Err(unknown("provider did not confirm acceptance"));
+        }
+        if response
+            .content_length()
+            .is_some_and(|length| length > RECEIPT_LIMIT as u64)
+        {
+            return Err(unknown("receipt exceeded size limit"));
+        }
+        let mut bytes = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| unknown("receipt unavailable"))?
+        {
+            if chunk.len() > RECEIPT_LIMIT - bytes.len() {
+                return Err(unknown("receipt exceeded size limit"));
+            }
+            bytes.extend_from_slice(&chunk);
+        }
+        let receipt: MessageResponse =
+            serde_json::from_slice(&bytes).map_err(|_| unknown("invalid receipt"))?;
+        if receipt.sid.len() != 34
+            || !(receipt.sid.starts_with("SM") || receipt.sid.starts_with("MM"))
+            || !receipt.sid[2..]
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+            || receipt.account_sid != self.account_sid
+            || receipt.error_code.is_some()
+            || receipt.error_message.is_some()
+            || receipt.success == Some(false)
+            || receipt.error.is_some()
+            || receipt
+                .status
+                .as_deref()
+                .is_some_and(|status| matches!(status, "failed" | "undelivered" | "canceled"))
+        {
+            return Err(unknown("receipt did not confirm the requested message"));
+        }
+        Ok(MessageReceipt { sid: receipt.sid })
     }
 
     pub fn provisioning_configured(&self) -> bool {
@@ -38,48 +173,13 @@ impl RealTwilioClient {
 
 #[async_trait]
 impl TwilioClientWrapper for RealTwilioClient {
-    async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
-        let url = format!(
-            "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
-            self.account_sid
-        );
-
-        let params = [("To", to), ("From", from), ("Body", body)];
-
-        let mut retries = 3;
-        while retries > 0 {
-            let res = self
-                .http_client
-                .post(&url)
-                .basic_auth(&self.account_sid, Some(&self.auth_token))
-                .form(&params)
-                .send()
-                .await;
-
-            match res {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        return Ok(());
-                    } else if resp.status().is_server_error() {
-                        retries -= 1;
-                        if retries == 0 {
-                            return Err(format!("Twilio API error: {}", resp.status()));
-                        }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    } else {
-                        return Err(format!("Twilio API error: {}", resp.status()));
-                    }
-                }
-                Err(e) => {
-                    retries -= 1;
-                    if retries == 0 {
-                        return Err(format!("Network error: {}", e));
-                    }
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                }
-            }
-        }
-        Err("Failed to send SMS after retries".to_string())
+    async fn send_sms(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError> {
+        self.send_message(to, from, body).await
     }
 
     async fn provision_number(&self, area_code: &str) -> Result<String, String> {
@@ -162,12 +262,12 @@ impl TwilioClientWrapper for RealTwilioClient {
         Ok(phone_number.to_string())
     }
 
-    async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
-        let url = format!(
-            "https://api.twilio.com/2010-04-01/Accounts/{}/Messages.json",
-            self.account_sid
-        );
-
+    async fn send_whatsapp(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError> {
         let formatted_to = if to.starts_with("whatsapp:") {
             to.to_string()
         } else {
@@ -179,46 +279,8 @@ impl TwilioClientWrapper for RealTwilioClient {
             format!("whatsapp:{}", from)
         };
 
-        let params = [
-            ("To", formatted_to.as_str()),
-            ("From", formatted_from.as_str()),
-            ("Body", body),
-        ];
-
-        let mut retries = 3;
-        while retries > 0 {
-            let res = self
-                .http_client
-                .post(&url)
-                .basic_auth(&self.account_sid, Some(&self.auth_token))
-                .form(&params)
-                .send()
-                .await;
-
-            match res {
-                Ok(resp) => {
-                    if resp.status().is_success() {
-                        return Ok(());
-                    } else if resp.status().is_server_error() {
-                        retries -= 1;
-                        if retries == 0 {
-                            return Err(format!("Twilio API error: {}", resp.status()));
-                        }
-                        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                    } else {
-                        return Err(format!("Twilio API error: {}", resp.status()));
-                    }
-                }
-                Err(e) => {
-                    retries -= 1;
-                    if retries == 0 {
-                        return Err(format!("Network error: {}", e));
-                    }
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                }
-            }
-        }
-        Err("Failed to send WhatsApp message after retries".to_string())
+        self.send_message(&formatted_to, &formatted_from, body)
+            .await
     }
 }
 
@@ -410,3 +472,7 @@ pub(crate) mod provisioning_tests {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "message_tests.rs"]
+mod message_tests;
