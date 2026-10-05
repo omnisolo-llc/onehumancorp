@@ -38,6 +38,7 @@ pub mod docs;
 pub mod fulfillment;
 pub mod incidents;
 pub mod invoice;
+pub mod legacy_triage;
 pub mod local_seo;
 pub mod mcp_webhook;
 pub mod meta_webhook;
