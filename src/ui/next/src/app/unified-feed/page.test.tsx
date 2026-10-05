@@ -21,7 +21,7 @@ let identity: (() => Promise<Response>) | undefined;
 let fetcher: ReturnType<typeof vi.fn<typeof fetch>>;
 const writes = () => fetcher.mock.calls.filter(([, options]) => options?.method === 'PUT');
 async function mount() { render(<UnifiedFeed />); await screen.findByText('Real pending work'); }
-async function approve() { fireEvent.click(screen.getByRole('button', { name: 'Approve & Send' })); await waitFor(() => expect(writes()).toHaveLength(1)); }
+async function approve() { fireEvent.click(screen.getByRole('button', { name: 'Record approval' })); await waitFor(() => expect(writes()).toHaveLength(1)); }
 beforeEach(() => {
   cleanup(); Object.defineProperty(window, 'localStorage', { value: storage(), writable: true }); localStorage.clear(); notifyQueueIdentityChange(); installOnboardingLocks(); owner = ownerA; rows = [{ ...row }]; identity = undefined;
   mutation = async () => Response.json({ ...row, lifecycle_state: 'APPROVED' });
@@ -71,7 +71,7 @@ it.each(['http-500', 'network', 'wrong-id', 'wrong-tenant', 'wrong-state', 'empt
   expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
   expect(screen.getByText('Real pending work')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Reject' })).toBeDisabled();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled();
   expect(writes()).toHaveLength(1);
 });
 it('reads back an ambiguous decision without issuing a second mutation', async () => {
@@ -90,14 +90,14 @@ it('does not clear an ambiguous hold when readback still reports pending or omit
   fireEvent.click(screen.getByRole('button', { name: 'Refresh recorded decisions' }));
   await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh recorded decisions' })).toBeEnabled());
   expect(screen.getByText('Real pending work')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled();
   expect(writes()).toHaveLength(1);
 });
 it('persists the unknown hold across a same-owner remount', async () => {
   mutation = async () => { throw new Error('Network disconnected'); };
   await mount(); await approve(); await screen.findByRole('alert');
   cleanup(); await mount();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled();
   expect(screen.getByRole('alert')).toHaveTextContent('Outcome unconfirmed');
   expect(writes()).toHaveLength(1);
 });
@@ -113,7 +113,7 @@ it('retires visible private rows and ignores a late mutation after a session cha
 });
 it('does not dispatch a card loaded under a different newly verified owner', async () => {
   await mount(); owner = { userId: 'owner-b', tenantId: 'tenant-b' };
-  fireEvent.click(screen.getByRole('button', { name: 'Approve & Send' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Record approval' }));
   await waitFor(() => expect(screen.queryByText('Real pending work')).toBeNull());
   expect(writes()).toHaveLength(0);
 });
@@ -136,7 +136,7 @@ it('preserves dismissal only after its actual row acknowledgement', async () => 
 it('keeps a prior acknowledged decision held in a stale reloaded feed without replay', async () => {
   await mount(); await approve(); await waitFor(() => expect(screen.queryByText('Real pending work')).toBeNull());
   cleanup(); await mount();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled();
   expect(writes()).toHaveLength(1);
 });
 it('does not offer data returned for a different tenant', async () => {
@@ -148,7 +148,7 @@ it('does not offer data returned for a different tenant', async () => {
 });
 it('fails before sending when the origin lock is unavailable', async () => {
   Object.defineProperty(navigator, 'locks', { value: undefined });
-  await mount(); fireEvent.click(screen.getByRole('button', { name: 'Approve & Send' }));
+  await mount(); fireEvent.click(screen.getByRole('button', { name: 'Record approval' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('No request was sent');
   expect(screen.getByText('Real pending work')).toBeVisible();
   expect(writes()).toHaveLength(0);
@@ -167,7 +167,7 @@ it('disables old cards if a fresh read cannot be verified', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Refresh recorded decisions' }));
   await screen.findByRole('alert');
   expect(screen.getByText('Real pending work')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled();
 });
 it('retires private cards on an empty authentication rejection during refresh', async () => {
   await mount();
@@ -185,12 +185,12 @@ it('serializes two stale views and never repeats an already acknowledged mutatio
   const first = within(screen.getByRole('region', { name: 'First view' }));
   const second = within(screen.getByRole('region', { name: 'Second view' }));
   await first.findByText('Real pending work'); await second.findByText('Real pending work');
-  fireEvent.click(first.getByRole('button', { name: 'Approve & Send' }));
+  fireEvent.click(first.getByRole('button', { name: 'Record approval' }));
   await waitFor(() => expect(writes()).toHaveLength(1));
-  fireEvent.click(second.getByRole('button', { name: 'Approve & Send' }));
+  fireEvent.click(second.getByRole('button', { name: 'Record approval' }));
   await act(async () => finish(Response.json({ ...row, lifecycle_state: 'APPROVED' })));
   expect(await second.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
-  expect(second.getByRole('button', { name: 'Approve & Send' })).toBeDisabled();
+  expect(second.getByRole('button', { name: 'Record approval' })).toBeDisabled();
   expect(writes()).toHaveLength(1);
 });
 it('clears private rows when the verified identity lease expires', async () => {
@@ -214,7 +214,7 @@ it('accepts a recorded edited decision only when the actual receipt preserves it
 it('reloads its owned feed after StrictMode retires the initial effect', async () => {
   render(<React.StrictMode><UnifiedFeed /></React.StrictMode>);
   expect(await screen.findByText('Real pending work')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeEnabled();
   expect(writes()).toHaveLength(0);
 });
 it('rejects edited acknowledgements with conflicting displayed and secondary fields', async () => {
@@ -250,7 +250,7 @@ it('bounds a stalled initial identity read and releases its loading state', asyn
 });
 it('bounds stalled pre-dispatch identity verification without sending or retaining a pending lock', async () => {
   await mount(); vi.useFakeTimers(); identity = () => new Promise(() => {});
-  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Approve & Send' })); });
+  await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Record approval' })); });
   await act(async () => { await vi.advanceTimersByTimeAsync(30_001); });
   expect(screen.getByRole('alert')).toBeVisible();
   expect(screen.getByRole('button', { name: 'Refresh recorded decisions' })).toBeEnabled();
@@ -258,5 +258,19 @@ it('bounds stalled pre-dispatch identity verification without sending or retaini
   identity = undefined;
   await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Refresh recorded decisions' })); });
   expect(screen.getByText('Real pending work')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Approve & Send' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Record approval' })).toBeEnabled();
+});
+
+it.each(['proposal', 'subscription_win_back'])('labels %s approval as a recorded decision while its receipt is pending', async actionType => {
+  rows = [{ ...row, proposed_action: { ...row.proposed_action, action_type: actionType } }];
+  let finish!: (response: Response) => void;
+  mutation = () => new Promise(resolve => { finish = resolve; });
+  await mount();
+  expect(screen.queryByRole('button', { name: /send/i })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /^Record approval$/ }));
+  await waitFor(() => expect(writes()).toHaveLength(1));
+  expect(screen.getByRole('button', { name: /^Recording approval\.\.\.$/ })).toBeDisabled();
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('No execution or delivery is confirmed');
+  await act(async () => finish(Response.json({ ...rows[0], lifecycle_state: 'APPROVED' })));
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded. Execution or delivery is not verified');
 });

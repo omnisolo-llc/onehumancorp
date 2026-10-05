@@ -37,20 +37,37 @@ test.describe('Help Center & Documentation Features', () => {
     const apiLink = page.locator('a:has-text("API Documentation")').first();
     await expect(apiLink).toBeVisible();
 
-    // 3. Navigate to API Docs
+    // 3. Follow the maintained reference and wait for its real specification.
+    await expect(apiLink).toHaveAttribute('href', '/api-docs');
+    const loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/api-docs-spec' && response.request().method() === 'GET');
     await apiLink.click();
     await page.waitForLoadState('domcontentloaded');
-    await expect(page).toHaveURL(/\/api-docs\.html/);
+    await expect(page).toHaveURL(/\/api-docs$/);
+    const response = await loaded;
+    expect(response.status()).toBe(200);
+    const spec = await response.json();
+    expect(spec.info.title).toBe('API Documentation (for Advanced Users)');
 
     // 4. Hover to see tooltip
     const tooltipTarget = page.locator('#api-docs-tooltip');
     await expect(tooltipTarget).toBeVisible();
     await tooltipTarget.hover();
-    await expect(page.locator('text=Direct API access is only for custom integrations.')).toBeVisible();
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toHaveText('Direct API access is only for custom integrations.');
+    await expect(tooltip).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(tooltip).toBeHidden();
+    await tooltipTarget.focus();
+    await expect(tooltip).toBeVisible();
+    await expect(tooltipTarget).toHaveAttribute('aria-describedby', 'api-docs-tooltip-description');
+    await tooltipTarget.press('Escape');
+    await expect(tooltip).toBeHidden();
+    await expect(tooltipTarget).toBeFocused();
 
     // 5. Verify API docs loaded (Swagger UI)
     await expect(page.locator('text=Advanced:')).toBeVisible();
     await expect(page.locator('.swagger-ui').first()).toBeVisible();
+    await expect(page.locator('.swagger-ui .info .title')).toContainText(spec.info.title);
   });
 
   test('Owner can trigger Interactive Walkthroughs from the Help Widget', async ({ page }) => {
@@ -119,10 +136,11 @@ test.describe('Help Center & Documentation Features', () => {
     // Click the Read full release notes link
     const releaseNotesLink = page.locator('a:has-text("Read full release notes")');
     await expect(releaseNotesLink).toBeVisible();
+    await expect(releaseNotesLink).toHaveAttribute('href', '/changelog');
 
     // Click and navigate
     await releaseNotesLink.click();
-    await expect(page).toHaveURL(/\/changelog\.html/);
+    await expect(page).toHaveURL((url) => url.pathname === '/changelog');
     await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
   });
 });

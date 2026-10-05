@@ -205,6 +205,138 @@ test('retiring a clicked document prevents its delayed navigation from replacing
   } finally { await isolated.close(); }
 });
 
+test('recovers an injected cleanup interruption after real logout without repeating its click or losing cookies', async ({ page }) => {
+  let logins = 0;
+  let logouts = 0;
+  let lateRequests = 0;
+  let session = 0;
+  const server = createServer((request, response) => {
+    if (request.url === '/fixture-login' && request.method === 'POST') {
+      session = ++logins;
+      response.writeHead(200, { 'set-cookie': [
+        `audit_nav_session=${session}; Path=/; SameSite=Lax`,
+        'audit_context=preserved; Path=/; SameSite=Lax',
+      ] });
+      response.end('authenticated');
+    } else if (request.url === '/api/v1/auth/logout' && request.method === 'POST') {
+      logouts += 1;
+      session = 0;
+      response.writeHead(200, { 'set-cookie': 'audit_nav_session=; Path=/; Max-Age=0' });
+      response.end('logged out');
+    } else if (request.url === '/late') {
+      lateRequests += 1;
+      response.end('late callback');
+    } else if (request.url === '/login') {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end('<h1>Login required</h1>');
+    } else if (!session || !request.headers.cookie?.split(';').some(value => value.trim() === `audit_nav_session=${session}`)) {
+      response.writeHead(302, { location: '/login' });
+      response.end();
+    } else {
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end(`<h1>Private audit fixture</h1><button onclick="this.disabled=true;this.textContent='Logging out';fetch('/api/v1/auth/logout',{method:'POST'}).then(()=>location.replace('/login'))">Log out</button>`);
+    }
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  let isolated = await page.context().newPage();
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing local logout fixture address');
+    const origin = `http://127.0.0.1:${address.port}`;
+    const navigate = createAuditNavigation(origin, async target => {
+      const response = await target.request.post(`${origin}/fixture-login`);
+      expect(response.ok()).toBe(true);
+    });
+    await navigate(isolated, '/private');
+    const effect = await observeClickEffects(isolated, (await isolated.getByRole('button', { name: 'Log out' }).elementHandle())!);
+    expect(hasMeaningfulClickEffect(effect)).toBe(true);
+    expect(effect.requestSeen).toBe(true);
+    await isolated.waitForURL(`${origin}/login`);
+    expect(logouts).toBe(1);
+    const cookies = await isolated.context().cookies(origin);
+    expect(cookies.find(cookie => cookie.name === 'audit_nav_session')).toBeUndefined();
+    expect(cookies.find(cookie => cookie.name === 'audit_context')?.value).toBe('preserved');
+    await isolated.evaluate(late => { setTimeout(() => { void fetch(late); }, 300); }, `${origin}/late`);
+    // Replay the exact hosted cleanup failure at the Playwright boundary.
+    // The logout, cookies, old realm and replacement remain real browser state;
+    // no product response or click effect is fabricated by this injected fault.
+    const goto = isolated.goto.bind(isolated);
+    let retirementAttempts = 0;
+    isolated.goto = async (url, options) => {
+      if (url === 'about:blank') {
+        retirementAttempts += 1;
+        throw new Error(`page.goto: Navigation to "about:blank" is interrupted by another navigation to "${origin}/login"`);
+      }
+      return goto(url, options);
+    };
+    const old = isolated;
+    isolated = await replaceAuditDocument(isolated);
+    expect(old.isClosed()).toBe(true);
+    expect(isolated).not.toBe(old);
+    expect(isolated.context()).toBe(old.context());
+    expect(Boolean(isolated.video())).toBe(Boolean(old.video()));
+    expect(isolated.viewportSize()).toEqual(old.viewportSize());
+    expect(await isolated.context().cookies(origin)).toEqual(cookies);
+    await navigate(isolated, '/private');
+    await isolated.waitForTimeout(450);
+    await expect(isolated.getByRole('heading', { name: 'Private audit fixture' })).toBeVisible();
+    expect(isolated.url()).toBe(`${origin}/private`);
+    expect(logins).toBe(2);
+    expect(logouts).toBe(1);
+    expect(lateRequests).toBe(0);
+    expect(retirementAttempts).toBe(1);
+  } finally {
+    await isolated.close();
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
+});
+
+test('retirement propagates other cleanup failures without closing the page or creating a replacement', async ({ page }) => {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { 'content-type': 'text/html' });
+    response.end('<h1>Original document</h1>');
+  });
+  await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+  try {
+    const address = server.address();
+    if (!address || typeof address === 'string') throw new Error('Missing local failure fixture address');
+    const origin = `http://127.0.0.1:${address.port}`;
+    const interrupted = (destination: string, source = 'about:blank') => new Error(`page.goto: Navigation to "${source}" is interrupted by another navigation to "${destination}"`);
+    const failures: Array<[string, unknown]> = [
+      ['cross-origin login', interrupted('http://other.invalid/login')],
+      ['different route', interrupted(`${origin}/settings`)],
+      ['login query', interrupted(`${origin}/login?next=/private`)],
+      ['login fragment', interrupted(`${origin}/login#fragment`)],
+      ['login credentials', interrupted(`${origin.replace('http://', 'http://user@')}/login`)],
+      ['different navigation source', interrupted(`${origin}/login`, `${origin}/private`)],
+      ['timeout', new Error('page.goto: Timeout 30000ms exceeded')],
+      ['aborted navigation', new Error('page.goto: net::ERR_ABORTED at about:blank')],
+      ['closed page', new Error('page.goto: Target page, context or browser has been closed')],
+      ['non-error rejection', `page.goto: Navigation to "about:blank" is interrupted by another navigation to "${origin}/login"`],
+    ];
+    for (const [name, failure] of failures) {
+      await test.step(name, async () => {
+        const isolated = await page.context().newPage();
+        try {
+          await isolated.goto(origin);
+          const pages = isolated.context().pages();
+          let attempts = 0;
+          isolated.goto = async () => { attempts += 1; throw failure; };
+          await expect(replaceAuditDocument(isolated)).rejects.toBe(failure);
+          expect(attempts).toBe(1);
+          expect(isolated.isClosed()).toBe(false);
+          expect(isolated.context().pages()).toEqual(pages);
+          await expect(isolated.getByRole('heading', { name: 'Original document' })).toBeVisible();
+        } finally { await isolated.close(); }
+      });
+    }
+  } finally {
+    server.closeAllConnections();
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+  }
+});
+
 
 test('observes an actual confirmation decision while cancellation performs no mutation', async ({ page }) => {
   await page.setContent(`<button onclick="if(confirm('Delete this isolated fixture?'))document.body.dataset.deleted='true'">Ask before delete</button>`);

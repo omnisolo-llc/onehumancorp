@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { allowedDevOrigins } from "../src/ui/next/next.config.mjs";
+import nextConfig, { allowedDevOrigins } from "../src/ui/next/next.config.mjs";
+
+test("preserves RSC and prefetch signals for the authenticated proxy", () => {
+  assert.equal(nextConfig.skipProxyUrlNormalize, true);
+});
+
+test("does not configure the deprecated middleware URL normalization alias", () => {
+  assert.equal(Object.hasOwn(nextConfig, "skipMiddlewareUrlNormalize"), false);
+});
 
 test("allows the exact private LAN hostname in explicit local development", () => {
   assert.deepEqual(

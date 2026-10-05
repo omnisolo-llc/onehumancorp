@@ -29,6 +29,8 @@ server_common = { path = "../../src/server/common" }
 server_omnisolo = { path = "../../src/server/omnisolo" }
 tower = { version = "0.5", features = ["util"] }
 jsonwebtoken = { version = "10.3", default-features = false, features = ["rust_crypto", "use_pem"] }
+[dev-dependencies]
+tempfile = "3.27.0"
 [lib]
 path = "generated.rs"
 [profile.dev]

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, type FormEvent, useEffect, useState } from "react";
 import { PublicAuthShell } from "@/app/components/PublicAuthShell";
@@ -185,24 +184,24 @@ function LoginForm() {
               <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-500">Or use single sign-on</p>
               <div className="flex flex-col gap-3">
                 {providers.map((provider) => (
-                  <Link
+                  <a
                     className="min-h-[50px] rounded-lg border border-gray-300 bg-white px-4 py-3 text-center text-sm font-semibold text-gray-800 transition hover:border-[#0066FF] dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
                     href={`/api/v1/auth/oidc/${provider.key}?next=${encodeURIComponent(next)}`}
                     key={provider.key}
                     onClick={notifyQueueIdentityChange}
                   >
                     Continue with {provider.display_name}
-                  </Link>
+                  </a>
                 ))}
               </div>
             </div>
           )}
 
           <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-300">
-            Need an account? <Link className="font-semibold text-[#0066FF]" href="/register">Check registration</Link>
+            Need an account? <a className="font-semibold text-[#0066FF]" href="/register">Check registration</a>
           </p>
           <div className="mt-3 text-center">
-            <Link role="button" className="text-xs text-gray-500 hover:text-[#0066FF]" href="/onboarding">Start Business Setup</Link>
+            <a role="button" className="text-xs text-gray-500 hover:text-[#0066FF]" href="/onboarding">Start Business Setup</a>
           </div>
         </div>
     </PublicAuthShell>

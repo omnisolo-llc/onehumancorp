@@ -1,11 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { navigateToPublicAuth } from "@/lib/auth/publicNavigation";
 import { useState } from "react";
 import { notifyQueueIdentityChange } from "../../lib/sync/queueIdentity";
 
 export function LogoutButton() {
-  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState(false);
 
@@ -17,8 +16,7 @@ export function LogoutButton() {
     try {
       const response = await fetch("/api/v1/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("logout failed");
-      router.replace("/login");
-      router.refresh();
+      navigateToPublicAuth("/login", true);
     } catch {
       setError(true);
       setPending(false);

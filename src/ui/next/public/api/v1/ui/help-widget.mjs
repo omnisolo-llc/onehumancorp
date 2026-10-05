@@ -543,7 +543,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   </label>
                 </div>
                 <div id="help-widget-advanced-links" style="display: none;">
-                    <a  href="/api-docs.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OmniSolo Advanced API Reference</a>
+                    <a  href="/api-docs" style="color: #64748b; font-size: 13px; text-decoration: none; display: block; margin-bottom: 8px;">OmniSolo Advanced API Reference</a>
                     <a href="/tooltip-registry.html" style="color: #64748b; font-size: 13px; text-decoration: none; display: block;">Tooltip Registry</a>
                 </div>
             </div>
@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="padding: 12px 0;">
                 <h4 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">Latest Updates</h4>
                 <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">See recent improvements and releases to OmniSolo OneHumanCorp.</p>
-                <a href="/changelog.html" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">Read full release notes &rarr;</a>
+                <a href="/changelog" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">Read full release notes &rarr;</a>
             </div>
         </div>
 

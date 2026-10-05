@@ -7,6 +7,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 class IgnoredRustCiContract(unittest.TestCase):
+    def test_affiliate_database_is_created_before_backend_tests_with_its_own_url(self):
+        workflow = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())
+        job = workflow['jobs']['native-test']
+        steps = job['steps']
+        backend = next(s for s in steps if s.get('run') == 'make test-backend')
+        self.assertEqual(
+            backend.get('env', {}).get('OHC_AFFILIATE_TEST_DATABASE_URL'),
+            'postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_affiliate_test',
+        )
+        fixture = next((s for s in steps if s.get('run') ==
+            'createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_affiliate_test'), None)
+        self.assertIsNotNone(fixture, 'affiliate aggregates require their own real database')
+        self.assertLess(steps.index(fixture), steps.index(backend))
+        self.assertEqual(fixture['env']['PGPASSWORD'], 'ignored_fixture')
+        self.assertEqual(fixture['if'], backend['if'])
+        self.assertFalse(fixture.get('continue-on-error', False))
+        self.assertFalse(backend.get('continue-on-error', False))
+        for env in (workflow.get('env', {}), job.get('env', {}), backend['env']):
+            self.assertNotIn('OMNISOLO_DATABASE_URL', env)
+
     def test_native_job_runs_exact_safe_inventory_after_primary_tests(self):
         job = yaml.safe_load((ROOT / '.github/workflows/ci.yml').read_text())['jobs']['native-test']
         steps = job['steps']

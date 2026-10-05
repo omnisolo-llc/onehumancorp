@@ -270,9 +270,30 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
 // Retire the old document before another route audit starts. A delayed checkout
 // navigation from that document must not replace the next document under test.
 export async function replaceAuditDocument(page: Page): Promise<Page> {
+  const retiredUrl = page.url();
+  const viewport = page.viewportSize();
   // A committed full-document navigation destroys the old JavaScript realm,
   // including delayed callbacks, while preserving one page/video per route.
-  await page.goto('about:blank', { waitUntil: 'load' });
+  try {
+    await page.goto('about:blank', { waitUntil: 'load' });
+  } catch (error) {
+    let logoutInterruption: string | undefined;
+    try {
+      const source = new URL(retiredUrl);
+      if (['http:', 'https:'].includes(source.protocol) && !source.username && !source.password) {
+        logoutInterruption = `page.goto: Navigation to "about:blank" is interrupted by another navigation to "${source.origin}/login"`;
+      }
+    } catch { /* An unclassified source cannot establish the logout boundary. */ }
+    if (!(error instanceof Error) || error.message.split('\n', 1)[0] !== logoutInterruption) throw error;
+    // Logout may replace the document after its real click effect was observed.
+    // Retire that realm without retrying either the click or the navigation.
+    // Keeping the context retains cookies and its recording of both pages.
+    const context = page.context();
+    await page.close({ runBeforeUnload: false });
+    const replacement = await context.newPage();
+    if (viewport) await replacement.setViewportSize(viewport);
+    return replacement;
+  }
   return page;
 }
 

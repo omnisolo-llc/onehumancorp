@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
           console.error("Failed to load help data", e);
         } finally {
           loadingState.style.display = 'none';
-          renderContent('');
+          renderContent(searchInput.value);
         }
       }
 

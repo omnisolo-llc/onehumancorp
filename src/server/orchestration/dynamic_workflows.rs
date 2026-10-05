@@ -40,6 +40,8 @@ pub enum WorkflowStatus {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DynamicWorkflowRequest {
+    // The BFF omits this field; the manager always assigns the verified owner.
+    #[serde(default)]
     pub tenant_id: String,
     pub parent_task_id: Option<String>,
     pub prompt: String,

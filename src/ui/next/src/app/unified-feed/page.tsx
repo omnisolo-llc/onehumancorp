@@ -255,8 +255,8 @@ export default function UnifiedFeed() {
                         data-testid="feed-approve-btn"
                       >
                         {processingId === item.workItem.id
-                          ? "Sending..."
-                          : "Approve Offer"}
+                          ? "Recording approval..."
+                          : "Record approval"}
                       </button>
                     </div>
                   </div>
@@ -302,7 +302,7 @@ export default function UnifiedFeed() {
                           data-testid="save-edit-approve-btn"
                         >
                           {processingId === item.workItem.id
-                            ? "..."
+                            ? "Recording approval..."
                             : "Save & Approve"}
                         </button>
                       </div>
@@ -331,8 +331,8 @@ export default function UnifiedFeed() {
                           data-testid="feed-approve-btn"
                         >
                           {processingId === item.workItem.id
-                            ? "..."
-                            : "Approve & Send"}
+                            ? "Recording approval..."
+                            : "Record approval"}
                         </button>
                       </div>
                     )}

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
+// Public auth entries accept document navigation; their Flight requests remain protected.
 export function PublicAuthShell({ children }: { children: ReactNode }) {
   return (
     <main
@@ -8,7 +8,7 @@ export function PublicAuthShell({ children }: { children: ReactNode }) {
       data-auth-shell
     >
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center gap-5">
-        <Link
+        <a
           aria-label="OmniSolo sign in"
           className="mx-auto flex items-center gap-3 text-sm font-semibold text-gray-700 no-underline dark:text-gray-200"
           href="/login"
@@ -17,7 +17,7 @@ export function PublicAuthShell({ children }: { children: ReactNode }) {
             O
           </span>
           <span>OmniSolo</span>
-        </Link>
+        </a>
         <section className="auth-panel w-full rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-8">
           {children}
         </section>

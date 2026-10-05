@@ -2,7 +2,6 @@
 
 import { notifyQueueIdentityChange } from "@/lib/sync/queueIdentity";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useState } from "react";
 import { PublicAuthShell } from "@/app/components/PublicAuthShell";
@@ -108,7 +107,7 @@ export default function VerifyEmailPage() {
           {challenge === null ? (
             <div className="mt-5">
               <p role="alert">No active email verification was found.</p>
-              <Link className="mt-3 inline-block font-semibold text-[#0066FF]" href="/register">Start again</Link>
+              <a className="mt-3 inline-block font-semibold text-[#0066FF]" href="/register">Start again</a>
             </div>
           ) : ticket === null ? (
             <form className="mt-6 flex flex-col gap-5" onSubmit={verify}>
