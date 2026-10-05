@@ -153,13 +153,7 @@ impl TaskQueue for PgTaskQueue {
                 .try_get("created_at")
                 .unwrap_or_else(|_| chrono::Utc::now());
             let latency = (chrono::Utc::now() - created_at).num_milliseconds() as f64 / 1000.0;
-            ::server_telemetry::record_sub_agent_queue_delay(
-                latency,
-                "postgres",
-            );
-            if start_poll.elapsed().as_millis() > 100 {
-                ::server_telemetry::record_task_claim_contention("postgres");
-            }
+            ::server_telemetry::record_sub_agent_queue_delay(latency, "postgres");
 
             let job = Job {
                 id: row.get("id"),

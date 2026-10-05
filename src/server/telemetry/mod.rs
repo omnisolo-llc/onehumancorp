@@ -17,7 +17,6 @@ use opentelemetry::metrics::{Counter, Gauge, UpDownCounter};
 static SUB_AGENT_QUEUE_LENGTH_GAUGE: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static SUB_AGENT_QUEUE_DELAY_HISTOGRAM: OnceLock<Histogram<f64>> = OnceLock::new();
 static TASK_CLAIM_CONTENTION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
-static SUB_AGENT_SPAWN_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 static BUBBLEWRAP_SPAWN_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
 static BUBBLEWRAP_EXECUTION_LATENCY: OnceLock<Histogram<f64>> = OnceLock::new();
 static BUBBLEWRAP_VIOLATION_TOTAL: OnceLock<UpDownCounter<i64>> = OnceLock::new();
@@ -2252,6 +2251,8 @@ mod pii_pattern_tests {
         assert!(!is_pii_value_pattern("1234"));
     }
 }
+
+pub static SUB_AGENT_SPAWN_ERRORS_TOTAL: OnceLock<Counter<u64>> = OnceLock::new();
 
 pub fn get_sub_agent_spawn_errors_total() -> &'static Counter<u64> {
     SUB_AGENT_SPAWN_ERRORS_TOTAL.get_or_init(|| {
