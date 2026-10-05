@@ -73,13 +73,15 @@ its existing output path and before/after source-manifest checks.
 
 `scripts/rust_source.py` builds this exact root-locked package offline, obtains
 its executable from Cargo's artifact JSON, and verifies every returned source
-hash, fragment hash and byte range. Cash receipts and Stripe webhook preparation
-include the adapter and parser source inputs in their existing before/after
+hash, fragment hash and byte range. Cash receipts, Stripe webhook and agent
+workflow preparation include the adapter and parser source inputs in their existing before/after
 manifests. The cash harness retains its test serialization adapters separately
 from the unchanged production derives. These callers reconstruct only plain
 inherent impls; an added enclosing attribute or changed impl shape fails closed
 until the caller explicitly preserves that context.
 
-The agent workflow consumer remains on its existing implementation until its
-full generated-source and focused checks are repeated using the uniform parser.
+The agent workflow consumer uses full-file parsing with explicit trait-impl and
+Hub-method identities. Its generated-source parity check preserves the original
+executable Rust and restores original doc comments formerly omitted by its
+scanner. Full focused runtime gates remain the consumer acceptance requirement.
 Production extraction never drops or reparses selected parts to hide file errors.
