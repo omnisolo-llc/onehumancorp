@@ -5,6 +5,7 @@ use axum::{Json, http::StatusCode, response::IntoResponse};
 use serde_json::{Value, json};
 use sqlx::{PgPool, Postgres, Transaction};
 
+use crate::orchestration::locks::{DistributedLock, RedisLock};
 use super::super::sync_transaction::SyncError;
 
 const ROUTE: &str = "/api/v1/payments/terminal/sync_offline";
@@ -65,8 +66,23 @@ pub(super) async fn sync_offline_response(
         reconciliation_required_transaction_ids: vec![],
         outcomes: vec![],
     };
+    let locker = redis.clone().map(RedisLock::new);
+
     for item in &request.transactions {
         let id = item.id.as_deref().unwrap_or("");
+
+        let mut _guard = None;
+        if let Some(ref l) = locker {
+            if !id.trim().is_empty() {
+                match l.acquire_resource(tenant, "offline_tx", id).await {
+                    Ok(g) => _guard = Some(g),
+                    Err(e) => {
+                        tracing::warn!("Failed to acquire Redis lock for offline transaction {}: {}", id, e);
+                    }
+                }
+            }
+        }
+
         let applied = match apply(pool, tenant, request.session_id.as_deref(), item).await {
             Ok(result) => result,
             Err(error) => {
@@ -125,6 +141,10 @@ pub(super) async fn sync_offline_response(
                     .query_async(&mut conn)
                     .await;
             }
+        }
+
+        if let Some(mut g) = _guard {
+            g.release().await;
         }
     }
     (StatusCode::OK, Json(response)).into_response()
