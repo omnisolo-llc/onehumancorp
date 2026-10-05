@@ -9,6 +9,7 @@
     "scripts/minimax-provider-contract",
     "scripts/proactive-worker-contract",
     "scripts/quote-taxjar",
+    "scripts/redis-reconnect",
     "scripts/site-publication",
     "scripts/staff-read-contract",
     "scripts/staff-timecard-contract"

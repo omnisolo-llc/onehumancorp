@@ -9,7 +9,7 @@ No workflow, product dependency, exception or advisory ignore is added here.
 ## Scope and policy
 
 [The inventory](../../scripts/dependency-audit/inventory.json) names six npm
-locks, the root Cargo graph, eleven tracked focused Cargo locks, four declared
+locks, the root Cargo graph, twelve tracked focused Cargo locks, four declared
 Python requirement sets, and image boundaries that still require an actual image
 inventory. New or missing tracked supported locks fail inventory validation. The
 exact historical `src/server/Cargo.lock` is excluded because it has no adjacent
@@ -25,7 +25,7 @@ inventory.
 | npm | Production and full graphs for all six locks, using `--package-lock-only`; explicitly include optional/peer packages and include development packages only for full graphs. Conflicting graph environment settings are removed. Preserve every reported severity. An affected-node count is not a count of unique advisories. |
 | Root Cargo | Seven backend/desktop target triples, all workspace roots, default features, development dependencies included. No `--all-features`, `--exclude-dev` or unpublished-member exclusion. |
 | Tauri Android | Four Android triples, Tauri as the sole workspace root, default features. Dependency analysis is not an Android build. |
-| Focused Cargo | Each of the eleven independent locks on Linux x86_64, default features. `--locked --offline` never rewrites a lock or resolves a new graph. |
+| Focused Cargo | Each of the twelve independent locks on Linux x86_64, default features. `--locked --offline` never rewrites a lock or resolves a new graph. |
 | Cargo advisories/sources | Include vulnerability, unsoundness, all unmaintained and yanked diagnostics separately. Crates.io is the observed allowed registry; unknown registries/git are denied by the scanner. No CVSS/severity suppression. |
 | Python | Audit all declared pinned rows with `--disable-pip --no-deps --strict`; require hashes for the three hashed application locks. Parse declarations with the pinned requirements library and require exact returned name/version coverage, with no duplicates or skipped rows. No installation, product resolver or auto-fix. Declared rows do not prove installed closure or wheel/OS integrity. |
 | Images | Explicit `not_audited` records remain in every report. Global CLI transitives, un-hashed Python installs, copied images/binaries and OS packages require actual image inventory/SBOM. The test-tools npm lock does not govern a Docker global install. |
