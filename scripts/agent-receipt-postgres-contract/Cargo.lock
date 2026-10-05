@@ -3922,6 +3922,7 @@ dependencies = [
  "sqlx",
  "tokio",
  "tokio-stream",
+ "tokio-util",
  "tonic 0.12.3",
  "tracing",
  "tracing-opentelemetry",
@@ -4018,6 +4019,7 @@ dependencies = [
  "server_pricing",
  "tokio",
  "tracing",
+ "url",
  "urlencoding",
 ]
 

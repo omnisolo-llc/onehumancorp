@@ -72,6 +72,46 @@ Each handoff must include commit/diff, changed paths, RED/GREEN commands with ex
 
 Subsequent adapters follow once initial batch evidence is reviewable. Every concrete finding remains in this ledger until fixed or justified with a specific prerequisite/keep decision. Shared locks, wider protocol and persisted-format changes receive independent review before integration.
 
+## Published checkpoint: initial bounded batch
+
+Draft PR [#40231](https://github.com/omnisolo-llc/onehumancorp/pull/40231)
+publishes the independently reviewed first batch. Six workers used explicitly
+requested `gpt-6-astra` / `ultra` settings; the tool accepted those settings and
+reported no fallback. Worktrees and remote branches remain separate from UI
+#40124, #40150 and #40153. No merge, deployment or live provider action has occurred.
+
+| Finding | Checkpoint status |
+| --- | --- |
+| B3 money | Exact decimal decoding and checked totals implemented; focused 18-test gate passed, including formerly ignored database/provider cases. |
+| INT1/INT2 Twilio | Standard form decoding, raw signature preservation, single mutating attempt, required receipts and caller error propagation implemented; focused/provider/voice gates passed. Durable cross-invocation reconciliation is not added. |
+| S3 JWE | Existing JOSE library now owns framing; legacy/current cross-decrypt and plaintext cleanup tests pass. |
+| S5/S6 JWK/RPC | Typed signing-key eligibility, discovery issuer check, bounded frames, child cleanup and persistent terminal state implemented; 19 OIDC and 25 RPC tests pass. Independent review's shutdown-waiter defect was fixed before integration. |
+| FE03/FE04 | Authenticated polling lifecycle fixes and proven-unused dependency cleanup implemented. Complete Next checkpoint: 4,069 tests in 516 files passed; later source requires its own final acceptance. |
+| Platform | Node distributions and five Docker stages use 22.23.3; Tauri URL reuse, desktop updater gating and CLI development scope implemented. Native/release platform acceptance remains separate. |
+| Maintenance | Compatible Cargo fixes applied across active locks; independent checksum/license/MSRV/range review completed. Remaining advisories are explicit in the maintenance record. |
+| T3/T1 initial | Parsed YAML policy checks and source-bound cash/Stripe extraction implemented. Broader parser replacement/workflow consumer work remains a separate follow-up checkpoint. |
+
+Full `make lint`, `make test`, required hosted CI, fresh real-stack browser gates
+and native platform verification are **pending** at publication. Focused evidence
+does not substitute for those gates. The PR must remain a draft until exact final
+source passes acceptance and the coordinating owner reviews it.
+
+The next batches remain outside this PR: B2 reconnect/PubSub, S1 Reqwest harness
+adapters, T1 uniform Syn parsing and workflow extraction, FE06 metadata/zoom, FE07
+truthful product extraction, and INT7 required provider receipts. Each has its own
+source/RED/GREEN/review record before integration. INT5's proposed DOM parser is
+explicitly blocked: deeply nested input exhausted a five-second diagnostic budget
+despite a one-MiB input bound. It needs a tested complexity bound; unit-test success
+alone is insufficient. Its WIP branch must not be merged.
+
+The remaining matrix above still applies: durable claims need an actual producer
+and persisted-job contract; SQL/envelope migrations need existing-data baselines;
+MCP needs saved legacy-transport compatibility; MIME needs verified sender identity;
+UI approval/accessibility and reverse-tunnel ownership need their traced authority
+contracts. Schema generation, metrics lifecycle and dependency-policy expansion
+remain separate work. Broader Cargo/Python scans found pre-existing advisories;
+adding a blanket failure policy or arbitrary major upgrades is not a completed fix.
+
 ## Review focus
 
 Lossy money conversion; provider replay after unknown outcome; raw signed body preservation; tenant/algorithm/identity confusion; unbounded allocation; process cleanup; persisted-format compatibility; dependency feature/toolchain/platform fit; exact final-source test evidence. Estimate benefits as fewer custom edge-case paths and known defects; do not invent performance/bundle savings.
