@@ -11,6 +11,7 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
+    'redis-reconnect': (20, None),
     'cash-receipts': (45, 'OHC_CASH_TEST_DATABASE_URL'),
     'nats-metadata-contract': (16, None),
     'mesh-startup-contract': (13, None),
@@ -38,7 +39,7 @@ GATES = {
     'quote-acceptance': (36, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
     'agent-workflow-contract': (108, None),
-    'agent-receipt-postgres-contract': (56, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
+    'agent-receipt-postgres-contract': (97, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
     'site-publication': (93, 'OHC_PUBLICATION_TEST_DATABASE_URL'),

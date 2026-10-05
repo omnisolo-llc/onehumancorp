@@ -2,8 +2,13 @@ use crate::retry::{ExponentialBackoffWithJitter, RetryStrategy};
 /// Master Catalog B.6. Output Parsing: Schema-constrained responses with Pydantic fallback
 use crate::types::{ChatRequest, ChatResponse, Message, ToolError};
 use async_trait::async_trait;
+use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
+
+#[cfg(test)]
+#[path = "output_parser_schema_test.rs"]
+mod schema_tests;
 
 #[async_trait]
 pub trait LlmClientForParser: Send + Sync {
@@ -114,7 +119,7 @@ pub struct RetryWithErrorOutputParser<'a, T> {
     llm: Arc<dyn LlmClientForParser>,
 }
 
-impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
+impl<'a, T: DeserializeOwned + JsonSchema> RetryWithErrorOutputParser<'a, T> {
     pub fn new(
         parser: Box<dyn OutputParser<T> + Send + Sync + 'a>,
         llm: Arc<dyn LlmClientForParser>,
@@ -145,27 +150,47 @@ impl<'a, T: DeserializeOwned> RetryWithErrorOutputParser<'a, T> {
         let max_retries = std::cmp::min(max_retries, 2); // Stripe limits retries to exactly 2
         let mut current_req = req.clone();
 
-        // Inject the schema as a tool definition to encourage the model to use tool_calls API
+        // Generate the whole envelope so any remaining recursive references stay
+        // rooted at the tool parameters, rather than at a nested `data` schema.
+        #[derive(JsonSchema)]
+        #[schemars(rename = "StructuredOutput")]
+        struct Envelope<T> {
+            #[allow(dead_code)] // This type describes the request schema only.
+            data: T,
+        }
+        let settings = schemars::generate::SchemaSettings::draft07()
+            .for_deserialize()
+            .with(|settings| {
+                settings.inline_subschemas = true;
+                settings.meta_schema = None;
+            });
+        let mut parameters = settings
+            .into_generator()
+            .into_root_schema_for::<Envelope<T>>();
+        // Even Option<T> results must arrive inside an explicitly present data
+        // key, matching the native parser's existing contract.
+        parameters.insert("required".into(), serde_json::json!(["data"]));
         let schema_tool = crate::types::ToolDefinition {
             name: "structured_output".to_string(),
             description: "Call this tool to output the parsed structured data.".to_string(),
-            parameters: serde_json::json!({
-                "type": "object",
-                "properties": {
-                    "data": {
-                        "type": "object",
-                        "description": "The structured data matching the requested schema."
-                    }
-                },
-                "required": ["data"]
-            }),
+            parameters: parameters.into(),
         };
 
-        if !current_req
+        let mut reserved = current_req
             .tools
             .iter()
-            .any(|t| t.name == "structured_output")
-        {
+            .filter(|tool| tool.name == "structured_output");
+        if let Some(existing) = reserved.next() {
+            if reserved.next().is_some()
+                || existing.description != schema_tool.description
+                || existing.parameters != schema_tool.parameters
+            {
+                return Err(ToolError::Unexpected(
+                    "Conflicting or duplicate reserved structured_output tool definition"
+                        .to_string(),
+                ));
+            }
+        } else {
             current_req.tools.push(schema_tool);
         }
 
@@ -337,7 +362,7 @@ Expected Schema:
 /// **Returns:**
 /// Returns the parsed strongly-typed output `T` on success, or a `ToolError` on failure (typically `ToolError::LlmRecoverable` or `ToolError::Transient`).
 #[allow(clippy::empty_line_after_doc_comments)]
-pub async fn parse_structured_output<T: DeserializeOwned + Send + Sync>(
+pub async fn parse_structured_output<T: DeserializeOwned + JsonSchema + Send + Sync>(
     llm: &Arc<dyn LlmClientForParser>,
     req: ChatRequest,
     max_retries: usize,
@@ -403,7 +428,7 @@ mod tests {
     use serde::Deserialize;
     use tokio::sync::Mutex;
 
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, JsonSchema, Debug, PartialEq)]
     struct TestOutput {
         result: String,
     }
@@ -844,7 +869,7 @@ mod retry_tests {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, JsonSchema, Debug, PartialEq)]
     struct TestOutput {
         result: String,
     }
@@ -1051,7 +1076,7 @@ mod tests_clamped {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    #[derive(Deserialize, Debug, PartialEq)]
+    #[derive(Deserialize, JsonSchema, Debug, PartialEq)]
     struct TestOutput {
         result: String,
     }
@@ -1279,16 +1304,39 @@ mod tests_clamped {
 fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(
     data: &serde_json::Value,
 ) -> Result<T, String> {
-    match T::deserialize(data) {
+    match serde_path_to_error::deserialize::<_, T>(data) {
         Ok(parsed) => Ok(parsed),
         Err(e) => {
+            // Bound only the added diagnostic location. Serde still owns validation,
+            // and the existing reason/input feedback policy remains unchanged.
+            let mut location = vec![serde_json::json!("data")];
+            for (depth, segment) in e.path().iter().enumerate() {
+                if depth == 32 {
+                    location.push(serde_json::json!("<truncated>"));
+                    break;
+                }
+                let value = match segment {
+                    serde_path_to_error::Segment::Seq { index } => serde_json::json!(index),
+                    serde_path_to_error::Segment::Map { key }
+                    | serde_path_to_error::Segment::Enum { variant: key } => {
+                        if key.len() <= 128 && !key.chars().any(char::is_control) {
+                            serde_json::json!(key)
+                        } else {
+                            serde_json::json!("<redacted>")
+                        }
+                    }
+                    serde_path_to_error::Segment::Unknown => serde_json::json!("<unknown>"),
+                };
+                location.push(value);
+            }
             let args_str = serde_json::to_string(data).unwrap_or_default();
-            Err(crate::types::format_pydantic_error(
-                &e,
+            Err(crate::types::format_pydantic_error_at_location(
+                e.inner(),
                 Some(&args_str),
                 Some(
                     "Please strictly follow the Pydantic-first tool schema and try again. Also ensure all enum variants are exact string matches.",
                 ),
+                Some(location),
             ))
         }
     }
@@ -1317,7 +1365,7 @@ mod strict_output_tests {
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
-    #[derive(Debug, serde::Deserialize, PartialEq)]
+    #[derive(Debug, serde::Deserialize, JsonSchema, PartialEq)]
     struct StrictTestOutput {
         strict: String,
     }

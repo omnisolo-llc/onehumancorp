@@ -9623,6 +9623,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_run_plan_and_execute_retry_fallback() {
+        struct CapturePlanner {
+            inner: Arc<MockLlmClient>,
+            requests: Arc<tokio::sync::Mutex<Vec<ChatRequest>>>,
+        }
+        #[async_trait::async_trait]
+        impl crate::llm::LlmClient for CapturePlanner {
+            async fn chat(
+                &self,
+                req: ChatRequest,
+            ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
+                self.requests.lock().await.push(req.clone());
+                crate::llm::LlmClient::chat(&*self.inner, req).await
+            }
+        }
         let client = Arc::new(MockLlmClient {
             responses: tokio::sync::Mutex::new(vec![
                 ChatResponse {
@@ -9657,6 +9671,11 @@ mod tests {
             ]),
         });
 
+        let requests = Arc::new(tokio::sync::Mutex::new(vec![]));
+        let client = Arc::new(CapturePlanner {
+            inner: client,
+            requests: requests.clone(),
+        });
         let mut cfg = AgentRunConfig::default();
         cfg.enable_llmcompiler_plan_and_execute = true;
 
@@ -9682,6 +9701,16 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "Final Answer");
+        let requests = requests.lock().await;
+        assert_eq!(requests.len(), 3);
+        assert!(requests[0].tools.is_empty());
+        let data = &requests[1]
+            .tools
+            .iter()
+            .find(|tool| tool.name == "structured_output")
+            .unwrap()
+            .parameters["properties"]["data"];
+        assert_eq!(data["type"], "array");
     }
 
     #[tokio::test]

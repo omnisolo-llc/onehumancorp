@@ -1,6 +1,7 @@
 import { CompactEncrypt, decodeProtectedHeader } from "jose";
 import type { CompactJWEHeaderParameters } from "jose";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import legacyTokens from "./sessionCodec.legacy-fixtures.json";
 import { openSession, sealSession } from "./sessionCodec";
 import { parseSessionKeyRing, type SessionKeyRing } from "./sessionKeys";
 import type { SessionCodecContext, WebSession } from "./sessionTypes";
@@ -101,6 +102,105 @@ async function expectInvalid(promise: Promise<unknown>): Promise<void> {
 }
 
 describe("compact JWE web sessions", () => {
+  // Frozen with the pre-JOSE writer at 405733038, the fixture keys above and IV
+  // 00..0b. These test-only vectors do not depend on the current writer.
+  it("reads frozen legacy sessions with active and rotated previous keys", async () => {
+    const ring = await activeRing();
+    const rotated = await rotatedRing();
+    await expect(openSession(legacyTokens["prod-v1"], ring, CONTEXT, NOW)).resolves.toEqual(SESSION);
+    await expect(openSession(legacyTokens["prod-v1"], rotated, CONTEXT, NOW)).resolves.toEqual(SESSION);
+    await expect(openSession(legacyTokens["prod-v2"], rotated, CONTEXT, NOW)).resolves.toEqual(SESSION);
+    await expectInvalid(openSession(legacyTokens["prod-v1"], rotated, CONTEXT, SESSION.exp));
+    await expectInvalid(openSession(legacyTokens["prod-v2"], ring, CONTEXT, NOW));
+  });
+
+  it("writes sessions readable by the legacy WebCrypto reader across key rotation", async () => {
+    for (const ring of [await activeRing(), await rotatedRing()]) {
+      const token = await sealSession(SESSION, ring, CONTEXT, {
+        now: NOW, backendExpiresAt: SESSION.exp,
+      });
+      const [header, encryptedKey, iv, ciphertext, tag] = token.split(".");
+      expect(encryptedKey).toBe("");
+      const plaintext = new Uint8Array(await crypto.subtle.decrypt(
+        {
+          name: "AES-GCM", iv: Buffer.from(iv, "base64url"),
+          additionalData: new TextEncoder().encode(header), tagLength: 128,
+        },
+        ring.active.key,
+        Buffer.concat([Buffer.from(ciphertext, "base64url"), Buffer.from(tag, "base64url")]),
+      ));
+      try {
+        expect(JSON.parse(new TextDecoder().decode(plaintext))).toEqual(wirePayload());
+      } finally {
+        plaintext.fill(0);
+      }
+    }
+  });
+
+  it.each(["success", "encryption failure", "oversized payload"])(
+    "clears every encoded plaintext byte buffer after %s", async (outcome) => {
+      const ring = await activeRing();
+      const buffers: Uint8Array[] = [];
+      const originalEncode = TextEncoder.prototype.encode;
+      const encodeSpy = vi.spyOn(TextEncoder.prototype, "encode").mockImplementation(function (input) {
+        const encoded = originalEncode.call(this, input);
+        if (input?.includes(SESSION.accessToken)) buffers.push(encoded);
+        return encoded;
+      });
+      const encryptSpy = outcome === "encryption failure"
+        ? vi.spyOn(crypto.subtle, "encrypt").mockRejectedValue(new Error("crypto detail must stay private"))
+        : undefined;
+      try {
+        const session = outcome === "oversized payload"
+          ? { ...SESSION, accessToken: SESSION.accessToken.repeat(20), user: { ...SESSION.user, roles: Array(32).fill("r".repeat(64)) } }
+          : SESSION;
+        const result = sealSession(session, ring, CONTEXT, { now: NOW, backendExpiresAt: SESSION.exp });
+        if (outcome === "success") await result;
+        else await expectInvalid(result);
+        expect(buffers.length).toBeGreaterThan(0);
+        for (const buffer of buffers) expect(buffer.every((byte) => byte === 0)).toBe(true);
+      } finally {
+        encodeSpy.mockRestore();
+        encryptSpy?.mockRestore();
+      }
+    },
+  );
+
+  it.each(["success", "invalid claims"])("clears decrypted bytes after %s", async (outcome) => {
+    const ring = await activeRing();
+    const token = await encryptRaw(ring, wirePayload(outcome === "invalid claims" ? { version: 2 } : {}));
+    const originalDecrypt = crypto.subtle.decrypt.bind(crypto.subtle);
+    const buffers: ArrayBuffer[] = [];
+    const decryptSpy = vi.spyOn(crypto.subtle, "decrypt").mockImplementation(async (...args) => {
+      const buffer = await originalDecrypt(...args);
+      buffers.push(buffer);
+      return buffer;
+    });
+    try {
+      const result = openSession(token, ring, CONTEXT, NOW);
+      if (outcome === "success") await expect(result).resolves.toEqual(SESSION);
+      else await expectInvalid(result);
+      expect(buffers).toHaveLength(1);
+      expect(new Uint8Array(buffers[0]).every((byte) => byte === 0)).toBe(true);
+    } finally {
+      decryptSpy.mockRestore();
+    }
+  });
+
+  it.each([
+    ["encrypted key", 1, "AA"],
+    ["short IV", 2, encode(new Uint8Array(11))],
+    ["long IV", 2, encode(new Uint8Array(13))],
+    ["empty ciphertext", 3, ""],
+    ["short tag", 4, encode(new Uint8Array(15))],
+    ["long tag", 4, encode(new Uint8Array(17))],
+    ["padded tag", 4, "YVjm5fdvfJv6Ej32xsB9TQ=="],
+  ])("rejects a malformed compact %s", async (_case, index, segment) => {
+    const segments = legacyTokens["prod-v1"].split(".");
+    segments[index as number] = segment as string;
+    await expectInvalid(openSession(segments.join("."), await activeRing(), CONTEXT, NOW));
+  });
+
   it("round trips confidential claims with randomized ciphertext", async () => {
     const ring = await activeRing();
     const first = await sealSession(SESSION, ring, CONTEXT, {

@@ -58,7 +58,7 @@ describe('InstagramDMCard', () => {
 
     render(<InstagramDMCard approval={approval} onApprove={onApprove} />);
 
-    const btn = screen.getByTestId('feed-approve-btn');
+    const btn = screen.getByTestId('approve-instagram-dm');
     fireEvent.click(btn);
 
     expect(onApprove).toHaveBeenCalledTimes(1);

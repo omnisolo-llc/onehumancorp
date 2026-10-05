@@ -14,7 +14,7 @@ uuid = { version = "1", features = ["v4"] }
 server_common = { path = "../../src/server/common" }
 tower = { version = "0.5", features = ["util"] }
 dashmap = "=5.5.3"
-redis = { version = "=0.27.6", features = ["tokio-comp"] }
+redis = { version = "=0.27.6", features = ["tokio-comp", "connection-manager"] }
 [lib]
 path = "generated.rs"
 [profile.dev]

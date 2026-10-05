@@ -30,7 +30,11 @@ impl NativeRuntime {
 
 fn backend_origin() -> Result<String, String> {
     let value = std::env::var("BACKEND_URL").unwrap_or_else(|_| "http://127.0.0.1:18789".into());
-    let url = reqwest::Url::parse(&value).map_err(|_| "BACKEND_URL must be an absolute origin")?;
+    parse_backend_origin(&value)
+}
+
+fn parse_backend_origin(value: &str) -> Result<String, String> {
+    let url = tauri::Url::parse(value).map_err(|_| "BACKEND_URL must be an absolute origin")?;
     let loopback = matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
     if !url.username().is_empty()
         || url.password().is_some()
@@ -93,7 +97,7 @@ fn resource_root(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
         .join("native-runtime"))
 }
 
-fn start(app: &tauri::AppHandle) -> Result<reqwest::Url, String> {
+fn start(app: &tauri::AppHandle) -> Result<tauri::Url, String> {
     let resources = resource_root(app)?;
     let node = resources
         .join("bin")
@@ -194,8 +198,7 @@ fn start(app: &tauri::AppHandle) -> Result<reqwest::Url, String> {
     {
         return Err("The local workspace exited during startup".into());
     }
-    reqwest::Url::parse(&format!("http://127.0.0.1:{port}/login"))
-        .map_err(|error| error.to_string())
+    tauri::Url::parse(&format!("http://127.0.0.1:{port}/login")).map_err(|error| error.to_string())
 }
 
 pub fn start_window(app: tauri::AppHandle) {
@@ -225,6 +228,46 @@ pub fn start_window(app: tauri::AppHandle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn backend_origin_preserves_https_and_loopback_origins() {
+        for (value, expected) in [
+            ("https://api.example.com/", "https://api.example.com"),
+            (
+                "https://api.example.com:8443",
+                "https://api.example.com:8443",
+            ),
+            ("http://127.0.0.1:18789", "http://127.0.0.1:18789"),
+            ("http://[::1]:18789/", "http://[::1]:18789"),
+            ("http://localhost:18789/", "http://localhost:18789"),
+        ] {
+            assert_eq!(parse_backend_origin(value).unwrap(), expected, "{value}");
+        }
+    }
+
+    #[test]
+    fn backend_origin_rejects_credentials_non_origins_and_non_loopback_http() {
+        for value in [
+            "https://user@example.com",
+            "https://user:password@example.com",
+            "https://:password@example.com",
+            "https://example.com/path",
+            "https://example.com/?query=1",
+            "https://example.com/#fragment",
+            "http://example.com",
+            "http://localhost.example.com",
+            "http://192.168.1.1",
+            "http://[::2]",
+            "ftp://localhost",
+            "file:///tmp/app",
+            "example.com",
+            "https://[invalid]",
+            "",
+        ] {
+            assert!(parse_backend_origin(value).is_err(), "{value}");
+        }
+    }
+
     #[test]
     fn oversized_lines_are_bounded_and_following_readiness_survives() {
         let mut data = vec![b'x'; 100_000];

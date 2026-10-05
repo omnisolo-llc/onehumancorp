@@ -12,6 +12,26 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_redis_reconnect_requires_owned_fixture_and_complete_inventory(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        self.assertEqual(gate.GATES.get('redis-reconnect'), (20, None))
+        steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/redis-reconnect/fetch.sh')
+        execute = next(i for i, step in enumerate(steps) if step.get('run') == 'python3 scripts/focused_ci_gate.py redis-reconnect')
+        self.assertLess(fetch, execute)
+        self.assertEqual(steps[execute].get('env', {}), {'CARGO_TARGET_DIR': 'target'})
+        runner = (root/'scripts/redis-reconnect/run.sh').read_text()
+        self.assertIn('--locked --offline', runner)
+        self.assertIn('verify_source.py verify', runner)
+        self.assertIn('verify_lock.py', runner)
+        minimum, _ = gate.GATES['redis-reconnect']
+        for result in ['19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out',
+                       '20 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out',
+                       '20 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out']:
+            with self.assertRaises(ValueError):
+                gate.validate_results('test result: ok. '+result+';', minimum)
+
     def test_cash_runner_rejects_unavailable_redis_before_native_execution(self):
         import os
         import shutil
@@ -438,7 +458,7 @@ if sys.argv[1] == 'test':
         self.assertIn('process.versions.node', witness)
     def test_agent_receipt_postgres_gate_keeps_real_storage_and_sqlite_inventory(self):
         minimum, database = gate.GATES['agent-receipt-postgres-contract']
-        self.assertGreaterEqual(minimum, 56)
+        self.assertGreaterEqual(minimum, 97)
         self.assertEqual(database, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/agent-receipt-postgres-contract/run.sh').read_text()
@@ -566,6 +586,28 @@ if sys.argv[1] == 'test':
         runner = Path(__file__).resolve().parents[1]/'scripts/agent-workflow-contract/run.sh'
         self.assertTrue(runner.is_file())
 
+    def test_agent_workflow_generated_provider_tests_keep_the_real_schema_helper(self):
+        import hashlib
+        import re
+        import runpy
+        root = Path(__file__).resolve().parents[1]
+        folder = root/'scripts/agent-workflow-contract'
+        prepared = runpy.run_path(str(folder/'prepare.py'))
+        generated = (folder/'generated.rs').read_text()
+        wire = prepared['extract_item'](generated, 'mod', 'llm_wire_contract')
+        helper = root/'src/agents/builtin/llm/structured_output_test.rs'
+        self.assertRegex(wire, r'#\[cfg\(test\)\]\s*#\[path='
+                         + re.escape(json.dumps(str(helper)))
+                         + r'\]\s*mod structured_output_test;')
+        self.assertNotIn('async fn array_request', wire, 'include the canonical helper, not a copied schema fixture')
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        for relative in ['src/agents/builtin/llm/structured_output_test.rs',
+                         'src/agents/builtin/llm/mod.rs',
+                         'src/agents/builtin/llm/anthropic.rs',
+                         'src/agents/builtin/llm/openai.rs',
+                         'src/agents/builtin/output_parser.rs']:
+            self.assertEqual(manifest.get(relative), hashlib.sha256((root/relative).read_bytes()).hexdigest())
+
     def test_checkpoint_restore_gate_requires_all_cases_and_owned_database(self):
         minimum, database = gate.GATES['checkpoint-restore-contract']
         self.assertGreaterEqual(minimum, 37)
@@ -663,6 +705,84 @@ if sys.argv[1] == 'test':
         for job_name in ['postgres-security', 'native-test']:
             uploads=[s for s in source['jobs'][job_name]['steps'] if s.get('uses','').startswith('actions/upload-artifact@')]
             self.assertTrue(any(s.get('if')=='always()' and s['with']['path']=='target/focused-ci-results' for s in uploads), job_name)
+
+
+class WorkflowWitnessLockTests(unittest.TestCase):
+    def setUp(self):
+        import shutil
+        self.root = Path(__file__).resolve().parents[1]
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        sandbox = Path(temporary.name)
+        self.here = sandbox/'scripts/agent-workflow-contract'
+        self.here.mkdir(parents=True)
+        client = sandbox/'src/ui/next'
+        client.mkdir(parents=True)
+        shutil.copyfile(self.root/'scripts/agent-workflow-contract/verify_node_lock.py', self.here/'verify_node_lock.py')
+        shutil.copyfile(self.root/'src/ui/next/package-lock.json', client/'package-lock.json')
+        canonical = json.loads((client/'package-lock.json').read_text())['packages']
+        self.dependencies = {name: canonical[f'node_modules/{name}']['version'] for name in ['jose', 'typescript']}
+        self.packages = {'': {'dependencies': self.dependencies.copy()},
+                         **{f'node_modules/{name}': canonical[f'node_modules/{name}'].copy() for name in self.dependencies}}
+        for name in self.dependencies:
+            self.packages[f'node_modules/{name}'].pop('dev', None)
+
+    def verify(self, dependencies, packages):
+        import subprocess
+        import sys
+        (self.here/'package.json').write_text(json.dumps({'dependencies': dependencies}))
+        (self.here/'package-lock.json').write_text(json.dumps({'packages': packages}))
+        return subprocess.run([sys.executable, str(self.here/'verify_node_lock.py')], capture_output=True, text=True)
+
+    def test_complete_witness_matches_both_canonical_packages(self):
+        result = self.verify(self.dependencies, self.packages)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_typescript_only_witness_cannot_certify_the_session_proxy(self):
+        del self.dependencies['jose']
+        del self.packages['']['dependencies']['jose']
+        del self.packages['node_modules/jose']
+        self.assertNotEqual(self.verify(self.dependencies, self.packages).returncode, 0)
+
+    def test_witness_rejects_package_drift_and_unpaired_or_extra_dependencies(self):
+        import copy
+        for name in self.dependencies:
+            for field in ['version', 'resolved', 'integrity']:
+                with self.subTest(package=name, field=field):
+                    packages = copy.deepcopy(self.packages)
+                    packages[f'node_modules/{name}'][field] = 'mismatched'
+                    self.assertNotEqual(self.verify(self.dependencies, packages).returncode, 0)
+        for change in ['manifest_pin', 'lock_pin', 'extra_manifest', 'extra_package', 'missing_package', 'dev_only']:
+            with self.subTest(change=change):
+                dependencies = self.dependencies.copy()
+                packages = copy.deepcopy(self.packages)
+                if change == 'manifest_pin': dependencies['jose'] = '^'+dependencies['jose']
+                elif change == 'lock_pin': packages['']['dependencies']['jose'] = '^'+dependencies['jose']
+                elif change == 'extra_manifest': dependencies['unrelated'] = '1.0.0'
+                elif change == 'extra_package': packages['node_modules/unrelated'] = {'version': '1.0.0'}
+                elif change == 'dev_only': packages['node_modules/jose']['dev'] = True
+                else: del packages['node_modules/jose']
+                self.assertNotEqual(self.verify(dependencies, packages).returncode, 0)
+
+    def test_receipt_source_manifest_binds_the_shared_witness_installation(self):
+        import hashlib
+        import runpy
+        folder = self.root/'scripts/agent-receipt-postgres-contract'
+        runpy.run_path(str(folder/'prepare.py'))
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        paths = [self.root/'scripts/agent-workflow-contract'/name for name in ['package.json', 'package-lock.json']]
+        paths += [self.root/path for path in [
+            'src/server/lib.rs', 'src/server/api/dynamic_workflows.rs',
+            'src/server/orchestration/dynamic_workflows.rs', 'src/server/queue.rs',
+            'src/server/migrations/104_sub_agent_queue.sql',
+            'scripts/agent-receipt-postgres-contract/dynamic_workflow_test.rs',
+            'scripts/agent-receipt-postgres-contract/dynamic_queue_test.rs',
+            'scripts/agent-receipt-postgres-contract/Cargo.toml',
+            'scripts/agent-receipt-postgres-contract/Cargo.lock',
+            'scripts/rust_source.py',
+        ]]
+        for path in paths:
+            self.assertEqual(manifest.get(str(path.relative_to(self.root))), hashlib.sha256(path.read_bytes()).hexdigest())
 
 
 if __name__ == '__main__':

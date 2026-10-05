@@ -25,115 +25,130 @@ pub async fn start_cache_invalidator(pool: sqlx::PgPool) {
         }
     };
 
-    let mut pubsub_conn = match client.get_async_pubsub().await {
-        Ok(conn) => conn,
-        Err(e) => {
-            error!("Failed to get Redis pubsub connection: {}", e);
-            return;
-        }
-    };
-
-    if let Err(e) = pubsub_conn.subscribe("cache_invalidation_events").await {
-        error!("Failed to subscribe to cache_invalidation_events: {}", e);
-        return;
-    }
-
-    info!("Cache Invalidator Service started, listening on cache_invalidation_events");
-
-    let mut stream = pubsub_conn.on_message();
-
     let edge_cache = crate::builder::edge::get_edge_cache();
 
-    while let Some(msg) = stream.next().await {
-        let payload: String = match msg.get_payload() {
-            Ok(p) => p,
-            Err(e) => {
-                error!("Failed to get message payload: {}", e);
+    loop {
+        // Pub/Sub has no replay. Bound connection + subscription together,
+        // then explicitly subscribe again after EOF; missed events stay lost.
+        let subscription = tokio::time::timeout(std::time::Duration::from_millis(500), async {
+            let mut connection = client.get_async_pubsub().await?;
+            connection.subscribe("cache_invalidation_events").await?;
+            Ok::<_, redis::RedisError>(connection)
+        })
+        .await;
+        let mut pubsub_conn = match subscription {
+            Ok(Ok(connection)) => connection,
+            Ok(Err(error)) => {
+                warn!("Cache invalidation subscription unavailable: {}", error);
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                continue;
+            }
+            Err(_) => {
+                warn!("Cache invalidation subscription timed out after 500ms");
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
                 continue;
             }
         };
 
-        match serde_json::from_str::<InvalidationEvent>(&payload) {
-            Ok(event) => {
-                info!("Received invalidation event: {}", event.event);
-                let mut tenant_id_str = None;
-                let mut product_id_str = None;
+        info!("Cache Invalidator Service listening on cache_invalidation_events");
+        let mut stream = pubsub_conn.on_message();
 
-                let client = reqwest::Client::new();
-                for tag in &event.tags {
-                    info!("Invalidating cache for tag: {}", tag);
-                    if tag.starts_with("tenant-id:") {
-                        tenant_id_str = Some(tag.trim_start_matches("tenant-id:").to_string());
-                    } else if tag.starts_with("entity:product:") {
-                        product_id_str =
-                            Some(tag.trim_start_matches("entity:product:").to_string());
-                    }
+        while let Some(msg) = stream.next().await {
+            let payload: String = match msg.get_payload() {
+                Ok(p) => p,
+                Err(e) => {
+                    error!("Failed to get message payload: {}", e);
+                    continue;
                 }
+            };
 
-                let edge_cache_ref = edge_cache.clone();
-                let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
-                let futures = event.tags.iter().map(|tag| {
-                    let edge_cache_clone = edge_cache_ref.clone();
-                    let cdn_cache_clone = cdn_cache.clone();
-                    let client_clone = client.clone();
-                    let tag_clone = tag.clone();
-                    async move {
-                        edge_cache_clone.invalidate_by_tag(&tag_clone).await;
-                        cdn_cache_clone.invalidate_by_tag(&tag_clone).await;
+            match serde_json::from_str::<InvalidationEvent>(&payload) {
+                Ok(event) => {
+                    info!("Received invalidation event: {}", event.event);
+                    let mut tenant_id_str = None;
+                    let mut product_id_str = None;
 
-                        // Send purge request to NGINX Edge Cache
-                        if let Err(e) = client_clone
-                            .post("http://edge-cache/purge")
-                            .body(tag_clone.clone())
-                            .send()
-                            .await
-                        {
-                            warn!(
-                                "Failed to send purge request to NGINX for tag {}: {}",
-                                tag_clone, e
-                            );
-                        } else {
-                            info!(
-                                "Successfully sent purge request to NGINX for tag {}",
-                                tag_clone
-                            );
+                    let client = reqwest::Client::new();
+                    for tag in &event.tags {
+                        info!("Invalidating cache for tag: {}", tag);
+                        if tag.starts_with("tenant-id:") {
+                            tenant_id_str = Some(tag.trim_start_matches("tenant-id:").to_string());
+                        } else if tag.starts_with("entity:product:") {
+                            product_id_str =
+                                Some(tag.trim_start_matches("entity:product:").to_string());
                         }
                     }
-                });
-                futures::future::join_all(futures).await;
 
-                if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str)
-                    && let (Ok(tenant_id), Ok(product_id)) =
-                        (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str))
-                {
-                    let site_id_res = sqlx::query_scalar::<_, uuid::Uuid>(
+                    let edge_cache_ref = edge_cache.clone();
+                    let cdn_cache = crate::utils::edge_caching_middleware::get_cdn_cache();
+                    let futures = event.tags.iter().map(|tag| {
+                        let edge_cache_clone = edge_cache_ref.clone();
+                        let cdn_cache_clone = cdn_cache.clone();
+                        let client_clone = client.clone();
+                        let tag_clone = tag.clone();
+                        async move {
+                            edge_cache_clone.invalidate_by_tag(&tag_clone).await;
+                            cdn_cache_clone.invalidate_by_tag(&tag_clone).await;
+
+                            // Send purge request to NGINX Edge Cache
+                            if let Err(e) = client_clone
+                                .post("http://edge-cache/purge")
+                                .body(tag_clone.clone())
+                                .send()
+                                .await
+                            {
+                                warn!(
+                                    "Failed to send purge request to NGINX for tag {}: {}",
+                                    tag_clone, e
+                                );
+                            } else {
+                                info!(
+                                    "Successfully sent purge request to NGINX for tag {}",
+                                    tag_clone
+                                );
+                            }
+                        }
+                    });
+                    futures::future::join_all(futures).await;
+
+                    if let (Some(t_str), Some(p_str)) = (tenant_id_str, product_id_str)
+                        && let (Ok(tenant_id), Ok(product_id)) =
+                            (uuid::Uuid::parse_str(&t_str), uuid::Uuid::parse_str(&p_str))
+                    {
+                        let site_id_res = sqlx::query_scalar::<_, uuid::Uuid>(
                             "SELECT id FROM builder_sites WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1"
                         )
                         .bind(tenant_id)
                         .fetch_one(&pool)
                         .await;
 
-                    if let Ok(_site_id) = site_id_res {
-                        info!(
-                            "Pre-warming cache for product: {} tenant: {}",
-                            product_id, tenant_id
-                        );
-                        let cache_key = format!("storefront:product:{}:{}", tenant_id, product_id);
-                        let _ = crate::builder::edge::regenerate_product_cache(
-                            pool.clone(),
-                            tenant_id,
-                            product_id,
-                            cache_key,
-                            edge_cache.clone(),
-                        )
-                        .await;
+                        if let Ok(_site_id) = site_id_res {
+                            info!(
+                                "Pre-warming cache for product: {} tenant: {}",
+                                product_id, tenant_id
+                            );
+                            let cache_key =
+                                format!("storefront:product:{}:{}", tenant_id, product_id);
+                            let _ = crate::builder::edge::regenerate_product_cache(
+                                pool.clone(),
+                                tenant_id,
+                                product_id,
+                                cache_key,
+                                edge_cache.clone(),
+                            )
+                            .await;
+                        }
                     }
                 }
-            }
-            Err(e) => {
-                error!("Failed to parse invalidation event: {}", e);
+                Err(e) => {
+                    error!("Failed to parse invalidation event: {}", e);
+                }
             }
         }
+        warn!(
+            "Cache invalidation stream ended; reconnecting. Events missed while disconnected cannot be recovered by Pub/Sub; existing cache expiry still applies."
+        );
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
 }
 

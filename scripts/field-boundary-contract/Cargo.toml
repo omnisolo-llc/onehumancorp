@@ -26,7 +26,7 @@ tower = { version = "0.5", features = ["util"] }
 async-trait = "0.1"
 futures = "=0.3.32"
 dashmap = "=5.5.3"
-redis = { version = "=0.27.6", features = ["tokio-comp"] }
+redis = { version = "=0.27.6", features = ["tokio-comp", "connection-manager"] }
 server_omnisolo = { path = "../../src/server/omnisolo" }
 [lib]
 path = "generated.rs"
