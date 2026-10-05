@@ -327,14 +327,27 @@ use axum::body::Bytes;
 pub async fn handle_relay_webhook(
     State(server): State<ReverseTunnelServer>,
     Path(agent_id): Path<String>,
+    auth: Option<axum::Extension<::server_auth::orchestration::AuthInfo>>,
     body: Bytes,
 ) -> impl IntoResponse {
-    match server.forward_webhook(&agent_id, body.to_vec()).await {
+    let Some(axum::Extension(auth)) = auth else {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(McpWebhookResponse {
+                success: false,
+                message: "Authenticated organization is required".to_string(),
+            }),
+        );
+    };
+    match server
+        .forward_webhook(&auth.org_id, &agent_id, body.to_vec())
+        .await
+    {
         Ok(_) => (
             StatusCode::OK,
             Json(McpWebhookResponse {
                 success: true,
-                message: "Webhook forwarded successfully".to_string(),
+                message: "Webhook queued for connected proxy".to_string(),
             }),
         ),
         Err(e) => {
