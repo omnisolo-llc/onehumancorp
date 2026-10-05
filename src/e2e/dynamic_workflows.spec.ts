@@ -73,7 +73,7 @@ test.describe('Dynamic Workflows Orhestrator', () => {
       } finally { await otherIdentity.dispose(); }
       for (const method of ['GET', 'POST']) {
         const path = `/api/v1/dynamic-workflows/${planId}${method === 'POST' ? '/confirm' : ''}`;
-        const denied = await request.fetch(path, { method, headers: { origin }, maxRedirects: 0 });
+        const denied = await request.fetch(path, { method, headers: { origin, 'sec-fetch-site': 'same-origin' }, maxRedirects: 0 });
         try {
           const deniedRaw = await capture(denied, `foreign-${method}`);
           expect(denied.status(), deniedRaw).toBe(404);
@@ -83,7 +83,7 @@ test.describe('Dynamic Workflows Orhestrator', () => {
       const anonymous = await playwrightRequest.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
       try {
         for (const method of ['GET', 'POST']) {
-          const denied = await anonymous.fetch(`/api/v1/dynamic-workflows/${planId}${method === 'POST' ? '/confirm' : ''}`, { method, headers: { origin }, maxRedirects: 0 });
+          const denied = await anonymous.fetch(`/api/v1/dynamic-workflows/${planId}${method === 'POST' ? '/confirm' : ''}`, { method, headers: { origin, 'sec-fetch-site': 'same-origin' }, maxRedirects: 0 });
           try { await capture(denied, `anonymous-${method}`); expect(denied.status()).toBe(401); }
           finally { await denied.dispose(); }
         }

@@ -3052,6 +3052,27 @@ mod tests {
             .expect("Failed to connect to DB")
     }
 
+    async fn affiliate_stats_test_pool() -> PgPool {
+        let raw = std::env::var("OHC_AFFILIATE_TEST_DATABASE_URL")
+            .expect("OHC_AFFILIATE_TEST_DATABASE_URL must identify the owned affiliate database");
+        let url = url::Url::parse(&raw).expect("affiliate test database URL must be valid");
+        assert!(
+            matches!(url.scheme(), "postgres" | "postgresql")
+                && matches!(url.host_str(), Some("127.0.0.1" | "[::1]"))
+                && url.port().is_some()
+                && url.path() == "/ohc_affiliate_test"
+                && url.query().is_none()
+                && url.fragment().is_none(),
+            "affiliate tests require an explicit loopback ohc_affiliate_test database without URL options"
+        );
+        crate::db::secure_pg_pool_options()
+            .acquire_timeout(std::time::Duration::from_millis(500))
+            .max_connections(1)
+            .connect(url.as_str())
+            .await
+            .expect("owned affiliate database must be available")
+    }
+
     fn affiliate_stats_state(pool: PgPool) -> GrowthState {
         let (event_tx, _) = tokio::sync::mpsc::channel(100);
         GrowthState {
@@ -3086,10 +3107,10 @@ mod tests {
 
     #[tokio::test]
     async fn affiliate_stats_reports_actual_tenant_aggregates_and_explicit_zero() {
-        // setup_db creates a dedicated one-connection pool. Temporary tables
+        // The fixture creates a dedicated one-connection pool. Temporary tables
         // shadow only this connection's production names; no shared schema or
         // other tenant's persistent data is created, removed or changed.
-        let pool = setup_db().await;
+        let pool = affiliate_stats_test_pool().await;
         sqlx::query("CREATE TEMP TABLE affiliate_links (tenant_id TEXT NOT NULL)")
             .execute(&pool)
             .await
@@ -3127,7 +3148,7 @@ mod tests {
     #[tokio::test]
     async fn affiliate_stats_rejects_partial_results_when_either_aggregate_fails() {
         for failed_aggregate in ["affiliates", "commissions"] {
-            let pool = setup_db().await;
+            let pool = affiliate_stats_test_pool().await;
             let links_schema = if failed_aggregate == "affiliates" {
                 "CREATE TEMP TABLE affiliate_links (missing_tenant TEXT)"
             } else {
