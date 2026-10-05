@@ -21,6 +21,19 @@ maps them to `Status::internal`. This change does not provide durable idempotenc
 or a reconciliation workflow across separate caller invocations. Daily remains a
 separate crate; this test gate does not activate it in the root registry.
 
+Cal.com is a separate, limited truthfulness fix. Its current v1 response schema
+could not be verified from the official documentation available during review.
+The client retains only its existing nonempty **string** `booking.id` contract;
+numeric IDs and a v2 migration require verified provider documentation and new
+fixtures. Local success tests prove preservation of that existing contract, not
+live v1 compatibility. Missing, malformed, duplicate or unsupported receipts
+return an unknown outcome instead of `mock_event_123`; creation has the same
+deadline, retry, redirect and 64 KiB receipt limits described above. Availability
+read/transport failures return errors without exposing the API key in its query
+string. Booking-link lookup is unavailable until a verified account/team owner
+and event-type mapping can resolve an actual URL; it rejects before network I/O
+instead of inventing an `omnisolo-tenant` URL. No caller is activated or migrated.
+
 The WhatsApp harness supplies only the handler's unrelated registry state and request DTO shape. Its registry is a negative effect sentinel: any attempt to configure an unverified connection is recorded and returns an error. It does not manufacture a successful connection. Both complete production handlers must return an unavailable response without invoking that effect. Actual provider verification and encrypted credential persistence are unavailable in this mounted path; `pending_verification` does not represent a queued verification job.
 
 Separate UI tests check that an absent Meta SDK causes no credential or connect request, an unavailable server result cannot show a connected state, and voice provisioning needs an explicit valid acknowledgement. Acknowledged voice numbers are already persisted by the backend, so the UI does not issue a second settings mutation. Unknown provisioning outcomes remain visibly held in the current view; a durable server reconciliation hold is a separately tracked follow-on. No live deployment, Meta ceremony, real phone assignment or cross-reload safety is certified by this focused gate.
