@@ -44,6 +44,7 @@ impl LocalProxyClient {
     }
 
     pub async fn start(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        ::server_auth::parse_spiffe_id(&self.spiffe_id)?;
         let (tx, rx) = mpsc::channel(128);
 
         // Initial registration
@@ -63,10 +64,13 @@ impl LocalProxyClient {
             .await;
 
         let request_stream = ReceiverStream::new(rx);
-        let response = self
-            .client
-            .establish_tunnel(Request::new(request_stream))
-            .await?;
+        let mut request = Request::new(request_stream);
+        // The existing standalone interceptor validates this identity. Cloud
+        // authentication continues to derive identity from the peer certificate.
+        request
+            .metadata_mut()
+            .insert("x-spiffe-id", self.spiffe_id.parse()?);
+        let response = self.client.establish_tunnel(request).await?;
         let mut in_stream = response.into_inner();
 
         let tx_clone = tx.clone();
