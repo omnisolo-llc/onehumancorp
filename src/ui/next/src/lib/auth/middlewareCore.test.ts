@@ -26,6 +26,8 @@ const retiredPages = [
   ["/api/v1/ui/changelog.html", "/changelog"],
   ["/unified-feed.html", "/unified-feed"],
   ["/ui/unified-feed.html", "/unified-feed"],
+  ["/booking-create.html", "/services/new"],
+  ["/ui/booking-create.html", "/services/new"],
 ] as const;
 const config: AuthRuntimeConfig = {
   canonicalOrigin: "https://app.example.com",
@@ -101,6 +103,33 @@ describe("middleware request description", () => {
 });
 
 describe("retired static page navigation", () => {
+  it.each(["/booking-create.html", "/ui/booking-create.html"])("preserves the exact booking query and protected method boundary for %s", async (oldPath) => {
+    const deps = await dependencies();
+    const session = await cookie(deps);
+    const query = "?tenant=foreign-tenant&campaign=retirement&campaign=again&opaque=%e2%9c%93+%20";
+    for (const method of ["GET", "HEAD"]) {
+      expect(await evaluateAuthMiddleware(request(oldPath + query, { method }, session), deps))
+        .toMatchObject({ kind: "redirect", location: "/services/new" + query });
+      expect(await evaluateAuthMiddleware(request(oldPath + query, { method }), deps))
+        .toMatchObject({ kind: "redirect", location: `/login?next=${encodeURIComponent(oldPath + query)}` });
+      // Keep the existing anti-ambiguity return-path guard for encoded slashes.
+      expect(await evaluateAuthMiddleware(request(oldPath + "?opaque=%2f%2F", { method }), deps))
+        .toMatchObject({ kind: "redirect", location: "/login?next=%2Fdashboard" });
+      expect(await evaluateAuthMiddleware(request(oldPath + "?opaque=%2f%2F", { method }, session), deps))
+        .toMatchObject({ kind: "redirect", location: "/services/new?opaque=%2f%2F" });
+    }
+    for (const method of ["POST", "PUT", "PATCH", "DELETE"]) {
+      expect(await evaluateAuthMiddleware(request(oldPath, {
+        method, headers: { origin: config.canonicalOrigin, "sec-fetch-site": "same-origin" },
+      }, session), deps)).toMatchObject({ kind: "next" });
+      expect(await evaluateAuthMiddleware(request(oldPath, {
+        method, headers: { origin: "https://foreign.example", "sec-fetch-site": "cross-site" },
+      }, session), deps)).toMatchObject({ kind: "response", status: 403 });
+    }
+    for (const unlisted of [`${oldPath}/extra`, oldPath.replace(".html", "%2ehtml"), oldPath.toUpperCase()]) {
+      expect((await evaluateAuthMiddleware(request(unlisted, {}, session), deps)).kind).not.toBe("redirect");
+    }
+  });
   it.each(retiredPages)("redirects authenticated GET/HEAD %s to %s without dropping queries", async (oldPath, canonical) => {
     const deps = await dependencies();
     const session = await cookie(deps);
