@@ -78,19 +78,19 @@ class NativeCacheTests(unittest.TestCase):
                 peak = max(peak, sum(weights[name] for name in concurrent))
         return peak
 
-    def test_complete_ci_graph_uses_at_most_ten_concurrent_runners(self):
+    def test_complete_ci_graph_uses_at_most_seven_concurrent_runners(self):
         peak = self.runner_bound(self.ci['jobs'])
-        self.assertLessEqual(peak, 10, f'CI can occupy {peak} runners concurrently')
+        self.assertLessEqual(peak, 7, f'CI can occupy {peak} runners concurrently')
 
-    def test_removing_docker_completion_fence_requires_eleven_runners(self):
+    def test_removing_docker_completion_fence_requires_eight_runners(self):
         jobs = copy.deepcopy(self.ci['jobs'])
         jobs['docker-e2e']['needs'] = [name for name in jobs['docker-e2e']['needs']
                                       if name != 'native-node']
-        self.assertEqual(self.runner_bound(jobs), 11)
+        self.assertEqual(self.runner_bound(jobs), 8)
 
     def test_browser_shards_keep_running_after_independent_quality_failure(self):
         job = self.ci['jobs']['native-e2e']
-        self.assertEqual(job['strategy']['matrix']['shard'], list(range(1, 13)))
+        self.assertEqual(job['strategy']['matrix']['shard'], [1, 2, 3])
         self.assertIn('!cancelled()', job['if'])
         self.assertIn("needs.native-build.result == 'success'", job['if'])
         self.assertIn("needs.native-web.result == 'success'", job['if'])
@@ -143,6 +143,22 @@ class NativeCacheTests(unittest.TestCase):
         self.assertIn('/_cacache', metadata['run'])
         node = next(s for s in self.steps if s.get('uses', '').startswith('actions/setup-node@'))
         self.assertFalse(node['with']['package-manager-cache'], 'no second implicit cache writer')
+
+    def test_node_contracts_prepare_locked_rust_parser_before_offline_guards(self):
+        steps = self.ci['jobs']['native-node']['steps']
+        setup = next(s for s in steps if s.get('uses') == './.github/actions/setup-native')
+        self.assertEqual(setup['with'].get('rust'), 'true', 'contracts execute the real Rust source parser')
+        self.assertEqual(setup['with']['role'], 'contract-parser')
+        preparations = [s for s in steps if 'ohc-rust-source-extract' in s.get('run', '')]
+        self.assertEqual(len(preparations), 1, 'cold runners need one required parser bootstrap')
+        prepare = preparations[0]
+        self.assertEqual(prepare['run'].split(), ['cargo', 'build', '--locked', '-p', 'ohc-rust-source-extract'])
+        self.assertNotIn('if', prepare, 'bootstrap must run on cold-cache requests too')
+        self.assertFalse(prepare.get('continue-on-error', False))
+        contracts = next(s for s in steps if s.get('run') == 'make test-contracts')
+        self.assertLess(steps.index(setup), steps.index(prepare))
+        self.assertLess(steps.index(prepare), steps.index(contracts))
+        self.assertFalse(contracts.get('continue-on-error', False))
 
     def test_locked_installer_obeys_scope_and_propagates_failure(self):
         body = self.step('Install locked Node dependencies')['run']

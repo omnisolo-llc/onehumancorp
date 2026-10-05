@@ -344,9 +344,12 @@ jobs:
       - uses: ./.github/actions/setup-native
         id: native-setup
         with:
-          rust: 'false'
+          rust: 'true'
+          role: contract-parser
           node-scope: all
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Prepare the locked Rust parser for offline source contracts
+        run: cargo build --locked -p ohc-rust-source-extract
       - name: Install Python workflow-contract dependency
         run: sudo apt-get update && sudo apt-get install -y python3-yaml
       # Independent checks retain their own failing conclusions. A lint failure
@@ -433,23 +436,22 @@ jobs:
         run: cargo test --locked -p app
 
   native-e2e:
-    name: Native real-stack Playwright ${{ matrix.shard }}/12
+    name: Native real-stack Playwright ${{ matrix.shard }}/3
     strategy:
       fail-fast: false
-      # Keep all twelve shards and two workers per isolated runner. Six slots
-      # reduce queued browser waves without adding jobs or repeated builds.
-      # Desktop and Docker's Node fence bound other overlap to four runners
-      # (exhaustive DAG-tested workflow total: ten).
-      max-parallel: 6
+      # Three duration-balanced runners combine complete logical shard units.
+      # Each logical shard starts its own isolated stack with two workers;
+      # exact discovery unions are checked before execution and in the final gate.
+      max-parallel: 3
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        shard: [1, 2, 3]
     needs: [check-changes, native-build, native-web, dependency-audit, native-desktop]
     # Browser setup owns its database; PostgreSQL correctness remains mandatory
     # in CI Required and can run concurrently. Desktop releases its runner first.
     # A quality failure must not conceal browser results for successfully built code.
     if: ${{ !cancelled() && needs.check-changes.outputs.markdown-only == 'false' && needs.native-build.result == 'success' && needs.native-web.result == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-native
@@ -470,7 +472,7 @@ jobs:
           chmod +x target/debug/server target/debug/omnisolo-builtin-agent target/debug/grpc-mtls-probe
           npx --no-install playwright install --with-deps chromium
       - name: Execute complete real-stack suite shard
-        run: npm run test:e2e -- --ci --shard=${{ matrix.shard }}/12 --workers=2 --retries=0
+        run: npm run test:e2e -- --ci --grouped-shard=${{ matrix.shard }}/3 --workers=2 --retries=0
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -480,7 +482,16 @@ jobs:
             test-results
           retention-days: 7
 
-
+      - name: Retain compact browser failure diagnostics
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: native-browser-failures-${{ matrix.shard }}
+          path: |
+            test-results/native/**/error-context.md
+            test-results/native/**/test-failed-*.png
+          if-no-files-found: warn
+          retention-days: 7
       - name: Retain actual per-shard click assertions
         uses: actions/upload-artifact@v6
         if: always()
@@ -510,7 +521,7 @@ jobs:
       - name: Require every actual route and target assertion
         run: |
           set -euo pipefail
-          node scripts/ui-click-audit.cjs target/click-receipts 12 | tee click-coverage-result.json
+          node scripts/ui-click-audit.cjs target/click-receipts 12 --grouped | tee click-coverage-result.json
       - uses: actions/upload-artifact@v6
         if: always()
         with:
@@ -1042,6 +1053,16 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_feed_decision_test
           python3 scripts/focused_ci_gate.py agent-feed-decision-contract
 
+      - name: Fetch locked Redis reconnect dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/redis-reconnect/fetch.sh
+
+      - name: Verify owned Redis reconnect and non-replay behavior
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py redis-reconnect
+
       - name: Fetch locked cash receipt dependencies
         if: ${{ !cancelled() }}
         run: bash scripts/cash-receipts/fetch.sh
@@ -1331,7 +1352,7 @@ jobs:
           fi
       - uses: actions/checkout@v6
         if: always()
-      - name: Measure complete CI critical path against the 35-minute budget
+      - name: Measure complete CI critical path against the 60-minute budget
         if: always()
         env:
           CI_PERFORMANCE_PREFIX: ${{ inputs.performance_prefix || '' }}
@@ -1347,7 +1368,7 @@ jobs:
           python3 scripts/ci-performance.py --jobs target/ci-performance/jobs.json \
             --run-id "$GITHUB_RUN_ID" --attempt "$GITHUB_RUN_ATTEMPT" \
             --job-prefix "$CI_PERFORMANCE_PREFIX" \
-            --budget-minutes 35 --output target/ci-performance "${args[@]}" || status=$?
+            --budget-minutes 60 --output target/ci-performance "${args[@]}" || status=$?
           if [[ -f target/ci-performance/performance.md ]]; then
             cat target/ci-performance/performance.md >> "$GITHUB_STEP_SUMMARY"
           fi

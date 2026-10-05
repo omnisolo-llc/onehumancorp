@@ -119,6 +119,58 @@ export function installClickFocusProbe(element: HTMLElement | SVGElement) {
   };
 }
 
+// Playwright exposes a popup Page only after its initial response starts. A
+// slow destination must not erase a real navigation from this trusted click.
+export function installClickPopupProbe(element: HTMLElement | SVGElement) {
+  const originalOpen = window.open;
+  const closedGetter = Object.getOwnPropertyDescriptor(window, 'closed')?.get;
+  const nativeOpen = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(originalOpen));
+  const opened: Array<{ popup: Window; url?: string }> = [];
+  let clicked: MouseEvent | undefined;
+  const capture = (event: MouseEvent) => {
+    if (event.isTrusted && event.composedPath().includes(element)) clicked = event;
+  };
+  const isLiveWindow = (popup: Window) => {
+    // Native getter branding rejects fake { closed: false } return values and
+    // works for real child WindowProxies across JavaScript realms.
+    try { return popup !== window && closedGetter?.call(popup) === false; } catch { return false; }
+  };
+  const observeOpen: Window['open'] = function (this: Window, ...args) {
+    const trusted = nativeOpen && clicked?.isTrusted && window.event === clicked;
+    const popup = Reflect.apply(originalOpen, this, args) as Window | null;
+    const [url, name] = args;
+    // Never take ownership of _self/_parent/_top or a reused named window.
+    if (nativeOpen && popup
+        && (name === undefined || name === '' || (typeof name === 'string' && name.toLowerCase() === '_blank'))
+        && isLiveWindow(popup)) {
+      let destinationUrl: string | undefined;
+      if (trusted && typeof url === 'string' && url.trim().length > 0) {
+        try {
+          const destination = new URL(url, document.baseURI);
+          if (['http:', 'https:'].includes(destination.protocol)) {
+            destination.hash = '';
+            destinationUrl = destination.href;
+          }
+        } catch { /* The native call retains its normal result for invalid URLs. */ }
+      }
+      // Also retire empty/late windows without crediting their calls as effects.
+      opened.push({ popup, url: destinationUrl });
+    }
+    return popup;
+  };
+  window.addEventListener('click', capture, true);
+  window.open = observeOpen;
+  return {
+    get destinations() { return opened.flatMap(({ popup, url }) => url && isLiveWindow(popup) ? [url] : []); },
+    dispose() {
+      window.removeEventListener('click', capture, true);
+      if (window.open === observeOpen) window.open = originalOpen;
+      // Pending windows do not yet exist in Playwright's page list.
+      for (const { popup } of opened) if (isLiveWindow(popup)) popup.close();
+    },
+  };
+}
+
 export async function observeClickEffects(page: Page, target: ElementHandle<HTMLElement | SVGElement>): Promise<ClickEffects> {
   const selectionAttribute = await prepareExclusiveChoice(target);
   await target.hover({ timeout: 5000 });
@@ -128,6 +180,7 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   const observed: ClickEffects = { changed: false, requestSeen: false, downloadSeen: false,
     fileChooserSeen: false, popupSeen: false, validationSeen: false, dialogSeen: false, decisionSeen: false, focusSeen: false };
   const popups: Page[] = [];
+  const initialPopupRequests = new Set<string>();
   const pending: Promise<unknown>[] = [];
   const onDialog = async (dialog: Dialog) => {
     observed.dialogSeen = true;
@@ -139,6 +192,14 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   const onRequest = (request: Request) => {
     if (request.isNavigationRequest() || ['fetch', 'xhr'].includes(request.resourceType())) observed.requestSeen = true;
   };
+  const onContextRequest = (request: Request) => {
+    if (!request.isNavigationRequest()) return;
+    try { request.frame(); } catch {
+      // Initial popup requests have no frame until the first response. Only a
+      // matching live window from the exact trusted click can claim this URL.
+      initialPopupRequests.add(request.url());
+    }
+  };
   const onDownload = (download: Download) => { observed.downloadSeen = Boolean(download.suggestedFilename()); };
   const onFileChooser = (chooser: FileChooser) => {
     observed.fileChooserSeen = true;
@@ -148,7 +209,10 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
     popups.push(popup);
     pending.push((async () => {
       await popup.waitForLoadState('domcontentloaded', { timeout: 2000 }).catch(() => undefined);
-      observed.popupSeen ||= popup.url() !== 'about:blank' || Boolean(await popup.locator('body').textContent({ timeout: 500 }).catch(() => ''));
+      const url = popup.url();
+      const hasDocument = (url !== '' && url !== 'about:blank')
+        || Boolean(await popup.locator('body').textContent({ timeout: 500 }).catch(() => ''));
+      observed.popupSeen ||= !popup.isClosed() && hasDocument;
     })());
   };
   await page.evaluate(() => {
@@ -165,13 +229,18 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   page.on('download', onDownload);
   page.on('filechooser', onFileChooser);
   page.on('popup', onPopup);
+  page.context().on('request', onContextRequest);
+  let popupProbe: JSHandle<ReturnType<typeof installClickPopupProbe>> | undefined;
   let focusProbe: JSHandle<ReturnType<typeof installClickFocusProbe>> | undefined;
   try {
+    popupProbe = await target.evaluateHandle(installClickPopupProbe);
     focusProbe = await target.evaluateHandle(installClickFocusProbe);
     // A real user gesture is required by clipboard, popup and file APIs.
     await target.click({ timeout: 5000 });
     const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
     observed.changed = effect.changed;
+    const popupDestinations = await popupProbe.evaluate(probe => probe.destinations).catch(() => [] as string[]);
+    observed.requestSeen ||= popupDestinations.some(url => initialPopupRequests.has(url));
     observed.focusSeen = await focusProbe.evaluate(probe => probe.focusSeen).catch(() => false);
     observed.validationSeen = await page.evaluate(() => Boolean((window as Window & { __uiAuditInvalid?: boolean }).__uiAuditInvalid)).catch(() => false);
     await Promise.all(pending);
@@ -180,15 +249,20 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
     }
     return observed;
   } finally {
-    if (focusProbe) {
-      await focusProbe.evaluate(probe => probe.dispose()).catch(() => undefined);
-      await focusProbe.dispose();
-    }
     page.off('dialog', onDialog);
     page.off('request', onRequest);
     page.off('download', onDownload);
     page.off('filechooser', onFileChooser);
     page.off('popup', onPopup);
+    page.context().off('request', onContextRequest);
+    if (popupProbe) {
+      await popupProbe.evaluate(probe => probe.dispose()).catch(() => undefined);
+      await popupProbe.dispose();
+    }
+    if (focusProbe) {
+      await focusProbe.evaluate(probe => probe.dispose()).catch(() => undefined);
+      await focusProbe.dispose();
+    }
     for (const popup of popups) await popup.close().catch(() => undefined);
   }
 }
@@ -196,9 +270,30 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
 // Retire the old document before another route audit starts. A delayed checkout
 // navigation from that document must not replace the next document under test.
 export async function replaceAuditDocument(page: Page): Promise<Page> {
+  const retiredUrl = page.url();
+  const viewport = page.viewportSize();
   // A committed full-document navigation destroys the old JavaScript realm,
   // including delayed callbacks, while preserving one page/video per route.
-  await page.goto('about:blank', { waitUntil: 'load' });
+  try {
+    await page.goto('about:blank', { waitUntil: 'load' });
+  } catch (error) {
+    let logoutInterruption: string | undefined;
+    try {
+      const source = new URL(retiredUrl);
+      if (['http:', 'https:'].includes(source.protocol) && !source.username && !source.password) {
+        logoutInterruption = `page.goto: Navigation to "about:blank" is interrupted by another navigation to "${source.origin}/login"`;
+      }
+    } catch { /* An unclassified source cannot establish the logout boundary. */ }
+    if (!(error instanceof Error) || error.message.split('\n', 1)[0] !== logoutInterruption) throw error;
+    // Logout may replace the document after its real click effect was observed.
+    // Retire that realm without retrying either the click or the navigation.
+    // Keeping the context retains cookies and its recording of both pages.
+    const context = page.context();
+    await page.close({ runBeforeUnload: false });
+    const replacement = await context.newPage();
+    if (viewport) await replacement.setViewportSize(viewport);
+    return replacement;
+  }
   return page;
 }
 

@@ -148,6 +148,49 @@ for (const root of roots) {
       }
     } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
   });
+  test(`${root}: initial Help data preserves the current query and rejects an older search response`, async () => {
+    const currentArticle = { title: 'Current product guide', desc: 'Matching guide', category: 'Guides', link: '/help/current' };
+    const unrelatedArticle = { title: 'Unrelated invoice guide', desc: 'Another guide', category: 'Guides', link: '/help/unrelated' };
+    const response = value => ({ ok: true, json: async () => value });
+    let resolveArticles;
+    let resolveVideos;
+    let resolveOlderSearch;
+    const dom = await load(root, url => {
+      if (url === '/api/v1/help') return new Promise(resolve => { resolveArticles = resolve; });
+      if (url === '/api/v1/videos') return new Promise(resolve => { resolveVideos = resolve; });
+      if (url === '/api/v1/help/search?q=older') return new Promise(resolve => { resolveOlderSearch = resolve; });
+      if (url === '/api/v1/help/search?q=product') return Promise.resolve(response([currentArticle]));
+      return Promise.resolve(response([]));
+    });
+    try {
+      const doc = dom.window.document;
+      const input = doc.getElementById('search-input');
+      const results = doc.getElementById('results');
+      assert.equal(doc.getElementById('loading-state').style.display, 'block');
+      input.value = 'older'; input.dispatchEvent(new dom.window.Event('input'));
+      input.value = 'product'; input.dispatchEvent(new dom.window.Event('input'));
+      await tick();
+      assert.match(results.textContent, /Current product guide/);
+
+      resolveArticles(response([currentArticle, unrelatedArticle]));
+      resolveVideos(response([
+        { title: 'Product tutorial', duration: '1:00', video_url: 'https://cdn.example/product.mp4' },
+        { title: 'Unrelated invoice tutorial', duration: '2:00', video_url: 'https://cdn.example/invoice.mp4' },
+      ]));
+      await tick();
+      assert.equal(doc.getElementById('loading-state').style.display, 'none');
+      assert.equal(input.value, 'product');
+      assert.match(results.textContent, /Current product guide/);
+      assert.match(results.textContent, /Product tutorial/);
+      assert.doesNotMatch(results.textContent, /Unrelated invoice/);
+
+      resolveOlderSearch(response([{ title: 'Stale older guide', desc: 'Old result', link: '/help/stale' }]));
+      await tick();
+      assert.equal(input.value, 'product');
+      assert.match(results.textContent, /Current product guide/);
+      assert.doesNotMatch(results.textContent, /Stale older guide|Unrelated invoice/);
+    } finally { dom.window.close(); assert.deepEqual(dom.testErrors, []); }
+  });
   test(`${root}: late search results cannot replace a cleared search`, async () => {
     let resolveSearch;
     const dom = await load(root, async url => {

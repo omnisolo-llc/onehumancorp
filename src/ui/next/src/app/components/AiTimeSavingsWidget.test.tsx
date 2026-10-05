@@ -1,10 +1,15 @@
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import Widget from './AiTimeSavingsWidget';
-const plan = vi.hoisted(() => ({ claimTrial: vi.fn().mockResolvedValue(false), claimError: null, verifiedOwner: { userId: 'a', tenantId: 'a' } as { userId: string; tenantId: string } | null }));
+import { invalidateQueueOwner, readQueueOwner } from '@/lib/sync/queueIdentity';
+const plan = vi.hoisted(() => ({ ownerRevision: 0, claimTrial: vi.fn().mockResolvedValue(false), claimError: null, verifiedOwner: { userId: 'a', tenantId: 'a' } as { userId: string; tenantId: string } | null }));
 vi.mock('./useProPlan', () => ({ useProPlan: () => plan }));
-beforeEach(() => { plan.verifiedOwner = { userId: 'a', tenantId: 'a' }; vi.stubGlobal('fetch', vi.fn(async () => Response.json({ hours_saved: 3, inquiries_handled: 2, appointments_scheduled: 1 }))); });
-afterEach(() => vi.unstubAllGlobals());
+beforeEach(async () => {
+  localStorage.clear(); act(() => invalidateQueueOwner());
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ userId: 'a', tenantId: 'a', expiresAt: Date.now() + 60000 })));
+  await readQueueOwner();
+  plan.ownerRevision = 0; plan.verifiedOwner = { userId: 'a', tenantId: 'a' }; vi.stubGlobal('fetch', vi.fn(async () => Response.json({ hours_saved: 3, inquiries_handled: 2, appointments_scheduled: 1 }))); });
+afterEach(() => { act(() => invalidateQueueOwner()); vi.unstubAllGlobals(); });
 it('shows only the actual owner-bound savings response without a reward claim', async () => {
   render(<Widget />); expect(await screen.findByText('Recorded estimate: 3 hours saved.')).toBeVisible();
   const [,init] = vi.mocked(fetch).mock.calls[0]; const headers = new Headers(init?.headers);
@@ -25,7 +30,7 @@ it('holds private metrics while owner verification is unavailable and ignores a 
   let resolve!: (value: unknown) => void; const body = new Promise(yes => { resolve = yes; });
   vi.stubGlobal('fetch', vi.fn(async () => ({ status: 200, json: () => body }) as Response));
   const view = render(<Widget />); await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
-  plan.verifiedOwner = null; view.rerender(<Widget />);
+  plan.verifiedOwner = null; plan.ownerRevision += 1; view.rerender(<Widget />);
   await act(async () => resolve({ hours_saved: 99 }));
   expect(screen.queryByText(/99 hours/)).not.toBeInTheDocument(); expect(screen.getByText('Verify your account to read time-savings data.')).toBeVisible();
 });

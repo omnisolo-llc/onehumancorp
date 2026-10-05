@@ -66,7 +66,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.getByTestId('agent-feed')).toBeVisible();
     const card = page.getByTestId('agent-feed-card').filter({ hasText: description });
     await expect(card).toBeVisible();
-    await card.getByRole('button', { name: 'Approve', exact: true }).click();
+    await card.getByRole('button', { name: 'Approve', exact: true })
+      .and(card.getByTestId('feed-approve-btn')).click();
     await expect(card).toBeHidden();
   });
 
@@ -75,7 +76,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(page.getByTestId('agent-feed')).toBeVisible();
     const card = page.getByTestId('agent-feed-card').filter({ hasText: description });
     await expect(card).toBeVisible();
-    await card.getByRole('button', { name: 'Dismiss', exact: true }).click();
+    await card.getByRole('button', { name: 'Dismiss', exact: true })
+      .and(card.getByTestId('feed-dismiss-btn')).click();
     await expect(card).toBeHidden();
   });
 

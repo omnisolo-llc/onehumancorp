@@ -4,24 +4,56 @@ import { errorMessage } from '@/lib/errors';
 
 import { useState } from "react";
 
+type WorkflowPlan = {
+  id: string; tenant_id: string; prompt: string; status: string;
+  requires_confirmation: boolean; tasks: unknown[];
+};
+
+function record(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+async function readPlan(response: Response, envelope: boolean, failure: string, expected?: WorkflowPlan): Promise<WorkflowPlan> {
+  let payload: unknown;
+  try { payload = await response.json(); } catch { payload = undefined; }
+  if (!response.ok) {
+    throw new Error(record(payload) && typeof payload.error === 'string' && payload.error.trim()
+      ? payload.error : `${failure} (HTTP ${response.status})`);
+  }
+  const plan = envelope && record(payload) ? payload.plan : payload;
+  const invalid = () => new Error('Backend returned an invalid workflow response');
+  if (!record(plan) || typeof plan.id !== 'string' || !/^dwf-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(plan.id)
+    || typeof plan.tenant_id !== 'string' || !plan.tenant_id.trim()
+    || typeof plan.prompt !== 'string' || !plan.prompt.trim()
+    || !['awaiting_confirmation', 'queued', 'running', 'completed', 'failed'].includes(String(plan.status))
+    || typeof plan.requires_confirmation !== 'boolean' || !Array.isArray(plan.tasks)
+    || (plan.status === 'awaiting_confirmation') !== plan.requires_confirmation
+    || expected && (plan.id !== expected.id || plan.tenant_id !== expected.tenant_id)) throw invalid();
+  if (envelope && (!record(payload) || !Number.isSafeInteger(payload.enqueued_jobs)
+    || (payload.enqueued_jobs as number) < 0
+    || plan.status === 'awaiting_confirmation' && payload.enqueued_jobs !== 0)) throw invalid();
+  return plan as WorkflowPlan;
+}
+
 export default function DynamicWorkflowsPage() {
   const [prompt, setPrompt] = useState("");
   const [loading, setLoading] = useState(false);
-  const [workflowState, setWorkflowState] = useState<{ id: string; status: string; script?: string } | null>(null);
+  const [workflowState, setWorkflowState] = useState<WorkflowPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [needsRefresh, setNeedsRefresh] = useState(false);
 
   const startWorkflow = async () => {
     setLoading(true);
     setError(null);
+    setWorkflowState(null);
+    setNeedsRefresh(false);
     try {
       const res = await fetch("/api/v1/dynamic-workflows", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, tenant_id: "default" })
+        body: JSON.stringify({ prompt })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to start workflow");
-      setWorkflowState(data);
+      setWorkflowState(await readPlan(res, true, 'Failed to start workflow'));
     } catch (e: unknown) {
       setError(errorMessage(e));
     } finally {
@@ -29,31 +61,31 @@ export default function DynamicWorkflowsPage() {
     }
   };
 
-  const confirmWorkflow = async (id: string) => {
+  const confirmWorkflow = async (plan: WorkflowPlan) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/dynamic-workflows/${id}/confirm`, {
+      const res = await fetch(`/api/v1/dynamic-workflows/${plan.id}/confirm`, {
         method: "POST"
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to confirm workflow");
-      setWorkflowState(data);
+      setWorkflowState(await readPlan(res, true, 'Failed to confirm workflow', plan));
     } catch (e: unknown) {
+      setNeedsRefresh(true);
       setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
   };
 
-  const refreshWorkflow = async (id: string) => {
+  const refreshWorkflow = async (plan: WorkflowPlan) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/v1/dynamic-workflows/${id}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch workflow");
-      setWorkflowState(data);
+      const res = await fetch(`/api/v1/dynamic-workflows/${plan.id}`);
+      const refreshed = await readPlan(res, false, 'Failed to fetch workflow', plan);
+      setWorkflowState(refreshed);
+      // An awaiting plan cannot rule out a queue commit whose acknowledgement was lost.
+      if (refreshed.status !== 'awaiting_confirmation') setNeedsRefresh(false);
     } catch (e: unknown) {
       setError(errorMessage(e));
     } finally {
@@ -84,7 +116,7 @@ export default function DynamicWorkflowsPage() {
       </div>
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-xl mb-6 shadow-sm border border-red-200">
+        <div role="alert" className="p-4 bg-red-50 text-red-700 rounded-xl mb-6 shadow-sm border border-red-200">
           {error}
         </div>
       )}
@@ -95,27 +127,27 @@ export default function DynamicWorkflowsPage() {
              <h2 className="text-xl font-bold">Workflow Status: {workflowState.status}</h2>
              <button
                className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-full font-medium"
-               onClick={() => refreshWorkflow(workflowState.id)}
+               onClick={() => refreshWorkflow(workflowState)}
+               disabled={loading}
              >
                Refresh
              </button>
           </div>
 
+          {workflowState.status === 'awaiting_confirmation' && !needsRefresh && <p>Plan saved. No work has been queued.</p>}
+          {workflowState.status === 'queued' && <p>Workflow queued. Execution and completion are not verified.</p>}
+          {needsRefresh && <p>Confirmation outcome is unconfirmed. Approval remains disabled. Refresh to check its status.</p>}
           <div className="bg-gray-50 p-4 rounded-xl font-mono text-sm overflow-auto max-h-[400px] mb-4">
-            {workflowState.script ? (
-               <pre>{workflowState.script}</pre>
-            ) : (
-               <pre>{JSON.stringify(workflowState, null, 2)}</pre>
-            )}
+            <pre>{JSON.stringify(workflowState, null, 2)}</pre>
           </div>
 
-          {workflowState.status === "pending_confirmation" && (
+          {workflowState.status === "awaiting_confirmation" && (
             <button
               className="w-full bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl shadow-sm font-medium disabled:opacity-50"
-              onClick={() => confirmWorkflow(workflowState.id)}
-              disabled={loading}
+              onClick={() => confirmWorkflow(workflowState)}
+              disabled={loading || needsRefresh}
             >
-              Approve & Run Workflow
+              Approve & Queue Workflow
             </button>
           )}
         </div>

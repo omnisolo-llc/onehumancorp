@@ -191,11 +191,13 @@ test.describe("Tooltips", () => {
     // Wait for the page to load
     await page.waitForLoadState("domcontentloaded");
 
-    // Wait for the window to have tooltips loaded to prevent racing
-    await page.waitForFunction(() => (window as Window & { OMNISOLO_TOOLTIPS?: unknown }).OMNISOLO_TOOLTIPS !== undefined, { timeout: 10000 });
-
     const tooltipTarget = page.locator("#help-search-tooltip");
     await tooltipTarget.waitFor({ state: "attached" });
+    // The outer provider can populate the global before the help provider.
+    // Wait for this wrapper to commit the server copy before touchstart captures it.
+    await expect(tooltipTarget).toHaveAttribute(
+      "data-tooltip", "Search for help articles and videos...", { timeout: 10000 },
+    );
 
     await page.evaluate(() => {
       const node = document.getElementById("help-search-tooltip");

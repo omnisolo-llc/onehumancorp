@@ -27,6 +27,7 @@ export default function HelpCenterPage() {
   }, [searchQuery]);
 
   useEffect(() => {
+    let active = true;
     const url = debouncedSearchQuery.trim()
       ? `/api/v1/help/search?q=${encodeURIComponent(debouncedSearchQuery.trim())}`
       : "/api/v1/help";
@@ -38,14 +39,17 @@ export default function HelpCenterPage() {
         return res.json();
       })
       .then((data) => {
+        if (!active) return;
         setArticles(Array.isArray(data) ? data : []);
         setIsLoading(false);
       })
       .catch(() => {
+        if (!active) return;
         setArticles([]);
         setIsError(true);
         setIsLoading(false);
       });
+    return () => { active = false; };
   }, [debouncedSearchQuery]);
 
   useEffect(() => {

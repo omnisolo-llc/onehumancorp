@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from 'node:events';
 import type { Page } from '@playwright/test';
-import { replaceAuditDocument, resolveAuditTarget, auditDocumentSignature, hasFragmentTarget, installClickFocusProbe } from '../../../../e2e/support/ui_click_audit';
+import { replaceAuditDocument, resolveAuditTarget, auditDocumentSignature, hasFragmentTarget, installClickFocusProbe, installClickPopupProbe } from '../../../../e2e/support/ui_click_audit';
 
 function documentPage(overrides: Record<string, unknown>): Page {
   return {
+    url: () => 'https://fixture.test/original',
+    viewportSize: () => ({ width: 1280, height: 720 }),
     evaluateHandle: vi.fn().mockResolvedValue({ dispose: vi.fn() }),
     evaluate: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -25,8 +28,13 @@ describe('audit document retirement', () => {
   });
 
   it('does not claim retirement when the committed navigation fails', async () => {
-    const page = documentPage({ goto: vi.fn().mockRejectedValue(new Error('navigation interrupted')), close: vi.fn(), context: () => ({ newPage: vi.fn() }) });
-    await expect(replaceAuditDocument(page)).rejects.toThrow('navigation interrupted');
+    const error = new Error('navigation interrupted');
+    const close = vi.fn();
+    const newPage = vi.fn();
+    const page = documentPage({ goto: vi.fn().mockRejectedValue(error), close, context: () => ({ newPage }) });
+    await expect(replaceAuditDocument(page)).rejects.toBe(error);
+    expect(close).not.toHaveBeenCalled();
+    expect(newPage).not.toHaveBeenCalled();
   });
 });
 
@@ -147,24 +155,35 @@ it('does not let delayed field-edit effects certify an inert submit click', asyn
     timers.push(setTimeout(() => { inputEffect(); document.querySelector('output')!.textContent = 'Autosaved input'; }, 100));
   });
   const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 100, height: 40 } as DOMRect);
-  const disposeHandle = vi.fn();
-  const disposeProbe = vi.fn();
+  const disposals = new Map<unknown, { probe: ReturnType<typeof vi.fn>; handle: ReturnType<typeof vi.fn> }>();
+  const originalOpen = window.open;
+  const context = new EventEmitter();
+  const pageEvents = new EventEmitter();
   const target = { evaluate: async (callback: (element: Element, argument?: unknown) => unknown, argument?: unknown) => callback(button, argument),
-    evaluateHandle: async (callback: typeof installClickFocusProbe) => {
+    evaluateHandle: async <T extends { dispose(): void },>(callback: (element: HTMLElement) => T) => {
       const probe = callback(button);
       const originalDispose = probe.dispose;
-      probe.dispose = () => { disposeProbe(); originalDispose(); };
-      return { evaluate: async <T,>(read: (value: typeof probe) => T) => read(probe), dispose: disposeHandle };
+      const disposeProbe = vi.fn(() => originalDispose());
+      const disposeHandle = vi.fn();
+      probe.dispose = disposeProbe;
+      disposals.set(callback, { probe: disposeProbe, handle: disposeHandle });
+      return { evaluate: async <U,>(read: (value: T) => U) => read(probe), dispose: disposeHandle };
     },
     hover: vi.fn(), focus: vi.fn(), click: async () => button.click() };
   const page = { url: () => window.location.href, evaluate: async (callback: (argument?: unknown) => unknown, argument?: unknown) => callback(argument),
-    waitForTimeout: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)), on: vi.fn(), off: vi.fn() };
+    waitForTimeout: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+    context: () => context, on: pageEvents.on.bind(pageEvents), off: pageEvents.off.bind(pageEvents) };
   try {
     const effect = await observeClickEffects(page as unknown as Page, target as never);
     expect(hasMeaningfulClickEffect(effect)).toBe(false);
     expect(effect.focusSeen).toBe(false);
-    expect(disposeProbe).toHaveBeenCalledTimes(1);
-    expect(disposeHandle).toHaveBeenCalledTimes(1);
+    expect(disposals.get(installClickFocusProbe)?.probe).toHaveBeenCalledTimes(1);
+    expect(disposals.get(installClickFocusProbe)?.handle).toHaveBeenCalledTimes(1);
+    expect(disposals.get(installClickPopupProbe)?.probe).toHaveBeenCalledTimes(1);
+    expect(disposals.get(installClickPopupProbe)?.handle).toHaveBeenCalledTimes(1);
+    expect(window.open).toBe(originalOpen);
+    expect(context.listenerCount('request')).toBe(0);
+    expect(pageEvents.eventNames()).toEqual([]);
     expect(inputEffect).not.toHaveBeenCalled();
     expect(control.value).toBe('');
     expect(document.querySelector('output')).toHaveTextContent('');

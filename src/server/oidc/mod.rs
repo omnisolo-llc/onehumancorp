@@ -1,7 +1,10 @@
 #![allow(clippy::upper_case_acronyms, clippy::collapsible_if)]
 use ::server_common::Claims;
 use chrono::{Duration, Utc};
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use jsonwebtoken::{
+    Algorithm, DecodingKey, Validation, decode, decode_header,
+    jwk::{AlgorithmParameters, Jwk, JwkSet, KeyAlgorithm, KeyOperations, PublicKeyUse},
+};
 use serde::{Deserialize, de::DeserializeOwned};
 use std::{
     collections::{HashMap, HashSet},
@@ -53,25 +56,14 @@ pub struct OIDCConfig {
 }
 
 #[derive(Debug, Clone, Deserialize)]
-struct JWK {
-    kid: String,
-    n: String,
-    e: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct JWKSet {
-    keys: Vec<JWK>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
 struct OIDCDiscovery {
+    issuer: String,
     jwks_uri: String,
 }
 
 #[derive(Clone)]
 enum CachedJwksResult {
-    Available(std::sync::Arc<Vec<JWK>>),
+    Available(std::sync::Arc<Vec<Jwk>>),
     Unavailable,
 }
 
@@ -212,7 +204,7 @@ fn is_local_development_ip(ip: std::net::IpAddr) -> bool {
 fn cached_jwks(
     issuer_url: &str,
     now: chrono::DateTime<Utc>,
-) -> Option<Result<std::sync::Arc<Vec<JWK>>, String>> {
+) -> Option<Result<std::sync::Arc<Vec<Jwk>>, String>> {
     let cache = get_cache().read().expect("JWKS cache lock poisoned");
     let cached = cache.get(issuer_url)?;
     let age = now - cached.fetch_at;
@@ -250,10 +242,10 @@ fn cache_jwks(issuer_url: &str, result: CachedJwksResult, now: chrono::DateTime<
 async fn fetch_jwks_cached<F, Fut>(
     issuer_url: &str,
     fetch: F,
-) -> Result<std::sync::Arc<Vec<JWK>>, String>
+) -> Result<std::sync::Arc<Vec<Jwk>>, String>
 where
     F: FnOnce() -> Fut,
-    Fut: Future<Output = Result<Vec<JWK>, String>>,
+    Fut: Future<Output = Result<Vec<Jwk>, String>>,
 {
     if let Some(result) = cached_jwks(issuer_url, Utc::now()) {
         return result;
@@ -319,27 +311,50 @@ async fn bounded_json<T: DeserializeOwned>(
     serde_json::from_slice(&body).map_err(|_| "invalid OIDC authority response".to_string())
 }
 
-fn validate_jwks(keys: Vec<JWK>) -> Result<Vec<JWK>, String> {
+fn validate_jwks(keys: Vec<Jwk>) -> Result<Vec<Jwk>, String> {
     if keys.is_empty() || keys.len() > MAX_JWKS_KEYS {
         return Err("invalid JWKS key count".to_string());
     }
     let mut kids = HashSet::with_capacity(keys.len());
     for key in &keys {
-        if key.kid.is_empty()
-            || key.kid.len() > MAX_KID_BYTES
-            || key.n.is_empty()
-            || key.n.len() > MAX_MODULUS_BYTES
-            || key.e.is_empty()
-            || key.e.len() > MAX_EXPONENT_BYTES
-            || !kids.insert(key.kid.as_str())
+        let kid = key.common.key_id.as_deref().unwrap_or_default();
+        if kid.is_empty() || kid.len() > MAX_KID_BYTES || !kids.insert(kid) {
+            return Err("invalid JWKS key".to_string());
+        }
+        if let AlgorithmParameters::RSA(rsa) = &key.algorithm
+            && (rsa.n.is_empty()
+                || rsa.n.len() > MAX_MODULUS_BYTES
+                || rsa.e.is_empty()
+                || rsa.e.len() > MAX_EXPONENT_BYTES)
         {
             return Err("invalid JWKS key".to_string());
         }
     }
-    Ok(keys)
+    // Other supported key types can coexist in a provider's set. Only RSA keys
+    // whose optional metadata permits RS256 verification enter the token cache.
+    Ok(keys
+        .into_iter()
+        .filter(|key| {
+            matches!(key.algorithm, AlgorithmParameters::RSA(_))
+                && key
+                    .common
+                    .public_key_use
+                    .as_ref()
+                    .is_none_or(|usage| *usage == PublicKeyUse::Signature)
+                && key
+                    .common
+                    .key_operations
+                    .as_ref()
+                    .is_none_or(|operations| operations.contains(&KeyOperations::Verify))
+                && key
+                    .common
+                    .key_algorithm
+                    .is_none_or(|algorithm| algorithm == KeyAlgorithm::RS256)
+        })
+        .collect())
 }
 
-async fn fetch_jwks_uncached(issuer_url: &str) -> Result<Vec<JWK>, String> {
+async fn fetch_jwks_uncached(issuer_url: &str) -> Result<Vec<Jwk>, String> {
     let disc_url = format!(
         "{}/.well-known/openid-configuration",
         issuer_url.trim_end_matches('/')
@@ -360,6 +375,9 @@ async fn fetch_jwks_uncached(issuer_url: &str) -> Result<Vec<JWK>, String> {
         MAX_DISCOVERY_BYTES,
     )
     .await?;
+    if disc.issuer != issuer_url {
+        return Err("OIDC discovery issuer does not match configured authority".to_string());
+    }
     if disc.jwks_uri.is_empty() || disc.jwks_uri.len() > MAX_JWKS_URI_BYTES {
         return Err("invalid JWKS URI".to_string());
     }
@@ -375,7 +393,7 @@ async fn fetch_jwks_uncached(issuer_url: &str) -> Result<Vec<JWK>, String> {
     } else {
         pinned_client(&jwks_host, jwks_ip, jwks_port)?
     };
-    let keys: JWKSet = bounded_json(
+    let keys: JwkSet = bounded_json(
         jwks_client
             .get(&disc.jwks_uri)
             .send()
@@ -396,7 +414,7 @@ fn ensure_no_transport_downgrade(discovery_url: &str, jwks_uri: &str) -> Result<
     Ok(())
 }
 
-async fn fetch_jwks(issuer_url: &str) -> Result<std::sync::Arc<Vec<JWK>>, String> {
+async fn fetch_jwks(issuer_url: &str) -> Result<std::sync::Arc<Vec<Jwk>>, String> {
     fetch_jwks_cached(issuer_url, || fetch_jwks_uncached(issuer_url)).await
 }
 
@@ -404,10 +422,10 @@ async fn refresh_jwk_for_unknown_kid<F, Fut>(
     issuer_url: &str,
     kid: &str,
     fetch: F,
-) -> Result<Option<JWK>, String>
+) -> Result<Option<Jwk>, String>
 where
     F: FnOnce() -> Fut,
-    Fut: Future<Output = Result<Vec<JWK>, String>>,
+    Fut: Future<Output = Result<Vec<Jwk>, String>>,
 {
     let fetch_lock = issuer_fetch_lock(issuer_url)?;
     let _guard = tokio::time::timeout(FETCH_WAIT_TIMEOUT, fetch_lock.lock_owned())
@@ -415,7 +433,10 @@ where
         .map_err(|_| "timed out waiting for OIDC authority refresh".to_string())?;
     if let Some(result) = cached_jwks(issuer_url, Utc::now()) {
         let keys = result?;
-        if let Some(key) = keys.iter().find(|key| key.kid == kid) {
+        if let Some(key) = keys
+            .iter()
+            .find(|key| key.common.key_id.as_deref() == Some(kid))
+        {
             return Ok(Some(key.clone()));
         }
     }
@@ -434,13 +455,19 @@ where
     };
     cache_jwks(issuer_url, cached, Utc::now());
     let keys = result?;
-    Ok(keys.iter().find(|key| key.kid == kid).cloned())
+    Ok(keys
+        .iter()
+        .find(|key| key.common.key_id.as_deref() == Some(kid))
+        .cloned())
 }
 
-async fn fetch_jwk(issuer_url: &str, kid: &str) -> Result<Option<JWK>, String> {
+async fn fetch_jwk(issuer_url: &str, kid: &str) -> Result<Option<Jwk>, String> {
     let had_positive_cache = matches!(cached_jwks(issuer_url, Utc::now()), Some(Ok(_)));
     let keys = fetch_jwks(issuer_url).await?;
-    if let Some(key) = keys.iter().find(|key| key.kid == kid) {
+    if let Some(key) = keys
+        .iter()
+        .find(|key| key.common.key_id.as_deref() == Some(kid))
+    {
         return Ok(Some(key.clone()));
     }
     if !had_positive_cache {
@@ -468,8 +495,7 @@ pub async fn validate_oidc_token(
         .map_err(|_| OidcValidationError::Unavailable)?;
     let key = key.ok_or(OidcValidationError::InvalidToken)?;
 
-    let decoding_key = DecodingKey::from_rsa_components(&key.n, &key.e)
-        .map_err(|_| OidcValidationError::Unavailable)?;
+    let decoding_key = DecodingKey::from_jwk(&key).map_err(|_| OidcValidationError::Unavailable)?;
 
     let mut validation = Validation::new(Algorithm::RS256);
     validation.set_audience(&[&cfg.client_id]);
@@ -583,6 +609,249 @@ mod tests {
         Arc,
         atomic::{AtomicUsize, Ordering},
     };
+
+    fn rsa_jwk_json(kid: &str) -> serde_json::Value {
+        serde_json::json!({"kty": "RSA", "kid": kid, "n": "n".repeat(256), "e": "AQAB"})
+    }
+
+    fn rsa_jwk(kid: &str) -> Jwk {
+        serde_json::from_value(rsa_jwk_json(kid)).unwrap()
+    }
+
+    fn validated_test_jwks(keys: Vec<serde_json::Value>) -> Result<Vec<Jwk>, String> {
+        let set: JwkSet = serde_json::from_value(serde_json::json!({"keys": keys}))
+            .map_err(|error| error.to_string())?;
+        validate_jwks(set.keys)
+    }
+
+    #[test]
+    fn mixed_jwks_retains_only_rs256_verification_keys() {
+        let keys = validated_test_jwks(vec![
+            rsa_jwk_json("rsa"),
+            serde_json::json!({"kty": "EC", "kid": "ec", "crv": "P-256", "x": "AA", "y": "AA"}),
+            serde_json::json!({"kty": "oct", "kid": "oct", "k": "AA"}),
+        ])
+        .expect("other supported Jwk types must not break RSA verification");
+        assert_eq!(keys.len(), 1);
+    }
+
+    #[test]
+    fn jwks_excludes_keys_with_ineligible_signature_metadata() {
+        for metadata in [
+            serde_json::json!({"use": "enc"}),
+            serde_json::json!({"use": "unknown"}),
+            serde_json::json!({"key_ops": ["sign"]}),
+            serde_json::json!({"key_ops": []}),
+            serde_json::json!({"key_ops": ["decrypt"]}),
+            serde_json::json!({"alg": "RS384"}),
+            serde_json::json!({"alg": "HS256"}),
+            serde_json::json!({"alg": "RSA-OAEP"}),
+            serde_json::json!({"alg": "unrecognized"}),
+        ] {
+            let mut key = rsa_jwk_json("ineligible");
+            key.as_object_mut()
+                .unwrap()
+                .extend(metadata.as_object().unwrap().clone());
+            assert!(
+                validated_test_jwks(vec![key]).unwrap().is_empty(),
+                "ineligible metadata: {metadata}"
+            );
+        }
+    }
+
+    #[test]
+    fn jwks_accepts_optional_or_explicit_rs256_verification_metadata() {
+        for metadata in [
+            serde_json::json!({}),
+            serde_json::json!({"use": "sig", "key_ops": ["verify"], "alg": "RS256"}),
+        ] {
+            let mut key = rsa_jwk_json("eligible");
+            key.as_object_mut()
+                .unwrap()
+                .extend(metadata.as_object().unwrap().clone());
+            assert_eq!(validated_test_jwks(vec![key]).unwrap().len(), 1);
+        }
+    }
+
+    #[test]
+    fn jwks_rejects_missing_empty_and_oversized_identifiers_and_rsa_fields() {
+        let mut missing_kid = rsa_jwk_json("key");
+        missing_kid.as_object_mut().unwrap().remove("kid");
+        assert!(validated_test_jwks(vec![missing_kid]).is_err());
+        for (field, value) in [
+            ("kid", String::new()),
+            ("kid", "k".repeat(MAX_KID_BYTES + 1)),
+            ("n", String::new()),
+            ("n", "n".repeat(MAX_MODULUS_BYTES + 1)),
+            ("e", String::new()),
+            ("e", "e".repeat(MAX_EXPONENT_BYTES + 1)),
+        ] {
+            let mut key = rsa_jwk_json("key");
+            key[field] = serde_json::Value::String(value);
+            assert!(
+                validated_test_jwks(vec![key]).is_err(),
+                "invalid {field} accepted"
+            );
+        }
+    }
+
+    #[test]
+    fn jwks_rejects_duplicate_ids_before_filtering_ineligible_keys() {
+        let mut encryption_key = rsa_jwk_json("shared-id");
+        encryption_key["use"] = serde_json::json!("enc");
+        assert!(validated_test_jwks(vec![rsa_jwk_json("shared-id"), encryption_key]).is_err());
+    }
+
+    #[test]
+    fn discovery_issuer_must_match_the_configured_authority() {
+        temp_env::with_vars(
+            [
+                ("OMNISOLO_ALLOW_LOCAL_IPS", Some("true")),
+                ("OMNISOLO_OIDC_ALLOW_HTTP", Some("true")),
+            ],
+            || {
+                tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
+                    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+                    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                    let issuer = format!("http://{}", listener.local_addr().unwrap());
+                    let jwks_uri = format!("{issuer}/keys");
+                    let server = tokio::spawn(async move {
+                        for body in [
+                            serde_json::json!({"issuer": "https://wrong-authority.example", "jwks_uri": jwks_uri}),
+                            serde_json::json!({"keys": [rsa_jwk_json("key")]}),
+                        ] {
+                            let (stream, _) = listener.accept().await.unwrap();
+                            let mut reader = BufReader::new(stream);
+                            let mut request = Vec::new();
+                            loop {
+                                assert!(reader.read_until(b'\n', &mut request).await.unwrap() > 0);
+                                assert!(request.len() <= 4096);
+                                if request.ends_with(b"\r\n\r\n") {
+                                    break;
+                                }
+                            }
+                            let mut stream = reader.into_inner();
+                            let body = body.to_string();
+                            stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}", body.len(), body).as_bytes()).await.unwrap();
+                        }
+                    });
+                    let result = fetch_jwks_uncached(&issuer).await;
+                    server.abort();
+                    assert!(result.is_err(), "discovery from a different issuer was accepted");
+                });
+            },
+        );
+    }
+
+    fn signed_token_fixture(
+        issuer: &str,
+        overrides: serde_json::Value,
+    ) -> (String, serde_json::Value) {
+        let encoding_key = jsonwebtoken::EncodingKey::from_rsa_pem(include_bytes!(
+            "fixtures/test-rsa-private.pem"
+        ))
+        .unwrap();
+        let mut jwk =
+            jsonwebtoken::jwk::Jwk::from_encoding_key(&encoding_key, Algorithm::RS256).unwrap();
+        jwk.common.key_id = Some("signed-key".to_string());
+        let mut claims = serde_json::json!({
+            "iss": issuer, "aud": "test-client", "sub": "test-subject",
+            "email": "user@example.test", "email_verified": true,
+            "iat": Utc::now().timestamp(), "exp": Utc::now().timestamp() + 300,
+        });
+        claims
+            .as_object_mut()
+            .unwrap()
+            .extend(overrides.as_object().unwrap().clone());
+        let mut header = jsonwebtoken::Header::new(Algorithm::RS256);
+        header.kid = Some("signed-key".to_string());
+        (
+            jsonwebtoken::encode(&header, &claims, &encoding_key).unwrap(),
+            serde_json::to_value(jwk).unwrap(),
+        )
+    }
+
+    #[test]
+    fn rs256_tokens_preserve_issuer_audience_expiry_and_verified_email_checks() {
+        // Token failures record telemetry, whose configuration must stay in test mode.
+        temp_env::with_vars([("TEST_WORKSPACE", Some("oidc-signature-test"))], || {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(async {
+                    for (case, overrides) in [
+                        ("valid", serde_json::json!({})),
+                        (
+                            "wrong-issuer",
+                            serde_json::json!({"iss": "https://other.example"}),
+                        ),
+                        (
+                            "wrong-audience",
+                            serde_json::json!({"aud": "another-client"}),
+                        ),
+                        (
+                            "expired",
+                            serde_json::json!({"exp": Utc::now().timestamp() - 120}),
+                        ),
+                        (
+                            "unverified-email",
+                            serde_json::json!({"email_verified": false}),
+                        ),
+                        ("empty-subject", serde_json::json!({"sub": ""})),
+                    ] {
+                        let issuer = format!("https://{case}.example.test");
+                        let (token, jwk) = signed_token_fixture(&issuer, overrides);
+                        cache_jwks(
+                            &issuer,
+                            CachedJwksResult::Available(Arc::new(
+                                validated_test_jwks(vec![jwk]).unwrap(),
+                            )),
+                            Utc::now(),
+                        );
+                        let cfg = OIDCConfig {
+                            issuer_url: issuer,
+                            client_id: "test-client".into(),
+                            enabled: true,
+                        };
+                        let result = validate_oidc_token(&token, &cfg).await;
+                        if case == "valid" {
+                            let claims = result.unwrap();
+                            assert_eq!(claims.sub, "test-subject");
+                            assert_eq!(claims.roles, ["VIEWER"]);
+                        } else {
+                            assert!(
+                                matches!(result, Err(OidcValidationError::InvalidToken)),
+                                "invalid {case}: {result:?}"
+                            );
+                        }
+                    }
+                });
+        });
+    }
+
+    #[tokio::test]
+    async fn encryption_only_jwk_cannot_authenticate_a_valid_rs256_signature() {
+        let issuer = "https://encryption-only.example.test";
+        let (token, mut jwk) = signed_token_fixture(issuer, serde_json::json!({}));
+        jwk["use"] = serde_json::json!("enc");
+        cache_jwks(
+            issuer,
+            CachedJwksResult::Available(Arc::new(validated_test_jwks(vec![jwk]).unwrap())),
+            Utc::now(),
+        );
+        // Do not perform an external refresh for this deliberately ineligible key.
+        unknown_kid_refresh_allowed(issuer, Utc::now());
+        let cfg = OIDCConfig {
+            issuer_url: issuer.into(),
+            client_id: "test-client".into(),
+            enabled: true,
+        };
+        assert!(matches!(
+            validate_oidc_token(&token, &cfg).await,
+            Err(OidcValidationError::InvalidToken)
+        ));
+    }
 
     #[test]
     fn test_is_blocked_ip() {
@@ -748,11 +1017,7 @@ mod tests {
                 fetch_jwks_cached(ISSUER, || async move {
                     calls.fetch_add(1, Ordering::SeqCst);
                     tokio::time::sleep(StdDuration::from_millis(20)).await;
-                    Ok(vec![JWK {
-                        kid: "shared-key".to_string(),
-                        n: "n".repeat(256),
-                        e: "AQAB".to_string(),
-                    }])
+                    Ok(vec![rsa_jwk("shared-key")])
                 })
                 .await
             });
@@ -760,7 +1025,7 @@ mod tests {
         while let Some(result) = tasks.join_next().await {
             let keys = result.unwrap().unwrap();
             assert_eq!(keys.len(), 1);
-            assert_eq!(keys[0].kid, "shared-key");
+            assert_eq!(keys[0].common.key_id.as_deref(), Some("shared-key"));
         }
         assert_eq!(calls.load(Ordering::SeqCst), 1);
         let first = cached_jwks(ISSUER, Utc::now()).unwrap().unwrap();
@@ -773,11 +1038,7 @@ mod tests {
         const ISSUER: &str = "test://unknown-kid-refresh";
         cache_jwks(
             ISSUER,
-            CachedJwksResult::Available(Arc::new(vec![JWK {
-                kid: "old-key".to_string(),
-                n: "n".repeat(256),
-                e: "AQAB".to_string(),
-            }])),
+            CachedJwksResult::Available(Arc::new(vec![rsa_jwk("old-key")])),
             Utc::now(),
         );
         UNKNOWN_KID_REFRESHES
@@ -793,17 +1054,16 @@ mod tests {
                 refresh_jwk_for_unknown_kid(ISSUER, "new-key", || async move {
                     calls.fetch_add(1, Ordering::SeqCst);
                     tokio::time::sleep(StdDuration::from_millis(20)).await;
-                    Ok(vec![JWK {
-                        kid: "new-key".to_string(),
-                        n: "n".repeat(256),
-                        e: "AQAB".to_string(),
-                    }])
+                    Ok(vec![rsa_jwk("new-key")])
                 })
                 .await
             });
         }
         while let Some(result) = tasks.join_next().await {
-            assert_eq!(result.unwrap().unwrap().unwrap().kid, "new-key");
+            assert_eq!(
+                result.unwrap().unwrap().unwrap().common.key_id.as_deref(),
+                Some("new-key")
+            );
         }
         assert_eq!(calls.load(Ordering::SeqCst), 1);
 
@@ -822,17 +1082,15 @@ mod tests {
 
     #[test]
     fn jwks_key_count_fields_and_duplicates_are_bounded() {
-        let key = || JWK {
-            kid: "key-1".to_string(),
-            n: "n".repeat(256),
-            e: "AQAB".to_string(),
-        };
+        let key = || rsa_jwk("key-1");
         assert!(validate_jwks(vec![key()]).is_ok());
         assert!(validate_jwks(Vec::new()).is_err());
         assert!(validate_jwks(vec![key(); MAX_JWKS_KEYS + 1]).is_err());
         assert!(validate_jwks(vec![key(), key()]).is_err());
         let mut oversized = key();
-        oversized.n = "n".repeat(MAX_MODULUS_BYTES + 1);
+        if let AlgorithmParameters::RSA(rsa) = &mut oversized.algorithm {
+            rsa.n = "n".repeat(MAX_MODULUS_BYTES + 1);
+        }
         assert!(validate_jwks(vec![oversized]).is_err());
     }
 

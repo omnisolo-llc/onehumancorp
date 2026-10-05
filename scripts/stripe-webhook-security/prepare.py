@@ -5,28 +5,16 @@ from its real file. Issuing is outside this active-route gate. No provider or re
 secret is contacted.
 """
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from rust_source import extract_item, input_paths as rust_source_inputs
 import json, hashlib
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
 API=ROOT/'src/server/api'
 STRIPE=ROOT/'src/server/integrations/stripe'
-def block(source,name):
-    start=source.index(name); at=source.index('{',start);depth=0;quoted=False;escape=False
-    for i in range(at,len(source)):
-        c=source[i]
-        if quoted:
-            if escape:escape=False
-            elif c=='\\':escape=True
-            elif c=='"':quoted=False
-            continue
-        if c=='"':quoted=True
-        elif c=='{':depth+=1
-        elif c=='}':
-            depth-=1
-            if depth==0:return source[start:i+1]
-    raise ValueError(name)
-billing=(API/'billing_webhook.rs').read_text()
-ledger=(API/'payment_ledger.rs').read_text()
+billing=(API/'billing_webhook.rs').read_bytes().decode('utf-8')
+ledger=(API/'payment_ledger.rs').read_bytes().decode('utf-8')
 source='''#![allow(dead_code)]
 extern crate self as server_telemetry;
 pub fn record_error_signal(_: &str) {}
@@ -45,7 +33,7 @@ use serde_json::Value;
 #[derive(Clone)] pub struct WebhookState{pub rate_limiter:Arc<NoRedis>}
 pub struct NoRedis{pub calls:AtomicUsize}
 impl NoRedis{pub async fn get_connection(&self)->Result<redis::aio::MultiplexedConnection,String>{self.calls.fetch_add(1,Ordering::SeqCst);Err("Redis effect sentinel".into())}}
-'''+billing[billing.index('#[derive(Debug, Deserialize)]\npub struct StripeEvent'):billing.index('#[async_trait::async_trait]',billing.index('pub struct StripeEvent'))].replace('Deserialize','serde::Deserialize')+block(billing,'pub async fn webhook_security_middleware(')+'\n}\n'
+'''+billing[billing.index('#[derive(Debug, Deserialize)]\npub struct StripeEvent'):billing.index('#[async_trait::async_trait]',billing.index('pub struct StripeEvent'))].replace('Deserialize','serde::Deserialize')+extract_item(billing, 'function', 'webhook_security_middleware')+'\n}\n'
 start=ledger.index('#[derive(Deserialize)]\npub struct WebhookPayload')
 end=ledger.index('#[derive(Serialize)]\npub struct BalanceResponse',start)
 source+='''pub mod payment_ledger {
@@ -58,7 +46,7 @@ async fn get_balance()->StatusCode{StatusCode::OK}
 async fn get_safe_to_spend()->StatusCode{StatusCode::OK}
 async fn process_receipt()->StatusCode{StatusCode::OK}
 async fn stripe_webhook(State(effects):State<AppState>,Json(_payload):Json<WebhookPayload>)->StatusCode{effects.fetch_add(1,Ordering::SeqCst);StatusCode::OK}
-'''+ledger[start:end]+block(ledger,'pub fn router()')+'\n}\n}\n#[cfg(test)]#[path="test.rs"]mod tests;\n'
+'''+ledger[start:end]+extract_item(ledger, 'function', 'router')+'\n}\n}\n#[cfg(test)]#[path="test.rs"]mod tests;\n'
 
 fixtures=(API/'billing_webhook_test.rs').read_text()
 start=fixtures.index('// Public fixture signing key');end=fixtures.index('#[test]',start)
@@ -72,7 +60,7 @@ source += "\n#[cfg(test)]mod billing_fixture_contracts {\n"+fixtures[start:end]+
 }
 }\n"""
 (HERE/'generated.rs').write_text(source)
-inputs=[ROOT/'Cargo.toml',ROOT/'src/server/common/secret_source.rs',ROOT/'src/server/integrations/mod.rs',ROOT/'Cargo.lock',STRIPE/'Cargo.toml',STRIPE/'mod.rs',STRIPE/'client.rs',STRIPE/'issuing.rs',API/'mod.rs',API/'billing_webhook.rs',API/'billing_webhook_test.rs',API/'payment_ledger.rs',ROOT/'src/server/lib.rs',HERE/'Cargo.toml',HERE/'prepare.py',HERE/'test.rs',HERE/'run.sh',HERE/'verify_lock.py',HERE/'source_contracts.py',HERE/'README.md']
+inputs=list(rust_source_inputs())+[ROOT/'Cargo.toml',ROOT/'src/server/common/secret_source.rs',ROOT/'src/server/integrations/mod.rs',ROOT/'Cargo.lock',STRIPE/'Cargo.toml',STRIPE/'mod.rs',STRIPE/'client.rs',STRIPE/'issuing.rs',API/'mod.rs',API/'billing_webhook.rs',API/'billing_webhook_test.rs',API/'payment_ledger.rs',ROOT/'src/server/lib.rs',HERE/'Cargo.toml',HERE/'prepare.py',HERE/'test.rs',HERE/'run.sh',HERE/'verify_lock.py',HERE/'source_contracts.py',HERE/'README.md']
 inputs += [p for p in [guard,STRIPE/'webhook_signature.rs'] if p.exists()]
 for directory in ['common','config','integrations/stripe','integrations/core','integrations/mercadopago','integrations/razorpay']:
     inputs += [p for p in (ROOT/'src/server'/directory).rglob('*') if p.is_file() and (p.suffix == '.rs' or p.name == 'Cargo.toml')]

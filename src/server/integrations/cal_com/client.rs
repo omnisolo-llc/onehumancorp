@@ -1,22 +1,51 @@
 use reqwest::Client;
+use serde::Deserialize;
+use std::time::Duration;
+
+const MAX_RECEIPT_BYTES: usize = 64 * 1024;
+
+// Preserve only the existing string-ID contract. The current v1 provider schema
+// has not been verified; accepting numeric IDs requires a separate migration.
+#[derive(Deserialize)]
+struct BookingReceipt {
+    booking: BookingIdentity,
+}
+
+#[derive(Deserialize)]
+struct BookingIdentity {
+    id: String,
+}
 
 pub struct CalComClient {
     pub access_token: String,
     http_client: Client,
+    api_base_url: String,
 }
 
 impl CalComClient {
+    fn http_client_builder(deadline: Duration) -> reqwest::ClientBuilder {
+        Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .read_timeout(Duration::from_secs(10))
+            .timeout(deadline)
+            .redirect(reqwest::redirect::Policy::none())
+            .retry(reqwest::retry::never())
+    }
+
     pub fn new(access_token: String) -> Self {
         CalComClient {
             access_token,
-            http_client: Client::new(),
+            http_client: Self::http_client_builder(Duration::from_secs(30))
+                .build()
+                .expect("static Cal.com client configuration is valid"),
+            api_base_url: "https://api.cal.com/v1".into(),
         }
     }
 }
 
 impl CalComClient {
     pub async fn get_free_busy(&self, time_min: &str, time_max: &str) -> Result<String, String> {
-        let url = "https://api.cal.com/v1/availability".to_string();
+        let url = format!("{}/availability", self.api_base_url);
 
         let res = self
             .http_client
@@ -32,13 +61,14 @@ impl CalComClient {
         match res {
             Ok(resp) => {
                 if resp.status().is_success() {
-                    let text = resp.text().await.unwrap_or_default();
-                    Ok(text)
+                    resp.text()
+                        .await
+                        .map_err(|_| "Cal.com availability response could not be read".to_string())
                 } else {
                     Err(format!("Cal.com API error: {}", resp.status()))
                 }
             }
-            Err(e) => Err(format!("Network error: {}", e)),
+            Err(_) => Err("Cal.com availability request failed".to_string()),
         }
     }
 
@@ -48,7 +78,7 @@ impl CalComClient {
         start_time: &str,
         end_time: &str,
     ) -> Result<String, String> {
-        let url = "https://api.cal.com/v1/bookings".to_string();
+        let url = format!("{}/bookings", self.api_base_url);
 
         let payload = serde_json::json!({
             "title": summary,
@@ -56,52 +86,63 @@ impl CalComClient {
             "end": end_time
         });
 
-        let res = self
+        let mut response = self
             .http_client
             .post(&url)
             .query(&[("apiKey", &self.access_token)])
             .json(&payload)
             .send()
-            .await;
+            .await
+            .map_err(|_| unknown_outcome("request failed"))?;
 
-        match res {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    let text = resp.text().await.unwrap_or_default();
-                    let json: serde_json::Value =
-                        serde_json::from_str(&text).unwrap_or(serde_json::Value::Null);
-                    let event_id = json["booking"]["id"]
-                        .as_str()
-                        .unwrap_or("mock_event_123")
-                        .to_string();
-                    Ok(event_id)
-                } else {
-                    Err(format!("Cal.com API error: {}", resp.status()))
-                }
-            }
-            Err(e) => Err(format!("Network error: {}", e)),
+        let status = response.status();
+        if status.is_client_error() && status != reqwest::StatusCode::REQUEST_TIMEOUT {
+            return Err(format!("Cal.com API error: {status}"));
         }
+        if !status.is_success() {
+            return Err(format!(
+                "{}: HTTP {status}",
+                unknown_outcome("provider response")
+            ));
+        }
+        if response
+            .content_length()
+            .is_some_and(|size| size > MAX_RECEIPT_BYTES as u64)
+        {
+            return Err(unknown_outcome("receipt exceeds 64 KiB"));
+        }
+        let mut body = Vec::new();
+        while let Some(chunk) = response
+            .chunk()
+            .await
+            .map_err(|_| unknown_outcome("receipt read failed"))?
+        {
+            if chunk.len() > MAX_RECEIPT_BYTES.saturating_sub(body.len()) {
+                return Err(unknown_outcome("receipt exceeds 64 KiB"));
+            }
+            body.extend_from_slice(&chunk);
+        }
+        let receipt: BookingReceipt = serde_json::from_slice(&body)
+            .map_err(|_| unknown_outcome("invalid or unsupported booking receipt"))?;
+        if receipt.booking.id.trim().is_empty() {
+            return Err(unknown_outcome("empty booking ID"));
+        }
+        Ok(receipt.booking.id)
     }
 
-    pub async fn get_booking_link(&self, event_type: &str) -> Result<String, String> {
-        let url = "https://api.cal.com/v1/event-types".to_string();
-
-        let res = self
-            .http_client
-            .get(&url)
-            .query(&[("apiKey", &self.access_token)])
-            .send()
-            .await;
-
-        match res {
-            Ok(resp) => {
-                if resp.status().is_success() {
-                    Ok(format!("https://cal.com/omnisolo-tenant/{}", event_type))
-                } else {
-                    Err(format!("Cal.com API error: {}", resp.status()))
-                }
-            }
-            Err(e) => Err(format!("Network error: {}", e)),
-        }
+    pub async fn get_booking_link(&self, _event_type: &str) -> Result<String, String> {
+        // A list response alone does not verify the account/team owner and event
+        // slug needed to resolve a real booking URL. Do not invent a tenant URL.
+        Err("Cal.com booking link unavailable: verified account owner and event-type mapping required".to_string())
     }
 }
+
+fn unknown_outcome(reason: &'static str) -> String {
+    format!(
+        "Cal.com booking creation outcome unknown ({reason}); reconcile with Cal.com before retrying"
+    )
+}
+
+#[cfg(test)]
+#[path = "client_test.rs"]
+mod tests;

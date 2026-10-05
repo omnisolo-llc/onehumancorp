@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Head from "next/head";
 
 type Proposal = {
   id: string;
@@ -52,9 +51,6 @@ export default function ProposalsDashboard() {
 
   return (
     <div className="flex flex-col p-4 max-w-[375px] mx-auto min-h-screen bg-[rgba(255,255,255,0.65)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.7)] dark:border-[rgba(255,255,255,0.1)] transition-colors duration-250 ease-[cubic-bezier(0.4,0,0.2,1)]">
-      <Head>
-        <title>Inquiries & Proposals | OHC</title>
-      </Head>
       <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">
         Inquiries & Proposals
       </h1>
