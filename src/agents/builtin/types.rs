@@ -232,6 +232,15 @@ pub fn format_pydantic_error(
     args_str: Option<&str>,
     custom_instruction: Option<&str>,
 ) -> String {
+    format_pydantic_error_at_location(e, args_str, custom_instruction, None)
+}
+
+pub(crate) fn format_pydantic_error_at_location(
+    e: &serde_json::Error,
+    args_str: Option<&str>,
+    custom_instruction: Option<&str>,
+    location: Option<Vec<serde_json::Value>>,
+) -> String {
     let error_type = if e.is_data() {
         "type_error"
     } else if e.is_syntax() {
@@ -267,7 +276,11 @@ pub fn format_pydantic_error(
 
     let mut pydantic_json_obj = serde_json::json!({
         "type": error_type,
-        "loc": ["data", format!("line_{}", line), format!("col_{}", column)],
+        "loc": location.unwrap_or_else(|| vec![
+            serde_json::json!("data"),
+            serde_json::json!(format!("line_{}", line)),
+            serde_json::json!(format!("col_{}", column)),
+        ]),
         "msg": precise_msg,
     });
 

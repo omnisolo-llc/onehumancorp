@@ -4,6 +4,253 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use tokio::sync::Mutex;
 
+#[derive(Debug, Deserialize, JsonSchema, PartialEq)]
+struct PathRow {
+    count: u64,
+}
+
+#[derive(Debug, Deserialize, JsonSchema, PartialEq)]
+struct PathRows {
+    items: Vec<PathRow>,
+}
+
+fn diagnostic_object(error: &str) -> Value {
+    let reason = error.split_once("Reason: ").unwrap().1;
+    let mut objects = serde_json::Deserializer::from_str(reason).into_iter::<Value>();
+    objects.next().unwrap().unwrap()[0].clone()
+}
+
+fn assert_original_reason_and_input<T: DeserializeOwned + std::fmt::Debug>(
+    data: &Value,
+    observed: &str,
+) {
+    let original_error = T::deserialize(data).unwrap_err();
+    let input = serde_json::to_string(data).unwrap();
+    let original = crate::types::format_pydantic_error(
+        &original_error,
+        Some(&input),
+        Some(
+            "Please strictly follow the Pydantic-first tool schema and try again. Also ensure all enum variants are exact string matches.",
+        ),
+    );
+    let mut before = diagnostic_object(&original);
+    let mut after = diagnostic_object(observed);
+    before.as_object_mut().unwrap().remove("loc");
+    after.as_object_mut().unwrap().remove("loc");
+    assert_eq!(after, before, "only the diagnostic location may change");
+}
+
+#[test]
+fn serde_path_nested_array_location_preserves_reason_and_input_for_both_parsers() {
+    let data = json!({"items":[{"count":1},{"count":"bad-value"}]});
+    let msg = native(data.clone());
+    let advanced = AdvancedPydanticOutputParser::<PathRows>::new()
+        .parse_message(&msg)
+        .unwrap_err();
+    let structured = StructuredOutputParser::<PathRows>::new()
+        .parse_message(&msg)
+        .unwrap_err();
+    for error in [advanced, structured] {
+        assert_eq!(
+            diagnostic_object(&error)["loc"],
+            json!(["data", "items", 1, "count"])
+        );
+        assert_original_reason_and_input::<PathRows>(&data, &error);
+    }
+}
+
+#[test]
+fn serde_path_missing_field_reports_containing_object_without_guessing_a_leaf() {
+    let data = json!({"items":[{}]});
+    let error = AdvancedPydanticOutputParser::<PathRows>::new()
+        .parse_message(&native(data.clone()))
+        .unwrap_err();
+    assert_eq!(
+        diagnostic_object(&error)["loc"],
+        json!(["data", "items", 0])
+    );
+    assert!(error.contains("missing field `count`"));
+    assert_original_reason_and_input::<PathRows>(&data, &error);
+}
+
+#[test]
+fn serde_path_root_type_error_has_only_the_envelope_root() {
+    let data = json!(false);
+    let error = StructuredOutputParser::<PathRows>::new()
+        .parse_message(&native(data.clone()))
+        .unwrap_err();
+    assert_eq!(diagnostic_object(&error)["loc"], json!(["data"]));
+    assert_original_reason_and_input::<PathRows>(&data, &error);
+}
+
+#[test]
+fn serde_path_enum_reason_remains_actionable() {
+    let data = json!({"mode":"not-a-mode","choice":1,"code":"A"});
+    let error = AdvancedPydanticOutputParser::<Shapes>::new()
+        .parse_message(&native(data.clone()))
+        .unwrap_err();
+    assert_eq!(diagnostic_object(&error)["loc"], json!(["data", "mode"]));
+    assert!(error.contains("unknown variant"));
+    assert!(error.contains("read_only"));
+    assert_original_reason_and_input::<Shapes>(&data, &error);
+}
+
+#[test]
+fn serde_path_map_segments_are_json_values_and_restrict_control_or_oversized_keys() {
+    use std::collections::BTreeMap;
+    for (key, expected) in [
+        (
+            "field.with[punctuation]\"\\".to_owned(),
+            "field.with[punctuation]\"\\".to_owned(),
+        ),
+        ("étiquette".to_owned(), "étiquette".to_owned()),
+        ("x".repeat(128), "x".repeat(128)),
+        ("é".repeat(64), "é".repeat(64)),
+        ("é".repeat(65), "<redacted>".to_owned()),
+        ("secret\nkey".to_owned(), "<redacted>".to_owned()),
+        ("secret\u{0}key".to_owned(), "<redacted>".to_owned()),
+        ("x".repeat(129), "<redacted>".to_owned()),
+    ] {
+        let data = json!({key.clone(): "bad-value"});
+        let error = StructuredOutputParser::<BTreeMap<String, u64>>::new()
+            .parse_message(&native(data.clone()))
+            .unwrap_err();
+        assert_eq!(diagnostic_object(&error)["loc"], json!(["data", expected]));
+        // Input/reason already belong to the existing same-model feedback contract.
+        assert_original_reason_and_input::<BTreeMap<String, u64>>(&data, &error);
+    }
+}
+
+#[test]
+fn serde_path_external_enum_keeps_variant_location_and_custom_errors_keep_reason() {
+    #[derive(Debug, Deserialize)]
+    enum External {
+        Selected(PathRow),
+    }
+    let valid = StructuredOutputParser::<External>::new()
+        .parse_message(&native(json!({"Selected":{"count":9}})))
+        .unwrap();
+    let External::Selected(row) = valid;
+    assert_eq!(row.count, 9);
+    let data = json!({"Selected":{"count":"bad-value"}});
+    let error = StructuredOutputParser::<External>::new()
+        .parse_message(&native(data.clone()))
+        .unwrap_err();
+    assert_eq!(
+        diagnostic_object(&error)["loc"],
+        json!(["data", "Selected", "count"])
+    );
+    assert_original_reason_and_input::<External>(&data, &error);
+
+    fn reject<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
+        let value = String::deserialize(deserializer)?;
+        Err(serde::de::Error::custom(format!(
+            "custom rejection: {value}"
+        )))
+    }
+    #[derive(Debug, Deserialize)]
+    struct Custom {
+        #[serde(deserialize_with = "reject")]
+        payload: String,
+    }
+    let data = json!({"payload":"existing-feedback-canary"});
+    let error = StructuredOutputParser::<Custom>::new()
+        .parse_message(&native(data.clone()))
+        .map(|value| value.payload)
+        .unwrap_err();
+    assert_eq!(diagnostic_object(&error)["loc"], json!(["data", "payload"]));
+    assert_original_reason_and_input::<Custom>(&data, &error);
+}
+
+#[tokio::test]
+async fn serde_path_terminal_error_remains_recoverable_and_corrections_stay_capped() {
+    let data = json!({"items":[{"count":"bad-value"}]});
+    let client = client(vec![native(data.clone()); 3]);
+    let result: Result<PathRows, _> = parse(&client, request(), usize::MAX).await;
+    let Err(ToolError::LlmRecoverable(error)) = result else {
+        panic!("expected the existing recoverable terminal category");
+    };
+    assert_eq!(client.requests.lock().await.len(), 3);
+    assert_eq!(
+        diagnostic_object(&error)["loc"],
+        json!(["data", "items", 0, "count"])
+    );
+    assert_original_reason_and_input::<PathRows>(&data, &error);
+}
+
+#[test]
+fn serde_path_deep_location_is_explicitly_truncated() {
+    #[derive(Debug, Deserialize)]
+    struct Branch(Vec<Branch>);
+    let empty = AdvancedPydanticOutputParser::<Branch>::new()
+        .parse_message(&native(json!([])))
+        .unwrap();
+    assert!(empty.0.is_empty());
+    let mut data = json!("not-an-array");
+    for _ in 0..40 {
+        data = json!([data]);
+    }
+    let error = AdvancedPydanticOutputParser::<Branch>::new()
+        .parse_message(&native(data.clone()))
+        .unwrap_err();
+    let mut expected = vec![json!("data")];
+    expected.extend(std::iter::repeat_n(json!(0), 32));
+    expected.push(json!("<truncated>"));
+    assert_eq!(diagnostic_object(&error)["loc"], Value::Array(expected));
+    assert_original_reason_and_input::<Branch>(&data, &error);
+}
+
+#[test]
+fn serde_path_valid_nested_data_preserves_serde_result() {
+    let data = json!({"items":[{"count":0},{"count":u64::MAX}],"additive":true});
+    let expected: PathRows = serde_json::from_value(data.clone()).unwrap();
+    assert_eq!(
+        StructuredOutputParser::<PathRows>::new()
+            .parse_message(&native(data))
+            .unwrap(),
+        expected
+    );
+}
+
+#[test]
+fn serde_path_plain_and_trailing_json_text_cannot_bypass_native_value_contract() {
+    for text in [r#"{"items":[]}"#, r#"{"items":[]} trailing"#] {
+        let parser = AdvancedPydanticOutputParser::<PathRows>::new();
+        assert!(
+            parser
+                .parse_message(&Message::assistant(text))
+                .unwrap_err()
+                .contains("Expected native tool_calls")
+        );
+        let error = parser.parse_message(&native(json!(text))).unwrap_err();
+        assert_eq!(diagnostic_object(&error)["type"], "type_error");
+    }
+}
+
+#[tokio::test]
+async fn serde_path_actual_correction_feedback_keeps_ids_reason_and_request_limit() {
+    let failed_data = json!({"items":[{"count":"bad-value"}]});
+    let mut failed = native(failed_data.clone());
+    failed.tool_calls[0].id = "owned-call-id".into();
+    failed.response_id = Some("owned-response-id".into());
+    let client = client(vec![failed, native(json!({"items":[{"count":7}]}))]);
+    let parsed: PathRows = parse(&client, request(), 2).await.unwrap();
+    assert_eq!(parsed.items[0].count, 7);
+    let requests = client.requests.lock().await;
+    assert_eq!(requests.len(), 2);
+    let feedback = requests[1].messages.last().unwrap();
+    assert_eq!(
+        feedback.previous_response_id.as_deref(),
+        Some("owned-response-id")
+    );
+    assert_eq!(feedback.tool_results[0].tool_call_id, "owned-call-id");
+    assert_eq!(
+        diagnostic_object(&feedback.tool_results[0].error)["loc"],
+        json!(["data", "items", 0, "count"])
+    );
+    assert_original_reason_and_input::<PathRows>(&failed_data, &feedback.tool_results[0].error);
+}
+
 struct CaptureClient {
     requests: Mutex<Vec<ChatRequest>>,
     responses: Mutex<Vec<Message>>,
