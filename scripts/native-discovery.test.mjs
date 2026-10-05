@@ -133,8 +133,11 @@ test('CI shards use complete native browser spec discovery, not a smoke allowlis
   assert.match(runner, /PLAYWRIGHT_TEST_DIR:\s*['"]\.\/src['"]/);
   assert.match(config, /testMatch:\s*['"]\*\*\/\*\.spec\.ts['"]/);
   assert.doesNotMatch(runner, /const maintained\s*=|ciSelection\s*\?\s*\[/);
-  assert.match(ci, /shard:\s*\[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12\]/);
-  assert.match(ci, /test:e2e -- --ci --shard=/);
+  assert.match(ci, /shard:\s*\[1, 2, 3\]/);
+  assert.match(ci, /test:e2e -- --ci --grouped-shard=/);
+  const { GROUPS } = await import('./browser-shards.cjs');
+  assert.deepEqual(GROUPS.flat().sort((a,b) => a-b), Array.from({length:12}, (_,i) => i+1));
+  assert.match(ci, /click-receipts 12 --grouped/);
   assert.match(ci, /--workers=2/);
   assert.match(ci, /--retries=0/);
   assert.match(runner, /pass-with-no-tests/);
@@ -157,4 +160,24 @@ test('native E2E environment never inherits provider credentials or production d
     for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
     Object.assign(process.env, previous);
   }
+});
+
+test('logical preflight does not erase reports from an earlier execution', async () => {
+  const { nativeDiscoveryArgs } = await import('./native-e2e.mjs');
+  const { mkdtemp, mkdir, writeFile, readFile, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { createRequire } = await import('node:module');
+  const directory = await mkdtemp(path.join(tmpdir(), 'ohc-preflight-reports-'));
+  const report = path.join(directory, 'logical-1', 'failure-marker.txt');
+  try {
+    await mkdir(path.dirname(report)); await writeFile(report, 'earlier failure');
+    const cli = createRequire(import.meta.url).resolve('@playwright/test/cli');
+    const result = spawnSync(process.execPath, nativeDiscoveryArgs(cli, ['--shard=2/12','--workers=2','--retries=0']), {
+      cwd: fileURLToPath(new URL('..', import.meta.url)), env: { ...testEnvironment(), PLAYWRIGHT_TEST_DIR:'./src', PLAYWRIGHT_LIST_REPORTER:'1', PLAYWRIGHT_HTML_REPORT:directory },
+      encoding:'utf8', timeout:90000, maxBuffer:8*1024*1024,
+    });
+    assert.ifError(result.error); assert.equal(result.status,0,result.stderr);
+    assert.match(result.stdout,/Total: [1-9]\d* tests/);
+    assert.equal(await readFile(report,'utf8'),'earlier failure');
+  } finally { await rm(directory,{recursive:true,force:true}); }
 });
