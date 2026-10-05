@@ -1,0 +1,23 @@
+[package]
+name = "ohc-redis-reconnect-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = "5"
+futures = "0.3"
+prost = "0.13"
+redis = { version = "=0.27.6", features = ["tokio-comp", "connection-manager"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["v4"] }
+server_omnisolo = { path = "../../src/server/omnisolo" }
+[build-dependencies]
+ohc-rust-source-extract = { path = "../rust-source-extract" }
+serde_json = "1"
+[lib]
+path = "probe.rs"
