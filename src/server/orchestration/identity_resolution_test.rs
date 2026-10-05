@@ -1,34 +1,47 @@
 use std::sync::Arc;
-use crate::db::DB;
+use crate::db::{DB, DbStore, create_dummy_pg_pool, create_sqlite_pool_for_test};
 use crate::orchestration::identity_resolution::IdentityResolver;
 use uuid::Uuid;
+
+async fn setup_db() -> Arc<DB> {
+    let sqlite_pool = create_sqlite_pool_for_test().await;
+    let dummy_pg_pool = create_dummy_pg_pool().await;
+
+    let db = Arc::new(DB {
+        pool: dummy_pg_pool,
+        store: DbStore::Sqlite(sqlite_pool),
+    });
+
+    db.run_migrations().await.unwrap();
+    db
+}
 
 #[tokio::test]
 async fn test_resolve_existing_customer() {
     let tenant_id = format!("test_tenant_{}", Uuid::new_v4());
-    let temp_db_path = format!("file:test_resolve_existing_customer_{}.db?mode=memory&cache=shared", Uuid::new_v4());
-    std::env::set_var("OMNISOLO_DATABASE_URL", &temp_db_path);
-    let db = Arc::new(DB::new().await.unwrap());
-
-    // Explicitly run migrations to ensure table schema is there in SQLite memory
-    crate::migrations::run_migrations(&db.pool).await.unwrap();
+    let db = setup_db().await;
 
     let resolver = IdentityResolver::new(db.clone());
     let sender_id = "test_lead_existing_123@example.com";
     let source = "email";
 
     let new_id = Uuid::new_v4().to_string();
-    sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
-        .bind(&tenant_id)
-        .execute(&db.pool)
-        .await.unwrap();
 
-    sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ($1, $2, 'Existing Customer', $3, NULL)")
-        .bind(&new_id)
-        .bind(&tenant_id)
-        .bind(sender_id)
-        .execute(&db.pool)
-        .await.unwrap();
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
+            .bind(&tenant_id)
+            .execute(pool)
+            .await
+            .unwrap();
+
+        sqlx::query("INSERT INTO customers (id, tenant_id, name, email, phone) VALUES ($1, $2, 'Existing Customer', $3, NULL)")
+            .bind(&new_id)
+            .bind(&tenant_id)
+            .bind(sender_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
 
     let resolved_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
 
@@ -38,55 +51,53 @@ async fn test_resolve_existing_customer() {
 #[tokio::test]
 async fn test_create_new_customer() {
     let tenant_id = format!("test_tenant_{}", Uuid::new_v4());
-    let temp_db_path = format!("file:test_create_new_customer_{}.db?mode=memory&cache=shared", Uuid::new_v4());
-    std::env::set_var("OMNISOLO_DATABASE_URL", &temp_db_path);
-    let db = Arc::new(DB::new().await.unwrap());
-
-    // Explicitly run migrations to ensure table schema is there in SQLite memory
-    crate::migrations::run_migrations(&db.pool).await.unwrap();
+    let db = setup_db().await;
 
     let resolver = IdentityResolver::new(db.clone());
     let sender_id = "new_lead_12345@example.com";
     let source = "whatsapp";
 
-    sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
-        .bind(&tenant_id)
-        .execute(&db.pool)
-        .await.unwrap();
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
+            .bind(&tenant_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
 
     let lead_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
 
-    let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT id, phone FROM customers WHERE id = $1")
-        .bind(&lead_id)
-        .fetch_optional(&db.pool)
-        .await
-        .unwrap_or(None);
+    if let DbStore::Sqlite(pool) = &db.store {
+        let row: Option<(String, Option<String>)> = sqlx::query_as("SELECT id, phone FROM customers WHERE id = $1")
+            .bind(&lead_id)
+            .fetch_optional(pool)
+            .await
+            .unwrap_or(None);
 
-    assert!(!lead_id.is_empty());
-    assert!(row.is_some());
-    let r = row.unwrap();
-    assert_eq!(r.0, lead_id);
-    assert_eq!(r.1.unwrap(), sender_id);
+        assert!(!lead_id.is_empty());
+        assert!(row.is_some());
+        let r = row.unwrap();
+        assert_eq!(r.0, lead_id);
+        assert_eq!(r.1.unwrap(), sender_id);
+    }
 }
 
 #[tokio::test]
 async fn test_create_and_resolve_social_customer() {
     let tenant_id = format!("test_tenant_{}", Uuid::new_v4());
-    let temp_db_path = format!("file:test_create_and_resolve_social_customer_{}.db?mode=memory&cache=shared", Uuid::new_v4());
-    std::env::set_var("OMNISOLO_DATABASE_URL", &temp_db_path);
-    let db = Arc::new(DB::new().await.unwrap());
-
-    // Explicitly run migrations to ensure table schema is there in SQLite memory
-    crate::migrations::run_migrations(&db.pool).await.unwrap();
+    let db = setup_db().await;
 
     let resolver = IdentityResolver::new(db.clone());
     let sender_id = "insta_handle_123";
     let source = "instagram";
 
-    sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
-        .bind(&tenant_id)
-        .execute(&db.pool)
-        .await.unwrap();
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
+            .bind(&tenant_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
 
     let lead_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
     let resolved_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
@@ -98,20 +109,19 @@ async fn test_create_and_resolve_social_customer() {
 #[tokio::test]
 async fn test_create_and_resolve_alias() {
     let tenant_id = format!("test_tenant_{}", Uuid::new_v4());
-    let temp_db_path = format!("file:test_create_and_resolve_alias_{}.db?mode=memory&cache=shared", Uuid::new_v4());
-    std::env::set_var("OMNISOLO_DATABASE_URL", &temp_db_path);
-    let db = Arc::new(DB::new().await.unwrap());
-
-    crate::migrations::run_migrations(&db.pool).await.unwrap();
+    let db = setup_db().await;
 
     let resolver = IdentityResolver::new(db.clone());
     let sender_id = "test_alias_123";
     let source = "whatsapp";
 
-    sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
-        .bind(&tenant_id)
-        .execute(&db.pool)
-        .await.unwrap();
+    if let DbStore::Sqlite(pool) = &db.store {
+        sqlx::query("INSERT INTO tenants (id, name) VALUES ($1, 'test')")
+            .bind(&tenant_id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
 
     let lead_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
     let resolved_id = resolver.resolve_or_create_customer(&tenant_id, sender_id, source).await.unwrap_or_default();
