@@ -16,7 +16,7 @@ GATES = {
     'nats-metadata-contract': (16, None),
     'mesh-startup-contract': (13, None),
     'redis-startup-contract': (23, None),
-    'agent-feed-decision-contract': (57, 'OHC_FEED_TEST_DATABASE_URL'),
+    'agent-feed-decision-contract': (103, 'OHC_FEED_TEST_DATABASE_URL'),
     'memory-jsonb-contract': (27, 'OHC_MEMORY_TEST_DATABASE_URL'),
     'approvals-read-contract': (12, 'OHC_APPROVAL_TEST_DATABASE_URL'),
     'shipping-integrity-contract': (92, 'OHC_SHIPPING_TEST_DATABASE_URL'),
