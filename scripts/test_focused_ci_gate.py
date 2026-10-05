@@ -15,7 +15,7 @@ class FocusedGateTests(unittest.TestCase):
     def test_redis_reconnect_requires_owned_fixture_and_complete_inventory(self):
         import yaml
         root = Path(__file__).resolve().parents[1]
-        self.assertEqual(gate.GATES.get('redis-reconnect'), (19, None))
+        self.assertEqual(gate.GATES.get('redis-reconnect'), (20, None))
         steps = yaml.safe_load((root/'.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
         fetch = next(i for i, step in enumerate(steps) if step.get('run') == 'bash scripts/redis-reconnect/fetch.sh')
         execute = next(i for i, step in enumerate(steps) if step.get('run') == 'python3 scripts/focused_ci_gate.py redis-reconnect')
@@ -25,11 +25,12 @@ class FocusedGateTests(unittest.TestCase):
         self.assertIn('--locked --offline', runner)
         self.assertIn('verify_source.py verify', runner)
         self.assertIn('verify_lock.py', runner)
-        for result in ['18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out',
-                       '19 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out',
-                       '19 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out']:
+        minimum, _ = gate.GATES['redis-reconnect']
+        for result in ['19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out',
+                       '20 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out',
+                       '20 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out']:
             with self.assertRaises(ValueError):
-                gate.validate_results('test result: ok. '+result+';', 19)
+                gate.validate_results('test result: ok. '+result+';', minimum)
 
     def test_cash_runner_rejects_unavailable_redis_before_native_execution(self):
         import os
