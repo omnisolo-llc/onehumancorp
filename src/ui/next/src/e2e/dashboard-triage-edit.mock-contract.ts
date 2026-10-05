@@ -31,7 +31,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
     await page.goto('/dashboard');
     await expect(page.locator('text=Activity Feed').first()).toBeVisible({ timeout: 15000 });
 
-    const feedBtn = page.locator('button', { hasText: 'Pending Approvals' });
+    const feedBtn = page.locator('button', { hasText: 'Proposals' });
     if (await feedBtn.isVisible()) {
         await feedBtn.click();
     }
