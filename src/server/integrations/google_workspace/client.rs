@@ -1,3 +1,5 @@
+use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
+use chrono::{DateTime, Datelike, Utc};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -458,92 +460,33 @@ impl GoogleWorkspaceClient {
 // ── Helpers ──────────────────────────────────────────────────────
 
 fn rfc2822_date_now() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
+    rfc2822_date_at(std::time::SystemTime::now())
+}
 
-    let secs = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
+fn rfc2822_date_at(now: std::time::SystemTime) -> String {
+    let secs = now
+        .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
+    // Preserve the epoch fallback for clocks before 1970, and avoid panicking
+    // if the host clock is outside Chrono's representable range.
+    let date = i64::try_from(secs)
+        .ok()
+        .and_then(|secs| DateTime::<Utc>::from_timestamp(secs, 0))
+        .unwrap_or(DateTime::<Utc>::UNIX_EPOCH);
 
-    let days = secs / 86400;
-    let mut y = 1970u32;
-    let mut remaining = days as u32;
-    loop {
-        let days_in_year = if is_leap(y) { 366 } else { 365 };
-        if remaining < days_in_year {
-            break;
-        }
-        remaining -= days_in_year;
-        y += 1;
-    }
-
-    let leap = is_leap(y);
-    let month_days: [u32; 12] = [
-        31,
-        if leap { 29 } else { 28 },
-        31,
-        30,
-        31,
-        30,
-        31,
-        31,
-        30,
-        31,
-        30,
-        31,
-    ];
-    let month_names = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-    let day_names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-    let mut m = 0u32;
-    let mut d = remaining;
-    while m < 12 && d >= month_days[m as usize] {
-        d -= month_days[m as usize];
-        m += 1;
-    }
-    let day_of_week = ((days + 4) % 7) as usize; // Jan 1 1970 was a Thursday
-
-    let time_secs = secs % 86400;
-    let hh = time_secs / 3600;
-    let mm = (time_secs % 3600) / 60;
-    let ss = time_secs % 60;
-
+    // to_rfc2822() does not zero-pad the day. Format the numeric year separately
+    // to preserve the existing unsigned spelling even for years beyond 9999.
     format!(
-        "{}, {:02} {} {} {:02}:{:02}:{:02} +0000",
-        day_names[day_of_week],
-        d + 1,
-        month_names[m as usize],
-        y,
-        hh,
-        mm,
-        ss
+        "{} {} {}",
+        date.format("%a, %d %b"),
+        date.year(),
+        date.format("%H:%M:%S %z")
     )
 }
 
-fn is_leap(y: u32) -> bool {
-    (y.is_multiple_of(4) && !y.is_multiple_of(100)) || y.is_multiple_of(400)
-}
-
 fn base64_encode(data: &[u8]) -> String {
-    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    let mut result = Vec::with_capacity(data.len().div_ceil(3) * 4);
-    for chunk in data.chunks(3) {
-        let b0 = chunk[0] as u32;
-        let b1 = if chunk.len() > 1 { chunk[1] as u32 } else { 0 };
-        let b2 = if chunk.len() > 2 { chunk[2] as u32 } else { 0 };
-        let triple = (b0 << 16) | (b1 << 8) | b2;
-        result.push(CHARS[((triple >> 18) & 0x3F) as usize]);
-        result.push(CHARS[((triple >> 12) & 0x3F) as usize]);
-        if chunk.len() > 1 {
-            result.push(CHARS[((triple >> 6) & 0x3F) as usize]);
-        }
-        if chunk.len() > 2 {
-            result.push(CHARS[(triple & 0x3F) as usize]);
-        }
-    }
-    String::from_utf8(result).unwrap_or_default()
+    URL_SAFE_NO_PAD.encode(data)
 }
 
 #[cfg(test)]
@@ -609,6 +552,92 @@ mod tests {
     fn request_body(request: &str) -> serde_json::Value {
         let (_, body) = request.split_once("\r\n\r\n").unwrap();
         serde_json::from_str(body).unwrap()
+    }
+
+    #[test]
+    fn rfc2822_date_preserves_utc_calendar_wire_vectors() {
+        use std::time::{Duration, UNIX_EPOCH};
+
+        let vectors = [
+            (0, "Thu, 01 Jan 1970 00:00:00 +0000"),
+            (1, "Thu, 01 Jan 1970 00:00:01 +0000"),
+            (86_399, "Thu, 01 Jan 1970 23:59:59 +0000"),
+            (86_400, "Fri, 02 Jan 1970 00:00:00 +0000"),
+            (951_782_400, "Tue, 29 Feb 2000 00:00:00 +0000"),
+            (951_868_800, "Wed, 01 Mar 2000 00:00:00 +0000"),
+            (1_709_164_800, "Thu, 29 Feb 2024 00:00:00 +0000"),
+            (1_709_251_200, "Fri, 01 Mar 2024 00:00:00 +0000"),
+            (1_791_158_400, "Mon, 05 Oct 2026 00:00:00 +0000"),
+            (4_107_542_399, "Sun, 28 Feb 2100 23:59:59 +0000"),
+            (4_107_542_400, "Mon, 01 Mar 2100 00:00:00 +0000"),
+            (13_574_563_200, "Tue, 29 Feb 2400 00:00:00 +0000"),
+            (13_574_649_600, "Wed, 01 Mar 2400 00:00:00 +0000"),
+            (253_402_300_799, "Fri, 31 Dec 9999 23:59:59 +0000"),
+            (253_402_300_800, "Sat, 01 Jan 10000 00:00:00 +0000"),
+        ];
+
+        for (seconds, expected) in vectors {
+            let now = UNIX_EPOCH + Duration::from_secs(seconds);
+            assert_eq!(rfc2822_date_at(now), expected, "timestamp: {seconds}");
+        }
+    }
+
+    #[test]
+    fn rfc2822_date_keeps_epoch_fallback_and_truncates_subseconds() {
+        use std::time::{Duration, UNIX_EPOCH};
+
+        assert_eq!(
+            rfc2822_date_at(UNIX_EPOCH - Duration::from_nanos(1)),
+            "Thu, 01 Jan 1970 00:00:00 +0000"
+        );
+        assert_eq!(
+            rfc2822_date_at(UNIX_EPOCH - Duration::from_secs(86_400)),
+            "Thu, 01 Jan 1970 00:00:00 +0000"
+        );
+        assert_eq!(
+            rfc2822_date_at(UNIX_EPOCH + Duration::new(86_399, 999_999_999)),
+            "Thu, 01 Jan 1970 23:59:59 +0000"
+        );
+    }
+
+    #[test]
+    fn rfc2822_date_falls_back_for_representable_out_of_range_clock() {
+        use std::time::{Duration, UNIX_EPOCH};
+
+        let seconds = DateTime::<Utc>::MAX_UTC.timestamp() as u64 + 1;
+        let Some(now) = UNIX_EPOCH.checked_add(Duration::from_secs(seconds)) else {
+            eprintln!("platform SystemTime cannot represent a clock beyond Chrono's range");
+            return;
+        };
+        assert_eq!(rfc2822_date_at(now), "Thu, 01 Jan 1970 00:00:00 +0000");
+    }
+
+    #[test]
+    fn base64_encode_preserves_url_safe_unpadded_wire_vectors() {
+        // RFC 4648 ASCII vectors plus independently encoded binary/UTF-8 cases.
+        // The binary tails distinguish URL-safe and padded engines.
+        let vectors: &[(&[u8], &str)] = &[
+            (b"", ""),
+            (b"f", "Zg"),
+            (b"fo", "Zm8"),
+            (b"foo", "Zm9v"),
+            (b"foob", "Zm9vYg"),
+            (b"fooba", "Zm9vYmE"),
+            (b"foobar", "Zm9vYmFy"),
+            (b"\0", "AA"),
+            (b"\0\0", "AAA"),
+            (b"\xfb", "-w"),
+            (b"\xfb\xff", "-_8"),
+            (b"\xfb\xff\xff", "-___"),
+            (b"=", "PQ"),
+            ("Café ☕".as_bytes(), "Q2Fmw6kg4piV"),
+            ("こんにちは世界".as_bytes(), "44GT44KT44Gr44Gh44Gv5LiW55WM"),
+            ("🙂 café\r\n正文".as_bytes(), "8J-ZgiBjYWbDqQ0K5q2j5paH"),
+        ];
+
+        for (input, expected) in vectors {
+            assert_eq!(base64_encode(input), *expected, "input bytes: {input:?}");
+        }
     }
 
     #[tokio::test]
@@ -779,6 +808,45 @@ mod tests {
         assert!(request.starts_with("POST /gmail/v1/users/me/messages/send"));
         let body = request_body(&request);
         assert!(body["raw"].is_string());
+    }
+
+    #[tokio::test]
+    async fn send_email_preserves_raw_mime_bytes() {
+        for (subject, message_body) in [
+            ("Test", "Body text"),
+            ("Café ☕", "こんにちは世界\r\n🙂 café\0正文"),
+            ("", ""),
+        ] {
+            let (base_url, request_rx) = start_server(r#"{"id":"sent-123"}"#).await;
+            let client =
+                GoogleWorkspaceClient::with_base_url_for_test("gmail-token".to_string(), base_url);
+
+            assert_eq!(
+                client
+                    .send_email("user@example.com", subject, message_body)
+                    .await
+                    .unwrap(),
+                "sent-123"
+            );
+
+            let request = request_rx.await.unwrap();
+            assert!(request.starts_with("POST /gmail/v1/users/me/messages/send"));
+            let payload = request_body(&request);
+            assert_eq!(payload.as_object().unwrap().len(), 1);
+            let raw = payload["raw"].as_str().unwrap();
+            assert!(!raw.contains(['=', '+', '/']));
+            let decoded = URL_SAFE_NO_PAD.decode(raw).unwrap();
+            let message = std::str::from_utf8(&decoded).unwrap();
+            let date = message
+                .split("\r\n")
+                .find_map(|line| line.strip_prefix("Date: "))
+                .unwrap();
+            assert!(!date.is_empty());
+            let expected = format!(
+                "To: user@example.com\r\nSubject: {subject}\r\nDate: {date}\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n{message_body}"
+            );
+            assert_eq!(decoded, expected.as_bytes());
+        }
     }
 
     #[tokio::test]

@@ -1304,16 +1304,39 @@ mod tests_clamped {
 fn validate_pydantic_schema<T: serde::de::DeserializeOwned>(
     data: &serde_json::Value,
 ) -> Result<T, String> {
-    match T::deserialize(data) {
+    match serde_path_to_error::deserialize::<_, T>(data) {
         Ok(parsed) => Ok(parsed),
         Err(e) => {
+            // Bound only the added diagnostic location. Serde still owns validation,
+            // and the existing reason/input feedback policy remains unchanged.
+            let mut location = vec![serde_json::json!("data")];
+            for (depth, segment) in e.path().iter().enumerate() {
+                if depth == 32 {
+                    location.push(serde_json::json!("<truncated>"));
+                    break;
+                }
+                let value = match segment {
+                    serde_path_to_error::Segment::Seq { index } => serde_json::json!(index),
+                    serde_path_to_error::Segment::Map { key }
+                    | serde_path_to_error::Segment::Enum { variant: key } => {
+                        if key.len() <= 128 && !key.chars().any(char::is_control) {
+                            serde_json::json!(key)
+                        } else {
+                            serde_json::json!("<redacted>")
+                        }
+                    }
+                    serde_path_to_error::Segment::Unknown => serde_json::json!("<unknown>"),
+                };
+                location.push(value);
+            }
             let args_str = serde_json::to_string(data).unwrap_or_default();
-            Err(crate::types::format_pydantic_error(
-                &e,
+            Err(crate::types::format_pydantic_error_at_location(
+                e.inner(),
                 Some(&args_str),
                 Some(
                     "Please strictly follow the Pydantic-first tool schema and try again. Also ensure all enum variants are exact string matches.",
                 ),
+                Some(location),
             ))
         }
     }

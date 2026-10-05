@@ -8,6 +8,8 @@ path = "mod.rs"
 
 [dependencies]
 async-trait = "0.1"
+base64 = "0.22"
+chrono = { workspace = true }
 reqwest = { workspace = true }
 serde_json = { workspace = true }
 server_integrations_core = { path = "../core" }
