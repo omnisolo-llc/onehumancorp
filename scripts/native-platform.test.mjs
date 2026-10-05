@@ -28,6 +28,17 @@ test('native Node pin and all archive digests match the reviewed official releas
   }
 });
 
+for (const dockerfile of ['deploy/docker/Dockerfile.harness-worker', 'deploy/docker/web/Dockerfile', 'src/ui/next/Dockerfile']) {
+  test(`${dockerfile} uses the repository Node runtime pin`, async () => {
+    const source = await readFile(new URL(`../${dockerfile}`, import.meta.url), 'utf8');
+    const images = [...source.matchAll(/^FROM\s+node:([^\s]+)\s+AS\s+/gmi)];
+    assert.ok(images.length > 0, 'the active image must retain its explicit Node base');
+    for (const [, tag] of images) {
+      assert.equal(tag, `${NODE_VERSION}-bookworm-slim`);
+    }
+  });
+}
+
 test('native URL parsing reuses Tauri without a direct HTTP client dependency', () => {
   assert.equal(tauriManifest.dependencies.reqwest, undefined);
 });
