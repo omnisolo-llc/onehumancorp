@@ -70,6 +70,42 @@ describe('AgentActionCard', () => {
     expect(screen.queryByText('Generic fallback')).not.toBeInTheDocument();
   });
 
+  it.each(['Additional customer context', { description: 'Additional customer context' }])('shows a generic draft alongside proposed-action context %j', (context) => {
+    const approval = {
+      ...defaultApproval,
+      event_source: 'sales',
+      context_payload: { description: 'Customer inquiry' },
+      proposed_action: { context, draft_reply: 'Reply with context' },
+    };
+    render(<AgentActionCard {...defaultProps} approval={approval} />);
+
+    expect(screen.getByRole('heading', { name: 'Customer inquiry' })).toBeVisible();
+    expect(screen.getByText('Reply with context')).toBeVisible();
+  });
+
+  it('shows the generic draft for an unrecognized feature with context', () => {
+    const approval = {
+      ...defaultApproval,
+      proposed_action: { feature_type: 'lead_reply', context: 'Inquiry context', draft_reply: 'Reply for a new feature' },
+    };
+    render(<AgentActionCard {...defaultProps} approval={approval} />);
+
+    expect(screen.getByText('Reply for a new feature')).toBeVisible();
+  });
+
+  it.each([42, { invalid: true }, ['Invalid draft'], '   '])('uses draft_reply when generated_response is not usable text: %j', (generated_response) => {
+    const setEditContent = vi.fn();
+    const approval = {
+      ...defaultApproval,
+      proposed_action: { generated_response, draft_reply: 'Usable fallback reply' } as unknown as AgentActionCardProps['approval']['proposed_action'],
+    };
+    render(<AgentActionCard {...defaultProps} {...{ approval, setEditContent }} />);
+
+    expect(screen.getByText('Usable fallback reply')).toBeVisible();
+    fireEvent.click(screen.getByTestId('edit-proposal'));
+    expect(setEditContent).toHaveBeenCalledWith('Usable fallback reply');
+  });
+
   it.each(['CustomerSuccessAgent', 'customer_success_agent'])('names the %s dismissal accurately and preserves its callback', async (event_source) => {
     const handleDecision = vi.fn().mockResolvedValue(true);
     const approval = {
