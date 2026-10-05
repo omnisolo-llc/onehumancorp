@@ -9,7 +9,20 @@ type ChangelogSection = {
   screenshot_url?: string;
 };
 
+type ChangelogState =
+  | { status: "loading" }
+  | { status: "error"; message: string }
+  | { status: "loaded"; sections: ChangelogSection[] };
 
+function isChangelog(value: unknown): value is ChangelogSection[] {
+  return Array.isArray(value) && value.every((section) =>
+    section !== null && typeof section === "object" &&
+    typeof section.version === "string" &&
+    Array.isArray(section.contentLines) &&
+    section.contentLines.every((line: unknown) => typeof line === "string") &&
+    (section.screenshot_url === undefined || typeof section.screenshot_url === "string")
+  );
+}
 
 function parseLinks(text: string): React.ReactNode {
   const linkRegex = /\[(.*?)\]\((.*?)\)/g;
@@ -38,24 +51,33 @@ function parseLinks(text: string): React.ReactNode {
 }
 
 export default function ChangelogPage() {
-  const [sections, setSections] = useState<ChangelogSection[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<ChangelogState>({ status: "loading" });
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
+    let active = true;
+    setState({ status: "loading" });
     fetch("/api/v1/changelog")
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load changelog");
+      .then(async (res) => {
+        if (!res.ok) {
+          const problem = await res.json().catch(() => null);
+          const detail = typeof problem?.error === "string" ? `: ${problem.error}` : "";
+          throw new Error(`HTTP ${res.status}${detail}`);
+        }
         return res.json();
       })
       .then((data) => {
-        setSections(Array.isArray(data) ? data : []);
-        setLoading(false);
+        if (!isChangelog(data)) throw new Error("The server returned an invalid changelog response.");
+        if (active) setState({ status: "loaded", sections: data });
       })
-      .catch(() => {
-        setSections([]);
-        setLoading(false);
+      .catch((error: unknown) => {
+        if (active) setState({
+          status: "error",
+          message: error instanceof Error ? error.message : "The request failed.",
+        });
       });
-  }, []);
+    return () => { active = false; };
+  }, [attempt]);
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-black py-12 px-4 sm:px-6 lg:px-8 font-inter">
@@ -64,18 +86,27 @@ export default function ChangelogPage() {
           Changelog Updates
         </h2>
         <div className="space-y-8">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
+          {state.status === "loading" ? (
+            <div role="status" className="flex justify-center items-center gap-3 py-12">
+              <div aria-hidden="true" className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0071E3]"></div>
+              <span>Loading changelog…</span>
             </div>
-          ) : sections.length === 0 ? (
+          ) : state.status === "error" ? (
+            <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-red-900">
+              <p role="alert">Unable to load changelog. {state.message}</p>
+              <button type="button" onClick={() => setAttempt((current) => current + 1)} className="mt-4 min-h-[44px] rounded-xl border border-red-300 px-5 py-2 font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2">
+                Retry
+              </button>
+            </div>
+          ) : state.sections.length === 0 ? (
             <p className="text-center text-gray-500 font-medium py-8 backdrop-blur-[40px] saturate-[210%] bg-white/70 dark:bg-[#1C1C1E]/70 border border-white/40 dark:border-white/10 shadow-[0_4px_24px_rgba(0,0,0,0.04)] rounded-3xl">
               No changelog available.
             </p>
           ) : (
-            sections.map((section, idx) => (
+            state.sections.map((section, idx) => (
               <motion.div
                 key={idx}
+                data-testid="changelog-section"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1, duration: 0.4 }}

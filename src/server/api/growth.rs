@@ -1322,9 +1322,6 @@ async fn handle_affiliate_stats(
         ::server_auth::orchestration::AuthInfo,
     >,
 ) -> Result<Json<AffiliateStatsResponse>, StatusCode> {
-    let mut total_affiliates: i64 = 0;
-    let mut total_commission_cents: i64 = 0;
-
     let (res_aff_join, res_comm_join) = tokio::join!(
         async {
             sqlx::query_scalar::<_, i64>(
@@ -1342,13 +1339,8 @@ async fn handle_affiliate_stats(
         }
     );
 
-    if let Ok(count) = res_aff_join {
-        total_affiliates = count;
-    }
-
-    if let Ok(sum) = res_comm_join {
-        total_commission_cents = sum;
-    }
+    let total_affiliates = res_aff_join.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_commission_cents = res_comm_join.map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     Ok(Json(AffiliateStatsResponse {
         total_affiliates,
@@ -3058,6 +3050,109 @@ mod tests {
             .max_connections(1)
             .connect_lazy(&database_url)
             .expect("Failed to connect to DB")
+    }
+
+    fn affiliate_stats_state(pool: PgPool) -> GrowthState {
+        let (event_tx, _) = tokio::sync::mpsc::channel(100);
+        GrowthState {
+            hub: Arc::new(crate::hub::Hub::new(event_tx, pool.clone())),
+            pool,
+            viral_loop_tracker: Arc::new(
+                crate::services::growth::viral_loop::ViralLoopTracker::new(),
+            ),
+        }
+    }
+
+    fn affiliate_stats_auth(tenant: &str) -> Extension<::server_auth::orchestration::AuthInfo> {
+        Extension(::server_auth::orchestration::AuthInfo {
+            spiffe_id: format!("spiffe://ohc.app/{tenant}/affiliate-test"),
+            org_id: tenant.to_string(),
+            agent_id: "affiliate-test".to_string(),
+        })
+    }
+
+    #[tokio::test]
+    async fn affiliate_stats_database_failure_is_not_a_zero_balance() {
+        let pool = setup_db().await;
+        pool.close().await;
+        let result = handle_affiliate_stats(
+            Extension(affiliate_stats_state(pool)),
+            affiliate_stats_auth("tenant-a"),
+        )
+        .await;
+
+        assert!(matches!(result, Err(StatusCode::INTERNAL_SERVER_ERROR)));
+    }
+
+    #[tokio::test]
+    async fn affiliate_stats_reports_actual_tenant_aggregates_and_explicit_zero() {
+        // setup_db creates a dedicated one-connection pool. Temporary tables
+        // shadow only this connection's production names; no shared schema or
+        // other tenant's persistent data is created, removed or changed.
+        let pool = setup_db().await;
+        sqlx::query("CREATE TEMP TABLE affiliate_links (tenant_id TEXT NOT NULL)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("CREATE TEMP TABLE affiliate_ledgers (tenant_id TEXT NOT NULL, commission_amount BIGINT NOT NULL)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO affiliate_links (tenant_id) VALUES ('tenant-a'), ('tenant-a'), ('tenant-b')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO affiliate_ledgers (tenant_id, commission_amount) VALUES ('tenant-a', 1234), ('tenant-a', 50), ('tenant-b', 99999)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let state = affiliate_stats_state(pool.clone());
+
+        let Json(actual) =
+            handle_affiliate_stats(Extension(state.clone()), affiliate_stats_auth("tenant-a"))
+                .await
+                .unwrap();
+        assert_eq!(actual.total_affiliates, 2);
+        assert_eq!(actual.total_commission_cents, 1284);
+
+        let Json(empty) =
+            handle_affiliate_stats(Extension(state), affiliate_stats_auth("tenant-empty"))
+                .await
+                .unwrap();
+        assert_eq!(empty.total_affiliates, 0);
+        assert_eq!(empty.total_commission_cents, 0);
+        pool.close().await;
+    }
+
+    #[tokio::test]
+    async fn affiliate_stats_rejects_partial_results_when_either_aggregate_fails() {
+        for failed_aggregate in ["affiliates", "commissions"] {
+            let pool = setup_db().await;
+            let links_schema = if failed_aggregate == "affiliates" {
+                "CREATE TEMP TABLE affiliate_links (missing_tenant TEXT)"
+            } else {
+                "CREATE TEMP TABLE affiliate_links (tenant_id TEXT)"
+            };
+            let ledger_schema = if failed_aggregate == "commissions" {
+                "CREATE TEMP TABLE affiliate_ledgers (tenant_id TEXT, missing_amount BIGINT)"
+            } else {
+                "CREATE TEMP TABLE affiliate_ledgers (tenant_id TEXT, commission_amount BIGINT)"
+            };
+            sqlx::query(links_schema).execute(&pool).await.unwrap();
+            sqlx::query(ledger_schema).execute(&pool).await.unwrap();
+
+            let result = handle_affiliate_stats(
+                Extension(affiliate_stats_state(pool.clone())),
+                affiliate_stats_auth("tenant-a"),
+            )
+            .await;
+
+            assert!(
+                matches!(result, Err(StatusCode::INTERNAL_SERVER_ERROR)),
+                "{failed_aggregate} query failure must not become an HTTP 200 partial balance"
+            );
+            pool.close().await;
+        }
     }
 
     #[tokio::test]

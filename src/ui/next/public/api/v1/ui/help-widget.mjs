@@ -553,7 +553,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div style="padding: 12px 0;">
                 <h4 style="margin: 0 0 8px 0; font-size: 15px; font-weight: 600;">Latest Updates</h4>
                 <p style="font-size: 13px; color: #64748b; margin: 0 0 16px 0;">See recent improvements and releases to OmniSolo OneHumanCorp.</p>
-                <a href="/changelog.html" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">Read full release notes &rarr;</a>
+                <a href="/changelog" style="color: #2563eb; text-decoration: none; font-size: 14px; font-weight: 500;">Read full release notes &rarr;</a>
             </div>
         </div>
 
