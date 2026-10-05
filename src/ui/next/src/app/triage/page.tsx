@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { getActions } from "../utils/offlineQueue";
+import { subscribeOnboardingInvalidation } from "../onboarding/draftSession";
 
 
 type TriageItem = {
@@ -52,6 +53,8 @@ const getSourceIcon = (source: string) => {
 
 export default function TriagePage() {
   const decisionInFlight = useRef(false);
+  const sessionEpoch = useRef(0);
+  const sessionRetired = useRef(false);
   const [items, setItems] = useState<TriageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,11 +68,22 @@ export default function TriagePage() {
 
 
   useEffect(() => {
+    const unsubscribe = subscribeOnboardingInvalidation(() => {
+      ++sessionEpoch.current;
+      sessionRetired.current = true;
+      decisionInFlight.current = false;
+      setItems([]); setEditingId(null); setEditValue(''); setSelectedItemId(null);
+      setProcessingId(null); setActionStatus(''); setOfflineActionsCount(0); setLoading(false);
+      setError('Your session changed. Reload to review work for the current account.');
+    });
     loadItems();
 
     const updateOfflineCount = async () => {
+      if (sessionRetired.current) return;
+      const generation = sessionEpoch.current;
       try {
         const actions = await getActions();
+        if (generation !== sessionEpoch.current) return;
         setOfflineActionsCount(actions.length);
       } catch (err) {
         console.warn("Failed to fetch offline actions count:", err);
@@ -88,6 +102,8 @@ export default function TriagePage() {
     window.addEventListener('omnisolo_queue_updated', handleQueueUpdated);
 
     return () => {
+      ++sessionEpoch.current;
+      unsubscribe();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener('omnisolo_queue_updated', handleQueueUpdated);
@@ -96,12 +112,14 @@ export default function TriagePage() {
 
 
   async function loadItems() {
+    const generation = sessionEpoch.current;
     setLoading(true);
     setError("");
     try {
       const res = await fetch(
         `/api/v1/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
       );
+      if (generation !== sessionEpoch.current) return;
       if (res.status === 401) {
         setItems([]);
         return;
@@ -109,6 +127,7 @@ export default function TriagePage() {
       if (!res.ok)
         throw new Error("Triage items temporarily unavailable");
       const data = await res.json();
+      if (generation !== sessionEpoch.current) return;
       const rows = Array.isArray(data)
         ? data
         : Array.isArray(data?.items)
@@ -116,10 +135,11 @@ export default function TriagePage() {
           : [];
       setItems(rows);
     } catch (e: unknown) {
+      if (generation !== sessionEpoch.current) return;
       const msg = e instanceof Error ? e.message : "";
       setError(msg && !/failed to load/i.test(msg) ? msg : "Triage items temporarily unavailable");
     } finally {
-      setLoading(false);
+      if (generation === sessionEpoch.current) setLoading(false);
     }
   }
 
@@ -129,7 +149,8 @@ export default function TriagePage() {
   ).length;
 
   async function handleDecision(id: string, approved: boolean, edited_payload?: string) {
-    if (decisionInFlight.current) return;
+    if (decisionInFlight.current || sessionRetired.current) return;
+    const generation = sessionEpoch.current;
     const item = items.find(item => item.id === id);
     if (!item) return;
     decisionInFlight.current = true;
@@ -142,6 +163,7 @@ export default function TriagePage() {
           payload: { triage_item_id: id, approved, edited_payload },
           timestamp: Date.now(),
         });
+        if (generation !== sessionEpoch.current) return;
         setOfflineActionsCount(count => count + 1);
         setActionStatus("Decision queued offline. Approval or dismissal is not yet recorded.");
       } else {
@@ -155,6 +177,7 @@ export default function TriagePage() {
           },
         );
         const receipt: unknown = await res.json().catch(() => null);
+        if (generation !== sessionEpoch.current) return;
         const record = (value: unknown): Record<string, unknown> | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
         const result = record(receipt), stored = record(result?.item);
         if (res.status !== 200 || result?.success !== true || result.decision_recorded !== true || result.error != null
@@ -170,12 +193,15 @@ export default function TriagePage() {
       setItems(previous => previous.filter(item => item.id !== id));
       setEditingId(null);
     } catch {
+      if (generation !== sessionEpoch.current) return;
       setActionStatus(isOffline
         ? "Decision was not queued. Your card and draft are retained."
         : "Outcome unconfirmed. Your card and draft are retained. Check recorded decisions before retrying.");
     } finally {
-      setProcessingId(null);
-      decisionInFlight.current = false;
+      if (generation === sessionEpoch.current) {
+        setProcessingId(null);
+        decisionInFlight.current = false;
+      }
     }
   }
 

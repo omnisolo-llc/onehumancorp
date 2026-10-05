@@ -389,3 +389,60 @@ it('retires an unconfirmed card and editor when the account is invalidated', asy
   expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument();
   expect(screen.queryByDisplayValue('Private owner draft')).not.toBeInTheDocument();
 });
+
+it('does not restore retired aggregate projections when a new account feed omits them', async () => {
+  vi.useFakeTimers();
+  try {
+    const oldAggregate = {
+      items: [pendingItem],
+      triage: [{ id: 'old-triage', tenant_id: 'tenant-1', context: 'Prior owner message', action_payload: 'Prior owner reply' }],
+      priority_tasks: [{ id: 'old-task', tenant_id: 'tenant-1', description: 'Prior owner task', status: 'PENDING' }],
+    };
+    const newItem = { ...pendingItem, id: 'new-owner-item', tenant_id: 'tenant-2', context_payload: { description: 'Current owner proposal' } };
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => Response.json(String(url).includes('session-identity')
+      ? { userId: 'user-2', tenantId: 'tenant-2', expiresAt: Date.now() + 60_000 }
+      : { items: [newItem] }));
+    vi.stubGlobal('fetch', fetcher);
+    const { rerender } = render(<UnifiedAgentFeed initialData={oldAggregate} />);
+    expect(screen.getByTestId('triage-card-old-triage')).toBeVisible();
+    expect(screen.getByTestId('triage-card-old-task')).toBeVisible();
+    await act(async () => {
+      window.dispatchEvent(new Event('omnisolo_auth_changed'));
+      await readQueueOwner();
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetcher).toHaveBeenCalledWith('/api/v1/agent-feed');
+    expect(screen.getByTestId('triage-card-new-owner-item')).toBeVisible();
+    expect(screen.queryByTestId('triage-card-old-triage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('triage-card-old-task')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument();
+    await act(async () => { rerender(<UnifiedAgentFeed initialData={{ ...oldAggregate }} />); });
+    expect(screen.getByTestId('triage-card-new-owner-item')).toBeVisible();
+    expect(screen.queryByText('Prior owner message')).not.toBeInTheDocument();
+    expect(screen.queryByText('Prior owner task')).not.toBeInTheDocument();
+  } finally { vi.useRealTimers(); }
+});
+
+it.each(['draft_message', 'draft_action'])('accepts an edited canonical receipt using %s', async (field) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(canonicalReceipt({ proposed_action: { [field]: 'Owner-reviewed draft' } }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded.');
+  await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument());
+});
+
+it.each(['draft_message', 'draft_action'])('rejects a stale canonical %s even when another edit field matches', async (field) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(canonicalReceipt({ proposed_action: { message: 'Owner-reviewed draft', [field]: 'Old draft' } }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
+  expect(screen.getByTestId('edit-proposal-textarea')).toHaveValue('Owner-reviewed draft');
+});

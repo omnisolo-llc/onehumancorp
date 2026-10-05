@@ -145,3 +145,44 @@ describe('Triage decisions', () => {
     expect(mutations()).toHaveLength(0);
   });
 });
+
+it('retires an unconfirmed triage editor when the account is invalidated', async () => {
+  fetcher.mockResolvedValueOnce(Response.json({}));
+  const user = await openItem();
+  await user.click(screen.getByRole('button', { name: 'Review Draft' }));
+  await user.clear(screen.getByTestId('triage-edit-textarea-item-1'));
+  await user.type(screen.getByTestId('triage-edit-textarea-item-1'), 'Private prior owner draft');
+  await user.click(screen.getByTestId('triage-save-btn-item-1'));
+  expect(screen.getByRole('status')).toHaveTextContent('Outcome unconfirmed');
+  await act(async () => { window.dispatchEvent(new Event('omnisolo_auth_changed')); });
+  expect(screen.queryByTestId('triage-card-item-1')).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue('Private prior owner draft')).not.toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  expect(screen.getByText('Your session changed. Reload to review work for the current account.')).toBeVisible();
+  expect(mutations()).toHaveLength(1);
+});
+
+it.each([true, false])('ignores a late %s triage decision receipt after account invalidation', async (confirmed) => {
+  let resolveDecision!: (response: Response) => void;
+  fetcher.mockImplementationOnce(() => new Promise<Response>(resolve => { resolveDecision = resolve; }));
+  const user = await openItem();
+  await user.click(screen.getByTestId('triage-approve-item-1'));
+  await act(async () => { window.dispatchEvent(new Event('omnisolo_auth_changed')); });
+  await act(async () => resolveDecision(Response.json(confirmed ? receipt() : {})));
+  expect(screen.queryByTestId('triage-card-item-1')).not.toBeInTheDocument();
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  expect(screen.getByText('Your session changed. Reload to review work for the current account.')).toBeVisible();
+  expect(mutations()).toHaveLength(1);
+});
+
+it('ignores a late triage list response after account invalidation', async () => {
+  let resolveList!: (response: Response) => void;
+  fetcher.mockReset();
+  fetcher.mockImplementationOnce(() => new Promise<Response>(resolve => { resolveList = resolve; }));
+  render(<TriagePage />);
+  await act(async () => { window.dispatchEvent(new Event('omnisolo_auth_changed')); });
+  await act(async () => resolveList(Response.json([item])));
+  expect(screen.queryByTestId('triage-card-item-1')).not.toBeInTheDocument();
+  expect(screen.getByText('Your session changed. Reload to review work for the current account.')).toBeVisible();
+  expect(mutations()).toHaveLength(0);
+});

@@ -27,6 +27,7 @@ import type { AgentFeedItem, AgentFeedData, ActivityItem } from '@/lib/agent-fee
 
 export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData }) {
   const hasFetchedCanonicalFeedRef = useRef(false);
+  const initialDataRetiredRef = useRef(false);
   const decidedIdsRef = useRef<Set<string>>(new Set());
   const pendingDecisionIdsRef = useRef<Set<string>>(new Set());
   const unconfirmedDecisionIdsRef = useRef<Set<string>>(new Set());
@@ -152,6 +153,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       unconfirmedDecisionIdsRef.current.clear();
       decidedIdsRef.current.clear();
       hasFetchedCanonicalFeedRef.current = true;
+      initialDataRetiredRef.current = true;
+      setQueuedActionIds(new Set()); setOfflineActionsCount(0);
       setItems([]); setActivities([]); setEditingId(null); setEditContent('');
       setEditQuotePrice(''); setEditQuoteScope(''); setDecisionStatus('');
     };
@@ -187,8 +190,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
 
   useEffect(() => {
     const updateOfflineCount = async () => {
+      const generation = decisionEpoch.current;
       try {
         const actions = await getActions();
+        if (generation !== decisionEpoch.current) return;
         setOfflineActionsCount(actions.length);
         const ids = new Set<string>();
         actions.forEach((a) => {
@@ -236,7 +241,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           setLoading(true);
           setActivityLoading(true);
         }
-        let unifiedData = initialData;
+        // Props from the retired account remain stale even if a parent renders
+        // them again. After invalidation, only fresh authenticated reads apply.
+        const aggregate = initialDataRetiredRef.current ? undefined : initialData;
+        let unifiedData = aggregate;
 
         // A late dashboard aggregate may be older than our own completed read.
         // Once we have read the canonical feed, revalidate it instead of letting
@@ -248,18 +256,18 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           }
           const refreshedData = await unifiedRes.json();
           if (mounted) hasFetchedCanonicalFeedRef.current = true;
-          unifiedData = initialData
+          unifiedData = aggregate
             ? {
-                ...initialData,
+                ...aggregate,
                 ...refreshedData,
-                items: refreshedData.items || initialData.items || [],
+                items: refreshedData.items || aggregate.items || [],
                 priority_tasks:
                   refreshedData.priority_tasks === undefined
-                    ? initialData.priority_tasks
+                    ? aggregate.priority_tasks
                     : refreshedData.priority_tasks,
                 triage:
                   refreshedData.triage === undefined
-                    ? initialData.triage
+                    ? aggregate.triage
                     : refreshedData.triage,
               }
             : refreshedData;
@@ -588,7 +596,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
       if (legacy) confirmed = stored?.edited_payload === modified_content;
       else {
         const payload = record(stored?.proposed_action);
-        const content = payload && ['draft_reply', 'generated_response', 'summary', 'message']
+        const content = payload && ['draft_reply', 'generated_response', 'summary', 'message', 'draft_message', 'draft_action']
           .filter(key => typeof payload[key] === 'string').map(key => payload[key]);
         confirmed = !!content?.length && content.every(text => text === modified_content);
       }
