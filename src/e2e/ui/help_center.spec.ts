@@ -136,10 +136,11 @@ test.describe('Help Center & Documentation Features', () => {
     // Click the Read full release notes link
     const releaseNotesLink = page.locator('a:has-text("Read full release notes")');
     await expect(releaseNotesLink).toBeVisible();
+    await expect(releaseNotesLink).toHaveAttribute('href', '/changelog');
 
     // Click and navigate
     await releaseNotesLink.click();
-    await expect(page).toHaveURL(/\/changelog\.html/);
+    await expect(page).toHaveURL((url) => url.pathname === '/changelog');
     await expect(page.locator('h1:has-text("Release Notes & Changelog")')).toBeVisible();
   });
 });
