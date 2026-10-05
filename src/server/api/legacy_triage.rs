@@ -72,10 +72,17 @@ fn failure(error: Error) -> Response {
             )
         }
     };
+    // Losing the COMMIT acknowledgment does not prove that no decision exists.
+    // Only a durable receipt (including an identical retry) can confirm it.
+    let decision_recorded = if status == StatusCode::SERVICE_UNAVAILABLE {
+        Value::Null
+    } else {
+        json!(false)
+    };
     (
         status,
         [("cache-control", "no-store")],
-        Json(json!({"success":false,"decision_recorded":false,"error":message})),
+        Json(json!({"success":false,"decision_recorded":decision_recorded,"error":message})),
     )
         .into_response()
 }
