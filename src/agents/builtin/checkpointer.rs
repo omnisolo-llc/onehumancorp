@@ -1926,6 +1926,9 @@ mod restore_safety_tests {
 
     #[tokio::test]
     async fn legacy_provenance_treats_task_id_as_a_literal_path() {
+        use sha2::{Digest, Sha256};
+        use std::collections::BTreeSet;
+
         let dir = tempfile::tempdir().unwrap();
         let saver = GitCheckpointer::new(dir.path().into());
         saver
@@ -1940,14 +1943,38 @@ mod restore_safety_tests {
         git(dir.path(), &["tag", "-f", "checkpoint-shared", "HEAD"]);
         std::fs::write(dir.path().join("untracked"), "preserve work").unwrap();
         let before = snapshot(dir.path());
-        assert!(
-            saver
-                .restore_checkpoint_for_thread("*", "shared")
-                .await
-                .is_err()
+        let restored = saver.restore_checkpoint_for_thread("*", "shared").await;
+        let after = snapshot(dir.path());
+        let expected_error = "Checkpoint not found for requested task";
+        if restored.as_ref().err().map(String::as_str) != Some(expected_error) || after != before {
+            let paths: BTreeSet<_> = before.keys().chain(after.keys()).collect();
+            let digest = |bytes: Option<&Vec<u8>>| {
+                bytes
+                    .map(|bytes| format!("{:x}", Sha256::digest(bytes)))
+                    .unwrap_or_else(|| "<missing>".to_owned())
+            };
+            for path in paths {
+                if before.get(path) != after.get(path) {
+                    eprintln!(
+                        "checkpoint snapshot changed {path:?}: {} -> {}",
+                        digest(before.get(path)),
+                        digest(after.get(path))
+                    );
+                }
+            }
+            let preserved = dir.keep();
+            eprintln!(
+                "checkpoint restore result: {restored:?}; preserved fixture: {}",
+                preserved.display()
+            );
+        }
+        assert!(restored.is_err(), "unexpected restore result: {restored:?}");
+        assert_eq!(
+            restored.as_ref().err().map(String::as_str),
+            Some(expected_error)
         );
         assert!(
-            snapshot(dir.path()) == before,
+            after == before,
             "glob task ID bypassed legacy membership validation"
         );
     }

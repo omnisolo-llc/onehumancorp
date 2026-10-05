@@ -162,6 +162,39 @@ describe("HelpCenterPage", () => {
     });
   });
 
+  it.each([200, 503])("keeps current search results when the initial article response arrives late with HTTP %i", async status => {
+    const fetchImmediately = global.fetch;
+    const initialResponse = status === 200
+      ? await fetchImmediately("/api/v1/help")
+      : Response.json({ error: "Unavailable" }, { status });
+    let releaseInitial!: (response: Response) => void;
+    global.fetch = vi.fn((...args: Parameters<typeof fetch>) => args[0] === "/api/v1/help"
+      ? new Promise<Response>(resolve => { releaseInitial = resolve; })
+      : fetchImmediately(...args));
+    const user = userEvent.setup();
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    const search = screen.getByTestId("help-search-input");
+    await user.type(search, "products");
+    await screen.findByText("Adding Products");
+    expect(screen.queryByText("Getting Started")).not.toBeInTheDocument();
+
+    await act(async () => { releaseInitial(initialResponse); });
+    expect(search).toHaveValue("products");
+    expect(screen.getByText("Adding Products")).toBeInTheDocument();
+    expect(screen.queryByText("Getting Started")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Advanced" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Something went wrong loading the help center.")).not.toBeInTheDocument();
+  });
+
+  it("still displays an error for the active article request", async () => {
+    const fetchImmediately = global.fetch;
+    global.fetch = vi.fn((...args: Parameters<typeof fetch>) => args[0] === "/api/v1/help"
+      ? Promise.resolve(Response.json({ error: "Unavailable" }, { status: 503 }))
+      : fetchImmediately(...args));
+    render(<TooltipProvider><HelpCenterPage /></TooltipProvider>);
+    expect(await screen.findByText("Something went wrong loading the help center.")).toBeInTheDocument();
+  });
+
   it("displays no matching articles message when search fails", async () => {
     const user = userEvent.setup();
     render(
