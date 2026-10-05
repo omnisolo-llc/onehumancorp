@@ -80,153 +80,6 @@ pub struct LocalUiTenantQuery {
     pub mobile_optimized: Option<bool>,
 }
 
-async fn generate_draft_reply(
-    tenant_id: &str,
-    customer_id: &str,
-    customer_message: &str,
-    context_summary: &str,
-    db: &Arc<DB>,
-) -> String {
-    let (business_name, industry): (String, String) = match &db.store {
-        crate::db::DbStore::Postgres => {
-            sqlx::query_as("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = $1")
-                .bind(tenant_id)
-                .fetch_optional(&db.pool)
-                .await
-                .unwrap_or(None)
-                .unwrap_or_else(|| ("A business".to_string(), "".to_string()))
-        }
-        crate::db::DbStore::Sqlite(sqlite_pool) => {
-            sqlx::query_as("SELECT name, COALESCE(industry, '') FROM tenants WHERE id = ?")
-                .bind(tenant_id)
-                .fetch_optional(sqlite_pool)
-                .await
-                .unwrap_or(None)
-                .unwrap_or_else(|| ("A business".to_string(), "".to_string()))
-        }
-    };
-
-    let business_context = if industry.is_empty() {
-        format!("A business named {}", business_name)
-    } else {
-        format!("A {} business named {}", industry, business_name)
-    };
-
-    let mut enriched_context_summary = context_summary.to_string();
-
-    let embedding = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
-        Ok("gemini") => {
-            crate::minimax::LocalLLMClient::new()
-                .generate_embedding(customer_message)
-                .await
-        }
-        Ok("minimax") => {
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-            if api_key.is_empty() {
-                crate::minimax::LocalLLMClient::new()
-                    .generate_embedding(customer_message)
-                    .await
-            } else {
-                crate::minimax::MinimaxClient::new(api_key)
-                    .generate_embedding(customer_message)
-                    .await
-            }
-        }
-        _ => {
-            crate::minimax::LocalLLMClient::new()
-                .generate_embedding(customer_message)
-                .await
-        }
-    };
-
-    if let Ok(emb) = embedding {
-        let emb_str = format!(
-            "[{}]",
-            emb.iter()
-                .map(|f| f.to_string())
-                .collect::<Vec<_>>()
-                .join(",")
-        );
-        let similar_memories: Result<Vec<String>, sqlx::Error> = match &db.store {
-            crate::db::DbStore::Postgres => {
-                let mut tx = db.pool.begin().await.unwrap();
-                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await.unwrap();
-
-                let rows = sqlx::query(
-                    "SELECT content FROM consolidated_memory WHERE tenant_id = $1 AND metadata->>'customer_id' = $2 ORDER BY embedding <=> $3::vector LIMIT 3"
-                )
-                .bind(tenant_id)
-                .bind(customer_id)
-                .bind(emb_str)
-                .fetch_all(&mut *tx)
-                .await;
-                tx.commit().await.unwrap();
-                rows.map(|rows| rows.into_iter().map(|r| r.get("content")).collect())
-            }
-            crate::db::DbStore::Sqlite(sqlite_pool) => {
-                sqlx::query(
-                    "SELECT content FROM consolidated_memory WHERE tenant_id = ? AND json_extract(metadata, '$.customer_id') = ? ORDER BY vec_distance_cosine(embedding, ?) LIMIT 3"
-                )
-                .bind(tenant_id)
-                .bind(customer_id)
-                .bind(emb_str)
-                .fetch_all(sqlite_pool)
-                .await
-                .map(|rows| rows.into_iter().map(|r| r.get("content")).collect())
-            }
-        };
-
-        if let Ok(mems) = similar_memories
-            && !mems.is_empty()
-        {
-            enriched_context_summary = format!(
-                "{} Past memories: {}",
-                enriched_context_summary,
-                mems.join("; ")
-            );
-        }
-    }
-
-    let prompt = format!(
-        "Write one concise, warm customer-service reply. Business context: {}. Customer recent history: {}. Customer message: {}",
-        business_context, enriched_context_summary, customer_message
-    );
-    let compressed_prompt = ::server_pricing::compression::reduce_tokens(&prompt);
-
-    let llm_res = match std::env::var("OMNISOLO_LLM_PROVIDER").as_deref() {
-        Ok("gemini") => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
-        }
-        Ok("minimax") => {
-            let api_key = std::env::var("MINIMAX_API_KEY").unwrap_or_default();
-            if api_key.is_empty() {
-                crate::minimax::LocalLLMClient::new()
-                    .reason(&compressed_prompt)
-                    .await
-            } else {
-                crate::minimax::MinimaxClient::new(api_key)
-                    .reason(&compressed_prompt)
-                    .await
-            }
-        }
-        _ => {
-            crate::minimax::LocalLLMClient::new()
-                .reason(&compressed_prompt)
-                .await
-        }
-    };
-
-    match llm_res {
-        Ok(reply) => reply,
-        Err(_) => format!(
-            "Hi there! Thanks for your message: '{}'. How can we help?",
-            customer_message
-        ),
-    }
-}
-
 pub fn router(db: Arc<DB>) -> Router {
     let state = AppState { db };
     Router::new()
@@ -307,36 +160,9 @@ pub async fn handle_unified_webhook(
     };
     let thread_id = format!("thread-{}", Uuid::new_v4());
     let message_id = format!("msg-{}", Uuid::new_v4());
-    let action_id = format!("action-{}", Uuid::new_v4());
-
-    let mut context_summary = "New customer inquiry received.".to_string();
 
     match &state.db.store {
         crate::db::DbStore::Postgres => {
-            // Build Context Memory Graph Summary
-            let recent_history = sqlx::query(
-                "SELECT channel, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = $1 AND customer_id = $2 ORDER BY created_at DESC LIMIT 2"
-            )
-            .bind(tenant_id)
-            .bind(&customer_id)
-            .fetch_all(&state.db.pool).await;
-
-            if let Ok(rows) = recent_history
-                && !rows.is_empty()
-            {
-                let mut history_str = String::from("Recent history: ");
-                let history_items: Vec<String> = rows
-                    .into_iter()
-                    .map(|row| {
-                        let channel: String = row.get("channel");
-                        let created_at: String = row.try_get("created_at").unwrap_or_default();
-                        format!("Sent {} ({})", channel, created_at)
-                    })
-                    .collect();
-                history_str.push_str(&history_items.join(", "));
-                context_summary = history_str;
-            }
-
             let _ = sqlx::query("INSERT INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES ($1, $2, $3, $4, 'open') ON CONFLICT DO NOTHING")
                 .bind(&thread_id)
                 .bind(tenant_id)
@@ -351,53 +177,21 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(&state.db.pool).await;
 
-            let draft_reply = generate_draft_reply(
-                tenant_id,
-                &customer_id,
-                &payload.message,
-                &context_summary,
-                &state.db,
-            )
-            .await;
-            let action_payload = serde_json::to_string(&DraftedResponse {
-                customer_id: customer_id.clone(),
-                context_summary,
-                draft_reply,
-            })
-            .unwrap();
+            let job_payload = serde_json::json!({
+                "message_id": message_id,
+                "source": payload.source,
+                "content": payload.message,
+                "sender_id": customer_id.clone(),
+                "customer_id": customer_id.clone()
+            });
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES ($1, $2, $3, 'Draft Reply', $4, 'pending')")
-                .bind(&action_id)
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES ($1, $2, 'message_triage', $3, 'PENDING')")
+                .bind(uuid::Uuid::new_v4().to_string())
                 .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&action_payload)
+                .bind(job_payload.to_string())
                 .execute(&state.db.pool).await;
         }
         crate::db::DbStore::Sqlite(sqlite_pool) => {
-            // Build Context Memory Graph Summary
-            let recent_history = sqlx::query(
-                "SELECT channel, CAST(created_at AS text) as created_at FROM unified_threads WHERE tenant_id = ? AND customer_id = ? ORDER BY created_at DESC LIMIT 2"
-            )
-            .bind(tenant_id)
-            .bind(&customer_id)
-            .fetch_all(sqlite_pool).await;
-
-            if let Ok(rows) = recent_history
-                && !rows.is_empty()
-            {
-                let mut history_str = String::from("Recent history: ");
-                let history_items: Vec<String> = rows
-                    .into_iter()
-                    .map(|row| {
-                        let channel: String = row.get("channel");
-                        let created_at: String = row.try_get("created_at").unwrap_or_default();
-                        format!("Sent {} ({})", channel, created_at)
-                    })
-                    .collect();
-                history_str.push_str(&history_items.join(", "));
-                context_summary = history_str;
-            }
-
             let _ = sqlx::query("INSERT OR IGNORE INTO unified_threads (id, tenant_id, customer_id, channel, status) VALUES (?, ?, ?, ?, 'open')")
                 .bind(&thread_id)
                 .bind(tenant_id)
@@ -412,26 +206,18 @@ pub async fn handle_unified_webhook(
                 .bind(&payload.message)
                 .execute(sqlite_pool).await;
 
-            let draft_reply = generate_draft_reply(
-                tenant_id,
-                &customer_id,
-                &payload.message,
-                &context_summary,
-                &state.db,
-            )
-            .await;
-            let action_payload = serde_json::to_string(&DraftedResponse {
-                customer_id: customer_id.clone(),
-                context_summary,
-                draft_reply,
-            })
-            .unwrap();
+            let job_payload = serde_json::json!({
+                "message_id": message_id,
+                "source": payload.source,
+                "content": payload.message,
+                "sender_id": customer_id.clone(),
+                "customer_id": customer_id.clone()
+            });
 
-            let _ = sqlx::query("INSERT INTO unified_triage_actions (id, tenant_id, thread_id, action_type, action_payload, status) VALUES (?, ?, ?, 'Draft Reply', ?, 'pending')")
-                .bind(&action_id)
+            let _ = sqlx::query("INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload, status) VALUES (?, ?, 'message_triage', ?, 'PENDING')")
+                .bind(uuid::Uuid::new_v4().to_string())
                 .bind(tenant_id)
-                .bind(&thread_id)
-                .bind(&action_payload)
+                .bind(job_payload.to_string())
                 .execute(sqlite_pool).await;
         }
     }
