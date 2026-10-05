@@ -1395,17 +1395,20 @@ impl RedisTaskQueue {
             )
         })?;
         let readiness = async {
-            let mut connection = queue.get_connection().await?;
+            let mut connection = queue.get_connection_typed().await?;
             // Both required sockets share the same startup deadline. Do not
             // defer an unbounded second connection to the first dequeue.
-            queue.get_blocking_connection().await?;
+            queue.get_blocking_connection_typed().await?;
             redis::cmd("PING")
                 .query_async::<String>(&mut connection)
                 .await
-                .map_err(|_| "Redis readiness check failed".to_string())
         };
         match tokio::time::timeout(Duration::from_secs(5), readiness).await {
             Ok(Ok(reply)) if reply == "PONG" => Ok(queue),
+            Ok(Err(error)) if error.is_timeout() => Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Configured Redis task queue startup timed out",
+            )),
             Ok(_) => Err(std::io::Error::other(
                 "Configured Redis task queue is unavailable; check REDIS_URL and the Redis service",
             )),
@@ -1440,20 +1443,30 @@ impl RedisTaskQueue {
     }
 
     async fn get_connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        self.get_connection_typed().await.map_err(|e| e.to_string())
+    }
+
+    async fn get_connection_typed(&self) -> redis::RedisResult<redis::aio::ConnectionManager> {
         let conn = self
             .connection
             .get_or_try_init(|| self.new_connection(Duration::from_millis(500)))
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
         Ok(conn.clone())
     }
 
     async fn get_blocking_connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        self.get_blocking_connection_typed()
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    async fn get_blocking_connection_typed(
+        &self,
+    ) -> redis::RedisResult<redis::aio::ConnectionManager> {
         let conn = self
             .blocking_connection
             .get_or_try_init(|| self.new_connection(Duration::from_millis(1500)))
-            .await
-            .map_err(|e| e.to_string())?;
+            .await?;
         Ok(conn.clone())
     }
 }
