@@ -42,6 +42,14 @@ Run `make lint` and `make test` from the repository root before accepting an imp
 - Focused lanes: `make test-rust`, `make test-backend`, `make test-node`, `make test-contracts`, `make test-e2e`, `make lint-rust`, `make lint-node`. `make test-backend` excludes Tauri and cannot certify the full suite.
 - `make test-e2e E2E_ARGS='--workers=1'` adjusts browser concurrency. Filters are diagnostic only; do not claim full acceptance for filtered runs. `make build-web` builds just the maintained web package.
 
+The Redis reconnect focused gate additionally requires `redis-server` and `redis-cli`
+on PATH (Debian/Ubuntu: `redis-server redis-tools`; macOS: `redis`). Its runner
+starts a disposable loopback process and verifies the server PID before destructive
+connection tests; shared Redis services and supplied URLs are rejected. Run
+`bash scripts/redis-reconnect/fetch.sh` then
+`python3 scripts/focused_ci_gate.py redis-reconnect`. Native contracts enforce the
+fixture ownership and required CI wiring without running those connection tests.
+
 Full gates require GNU Make, the pinned Rust/Node toolchains, Python 3 with PyYAML, native Tauri/WebKit/GTK development libraries for the host, a running Docker daemon and Playwright Chromium plus its OS dependencies (`npx --no-install playwright install --with-deps chromium`). Install locked npm dependencies at root, `src/ui/next`, and `src/cli`. See the native CI setup action for platform package lists. Mobile SDK, signing and physical-device checks remain separate release verification, not implied by a host workspace pass.
 
 ## Setup and boundaries

@@ -1362,10 +1362,14 @@ impl TaskQueue for SqliteTaskQueue {
 pub struct RedisTaskQueue {
     client: redis::Client,
     queue_name: String,
-    connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    connection: tokio::sync::OnceCell<redis::aio::ConnectionManager>,
     // Redis serializes commands on a connection. BLPOP must not delay enqueue
     // or pruning when callers share this queue.
-    blocking_connection: tokio::sync::OnceCell<redis::aio::MultiplexedConnection>,
+    blocking_connection: tokio::sync::OnceCell<redis::aio::ConnectionManager>,
+    // Serialize active dequeue calls so their response budgets are not spent
+    // waiting behind other one-second reads. Cancellation can leave a submitted
+    // BLPOP on the wire even after its admission guard is dropped.
+    blocking_admission: tokio::sync::Mutex<()>,
 }
 
 impl RedisTaskQueue {
@@ -1376,6 +1380,7 @@ impl RedisTaskQueue {
             queue_name: queue_name.to_string(),
             connection: tokio::sync::OnceCell::new(),
             blocking_connection: tokio::sync::OnceCell::new(),
+            blocking_admission: tokio::sync::Mutex::new(()),
         })
     }
 
@@ -1390,17 +1395,20 @@ impl RedisTaskQueue {
             )
         })?;
         let readiness = async {
-            let mut connection = queue.get_connection().await?;
+            let mut connection = queue.get_connection_typed().await?;
             // Both required sockets share the same startup deadline. Do not
             // defer an unbounded second connection to the first dequeue.
-            queue.get_blocking_connection().await?;
+            queue.get_blocking_connection_typed().await?;
             redis::cmd("PING")
                 .query_async::<String>(&mut connection)
                 .await
-                .map_err(|_| "Redis readiness check failed".to_string())
         };
         match tokio::time::timeout(Duration::from_secs(5), readiness).await {
             Ok(Ok(reply)) if reply == "PONG" => Ok(queue),
+            Ok(Err(error)) if error.is_timeout() => Err(std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                "Configured Redis task queue startup timed out",
+            )),
             Ok(_) => Err(std::io::Error::other(
                 "Configured Redis task queue is unavailable; check REDIS_URL and the Redis service",
             )),
@@ -1411,21 +1419,54 @@ impl RedisTaskQueue {
         }
     }
 
-    async fn get_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    // ConnectionManager replaces failed sockets for later calls; redis 0.27
+    // returns the original command failure without replaying the command.
+    // Connection and response deadlines bound separate phases, not total wait.
+    async fn new_connection(
+        &self,
+        response_timeout: Duration,
+    ) -> redis::RedisResult<redis::aio::ConnectionManager> {
+        redis::aio::ConnectionManager::new_with_config(
+            self.client.clone(),
+            redis::aio::ConnectionManagerConfig::new()
+                .set_number_of_retries(0)
+                .set_connection_timeout(Duration::from_millis(500))
+                .set_response_timeout(response_timeout),
+        )
+        .await
+    }
+
+    fn command_error(error: redis::RedisError) -> String {
+        format!(
+            "Redis task queue command failed; outcome may be unknown and was not retried: {error}"
+        )
+    }
+
+    async fn get_connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        self.get_connection_typed().await.map_err(|e| e.to_string())
+    }
+
+    async fn get_connection_typed(&self) -> redis::RedisResult<redis::aio::ConnectionManager> {
         let conn = self
             .connection
-            .get_or_try_init(|| async { self.client.get_multiplexed_tokio_connection().await })
-            .await
-            .map_err(|e| e.to_string())?;
+            .get_or_try_init(|| self.new_connection(Duration::from_millis(500)))
+            .await?;
         Ok(conn.clone())
     }
 
-    async fn get_blocking_connection(&self) -> Result<redis::aio::MultiplexedConnection, String> {
+    async fn get_blocking_connection(&self) -> Result<redis::aio::ConnectionManager, String> {
+        self.get_blocking_connection_typed()
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    async fn get_blocking_connection_typed(
+        &self,
+    ) -> redis::RedisResult<redis::aio::ConnectionManager> {
         let conn = self
             .blocking_connection
-            .get_or_try_init(|| async { self.client.get_multiplexed_tokio_connection().await })
-            .await
-            .map_err(|e| e.to_string())?;
+            .get_or_try_init(|| self.new_connection(Duration::from_millis(1500)))
+            .await?;
         Ok(conn.clone())
     }
 }
@@ -1462,7 +1503,7 @@ impl TaskQueue for RedisTaskQueue {
         let _: () = pipe
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
         Ok(())
     }
 
@@ -1492,12 +1533,15 @@ impl TaskQueue for RedisTaskQueue {
             .arg(buf)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
 
         Ok(())
     }
 
     async fn dequeue(&self, roles: Vec<String>) -> Result<Option<Job>, String> {
+        // Cancellation or a lost reply can leave the pop outcome unknown.
+        // Never replay BLPOP; atomic claim/recovery is a separate queue concern.
+        let admission = self.blocking_admission.lock().await;
         let mut conn = self.get_blocking_connection().await?;
 
         // Use BLPOP with 1 second timeout to avoid busy loop
@@ -1506,7 +1550,8 @@ impl TaskQueue for RedisTaskQueue {
             .arg(1)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
+        drop(admission);
 
         if let Some((_, payload_bytes)) = result
             && let Ok(queue_job) =
@@ -1537,13 +1582,14 @@ impl TaskQueue for RedisTaskQueue {
                     .unwrap_or_else(chrono::Utc::now),
             };
             if roles.contains(&job.job_type) {
+                let mut conn = self.get_connection().await?;
                 let _: () = redis::cmd("HSET")
                     .arg(format!("{}_processing", self.queue_name))
                     .arg(&job.id)
                     .arg(&payload_bytes)
                     .query_async(&mut conn)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(Self::command_error)?;
                 return Ok(Some(job));
             } else {
                 // Not intended for this worker role, push it back.
@@ -1561,7 +1607,7 @@ impl TaskQueue for RedisTaskQueue {
             .arg(job_id)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
         if let Some(payload_bytes) = result
             && let Ok(queue_job) =
                 <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..])
@@ -1574,7 +1620,7 @@ impl TaskQueue for RedisTaskQueue {
                 .arg(job_id)
                 .query_async(&mut conn)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(Self::command_error)?;
             return Ok(());
         }
         Err("job not found".to_string())
@@ -1588,7 +1634,7 @@ impl TaskQueue for RedisTaskQueue {
             .arg(job_id)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
         if let Some(payload_bytes) = result
             && let Ok(queue_job) =
                 <::server_omnisolo::interop::QueueJob as prost::Message>::decode(&payload_bytes[..])
@@ -1601,7 +1647,7 @@ impl TaskQueue for RedisTaskQueue {
                 .arg(job_id)
                 .query_async(&mut conn)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(Self::command_error)?;
             return Ok(());
         }
         Err("job not found".to_string())
@@ -1632,7 +1678,7 @@ impl TaskQueue for RedisTaskQueue {
             .arg(&payload_bytes)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
         Ok(())
     }
 
@@ -1645,7 +1691,7 @@ impl TaskQueue for RedisTaskQueue {
             .arg(&processing_key)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
 
         let stale_threshold_ms = (Utc::now() - chrono::Duration::hours(1)).timestamp_millis();
         let mut stale_count = 0;
@@ -1669,7 +1715,7 @@ impl TaskQueue for RedisTaskQueue {
                     .arg(&job_id)
                     .query_async(&mut conn)
                     .await
-                    .map_err(|e| e.to_string())?;
+                    .map_err(Self::command_error)?;
                 stale_count += 1;
             }
         }
@@ -1679,7 +1725,7 @@ impl TaskQueue for RedisTaskQueue {
             .arg(&self.queue_name)
             .query_async(&mut conn)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(Self::command_error)?;
         if list_len > 0 {
             let items: Vec<Vec<u8>> = redis::cmd("LRANGE")
                 .arg(&self.queue_name)
@@ -1687,7 +1733,7 @@ impl TaskQueue for RedisTaskQueue {
                 .arg(list_len - 1)
                 .query_async(&mut conn)
                 .await
-                .map_err(|e| e.to_string())?;
+                .map_err(Self::command_error)?;
             let stagnant_threshold_ms =
                 (Utc::now() - chrono::Duration::hours(24)).timestamp_millis();
 
@@ -1705,7 +1751,7 @@ impl TaskQueue for RedisTaskQueue {
                     let _: () = pipe
                         .query_async(&mut conn)
                         .await
-                        .map_err(|e| e.to_string())?;
+                        .map_err(Self::command_error)?;
                     stale_count += 1;
                 }
             }

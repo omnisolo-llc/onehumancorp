@@ -2,7 +2,6 @@
 
 import { useClipboardFeedback } from '@/hooks/useClipboardFeedback';
 import { useEffect, useState, useRef } from "react";
-import Head from "next/head";
 import Link from 'next/link';
 import { useProPlan } from '../components/useProPlan';
 import { hasVerifiedOfflineQueueOwner } from '@/lib/sync/queueIdentity';
@@ -102,9 +101,6 @@ export default function ExitIntentBuilder() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 flex flex-col items-center justify-center font-sans">
-      <Head>
-        <title>Exit-Intent Pop-up Builder | OmniSolo OneHumanCorp</title>
-      </Head>
 
       <div className="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row">
         {/* Left Column: Editor */}

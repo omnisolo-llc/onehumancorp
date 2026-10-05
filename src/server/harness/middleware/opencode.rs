@@ -3,16 +3,19 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::{Path, PathBuf};
+use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
+use futures_util::TryStreamExt;
 use serde_json::{Map, Value, json};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
+use tokio::io::{AsyncBufReadExt, AsyncRead, BufReader};
 use tokio::time::{Instant, sleep, timeout};
+use tokio_util::io::StreamReader;
 use uuid::Uuid;
 
 use crate::middleware::harness::{HarnessAdapterError, HarnessEvent};
+use crate::middleware::http_client::{self, ResponseError};
 use crate::middleware::http_runtime::{HttpProcessConfig, HttpProcessError, HttpProcessRuntime};
 use crate::middleware::types::{ModelApiDialect, ReasoningEffort, ResolvedModelSelection};
 
@@ -24,7 +27,6 @@ pub const OPENCODE_DATA_HOME_ENV: &str = "XDG_DATA_HOME";
 const OPENCODE_CONFIG_ENV: &str = "OPENCODE_CONFIG";
 const OPENCODE_CONFIG_CONTENT_ENV: &str = "OPENCODE_CONFIG_CONTENT";
 const MAX_HTTP_BODY_BYTES: usize = 8 * 1024 * 1024;
-const MAX_HEADER_BYTES: usize = 64 * 1024;
 const MAX_SSE_LINE_BYTES: usize = 64 * 1024;
 const MAX_SSE_EVENT_BYTES: usize = 256 * 1024;
 const MAX_READINESS_PROBE_TIMEOUT: Duration = Duration::from_secs(1);
@@ -387,11 +389,12 @@ pub struct OpenCodePromptResult {
 }
 
 pub struct OpenCodeHttpAdapter {
+    client: reqwest::Client,
     runtime: Option<HttpProcessRuntime>,
     home: Option<OpenCodeIsolatedHome>,
     address: SocketAddr,
     request_timeout: Duration,
-    active_turns: Arc<Mutex<HashMap<String, String>>>,
+    active_turns: ActiveTurns,
     secret_values: Vec<String>,
 }
 
@@ -413,6 +416,8 @@ impl OpenCodeHttpAdapter {
         selection: ResolvedModelSelection,
         base_url: &str,
     ) -> Result<Self, HarnessAdapterError> {
+        let client = http_client::local_client()
+            .map_err(|error| HarnessAdapterError::Io(std::io::Error::other(error.without_url())))?;
         let deadline = Instant::now() + config.readiness_timeout;
         let secret_values = config
             .environment
@@ -433,6 +438,7 @@ impl OpenCodeHttpAdapter {
             .map_err(map_process_error)?;
         let address = runtime.address();
         let mut adapter = Self {
+            client,
             runtime: Some(runtime),
             home: Some(home),
             address,
@@ -486,6 +492,9 @@ impl OpenCodeHttpAdapter {
             )));
         }
         Ok(Self {
+            client: http_client::local_client().map_err(|error| {
+                HarnessAdapterError::Io(std::io::Error::other(error.without_url()))
+            })?,
             runtime: None,
             home: None,
             address,
@@ -636,6 +645,10 @@ impl OpenCodeHttpAdapter {
 
     pub async fn abort(&self, native_session_id: &str) -> Result<(), HarnessAdapterError> {
         let native_session_id = validated_session_id(native_session_id)?;
+        let turn = ActiveTurnLease::current(Arc::clone(&self.active_turns), native_session_id)?;
+        if let Some(turn) = &turn {
+            turn.begin_cancellation()?;
+        }
         let value = self
             .json_request(
                 "POST",
@@ -647,18 +660,31 @@ impl OpenCodeHttpAdapter {
         if value != Value::Bool(true) {
             return Err(invalid_response("OpenCode abort response must be true"));
         }
+        if let Some(turn) = turn {
+            turn.complete();
+        }
         Ok(())
     }
 
     pub async fn shutdown(mut self) -> Result<(), HarnessAdapterError> {
-        let active_sessions = self
-            .active_turns
-            .lock()
-            .map_err(|_| invalid_response("OpenCode active-turn lock was poisoned"))?
-            .keys()
-            .cloned()
-            .collect::<Vec<_>>();
-        let mut first_error = None;
+        let (active_sessions, has_unknown_cancellation) = {
+            let turns = self
+                .active_turns
+                .lock()
+                .map_err(|_| invalid_response("OpenCode active-turn lock was poisoned"))?;
+            (
+                turns
+                    .iter()
+                    .filter(|(_, turn)| !turn.cancellation_attempted)
+                    .map(|(session, _)| session.clone())
+                    .collect::<Vec<_>>(),
+                turns.values().any(|turn| turn.cancellation_attempted),
+            )
+        };
+        // An external server has no owned process whose shutdown can prove that
+        // a previously attempted, session-scoped abort has finished executing.
+        let mut first_error =
+            (self.runtime.is_none() && has_unknown_cancellation).then(unknown_cancellation);
         for native_session_id in active_sessions {
             if let Err(error) = self.abort(&native_session_id).await
                 && first_error.is_none()
@@ -683,25 +709,23 @@ impl OpenCodeHttpAdapter {
         correlation: OpenCodeEventCorrelation,
     ) -> Result<OpenCodeEventStream, HarnessAdapterError> {
         let operation = async {
-            let mut stream = TcpStream::connect(self.address)
+            let response = self
+                .client
+                .get(format!("http://{}/event", self.address))
+                .header(reqwest::header::ACCEPT, "text/event-stream")
+                .header(reqwest::header::CONNECTION, "close")
+                .send()
                 .await
                 .map_err(|_| HarnessAdapterError::ProcessExited)?;
-            let request = format!(
-                "GET /event HTTP/1.0\r\nHost: {}\r\nAccept: text/event-stream\r\nConnection: close\r\n\r\n",
-                self.address
-            );
-            stream
-                .write_all(request.as_bytes())
-                .await
-                .map_err(|_| HarnessAdapterError::ProcessExited)?;
-            let mut reader = BufReader::new(stream);
-            let (status, headers) = read_response_head(&mut reader).await?;
+            http_client::validate_headers(&response).map_err(map_response_error)?;
+            let status = response.status().as_u16();
             if status != 200 {
                 return Err(remote_http_error(status, Value::Null));
             }
-            let content_type = headers
-                .get("content-type")
-                .map(String::as_str)
+            let content_type = response
+                .headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok())
                 .unwrap_or("");
             if !content_type
                 .to_ascii_lowercase()
@@ -711,6 +735,10 @@ impl OpenCodeHttpAdapter {
                     "OpenCode event subscription did not return text/event-stream",
                 ));
             }
+            let body = response
+                .bytes_stream()
+                .map_err(|error| std::io::Error::other(error.without_url()));
+            let reader: EventReader = BufReader::new(Box::pin(StreamReader::new(body)));
             let native_session_id = correlation.native_session_id.clone();
             Ok(OpenCodeEventStream {
                 reader,
@@ -720,9 +748,11 @@ impl OpenCodeHttpAdapter {
                 ),
                 event_timeout: self.request_timeout,
                 turn: None,
+                client: self.client.clone(),
                 address: self.address,
                 native_session_id,
                 cancellation_sent: false,
+                cancellation_confirmed: false,
             })
         };
         timeout(self.request_timeout, operation)
@@ -739,7 +769,7 @@ impl OpenCodeHttpAdapter {
     ) -> Result<Value, HarnessAdapterError> {
         let response = timeout(
             self.request_timeout,
-            raw_http_request(self.address, method, path, body.as_ref()),
+            http_request(&self.client, self.address, method, path, body.as_ref()),
         )
         .await
         .map_err(|_| HarnessAdapterError::Timeout)??;
@@ -956,126 +986,45 @@ struct HttpResponse {
     body: Vec<u8>,
 }
 
-async fn raw_http_request(
+async fn http_request(
+    client: &reqwest::Client,
     address: SocketAddr,
     method: &str,
     path: &str,
     body: Option<&Value>,
 ) -> Result<HttpResponse, HarnessAdapterError> {
+    let method = reqwest::Method::from_bytes(method.as_bytes())
+        .map_err(|_| HarnessAdapterError::InvalidRequest("HTTP method is invalid".to_owned()))?;
     let body = body
         .map(serde_json::to_vec)
         .transpose()
         .map_err(HarnessAdapterError::Json)?
         .unwrap_or_default();
-    let mut stream = TcpStream::connect(address)
+    let mut request = client
+        .request(method, format!("http://{address}{path}"))
+        .header(reqwest::header::ACCEPT, "application/json")
+        .header(reqwest::header::CONNECTION, "close");
+    if !body.is_empty() {
+        request = request
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .body(body);
+    }
+    let response = request
+        .send()
         .await
         .map_err(|_| HarnessAdapterError::ProcessExited)?;
-    let mut request = format!(
-        "{method} {path} HTTP/1.0\r\nHost: {address}\r\nAccept: application/json\r\nConnection: close\r\n"
-    );
-    if !body.is_empty() {
-        request.push_str("Content-Type: application/json\r\n");
-        request.push_str(&format!("Content-Length: {}\r\n", body.len()));
-    }
-    request.push_str("\r\n");
-    stream
-        .write_all(request.as_bytes())
+    let status = response.status().as_u16();
+    let body = http_client::bounded_body(response, MAX_HTTP_BODY_BYTES)
         .await
-        .map_err(|_| HarnessAdapterError::ProcessExited)?;
-    if !body.is_empty() {
-        stream
-            .write_all(&body)
-            .await
-            .map_err(|_| HarnessAdapterError::ProcessExited)?;
-    }
-    let mut reader = BufReader::new(stream);
-    let (status, headers) = read_response_head(&mut reader).await?;
-    let content_length = headers
-        .get("content-length")
-        .map(|value| {
-            value
-                .parse::<usize>()
-                .map_err(|_| invalid_response("OpenCode Content-Length was malformed"))
-        })
-        .transpose()?;
-    if content_length.is_some_and(|length| length > MAX_HTTP_BODY_BYTES) {
-        return Err(invalid_response(
-            "OpenCode HTTP response exceeded the body limit",
-        ));
-    }
-    let mut response_body = Vec::new();
-    if let Some(content_length) = content_length {
-        response_body.resize(content_length, 0);
-        reader
-            .read_exact(&mut response_body)
-            .await
-            .map_err(|_| HarnessAdapterError::ProcessExited)?;
-    } else {
-        reader
-            .take((MAX_HTTP_BODY_BYTES + 1) as u64)
-            .read_to_end(&mut response_body)
-            .await
-            .map_err(|_| HarnessAdapterError::ProcessExited)?;
-        if response_body.len() > MAX_HTTP_BODY_BYTES {
-            return Err(invalid_response(
-                "OpenCode HTTP response exceeded the body limit",
-            ));
-        }
-    }
-    Ok(HttpResponse {
-        status,
-        body: response_body,
-    })
+        .map_err(map_response_error)?;
+    Ok(HttpResponse { status, body })
 }
 
-async fn read_response_head(
-    reader: &mut BufReader<TcpStream>,
-) -> Result<(u16, BTreeMap<String, String>), HarnessAdapterError> {
-    let mut status_line = String::new();
-    if reader
-        .read_line(&mut status_line)
-        .await
-        .map_err(|_| HarnessAdapterError::ProcessExited)?
-        == 0
-    {
-        return Err(HarnessAdapterError::ProcessExited);
+fn map_response_error(error: ResponseError) -> HarnessAdapterError {
+    match error {
+        ResponseError::Transport(_) => HarnessAdapterError::ProcessExited,
+        ResponseError::Invalid(message) => invalid_response(format!("OpenCode {message}")),
     }
-    let mut parts = status_line.split_whitespace();
-    let protocol = parts.next().unwrap_or_default();
-    let status = parts
-        .next()
-        .and_then(|value| value.parse::<u16>().ok())
-        .ok_or_else(|| invalid_response("OpenCode HTTP status line was malformed"))?;
-    if !protocol.starts_with("HTTP/1.") {
-        return Err(invalid_response("OpenCode HTTP protocol was malformed"));
-    }
-
-    let mut headers = BTreeMap::new();
-    let mut header_bytes = status_line.len();
-    loop {
-        let mut line = String::new();
-        if reader
-            .read_line(&mut line)
-            .await
-            .map_err(|_| HarnessAdapterError::ProcessExited)?
-            == 0
-        {
-            return Err(HarnessAdapterError::ProcessExited);
-        }
-        header_bytes += line.len();
-        if header_bytes > MAX_HEADER_BYTES {
-            return Err(invalid_response("OpenCode HTTP headers exceeded the limit"));
-        }
-        if line == "\r\n" || line == "\n" {
-            break;
-        }
-        let (name, value) = line
-            .trim_end_matches(['\r', '\n'])
-            .split_once(':')
-            .ok_or_else(|| invalid_response("OpenCode HTTP header was malformed"))?;
-        headers.insert(name.trim().to_ascii_lowercase(), value.trim().to_owned());
-    }
-    Ok((status, headers))
 }
 
 fn remote_http_error(status: u16, body: Value) -> HarnessAdapterError {
@@ -1483,23 +1432,45 @@ impl OpenCodeEventDecoder {
     }
 }
 
+type EventReader = BufReader<Pin<Box<dyn AsyncRead + Send + Sync>>>;
+
 pub struct OpenCodeEventStream {
-    reader: BufReader<TcpStream>,
+    reader: EventReader,
+    client: reqwest::Client,
     decoder: OpenCodeEventDecoder,
     event_timeout: Duration,
     turn: Option<ActiveTurnLease>,
     address: SocketAddr,
     native_session_id: String,
     cancellation_sent: bool,
+    cancellation_confirmed: bool,
 }
 
 impl OpenCodeEventStream {
     pub async fn cancel(&mut self) -> Result<(), HarnessAdapterError> {
-        if !self.cancellation_sent {
-            abort_at(self.address, self.event_timeout, &self.native_session_id).await?;
-            self.cancellation_sent = true;
+        if self.cancellation_confirmed {
+            return Ok(());
         }
-        self.turn.take();
+        if self.cancellation_sent {
+            return Err(unknown_cancellation());
+        }
+        if let Some(turn) = &self.turn {
+            turn.begin_cancellation()?;
+        }
+        // Record the attempt before awaiting: dropping this future cannot make
+        // Drop or shutdown repeat a POST whose outcome is unknown.
+        self.cancellation_sent = true;
+        abort_at(
+            &self.client,
+            self.address,
+            self.event_timeout,
+            &self.native_session_id,
+        )
+        .await?;
+        self.cancellation_confirmed = true;
+        if let Some(turn) = self.turn.take() {
+            turn.complete();
+        }
         Ok(())
     }
 
@@ -1512,7 +1483,10 @@ impl OpenCodeEventStream {
             }
         };
         if event.terminal {
-            self.turn.take();
+            self.cancellation_sent = true;
+            if let Some(turn) = self.turn.take() {
+                self.cancellation_confirmed = turn.complete_from_terminal();
+            }
         }
         Ok(event)
     }
@@ -1533,26 +1507,37 @@ impl Drop for OpenCodeEventStream {
             return;
         }
         self.cancellation_sent = true;
-        self.turn.take();
+        let turn = self.turn.take().expect("active turn checked above");
+        if turn.begin_cancellation().is_err() {
+            return;
+        }
+        let client = self.client.clone();
         let address = self.address;
         let request_timeout = self.event_timeout;
         let native_session_id = self.native_session_id.clone();
         if let Ok(runtime) = tokio::runtime::Handle::try_current() {
             runtime.spawn(async move {
-                let _ = abort_at(address, request_timeout, &native_session_id).await;
+                if abort_at(&client, address, request_timeout, &native_session_id)
+                    .await
+                    .is_ok()
+                {
+                    turn.complete();
+                }
             });
         }
     }
 }
 
 async fn abort_at(
+    client: &reqwest::Client,
     address: SocketAddr,
     request_timeout: Duration,
     native_session_id: &str,
 ) -> Result<(), HarnessAdapterError> {
     let response = timeout(
         request_timeout,
-        raw_http_request(
+        http_request(
+            client,
             address,
             "POST",
             &format!("/session/{native_session_id}/abort"),
@@ -1572,15 +1557,28 @@ async fn abort_at(
     Ok(())
 }
 
+type ActiveTurns = Arc<Mutex<HashMap<String, ActiveTurn>>>;
+
+struct ActiveTurn {
+    message_id: String,
+    cancellation_attempted: bool,
+}
+
+fn unknown_cancellation() -> HarnessAdapterError {
+    invalid_response(
+        "OpenCode cancellation outcome is unknown; reconcile the session before retrying",
+    )
+}
+
 struct ActiveTurnLease {
-    active_turns: Arc<Mutex<HashMap<String, String>>>,
+    active_turns: ActiveTurns,
     native_session_id: String,
     message_id: String,
 }
 
 impl ActiveTurnLease {
     fn acquire(
-        active_turns: Arc<Mutex<HashMap<String, String>>>,
+        active_turns: ActiveTurns,
         native_session_id: String,
         message_id: String,
     ) -> Result<Self, HarnessAdapterError> {
@@ -1589,12 +1587,23 @@ impl ActiveTurnLease {
                 "OpenCode active-turn registry is poisoned".to_owned(),
             )
         })?;
-        if turns.contains_key(&native_session_id) {
+        if let Some(turn) = turns.get(&native_session_id) {
             return Err(HarnessAdapterError::InvalidRequest(format!(
-                "OpenCode session {native_session_id} already has an active turn"
+                "OpenCode session {native_session_id} {}",
+                if turn.cancellation_attempted {
+                    "has an unknown cancellation outcome; reconcile it before starting another turn"
+                } else {
+                    "already has an active turn"
+                }
             )));
         }
-        turns.insert(native_session_id.clone(), message_id.clone());
+        turns.insert(
+            native_session_id.clone(),
+            ActiveTurn {
+                message_id: message_id.clone(),
+                cancellation_attempted: false,
+            },
+        );
         drop(turns);
         Ok(Self {
             active_turns,
@@ -1602,19 +1611,84 @@ impl ActiveTurnLease {
             message_id,
         })
     }
+
+    fn current(
+        active_turns: ActiveTurns,
+        native_session_id: &str,
+    ) -> Result<Option<Self>, HarnessAdapterError> {
+        let message_id = active_turns
+            .lock()
+            .map_err(|_| invalid_response("OpenCode active-turn registry is poisoned"))?
+            .get(native_session_id)
+            .map(|turn| turn.message_id.clone());
+        Ok(message_id.map(|message_id| Self {
+            active_turns,
+            native_session_id: native_session_id.to_owned(),
+            message_id,
+        }))
+    }
+
+    fn begin_cancellation(&self) -> Result<(), HarnessAdapterError> {
+        let mut turns = self
+            .active_turns
+            .lock()
+            .map_err(|_| invalid_response("OpenCode active-turn registry is poisoned"))?;
+        let turn = turns
+            .get_mut(&self.native_session_id)
+            .filter(|turn| turn.message_id == self.message_id)
+            .ok_or_else(|| invalid_response("OpenCode turn is no longer active"))?;
+        if turn.cancellation_attempted {
+            return Err(unknown_cancellation());
+        }
+        turn.cancellation_attempted = true;
+        Ok(())
+    }
+
+    fn complete(&self) {
+        if let Ok(mut turns) = self.active_turns.lock()
+            && turns
+                .get(&self.native_session_id)
+                .is_some_and(|turn| turn.message_id == self.message_id)
+        {
+            turns.remove(&self.native_session_id);
+        }
+    }
+
+    fn complete_from_terminal(&self) -> bool {
+        let Ok(mut turns) = self.active_turns.lock() else {
+            return false;
+        };
+        if let Some(turn) = turns.get(&self.native_session_id)
+            && turn.message_id == self.message_id
+        {
+            // A terminal event for this turn does not prove that a delayed
+            // session-scoped abort cannot affect the next admitted turn.
+            if turn.cancellation_attempted {
+                return false;
+            }
+            turns.remove(&self.native_session_id);
+        }
+        true
+    }
 }
 
 impl Drop for ActiveTurnLease {
     fn drop(&mut self) {
+        // An attempted cancellation can have reached the native server even if
+        // its response (or our awaiting future) was lost. Only confirmed abort
+        // releases that admission record; terminal events cannot prove that a
+        // delayed session-scoped abort has finished executing.
         if let Ok(mut turns) = self.active_turns.lock()
-            && turns.get(&self.native_session_id) == Some(&self.message_id)
+            && turns.get(&self.native_session_id).is_some_and(|turn| {
+                turn.message_id == self.message_id && !turn.cancellation_attempted
+            })
         {
             turns.remove(&self.native_session_id);
         }
     }
 }
 
-async fn read_sse_event(reader: &mut BufReader<TcpStream>) -> Result<Value, HarnessAdapterError> {
+async fn read_sse_event(reader: &mut EventReader) -> Result<Value, HarnessAdapterError> {
     let mut data = String::new();
     loop {
         let Some(line) = read_bounded_sse_line(reader).await? else {
@@ -1651,7 +1725,7 @@ async fn read_sse_event(reader: &mut BufReader<TcpStream>) -> Result<Value, Harn
 }
 
 async fn read_bounded_sse_line(
-    reader: &mut BufReader<TcpStream>,
+    reader: &mut EventReader,
 ) -> Result<Option<Vec<u8>>, HarnessAdapterError> {
     let mut line = Vec::new();
     loop {

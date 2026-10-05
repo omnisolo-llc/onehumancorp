@@ -1,7 +1,7 @@
 //! Select exact original Rust bytes; syntax selection is not compilation or authorization.
 
 use sha2::{Digest, Sha256};
-use tree_sitter::{Node, Parser};
+use syn::{ImplItem, Item, spanned::Spanned, visit::Visit};
 
 #[derive(Default)]
 pub struct Selector {
@@ -41,53 +41,30 @@ pub fn sha256(source: &[u8]) -> String {
     format!("{:x}", Sha256::digest(source))
 }
 
-fn field_text<'a>(node: Node<'_>, field: &str, source: &'a [u8]) -> Option<&'a str> {
-    node.child_by_field_name(field)
-        .map(|value| std::str::from_utf8(&source[value.byte_range()]).expect("validated UTF-8"))
-}
-
-fn item_span(node: Node<'_>, source: &[u8]) -> Span {
-    let mut start = node.start_byte();
-    let mut previous = node.prev_named_sibling();
-    while let Some(sibling) = previous {
-        match sibling.kind() {
-            "attribute_item" => start = sibling.start_byte(),
-            "line_comment" | "block_comment" => {
-                let text = &source[sibling.byte_range()];
-                let outer_doc = (text.starts_with(b"///") && !text.starts_with(b"////"))
-                    || (text.starts_with(b"/**") && !text.starts_with(b"/***"));
-                if outer_doc {
-                    start = sibling.start_byte();
-                } else if text.starts_with(b"//!") || text.starts_with(b"/*!") {
-                    break;
-                }
+// Syn can retain unsupported syntax as opaque tokens. Reject every Verbatim
+// variant throughout the file, including outside the item being selected.
+#[derive(Default)]
+struct RejectOpaque(Option<proc_macro2::Span>);
+macro_rules! reject_verbatim {
+    ($visit:ident, $kind:ident) => {
+        fn $visit(&mut self, node: &'ast syn::$kind) {
+            if let syn::$kind::Verbatim(tokens) = node {
+                self.0.get_or_insert(tokens.span());
+            } else {
+                syn::visit::$visit(self, node);
             }
-            _ => break,
         }
-        previous = sibling.prev_named_sibling();
-    }
-    Span {
-        start,
-        end: node.end_byte(),
-    }
+    };
 }
-
-fn reject_invalid_syntax(node: Node<'_>) -> Result<(), String> {
-    if node.is_error() || node.is_missing() {
-        let position = node.start_position();
-        return Err(format!(
-            "invalid Rust syntax ({}{}) at line {}, column {}",
-            node.kind(),
-            if node.is_missing() { ", missing" } else { "" },
-            position.row + 1,
-            position.column + 1
-        ));
-    }
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        reject_invalid_syntax(child)?;
-    }
-    Ok(())
+impl<'ast> Visit<'ast> for RejectOpaque {
+    reject_verbatim!(visit_item, Item);
+    reject_verbatim!(visit_expr, Expr);
+    reject_verbatim!(visit_impl_item, ImplItem);
+    reject_verbatim!(visit_trait_item, TraitItem);
+    reject_verbatim!(visit_foreign_item, ForeignItem);
+    reject_verbatim!(visit_type, Type);
+    reject_verbatim!(visit_pat, Pat);
+    reject_verbatim!(visit_type_param_bound, TypeParamBound);
 }
 
 #[derive(Clone, Default)]
@@ -99,81 +76,159 @@ struct Scope {
 }
 
 struct Search<'a> {
-    source: &'a [u8],
+    source: &'a str,
     selector: &'a Selector,
-    node_kind: &'a str,
+    // parse_file removes BOM/shebang bytes; all public ranges refer to the
+    // original input, so restore that exact prefix length to every span.
+    prefix_bytes: usize,
     matches: Vec<(Span, Vec<Span>)>,
 }
 
 impl Search<'_> {
-    fn visit(&mut self, container: Node<'_>, scope: &Scope) {
-        let mut cursor = container.walk();
-        for node in container.named_children(&mut cursor) {
-            let is_impl = node.kind() == "impl_item";
-            let name = field_text(node, if is_impl { "type" } else { "name" }, self.source);
-            let selected_trait = if is_impl {
-                field_text(node, "trait", self.source)
-            } else {
-                scope.impl_trait.as_deref()
+    fn span(&self, node: &impl Spanned) -> Result<Span, String> {
+        let range = node.span().byte_range();
+        let start = range
+            .start
+            .checked_add(self.prefix_bytes)
+            .ok_or("source span overflow")?;
+        let end = range
+            .end
+            .checked_add(self.prefix_bytes)
+            .ok_or("source span overflow")?;
+        if start >= end || self.source.get(start..end).is_none() {
+            return Err("parser returned an invalid original source span".into());
+        }
+        Ok(Span { start, end })
+    }
+
+    fn text(&self, node: &impl Spanned) -> Result<String, String> {
+        let span = self.span(node)?;
+        Ok(self.source[span.start..span.end].to_owned())
+    }
+
+    fn record(
+        &mut self,
+        kind: &str,
+        name: &str,
+        node: &impl Spanned,
+        scope: &Scope,
+        impl_trait: Option<&str>,
+    ) -> Result<(), String> {
+        if kind == self.selector.kind
+            && name == self.selector.name
+            && scope.modules == self.selector.modules
+            && scope.impl_type == self.selector.impl_type
+            && impl_trait == self.selector.impl_trait.as_deref()
+        {
+            self.matches
+                .push((self.span(node)?, scope.enclosing.clone()));
+        }
+        Ok(())
+    }
+
+    fn visit(&mut self, items: &[Item], scope: &Scope) -> Result<(), String> {
+        for item in items {
+            let identity = match item {
+                Item::Fn(node) => Some(("function", node.sig.ident.to_string())),
+                Item::Struct(node) => Some(("struct", node.ident.to_string())),
+                Item::Enum(node) => Some(("enum", node.ident.to_string())),
+                Item::Type(node) => Some(("type", node.ident.to_string())),
+                Item::Const(node) => Some(("const", node.ident.to_string())),
+                Item::Static(node) => Some(("static", node.ident.to_string())),
+                Item::Trait(node) => Some(("trait", node.ident.to_string())),
+                Item::Mod(node) => Some(("mod", node.ident.to_string())),
+                _ => None,
             };
-            if node.kind() == self.node_kind
-                && name == Some(self.selector.name.as_str())
-                && scope.modules == self.selector.modules
-                && scope.impl_type == self.selector.impl_type
-                && selected_trait == self.selector.impl_trait.as_deref()
-            {
-                self.matches
-                    .push((item_span(node, self.source), scope.enclosing.clone()));
+            if let Some((kind, name)) = identity {
+                self.record(kind, &name, item, scope, scope.impl_trait.as_deref())?;
             }
-            if (node.kind() == "mod_item" || is_impl)
-                && let Some(body) = node.child_by_field_name("body")
-            {
-                let mut nested = scope.clone();
-                nested.enclosing.push(item_span(node, self.source));
-                if is_impl {
-                    nested.impl_type = name.map(str::to_owned);
-                    nested.impl_trait = field_text(node, "trait", self.source).map(str::to_owned);
-                } else if let Some(name) = name {
-                    nested.modules.push(name.to_owned());
+            match item {
+                Item::Mod(module) => {
+                    if let Some((_, nested_items)) = &module.content {
+                        let mut nested = scope.clone();
+                        nested.modules.push(module.ident.to_string());
+                        nested.enclosing.push(self.span(item)?);
+                        self.visit(nested_items, &nested)?;
+                    }
                 }
-                self.visit(body, &nested);
+                Item::Impl(implementation) => {
+                    let name = self.text(implementation.self_ty.as_ref())?;
+                    let trait_name = implementation
+                        .trait_
+                        .as_ref()
+                        .map(|(_, path, _)| self.text(path))
+                        .transpose()?;
+                    self.record("impl", &name, item, scope, trait_name.as_deref())?;
+                    let mut nested = scope.clone();
+                    nested.impl_type = Some(name);
+                    nested.impl_trait = trait_name;
+                    nested.enclosing.push(self.span(item)?);
+                    for member in &implementation.items {
+                        let identity = match member {
+                            ImplItem::Fn(node) => Some(("function", node.sig.ident.to_string())),
+                            ImplItem::Const(node) => Some(("const", node.ident.to_string())),
+                            ImplItem::Type(node) => Some(("type", node.ident.to_string())),
+                            _ => None,
+                        };
+                        if let Some((kind, name)) = identity {
+                            self.record(
+                                kind,
+                                &name,
+                                member,
+                                &nested,
+                                nested.impl_trait.as_deref(),
+                            )?;
+                        }
+                    }
+                }
+                _ => {}
             }
         }
+        Ok(())
     }
 }
 
 pub fn extract(source: &[u8], selector: &Selector) -> Result<Extraction, String> {
-    std::str::from_utf8(source).map_err(|error| format!("source is not UTF-8: {error}"))?;
-    let node_kind = match selector.kind.as_str() {
-        "function" => "function_item",
-        "struct" => "struct_item",
-        "enum" => "enum_item",
-        "type" => "type_item",
-        "const" => "const_item",
-        "static" => "static_item",
-        "trait" => "trait_item",
-        "mod" => "mod_item",
-        "impl" => "impl_item",
-        other => return Err(format!("unsupported Rust item kind: {other}")),
-    };
+    let text =
+        std::str::from_utf8(source).map_err(|error| format!("source is not UTF-8: {error}"))?;
+    if !matches!(
+        selector.kind.as_str(),
+        "function" | "struct" | "enum" | "type" | "const" | "static" | "trait" | "mod" | "impl"
+    ) {
+        return Err(format!("unsupported Rust item kind: {}", selector.kind));
+    }
     if selector.impl_trait.is_some() && selector.impl_type.is_none() && selector.kind != "impl" {
         return Err("unsupported trait method selector without impl type".into());
     }
-    let mut parser = Parser::new();
-    parser
-        .set_language(&tree_sitter_rust::LANGUAGE.into())
-        .map_err(|error| error.to_string())?;
-    let tree = parser
-        .parse(source, None)
-        .ok_or("Rust parser returned no tree")?;
-    reject_invalid_syntax(tree.root_node())?;
+    let tree = syn::parse_file(text).map_err(|error| {
+        let position = error.span().start();
+        format!(
+            "invalid Rust syntax at line {}, column {}: {error}",
+            position.line,
+            position.column + 1
+        )
+    })?;
+    let mut guard = RejectOpaque::default();
+    guard.visit_file(&tree);
+    if let Some(span) = guard.0 {
+        return Err(format!(
+            "unsupported opaque Rust syntax at line {}, column {}",
+            span.start().line,
+            span.start().column + 1
+        ));
+    }
+    let prefix_bytes = if text.starts_with('\u{feff}') {
+        '\u{feff}'.len_utf8()
+    } else {
+        0
+    } + tree.shebang.as_ref().map_or(0, String::len);
     let mut search = Search {
-        source,
+        source: text,
         selector,
-        node_kind,
+        prefix_bytes,
         matches: Vec::new(),
     };
-    search.visit(tree.root_node(), &Scope::default());
+    search.visit(&tree.items, &Scope::default())?;
     match search.matches.len() {
         0 => Err(format!(
             "Rust {} {:?} not found in selected module/impl",

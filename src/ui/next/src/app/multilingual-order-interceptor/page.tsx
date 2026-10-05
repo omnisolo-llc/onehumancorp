@@ -3,7 +3,6 @@
 
 import { errorMessage } from '@/lib/errors';
 import React, { useState } from 'react';
-import Head from 'next/head';
 
 interface InterceptedOrder {
   language: string;
@@ -59,9 +58,6 @@ export default function MultilingualOrderInterceptor() {
 
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-            <Head>
-                <title>Multilingual Order Interceptor | OmniSolo OneHumanCorp</title>
-            </Head>
 
             <div className="w-full max-w-[375px] bg-white rounded-2xl shadow-xl overflow-hidden relative font-sans min-h-[600px] flex flex-col">
                 <div className="p-6 flex-1 flex flex-col">

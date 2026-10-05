@@ -1050,6 +1050,16 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_feed_decision_test
           python3 scripts/focused_ci_gate.py agent-feed-decision-contract
 
+      - name: Fetch locked Redis reconnect dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/redis-reconnect/fetch.sh
+
+      - name: Verify owned Redis reconnect and non-replay behavior
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py redis-reconnect
+
       - name: Fetch locked cash receipt dependencies
         if: ${{ !cancelled() }}
         run: bash scripts/cash-receipts/fetch.sh

@@ -200,3 +200,59 @@ fn unsupported_selector_invalid_utf8_and_missing_name_fail_closed() {
             .contains("not found")
     );
 }
+
+#[test]
+fn whole_current_server_source_parses_without_opaque_nodes() {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../src/server/lib.rs");
+    let source = std::fs::read(path).unwrap();
+    let selected = extract(&source, &Selector::new("function", "run_server")).unwrap();
+    assert!(source[selected.start..selected.end].starts_with(b"pub async fn run_server()"));
+    assert!(source[selected.start..selected.end].ends_with(b"Ok(())\n}"));
+    assert_eq!(
+        selected.source_sha256,
+        format!("{:x}", Sha256::digest(&source))
+    );
+}
+
+#[test]
+fn bom_and_shebang_do_not_shift_original_byte_offsets() {
+    let item = "/// Unicode é\r\n#[inline]\r\npub fn café() { let brace = '}'; }";
+    for prefix in [
+        "",
+        "\u{feff}",
+        "#!/usr/bin/env rustx\r\n",
+        "\u{feff}#!/usr/bin/env rustx\r\n",
+    ] {
+        check_item(&format!("{prefix}{item}\r\n"), "function", "café", item);
+    }
+}
+
+#[test]
+fn unsupported_opaque_syntax_anywhere_fails_closed() {
+    for source in [
+        "fn good() {} type Opaque = dyn* Trait;",
+        "fn good() {} fn opaque() { become other(); }",
+        "fn good() {} pub macro opaque() {}",
+    ] {
+        assert!(
+            extract(source.as_bytes(), &Selector::new("function", "good")).is_err(),
+            "{source}"
+        );
+    }
+}
+
+#[test]
+fn module_inner_attributes_are_preserved_in_enclosing_range() {
+    let source = "mod inner { #![allow(dead_code)] #[inline] fn same() {} }";
+    let mut selector = Selector::new("function", "same");
+    selector.modules = vec!["inner".into()];
+    let selected = extract(source.as_bytes(), &selector).unwrap();
+    assert_eq!(
+        &source[selected.start..selected.end],
+        "#[inline] fn same() {}"
+    );
+    assert_eq!(
+        &source[selected.enclosing[0].start..selected.enclosing[0].end],
+        source
+    );
+}

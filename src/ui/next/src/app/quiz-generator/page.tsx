@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Head from 'next/head';
 
 export default function QuizGeneratorPage() {
   const [topic, setTopic] = useState('');
@@ -16,9 +15,6 @@ export default function QuizGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <Head>
-        <title>Viral Quiz Generator</title>
-      </Head>
 
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg border border-gray-100">
         <h1 className="text-3xl font-bold mb-6 text-gray-900 text-center">Viral Quiz Generator</h1>

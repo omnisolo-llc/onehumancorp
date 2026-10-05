@@ -3813,10 +3813,10 @@ dependencies = [
 name = "ohc-rust-source-extract"
 version = "0.1.0"
 dependencies = [
+ "proc-macro2",
  "serde_json",
  "sha2",
- "tree-sitter",
- "tree-sitter-rust",
+ "syn 2.0.117",
 ]
 
 [[package]]
