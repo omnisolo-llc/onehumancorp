@@ -9,7 +9,7 @@ import GrowthReferralWidget from "../components/GrowthReferralWidget";
 import { enqueueAction, getActions } from "../utils/offlineQueue";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { AmbassadorReplyCard } from "./AmbassadorReplyCard";
-import "./InstagramDMCard";
+import { InstagramDMCard } from "./InstagramDMCard";
 import { AgentActionCard } from "../../components/feed/AgentActionCard";
 import { GroupedAgentActionCard } from "../../components/feed/GroupedAgentActionCard";
 
@@ -727,6 +727,28 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                   rawPayload?.feature_type === "ambassador_reply" ||
                   propAction?.feature_type === "ambassador_reply" ||
                   ctxPayload?.feature_type === "ambassador_reply";
+
+                const isInstagramDM = approval.event_source === "instagram_dm" || propAction?.feature_type === "instagram_dm" || ctxPayload?.feature_type === "instagram_dm";
+
+                if (isInstagramDM) {
+
+                  return (
+
+                    <InstagramDMCard
+
+                      key={approval.id}
+
+                      approval={approval}
+
+                      onApprove={() => handleDecision(approval.id, true)}
+
+                      onDismiss={() => handleDecision(approval.id, false)}
+
+                    />
+
+                  );
+
+                }
 
                 if (isAmbassador) {
                   return (
