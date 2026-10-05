@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useProPlan } from '../components/useProPlan';
-import Head from 'next/head';
 import Link from 'next/link';
 
 export default function ViralTierListGeneratorPage() {
@@ -44,9 +43,6 @@ export default function ViralTierListGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col p-6 font-inter">
-      <Head>
-        <title>Viral Tier List Generator</title>
-      </Head>
       <main className="max-w-4xl mx-auto w-full">
         <h1 className="text-3xl font-bold font-outfit mb-8">Viral Tier List Generator</h1>
 
