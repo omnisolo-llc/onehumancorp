@@ -2359,6 +2359,7 @@ dependencies = [
  "axum 0.8.9",
  "chrono",
  "futures-util",
+ "jsonwebtoken",
  "omnisolo_builtin_agent_core",
  "omnisolo_builtin_agent_llm",
  "redis",

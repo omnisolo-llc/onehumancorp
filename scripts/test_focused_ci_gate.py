@@ -458,7 +458,7 @@ if sys.argv[1] == 'test':
         self.assertIn('process.versions.node', witness)
     def test_agent_receipt_postgres_gate_keeps_real_storage_and_sqlite_inventory(self):
         minimum, database = gate.GATES['agent-receipt-postgres-contract']
-        self.assertGreaterEqual(minimum, 56)
+        self.assertGreaterEqual(minimum, 97)
         self.assertEqual(database, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL')
         root = Path(__file__).resolve().parents[1]
         runner = (root/'scripts/agent-receipt-postgres-contract/run.sh').read_text()
@@ -748,8 +748,18 @@ class WorkflowWitnessLockTests(unittest.TestCase):
         folder = self.root/'scripts/agent-receipt-postgres-contract'
         runpy.run_path(str(folder/'prepare.py'))
         manifest = json.loads((folder/'source-manifest.json').read_text())
-        for name in ['package.json', 'package-lock.json']:
-            path = self.root/'scripts/agent-workflow-contract'/name
+        paths = [self.root/'scripts/agent-workflow-contract'/name for name in ['package.json', 'package-lock.json']]
+        paths += [self.root/path for path in [
+            'src/server/lib.rs', 'src/server/api/dynamic_workflows.rs',
+            'src/server/orchestration/dynamic_workflows.rs', 'src/server/queue.rs',
+            'src/server/migrations/104_sub_agent_queue.sql',
+            'scripts/agent-receipt-postgres-contract/dynamic_workflow_test.rs',
+            'scripts/agent-receipt-postgres-contract/dynamic_queue_test.rs',
+            'scripts/agent-receipt-postgres-contract/Cargo.toml',
+            'scripts/agent-receipt-postgres-contract/Cargo.lock',
+            'scripts/rust_source.py',
+        ]]
+        for path in paths:
             self.assertEqual(manifest.get(str(path.relative_to(self.root))), hashlib.sha256(path.read_bytes()).hexdigest())
 
 

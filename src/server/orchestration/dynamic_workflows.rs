@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use server_auth::commit_authority::VerifiedOwner;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
@@ -94,6 +95,13 @@ pub struct DynamicWorkflowStart {
     pub enqueued_jobs: usize,
 }
 
+#[derive(Debug)]
+pub enum DynamicWorkflowError {
+    NotFound,
+    NotTriggered,
+    Internal(String),
+}
+
 pub struct DynamicWorkflowManager {
     queue: Arc<dyn TaskQueue>,
     plans: RwLock<HashMap<String, DynamicWorkflowPlan>>,
@@ -159,26 +167,34 @@ impl DynamicWorkflowManager {
 
     pub async fn start_workflow(
         &self,
-        request: DynamicWorkflowRequest,
-    ) -> Result<DynamicWorkflowStart, String> {
+        owner: &VerifiedOwner,
+        mut request: DynamicWorkflowRequest,
+    ) -> Result<DynamicWorkflowStart, DynamicWorkflowError> {
+        // This capability is a current-request snapshot, not a queue commit fence.
+        // The wire tenant is retained for compatibility but never grants authority.
+        request.tenant_id = owner.tenant_id().to_owned();
         let decision = Self::decide(&request);
         if !decision.should_create_workflow {
-            return Err(decision.reason);
+            return Err(DynamicWorkflowError::NotTriggered);
         }
 
-        let mut plan = build_plan(request, decision)?;
+        let mut plan = build_plan(request, decision).map_err(DynamicWorkflowError::Internal)?;
         let enqueued_jobs = if plan.requires_confirmation {
             0
         } else {
             let jobs = self.build_jobs(&plan);
             let count = jobs.len();
-            self.queue.enqueue_batch(jobs).await?;
+            self.queue
+                .enqueue_batch(jobs)
+                .await
+                .map_err(DynamicWorkflowError::Internal)?;
             plan.status = WorkflowStatus::Queued;
             plan.updated_at = Utc::now();
             count
         };
 
-        self.store_plan(plan.clone())?;
+        self.store_plan(plan.clone())
+            .map_err(DynamicWorkflowError::Internal)?;
         Ok(DynamicWorkflowStart {
             plan,
             enqueued_jobs,
@@ -187,11 +203,12 @@ impl DynamicWorkflowManager {
 
     pub async fn confirm_workflow(
         &self,
+        owner: &VerifiedOwner,
         workflow_id: &str,
-    ) -> Result<DynamicWorkflowStart, String> {
+    ) -> Result<DynamicWorkflowStart, DynamicWorkflowError> {
         let mut plan = self
-            .get_workflow(workflow_id)?
-            .ok_or_else(|| "workflow not found".to_string())?;
+            .get_workflow(owner.tenant_id(), workflow_id)?
+            .ok_or(DynamicWorkflowError::NotFound)?;
 
         if plan.status != WorkflowStatus::AwaitingConfirmation {
             return Ok(DynamicWorkflowStart {
@@ -202,12 +219,16 @@ impl DynamicWorkflowManager {
 
         let jobs = self.build_jobs(&plan);
         let enqueued_jobs = jobs.len();
-        self.queue.enqueue_batch(jobs).await?;
+        self.queue
+            .enqueue_batch(jobs)
+            .await
+            .map_err(DynamicWorkflowError::Internal)?;
 
         plan.status = WorkflowStatus::Queued;
         plan.requires_confirmation = false;
         plan.updated_at = Utc::now();
-        self.store_plan(plan.clone())?;
+        self.store_plan(plan.clone())
+            .map_err(DynamicWorkflowError::Internal)?;
 
         Ok(DynamicWorkflowStart {
             plan,
@@ -215,12 +236,26 @@ impl DynamicWorkflowManager {
         })
     }
 
-    pub fn get_workflow(&self, workflow_id: &str) -> Result<Option<DynamicWorkflowPlan>, String> {
+    pub fn get_workflow(
+        &self,
+        tenant_id: &str,
+        workflow_id: &str,
+    ) -> Result<Option<DynamicWorkflowPlan>, DynamicWorkflowError> {
+        // Validate before either cache lookup or construction of a filesystem path.
+        if !canonical_workflow_id(workflow_id) {
+            return Ok(None);
+        }
+        let belongs_to_request =
+            |plan: &DynamicWorkflowPlan| plan.id == workflow_id && plan.tenant_id == tenant_id;
         if let Some(plan) = self.plans.read().unwrap().get(workflow_id).cloned() {
-            return Ok(Some(plan));
+            return Ok(Some(plan).filter(belongs_to_request));
         }
 
-        if let Some(plan) = self.load_plan(workflow_id)? {
+        if let Some(plan) = self
+            .load_plan(workflow_id)
+            .map_err(DynamicWorkflowError::Internal)?
+            .filter(belongs_to_request)
+        {
             self.plans
                 .write()
                 .unwrap()
@@ -295,6 +330,12 @@ impl DynamicWorkflowManager {
         let plan = serde_json::from_str(&content).map_err(|e| e.to_string())?;
         Ok(Some(plan))
     }
+}
+
+fn canonical_workflow_id(id: &str) -> bool {
+    id.strip_prefix("dwf-").is_some_and(|suffix| {
+        uuid::Uuid::parse_str(suffix).is_ok_and(|parsed| parsed.hyphenated().to_string() == suffix)
+    })
 }
 
 fn score_complexity(prompt: &str) -> usize {
@@ -568,6 +609,43 @@ mod tests {
         }
     }
 
+    async fn owner() -> VerifiedOwner {
+        let pool = sqlx::sqlite::SqlitePoolOptions::new()
+            .max_connections(1)
+            .connect("sqlite::memory:")
+            .await
+            .unwrap();
+        let database = crate::persistence::AppDatabase::from_connection(
+            sea_orm::SqlxSqliteConnector::from_sqlx_sqlite_pool(pool),
+        );
+        crate::persistence::migration::migrate(&database)
+            .await
+            .unwrap();
+        let store = server_auth::Store::with_portable_repo(Arc::new(
+            server_auth::seaorm_store::SeaOrmAuthRepository::new(database.connection().clone()),
+        ));
+        let user = store
+            .create_user(
+                "workflow-owner".into(),
+                "workflow-owner@example.test".into(),
+                "public-local-workflow-fixture".into(),
+                vec!["OWNER".into()],
+                "tenant-1".into(),
+            )
+            .await
+            .unwrap();
+        let token = store.issue_token(&user).unwrap();
+        let claims = store.validate_token(&token).await.unwrap();
+        let mut headers = axum::http::HeaderMap::new();
+        headers.insert(
+            axum::http::header::AUTHORIZATION,
+            format!("Bearer {token}").parse().unwrap(),
+        );
+        server_auth::commit_authority::verify_owner(&store, &claims, &headers)
+            .await
+            .unwrap()
+    }
+
     #[test]
     fn explicit_request_requires_confirmation() {
         let req = request("Create a workflow to audit the entire service");
@@ -601,7 +679,7 @@ mod tests {
         let mut req = request("Create a workflow to migrate the legacy API");
         req.confirm = true;
 
-        let start = manager.start_workflow(req).await.unwrap();
+        let start = manager.start_workflow(&owner().await, req).await.unwrap();
 
         assert_eq!(start.plan.status, WorkflowStatus::Queued);
         assert!(start.enqueued_jobs >= 4);
@@ -617,15 +695,22 @@ mod tests {
     async fn confirmation_queues_prepared_plan() {
         let queue = Arc::new(RecordingQueue::default());
         let manager = DynamicWorkflowManager::new(queue.clone());
+        let owner = owner().await;
 
         let start = manager
-            .start_workflow(request("Create a workflow to optimize the entire service"))
+            .start_workflow(
+                &owner,
+                request("Create a workflow to optimize the entire service"),
+            )
             .await
             .unwrap();
         assert_eq!(start.enqueued_jobs, 0);
         assert_eq!(start.plan.status, WorkflowStatus::AwaitingConfirmation);
 
-        let confirmed = manager.confirm_workflow(&start.plan.id).await.unwrap();
+        let confirmed = manager
+            .confirm_workflow(&owner, &start.plan.id)
+            .await
+            .unwrap();
         assert_eq!(confirmed.plan.status, WorkflowStatus::Queued);
         assert_eq!(queue.jobs.lock().unwrap().len(), confirmed.enqueued_jobs);
     }
