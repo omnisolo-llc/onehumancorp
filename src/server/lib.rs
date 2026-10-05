@@ -4025,11 +4025,13 @@ pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<()
         let provider =
             crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
 
-        if let Err(_e) = provider.send_sms(&phone, &from_number, message).await {
-            tracing::warn!(
-                "Failed to dispatch critical SMS. Expected if Twilio is not configured."
-            );
-        }
+        provider
+            .send_sms(&phone, &from_number, message)
+            .await
+            .map_err(|error| {
+                tracing::warn!(%error, "Critical SMS was not confirmed");
+                error.to_string()
+            })?;
     }
     Ok(())
 }

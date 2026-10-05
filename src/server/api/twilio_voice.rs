@@ -1,5 +1,4 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
-use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -9,7 +8,7 @@ use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::identity_resolution::IdentityResolver;
 use crate::voice::{VoiceAIEdgeEngine, VoiceContextRouter};
 use ::server_integrations_twilio::provider::TwilioProvider;
-use ::server_utils::url::url_decode;
+use ::server_utils::url::parse_form_urlencoded;
 
 #[derive(Clone)]
 pub struct TwilioVoiceWebhookState {
@@ -24,8 +23,7 @@ pub async fn twilio_voice_incoming_handler(
     State(state): State<TwilioVoiceWebhookState>,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let body_str = String::from_utf8_lossy(&body_bytes);
-    let params = parse_form_urlencoded(&body_str);
+    let params = parse_form_urlencoded(&body_bytes);
 
     let caller_phone = params
         .get("From")
@@ -112,8 +110,7 @@ pub async fn twilio_voice_gather_handler(
     State(state): State<TwilioVoiceWebhookState>,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let body_str = String::from_utf8_lossy(&body_bytes);
-    let params = parse_form_urlencoded(&body_str);
+    let params = parse_form_urlencoded(&body_bytes);
 
     let call_sid = params.get("CallSid").cloned().unwrap_or_default();
     let to_number = params.get("To").cloned().unwrap_or_default();
@@ -160,8 +157,7 @@ pub async fn twilio_voice_status_handler(
     State(state): State<TwilioVoiceWebhookState>,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let body_str = String::from_utf8_lossy(&body_bytes);
-    let params = parse_form_urlencoded(&body_str);
+    let params = parse_form_urlencoded(&body_bytes);
 
     let call_sid = params.get("CallSid").cloned().unwrap_or_default();
     let call_status = params.get("CallStatus").cloned().unwrap_or_default();
@@ -347,26 +343,20 @@ pub async fn twilio_voice_status_handler(
     StatusCode::OK.into_response()
 }
 
-fn parse_form_urlencoded(input: &str) -> HashMap<String, String> {
-    let mut params = HashMap::new();
-    for pair in input.split('&') {
-        let mut parts = pair.split('=');
-        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-            let decoded_key = url_decode(key);
-            let decoded_val = url_decode(value);
-            params.insert(decoded_key, decoded_val);
-        }
-    }
-    params
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
+    fn form_values_preserve_unicode_and_literal_delimiters() {
+        let params = parse_form_urlencoded(b"Body=caf%C3%A9+%F0%9F%98%80=a%3Db%26c&Plus=+%2B");
+        assert_eq!(params.get("Body").unwrap(), "café 😀=a=b&c");
+        assert_eq!(params.get("Plus").unwrap(), " +");
+    }
+
+    #[test]
     fn test_parse_form_urlencoded() {
-        let params = parse_form_urlencoded("CallSid=CA123&From=%2B123&To=%2B456");
+        let params = parse_form_urlencoded(b"CallSid=CA123&From=%2B123&To=%2B456");
         assert_eq!(params.get("CallSid").unwrap(), "CA123");
         assert_eq!(params.get("From").unwrap(), "+123");
         assert_eq!(params.get("To").unwrap(), "+456");

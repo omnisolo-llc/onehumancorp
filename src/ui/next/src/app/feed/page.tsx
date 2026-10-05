@@ -2,7 +2,8 @@
 
 
 import { errorMessage } from '@/lib/errors';
-import { useCallback,useEffect,useState } from 'react';
+import { useCallback,useEffect,useRef,useState } from 'react';
+import { QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '../components/AppShell';
 import { useAuthenticatedPolling } from '../../hooks/useAuthenticatedPolling';
@@ -20,27 +21,98 @@ export default function FeedPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
-  const fetchFeed = useCallback(async () => {
-    try {
-      const res = await fetch('/api/v1/agent-feed');
-      if (!res.ok) {
-        throw new Error('Failed to fetch feed');
-      }
-      const data = await res.json();
-      // Only show pending items on this feed view
-      setItems((data.items || []).filter((i: FeedItem) => i.lifecycle_state !== "APPROVED" && i.lifecycle_state !== "DISMISSED"));
-    } catch (err) {
-      setError(errorMessage(err, ''));
-    } finally {
-      setLoading(false);
-    }
+  const active = useRef(false);
+  const lifecycle = useRef(0);
+  const readGeneration = useRef(0);
+  const pendingRead = useRef<AbortController | null>(null);
+  const [retired, setRetired] = useState(false);
+
+  const retire = useCallback(() => {
+    active.current = false;
+    lifecycle.current += 1;
+    readGeneration.current += 1;
+    pendingRead.current?.abort();
+    setRetired(true);
+    setItems([]);
+    setEditingId(null);
+    setEditValue('');
+    setProcessingId(null);
+    setLoading(false);
+    setError('Your session changed or could not be verified. Reload to access the current feed.');
   }, []);
 
-  useEffect(() => {
-    void fetchFeed();
-  }, [fetchFeed]);
+  const fetchFeed = useCallback(async (signal?: AbortSignal) => {
+    if (!active.current || pendingRead.current || signal?.aborted) return;
+    const controller = new AbortController();
+    pendingRead.current = controller;
+    const generation = readGeneration.current;
+    const current = () => active.current && generation === readGeneration.current;
+    const abort = () => controller.abort();
+    signal?.addEventListener('abort', abort, { once: true });
+    const deadline = window.setTimeout(() => {
+      controller.abort();
+      if (current()) {
+        setError('The feed request timed out.');
+        setLoading(false);
+      }
+    }, 30_000);
+    try {
+      const res = await fetch('/api/v1/agent-feed', {
+        signal: controller.signal, credentials: 'same-origin', cache: 'no-store',
+      });
+      if (!current() || controller.signal.aborted) return;
+      if ([401, 403].includes(res.status)) { retire(); return; }
+      if (!res.ok) throw new Error('Failed to fetch feed');
+      const data = await res.json();
+      if (!current() || controller.signal.aborted) return;
+      if (!data || data.error != null || data.success === false || !Array.isArray(data.items) ||
+          !data.items.every((item: FeedItem) => item && typeof item === 'object' &&
+            typeof item.id === 'string' && typeof item.event_source === 'string' &&
+            typeof item.lifecycle_state === 'string' && typeof item.created_at === 'string')) {
+        throw new Error('Invalid feed response');
+      }
+      // A read that predates a recorded decision must never restore its card.
+      setItems(data.items.filter((item: FeedItem) => item.lifecycle_state !== "APPROVED" && item.lifecycle_state !== "DISMISSED"));
+      setError(null);
+    } catch (err) {
+      if (current() && !controller.signal.aborted) setError(errorMessage(err, ''));
+    } finally {
+      window.clearTimeout(deadline);
+      signal?.removeEventListener('abort', abort);
+      if (pendingRead.current === controller) pendingRead.current = null;
+      if (current() && !controller.signal.aborted) setLoading(false);
+    }
+  }, [retire]);
 
-  useAuthenticatedPolling({ onPoll: fetchFeed });
+  useEffect(() => {
+    active.current = true;
+    const storage = (event: StorageEvent) => {
+      if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) retire();
+    };
+    const restore = (event: PageTransitionEvent) => {
+      // A restored document must pass the session boundary again before reads
+      // resume; pagehide has already removed its private data and authority.
+      if (event.persisted) globalThis.location.reload();
+    };
+    window.addEventListener('pageshow', restore);
+    window.addEventListener('omnisolo_auth_changed', retire);
+    window.addEventListener('pagehide', retire);
+    window.addEventListener('storage', storage);
+    void fetchFeed();
+    return () => {
+      active.current = false;
+      lifecycle.current += 1;
+      readGeneration.current += 1;
+      pendingRead.current?.abort();
+      pendingRead.current = null;
+      window.removeEventListener('pageshow', restore);
+      window.removeEventListener('omnisolo_auth_changed', retire);
+      window.removeEventListener('pagehide', retire);
+      window.removeEventListener('storage', storage);
+    };
+  }, [fetchFeed, retire]);
+
+  useAuthenticatedPolling({ onPoll: fetchFeed, enabled: !retired });
 
   const startEditing = (item: FeedItem) => {
     setEditingId(item.id);
@@ -95,6 +167,8 @@ export default function FeedPage() {
   };
 
   const handleAction = async (id: string, state: string, updatedProposed?: ActionPayload, updatedContext?: ActionPayload) => {
+    if (!active.current) return;
+    const generation = lifecycle.current;
     const item = items.find(i => i.id === id);
     if (state === 'APPROVED') {
       if (item?.proposed_action?.action_type === 'Draft Quote') {
@@ -124,16 +198,20 @@ export default function FeedPage() {
         body: JSON.stringify(bodyPayload),
       });
       await res.text();
+      if (!active.current || generation !== lifecycle.current) return;
       if (!res.ok) throw new Error('Action failed');
 
-      // Update UI optimistically or refetch
+      readGeneration.current += 1;
+      pendingRead.current?.abort();
+
+      // The response acknowledged the decision; retire any earlier read.
       if (state === 'APPROVED' || state === 'DISMISSED') {
           setItems((prev) => prev.filter((item) => item.id !== id));
       }
     } catch (err) {
-      alert(errorMessage(err, ''));
+      if (active.current && generation === lifecycle.current) alert(errorMessage(err, ''));
     } finally {
-      setProcessingId(null);
+      if (active.current && generation === lifecycle.current) setProcessingId(null);
     }
   };
 

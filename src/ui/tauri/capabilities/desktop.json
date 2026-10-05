@@ -1,0 +1,8 @@
+{
+  "$schema": "https://v2.tauri.app/schemas/2.0.0/capability.schema.json",
+  "identifier": "desktop-updater",
+  "description": "Updater access for bundled desktop code",
+  "windows": ["main"],
+  "platforms": ["linux", "macOS", "windows"],
+  "permissions": ["updater:default"]
+}

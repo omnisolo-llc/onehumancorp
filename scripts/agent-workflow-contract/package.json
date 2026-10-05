@@ -6,6 +6,7 @@
     "node": ">=22.22.1 <23"
   },
   "dependencies": {
+    "jose": "6.2.3",
     "typescript": "5.9.3"
   }
 }

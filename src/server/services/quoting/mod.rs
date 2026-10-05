@@ -375,6 +375,13 @@ async fn create_quote(
     let mut tx = pool.begin().await.map_err(|_| axum::http::StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let mut line_items = payload.line_items;
+    let checked_total = |items: &[QuoteLineItemReq]| {
+        crate::integrations::taxjar::money::checked_total_cents(
+            items.iter().map(|item| (item.unit_price_cents, item.quantity)),
+        )
+    };
+    let total_pre_tax = checked_total(&line_items)
+        .map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
 
     // Check if TaxJar integration is active for this tenant
     // In a real implementation we would fetch the integration credentials,
@@ -383,15 +390,13 @@ async fn create_quote(
     if let Ok(api_key) = std::env::var("TAXJAR_API_KEY") {
         if !api_key.is_empty() {
             let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
-            let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-            let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
 
             // Hardcoding dummy from/to zip codes for automated tax calculation via API
-            if let Ok(tax_rate) = provider.calculate_tax(crate::integrations::taxjar::client::TaxJarParams { amount: total_pre_tax_usd, shipping: 0.0, to_country: "US", to_zip: "90002", to_state: "CA", from_country: "US", from_zip: "92093", from_state: "CA" }).await {
-                if tax_rate.amount_to_collect > 0.0 {
+            if let Ok(tax_rate) = provider.calculate_tax(crate::integrations::taxjar::client::TaxJarParams { amount_cents: total_pre_tax, shipping_cents: 0, to_country: "US", to_zip: "90002", to_state: "CA", from_country: "US", from_zip: "92093", from_state: "CA" }).await {
+                if tax_rate.amount_to_collect_cents > 0 {
                     line_items.push(QuoteLineItemReq {
                         description: "Automated Sales Tax (TaxJar)".to_string(),
-                        unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                        unit_price_cents: tax_rate.amount_to_collect_cents,
                         quantity: 1,
                         is_optional: false,
                         service_item_id: None,
@@ -401,7 +406,8 @@ async fn create_quote(
         }
     }
 
-    let total_amount_cents = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
+    let total_amount_cents = checked_total(&line_items)
+        .map_err(|_| axum::http::StatusCode::BAD_REQUEST)?;
     let required_deposit_cents = total_amount_cents / 3; // Default 33% deposit
 
     let quote = sqlx::query_as::<_, Quote>(

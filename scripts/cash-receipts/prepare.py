@@ -1,5 +1,8 @@
 """Compile exact cash/billing handlers and inventory service with real PG/Redis."""
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from rust_source import extract_item, input_paths as rust_source_inputs
 import hashlib
 import json
 import os
@@ -7,24 +10,10 @@ import subprocess
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 
-def block(source, name):
-    a=source.index(name); at=source.index('{',a); depth=0; quoted=False; escape=False
-    for i in range(at,len(source)):
-        c=source[i]
-        if quoted:
-            if escape: escape=False
-            elif c=='\\': escape=True
-            elif c=='"': quoted=False
-        elif c=='"': quoted=True
-        elif c=='{': depth+=1
-        elif c=='}':
-            depth-=1
-            if depth==0: return source[a:i+1]
-    raise ValueError(name)
 
 def source_file(path):
     baseline=os.environ.get('OHC_CASH_BASELINE')
-    return subprocess.check_output(['git','show',f'{baseline}:{path}'],cwd=ROOT,text=True) if baseline else (ROOT/path).read_text()
+    return subprocess.check_output(['git','show',f'{baseline}:{path}'],cwd=ROOT).decode('utf-8') if baseline else (ROOT/path).read_bytes().decode('utf-8')
 terminal=source_file('src/server/api/terminal_api.rs')
 billing=source_file('src/server/api/billing_api.rs')
 inventory=source_file('src/server/services/inventory/service.rs').split('#[cfg(test)]\nmod tests')[0]
@@ -63,31 +52,32 @@ use hub::Hub;
 pub mod services {pub mod inventory {pub use crate::inventory::*;}}
 '''
 client=source_file('src/server/integrations/stripe/client.rs')
-source+='pub mod stripe {pub mod client {\n'+block(client,'pub struct StripeClient {')+'\nimpl StripeClient {\n'
-for prefix in ['pub fn new(', 'pub fn require_api_key(', 'pub fn api_base(', 'pub async fn create_checkout_session(']:
-    source+=block(client,prefix)+'\n'
+source+='pub mod stripe {pub mod client {\n'+extract_item(client, 'struct', 'StripeClient')+'\nimpl StripeClient {\n'
+for name in ['new', 'require_api_key', 'api_base', 'create_checkout_session']:
+    source+=extract_item(client, 'function', name, impl_type='StripeClient')+'\n'
 source+='}}\n'
 for module in ['routing','safe_checkout']:
     source+=f'#[path={json.dumps(str(ROOT / "src/server/integrations/stripe" / (module+".rs")))}]pub mod {module};\n'
 source+='}\n'
 for name in ['ReserveInventoryRequest','CommitInventoryRequest']:
-    source+='#[derive(serde::Deserialize)]\n'+block(terminal,'pub struct '+name+' {')+'\n'
+    source+=extract_item(terminal, 'struct', name)+'\n'
 for name in ['reserve_inventory_handler','commit_inventory_handler']:
-    source+=block(terminal,'pub async fn '+name+'(')+'\n'
+    source+=extract_item(terminal, 'function', name)+'\n'
 if 'pub async fn read_cash_receipt_handler(' in terminal:
-    source+=block(terminal,'pub async fn read_cash_receipt_handler(')+'\n'
+    source+=extract_item(terminal, 'function', 'read_cash_receipt_handler')+'\n'
     source+='pub const HAS_READBACK:bool=true;\n'
 else:
     source+='pub const HAS_READBACK:bool=false;\nasync fn read_cash_receipt_handler()->StatusCode{StatusCode::NOT_FOUND}\n'
 if 'pub items:' in terminal:
     source+=f'#[path={json.dumps(str(ROOT/"src/server/api/terminal_cash_receipts.rs"))}]mod cash_receipts;\n'
-for name in ['CreateCheckoutSessionRequest','CreateCheckoutSessionResponse']:
-    source+='#[derive(serde::Serialize,serde::Deserialize)]\n'+block(billing,'pub struct '+name+' {')+'\n'
-for prefix in ['fn validated_checkout_quantity(', 'fn validated_subscription_interval(', 'async fn begin_billing_tenant_transaction', 'pub async fn create_checkout_session_handler(']:
-    source+=block(billing,prefix)+'\n'
+for name, adapter in [('CreateCheckoutSessionRequest', 'serde::Serialize'), ('CreateCheckoutSessionResponse', 'serde::Deserialize')]:
+    # Preserve production attributes, adding only the existing test serialization adapter.
+    source+=f'#[derive({adapter})]\n'+extract_item(billing, 'struct', name)+'\n'
+for name in ['validated_checkout_quantity', 'validated_subscription_interval', 'begin_billing_tenant_transaction', 'create_checkout_session_handler']:
+    source+=extract_item(billing, 'function', name)+'\n'
 source+='#[cfg(test)]#[path="test.rs"]mod cash_contract;\n'
 (HERE/'generated.rs').write_text(source)
-paths=[ROOT/'Cargo.lock',ROOT/'src/server/api/terminal_api.rs',ROOT/'src/server/api/billing_api.rs',ROOT/'src/server/services/inventory/service.rs',ROOT/'src/server/services/inventory/mod.rs']
+paths=list(rust_source_inputs())+[ROOT/'Cargo.lock',ROOT/'src/server/api/terminal_api.rs',ROOT/'src/server/api/billing_api.rs',ROOT/'src/server/services/inventory/service.rs',ROOT/'src/server/services/inventory/mod.rs']
 paths += [ROOT / path for path in ['.github/workflows/ci.yml', 'scripts/focused_ci_gate.py', 'scripts/test_focused_ci_gate.py', 'scripts/agent-feed-decision-contract/database_guard.py']]
 paths += [p for p in (ROOT/'src/server/migrations').glob('*.sql')]
 paths += [p for p in HERE.iterdir() if p.is_file() and p.name not in ['source-manifest.json','Cargo.lock']]

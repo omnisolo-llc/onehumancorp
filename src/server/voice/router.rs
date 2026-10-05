@@ -170,7 +170,9 @@ fn parse_voice_turn_plan(raw: &str) -> Result<VoiceTurnPlan, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ::server_integrations_twilio::client::TwilioClientWrapper;
+    use ::server_integrations_twilio::client::{
+        MessageReceipt, MessageSendError, TwilioClientWrapper,
+    };
     use async_trait::async_trait;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -180,13 +182,27 @@ mod tests {
 
     #[async_trait]
     impl TwilioClientWrapper for MockTwilioClient {
-        async fn send_sms(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_sms(
+            &self,
+            _to: &str,
+            _from: &str,
+            _body: &str,
+        ) -> Result<MessageReceipt, MessageSendError> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            Ok(MessageReceipt {
+                sid: "SM22222222222222222222222222222222".into(),
+            })
         }
-        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_whatsapp(
+            &self,
+            _to: &str,
+            _from: &str,
+            _body: &str,
+        ) -> Result<MessageReceipt, MessageSendError> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            Ok(MessageReceipt {
+                sid: "SM22222222222222222222222222222222".into(),
+            })
         }
 
         async fn provision_number(&self, _area_code: &str) -> Result<String, String> {

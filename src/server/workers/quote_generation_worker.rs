@@ -258,14 +258,16 @@ impl QuoteGenerationWorker {
 
             if !api_key.is_empty() {
                 let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
-                let total_pre_tax = line_items.iter().map(|li| li.unit_price_cents * li.quantity as i64).sum::<i64>();
-                let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
+                let total_pre_tax = crate::integrations::taxjar::money::checked_total_cents(
+                    line_items.iter().map(|item| (item.unit_price_cents, item.quantity)),
+                )
+                .map_err(|error| format!("Invalid quote line items before tax: {error}"))?;
 
-                if let Ok(tax_rate) = provider.calculate_tax(crate::integrations::taxjar::client::TaxJarParams { amount: total_pre_tax_usd, shipping: 0.0, to_country: "US", to_zip: "90002", to_state: "CA", from_country: "US", from_zip: "92093", from_state: "CA" }).await {
-                    if tax_rate.amount_to_collect > 0.0 {
+                if let Ok(tax_rate) = provider.calculate_tax(crate::integrations::taxjar::client::TaxJarParams { amount_cents: total_pre_tax, shipping_cents: 0, to_country: "US", to_zip: "90002", to_state: "CA", from_country: "US", from_zip: "92093", from_state: "CA" }).await {
+                    if tax_rate.amount_to_collect_cents > 0 {
                         line_items.push(LineItemRequest {
                             description: "Automated Sales Tax (TaxJar)".to_string(),
-                            unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                            unit_price_cents: tax_rate.amount_to_collect_cents,
                             quantity: 1,
                             is_optional: false,
                             service_item_id: None,

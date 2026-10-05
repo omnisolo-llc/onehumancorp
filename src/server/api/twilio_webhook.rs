@@ -5,7 +5,6 @@ use axum::{
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use hmac::{Hmac, Mac};
 use sha1::Sha1;
-use std::collections::HashMap;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -13,7 +12,7 @@ use crate::db::DB;
 use crate::hub::Hub;
 use crate::orchestration::departments::orchestrator::DepartmentOrchestrator;
 use crate::orchestration::identity_resolution::IdentityResolver;
-use ::server_utils::url::url_decode;
+use ::server_utils::url::parse_form_urlencoded;
 
 #[derive(Clone)]
 pub struct TwilioWebhookState {
@@ -105,18 +104,7 @@ pub async fn twilio_webhook_post_handler(
     State(state): State<TwilioWebhookState>,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let body_str = String::from_utf8_lossy(&body_bytes);
-
-    // Parse form url-encoded body manually (split by & and =)
-    let mut params = HashMap::new();
-    for pair in body_str.split('&') {
-        let mut parts = pair.split('=');
-        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-            let decoded_key = url_decode(key);
-            let decoded_val = url_decode(value);
-            params.insert(decoded_key, decoded_val);
-        }
-    }
+    let params = parse_form_urlencoded(&body_bytes);
 
     let sender_id = params
         .get("From")
@@ -327,21 +315,11 @@ pub async fn twilio_webhook_post_handler(
     StatusCode::OK.into_response()
 }
 
-// Basic URL decode
-
 pub async fn twilio_voice_webhook_handler(
     State(state): State<TwilioWebhookState>,
     body_bytes: axum::body::Bytes,
 ) -> impl IntoResponse {
-    let body_str = String::from_utf8_lossy(&body_bytes);
-
-    let mut params = HashMap::new();
-    for pair in body_str.split('&') {
-        let mut parts = pair.split('=');
-        if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
-            params.insert(url_decode(key), url_decode(value));
-        }
-    }
+    let params = parse_form_urlencoded(&body_bytes);
 
     let call_sid = params
         .get("CallSid")
@@ -536,3 +514,7 @@ pub async fn twilio_voice_webhook_handler(
 
     ([(axum::http::header::CONTENT_TYPE, "text/xml")], twiml).into_response()
 }
+
+#[cfg(test)]
+#[path = "twilio_signature_tests.rs"]
+mod signature_tests;

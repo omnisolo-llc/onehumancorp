@@ -316,6 +316,17 @@ async fn create_quote(
     }
 
     let mut line_items = payload.line_items;
+    let checked_total = |items: &[QuoteLineItemRequest]| {
+        crate::integrations::taxjar::money::checked_total_cents(
+            items
+                .iter()
+                .map(|item| (item.unit_price_cents, item.quantity)),
+        )
+    };
+    let total_pre_tax = match checked_total(&line_items) {
+        Ok(total) => total,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
 
     let api_key = match quote_taxjar::load_quote_taxjar_key(
         &mut tx,
@@ -333,16 +344,10 @@ async fn create_quote(
 
     if let Some(api_key) = api_key {
         let provider = crate::integrations::taxjar::provider::TaxJarProvider::new(api_key);
-        let total_pre_tax = line_items
-            .iter()
-            .map(|li| li.unit_price_cents * li.quantity as i64)
-            .sum::<i64>();
-        let total_pre_tax_usd = (total_pre_tax as f64) / 100.0;
-
         if let Ok(tax_rate) = provider
             .calculate_tax(crate::integrations::taxjar::client::TaxJarParams {
-                amount: total_pre_tax_usd,
-                shipping: 0.0,
+                amount_cents: total_pre_tax,
+                shipping_cents: 0,
                 to_country: "US",
                 to_zip: "90002",
                 to_state: "CA",
@@ -351,11 +356,11 @@ async fn create_quote(
                 from_state: "CA",
             })
             .await
-            && tax_rate.amount_to_collect > 0.0
+            && tax_rate.amount_to_collect_cents > 0
         {
             line_items.push(QuoteLineItemRequest {
                 description: "Automated Sales Tax (TaxJar)".to_string(),
-                unit_price_cents: (tax_rate.amount_to_collect * 100.0) as i64,
+                unit_price_cents: tax_rate.amount_to_collect_cents,
                 quantity: 1,
                 is_optional: false,
                 service_item_id: None,
@@ -363,10 +368,10 @@ async fn create_quote(
         }
     }
 
-    let total_amount_cents = line_items
-        .iter()
-        .map(|li| li.unit_price_cents * li.quantity as i64)
-        .sum::<i64>();
+    let total_amount_cents = match checked_total(&line_items) {
+        Ok(total) => total,
+        Err(_) => return StatusCode::BAD_REQUEST.into_response(),
+    };
     let required_deposit_cents = payload
         .required_deposit_cents
         .unwrap_or(total_amount_cents / 3);

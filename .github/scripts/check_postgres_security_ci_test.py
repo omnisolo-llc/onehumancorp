@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import subprocess
 import tempfile
+import unittest
 from unittest import mock
 
 from check_postgres_security_ci import ContractError, check_workflow, validate_yaml
@@ -69,15 +70,12 @@ def assert_parser_absence_fails_closed() -> None:
             raise ImportError("simulated missing PyYAML")
         return real_import(name, *args, **kwargs)
 
-    with (
-        mock.patch("builtins.__import__", side_effect=import_without_yaml),
-        mock.patch("check_postgres_security_ci.shutil.which", return_value=None),
-    ):
+    with mock.patch("builtins.__import__", side_effect=import_without_yaml):
         try:
             validate_yaml(WORKFLOW)
         except ContractError:
             return
-    raise AssertionError("YAML validation did not fail closed without either parser")
+    raise AssertionError("YAML validation did not fail closed without PyYAML")
 
 
 def assert_real_yaml_parser_rejects_nested_duplicates() -> None:
@@ -126,7 +124,83 @@ def assert_every_required_lane_failure_blocks_acceptance() -> None:
             assert result.returncode != 0, (key, outcome, result.stdout, result.stderr)
 
 
+class ParsedWorkflowTests(unittest.TestCase):
+    def validate(self, source):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "workflow.yml"
+            path.write_text(source, encoding="utf-8")
+            return validate_yaml(path)
+
+    def test_returns_nodes_with_literal_on_style_and_source_location(self):
+        node = self.validate('on: push\nrun: |\n  echo hello\n')
+        self.assertIsNotNone(node, "validation must retain the parsed representation graph")
+        self.assertEqual(node.value[0][0].value, "on")
+        self.assertEqual(node.value[1][1].style, "|")
+        self.assertEqual(node.value[1][1].start_mark.line, 1)
+        self.assertEqual(node.value[1][1].value, "echo hello\n")
+
+    def test_literal_boolean_like_keys_remain_distinct(self):
+        node = self.validate('on: push\ntrue: yes\n')
+        self.assertEqual([key.value for key, _ in node.value], ["on", "true"])
+
+    def test_duplicate_keys_report_original_location(self):
+        with self.assertRaisesRegex(ContractError, "line 3"):
+            self.validate('root:\n  on: push\n  "on": pull_request\n')
+
+    def test_aliases_fail_closed(self):
+        with self.assertRaisesRegex(ContractError, "alias"):
+            self.validate('first: &value [one]\nsecond: *value\n')
+
+    def test_recursive_aliases_fail_closed(self):
+        with self.assertRaisesRegex(ContractError, "alias"):
+            self.validate('first: &value [*value]\n')
+
+    def test_merge_keys_fail_closed(self):
+        with self.assertRaisesRegex(ContractError, "merge"):
+            self.validate('root: {<<: {run: false}}\n')
+
+    def test_explicit_keys_fail_closed(self):
+        with self.assertRaisesRegex(ContractError, "explicit"):
+            self.validate('? jobs\n: {}\n')
+
+    def test_non_scalar_keys_fail_closed(self):
+        with self.assertRaises(ContractError):
+            self.validate('? [one, two]\n: value\n')
+
+    def test_unsafe_tags_fail_closed(self):
+        with self.assertRaisesRegex(ContractError, "tag"):
+            self.validate('value: !!python/object/apply:builtins.print [unsafe]\n')
+
+    def test_multiple_documents_fail_closed(self):
+        with self.assertRaises(ContractError):
+            self.validate('jobs: {}\n---\njobs: {}\n')
+
+    def test_folded_script_cannot_pass_literal_shell_policy(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        marker = "      - name: Install PostgreSQL client\n        run: |"
+        self.assertIn(marker, workflow)
+        expect_text_rejected(workflow.replace(marker, marker[:-1] + ">"), "folded toolchain script")
+
+    def test_semantically_equivalent_mapping_indentation_is_supported(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        workflow = workflow.replace("defaults:\n  run:\n    shell: bash", "defaults:\n    run:\n        shell: bash")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "ci.yml"
+            path.write_text(workflow, encoding="utf-8")
+            check_workflow(path)
+
+    def test_flow_mapping_cannot_hide_step_overrides(self):
+        workflow = WORKFLOW.read_text(encoding="utf-8")
+        old = '      - name: Run PostgreSQL tenant-isolation suite\n        run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture"'
+        new = '      - {name: Run PostgreSQL tenant-isolation suite, run: "cargo test --locked -p server_auth multitenancy_isolation:: -- --nocapture", shell: "bash {0} || true"}'
+        self.assertIn(old, workflow)
+        expect_text_rejected(workflow.replace(old, new), "flow mapping shell override")
+
+
 def main() -> None:
+    result = unittest.TextTestRunner().run(unittest.defaultTestLoader.loadTestsFromTestCase(ParsedWorkflowTests))
+    if not result.wasSuccessful():
+        raise AssertionError("parsed workflow regression suite failed")
     assert_dependency_audit_blocks_required_check()
     assert_every_required_lane_failure_blocks_acceptance()
     assert_bash_env_can_preempt_a_step()

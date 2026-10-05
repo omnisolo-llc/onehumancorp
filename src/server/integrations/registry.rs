@@ -1032,7 +1032,11 @@ impl IntegrationsRegistry {
                 clients.get(integration_id).cloned()
             };
             if let Some(c) = client {
-                return c.send_whatsapp(to, from, body).await;
+                return c
+                    .send_whatsapp(to, from, body)
+                    .await
+                    .map(|_| ())
+                    .map_err(|error| error.to_string());
             }
         } else if integration_id == "meta"
             || integration_id == "whatsapp"
@@ -1229,7 +1233,7 @@ impl IntegrationsRegistry {
                 }
                 r
             };
-            return res;
+            return res.map(|_| ()).map_err(|error| error.to_string());
         }
         Err("integration not found or not supported".to_string())
     }

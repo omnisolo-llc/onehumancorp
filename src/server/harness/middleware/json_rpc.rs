@@ -1,17 +1,23 @@
 use std::collections::HashMap;
 use std::process::Stdio;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+use futures_util::StreamExt;
 use serde::Serialize;
 use serde_json::{Value, json};
-use tokio::io::{AsyncBufReadExt, AsyncRead, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncRead, AsyncWriteExt, BufReader};
 use tokio::process::{Child, ChildStdin, Command};
-use tokio::sync::{Mutex, broadcast, oneshot};
+use tokio::sync::{Mutex, broadcast, oneshot, watch};
 use tokio::time::timeout;
+use tokio_util::codec::{FramedRead, LinesCodec, LinesCodecError};
 
 use super::process_env::apply_isolated_environment;
+
+// Match the existing OpenCode response envelope while bounding every native
+// JSONL record before parsing. The limit counts bytes before the LF delimiter.
+const MAX_JSON_RPC_LINE_BYTES: usize = 8 * 1024 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct JsonRpcId {
@@ -170,7 +176,7 @@ struct RuntimeState {
     next_id: AtomicU64,
     request_timeout: Duration,
     include_jsonrpc_header: bool,
-    closed: AtomicBool,
+    closed: watch::Sender<Option<JsonRpcError>>,
 }
 
 #[derive(Clone)]
@@ -182,7 +188,7 @@ impl std::fmt::Debug for JsonRpcProcessRuntime {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("JsonRpcProcessRuntime")
-            .field("closed", &self.inner.closed.load(Ordering::Acquire))
+            .field("closed", &self.inner.closed.borrow().is_some())
             .finish()
     }
 }
@@ -195,7 +201,8 @@ impl JsonRpcProcessRuntime {
         command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::null());
+            .stderr(Stdio::null())
+            .kill_on_drop(true);
         let mut process = command
             .spawn()
             .map_err(|error| JsonRpcError::Spawn(error.to_string()))?;
@@ -205,6 +212,7 @@ impl JsonRpcProcessRuntime {
         let (server_request_events, _) = broadcast::channel(256);
         // Optional diagnostic observation must never backpressure protocol dispatch.
         let (inbound_tx, inbound_rx) = broadcast::channel(256);
+        let (closed, _) = watch::channel(None);
         let runtime = Self {
             inner: Arc::new(RuntimeState {
                 writer: Mutex::new(stdin),
@@ -218,7 +226,7 @@ impl JsonRpcProcessRuntime {
                 next_id: AtomicU64::new(1),
                 request_timeout: config.request_timeout,
                 include_jsonrpc_header: config.include_jsonrpc_header,
-                closed: AtomicBool::new(false),
+                closed,
             }),
         };
         let reader_runtime = runtime.clone();
@@ -271,16 +279,16 @@ impl JsonRpcProcessRuntime {
         params: Option<Value>,
         request_timeout: Duration,
     ) -> JsonRpcResult {
-        if self.inner.closed.load(Ordering::Acquire) {
-            return Err(JsonRpcError::ProcessExited);
-        }
         let id = JsonRpcId::numeric(self.inner.next_id.fetch_add(1, Ordering::AcqRel));
         let (sender, receiver) = oneshot::channel();
-        self.inner
-            .pending
-            .lock()
-            .await
-            .insert(id.key.clone(), sender);
+        {
+            let mut pending = self.inner.pending.lock().await;
+            // Admission and close/drain must agree even when requests race EOF.
+            if self.inner.closed.borrow().is_some() {
+                return Err(JsonRpcError::ProcessExited);
+            }
+            pending.insert(id.key.clone(), sender);
+        }
         let mut message = json!({
             "id": id.raw,
             "method": method,
@@ -305,7 +313,7 @@ impl JsonRpcProcessRuntime {
     }
 
     pub async fn notify(&self, method: &str, params: Value) -> Result<(), JsonRpcError> {
-        if self.inner.closed.load(Ordering::Acquire) {
+        if self.inner.closed.borrow().is_some() {
             return Err(JsonRpcError::ProcessExited);
         }
         let mut message = json!({
@@ -318,12 +326,42 @@ impl JsonRpcProcessRuntime {
 
     pub async fn next_message(&self) -> Result<JsonRpcInbound, JsonRpcError> {
         let mut receiver = self.inner.inbound_rx.lock().await;
-        match receiver.recv().await {
-            Ok(message) => message,
-            Err(broadcast::error::RecvError::Closed) => Err(JsonRpcError::ProcessExited),
-            Err(broadcast::error::RecvError::Lagged(count)) => Err(JsonRpcError::InvalidMessage(
-                format!("diagnostic observer lagged by {count} messages"),
-            )),
+        let mut closed = self.inner.closed.subscribe();
+        loop {
+            // Preserve queued diagnostics and lag reports before returning the
+            // persistent terminal reason to this and every subsequent observer.
+            match receiver.try_recv() {
+                Ok(message) => return message,
+                Err(broadcast::error::TryRecvError::Lagged(count)) => {
+                    return Err(JsonRpcError::InvalidMessage(format!(
+                        "diagnostic observer lagged by {count} messages"
+                    )));
+                }
+                Err(broadcast::error::TryRecvError::Closed) => {
+                    return Err(closed
+                        .borrow()
+                        .clone()
+                        .unwrap_or(JsonRpcError::ProcessExited));
+                }
+                Err(broadcast::error::TryRecvError::Empty) => {}
+            }
+            if let Some(error) = closed.borrow().clone() {
+                return Err(error);
+            }
+            tokio::select! {
+                result = receiver.recv() => return match result {
+                    Ok(message) => message,
+                    Err(broadcast::error::RecvError::Closed) => {
+                        Err(closed.borrow().clone().unwrap_or(JsonRpcError::ProcessExited))
+                    }
+                    Err(broadcast::error::RecvError::Lagged(count)) => {
+                        Err(JsonRpcError::InvalidMessage(format!(
+                            "diagnostic observer lagged by {count} messages"
+                        )))
+                    }
+                },
+                _ = closed.changed() => {}
+            }
         }
     }
 
@@ -355,10 +393,28 @@ impl JsonRpcProcessRuntime {
     }
 
     pub async fn shutdown(&self) -> Result<(), JsonRpcError> {
-        if self.inner.closed.swap(true, Ordering::AcqRel) {
-            return Ok(());
+        self.close_runtime(JsonRpcError::Cancelled).await
+    }
+
+    async fn close_runtime(&self, error: JsonRpcError) -> Result<(), JsonRpcError> {
+        let first_close = self.inner.closed.send_if_modified(|terminal| {
+            if terminal.is_some() {
+                return false;
+            }
+            *terminal = Some(error.clone());
+            true
+        });
+        if first_close {
+            let _ = self.inner.inbound_tx.send(Err(error.clone()));
+            self.fail_pending(error).await;
+            self.inner.server_requests.lock().await.clear();
         }
-        self.fail_pending(JsonRpcError::Cancelled).await;
+        // A reader can mark the runtime closed before process cleanup completes.
+        // Repeated shutdown calls must still wait for that child to be reaped.
+        self.reap_child().await
+    }
+
+    async fn reap_child(&self) -> Result<(), JsonRpcError> {
         let mut process = self.inner.process.lock().await;
         process_kill_result(process.kill().await)?;
         process
@@ -421,38 +477,43 @@ impl JsonRpcProcessRuntime {
         }
     }
 
-    async fn read_stdout<R>(&self, mut stdout: BufReader<R>)
+    async fn read_stdout<R>(&self, stdout: BufReader<R>)
     where
         R: AsyncRead + Unpin,
     {
-        let mut line = String::new();
-        loop {
-            line.clear();
-            match stdout.read_line(&mut line).await {
-                Ok(0) => {
-                    self.inner.closed.store(true, Ordering::Release);
-                    self.fail_pending(JsonRpcError::ProcessExited).await;
-                    let _ = self.inner.inbound_tx.send(Err(JsonRpcError::ProcessExited));
-                    break;
-                }
-                Ok(_) if line.trim().is_empty() => continue,
-                Ok(_) => match parse_message(line.trim()) {
-                    Ok(message) => {
-                        self.route_message(message).await;
-                    }
-                    Err(error) => {
-                        self.inner.closed.store(true, Ordering::Release);
-                        self.fail_pending(error.clone()).await;
-                        let _ = self.inner.inbound_tx.send(Err(error));
-                        break;
-                    }
+        let mut lines = FramedRead::new(
+            stdout,
+            LinesCodec::new_with_max_length(MAX_JSON_RPC_LINE_BYTES),
+        );
+        let mut closed = self.inner.closed.subscribe();
+        let error = loop {
+            if closed.borrow().is_some() {
+                return;
+            }
+            let line = tokio::select! {
+                biased;
+                _ = closed.changed() => return,
+                line = lines.next() => line,
+            };
+            match line {
+                None => break JsonRpcError::ProcessExited,
+                Some(Ok(line)) if line.trim().is_empty() => continue,
+                Some(Ok(line)) => match parse_message(line.trim()) {
+                    Ok(message) => self.route_message(message).await,
+                    Err(error) => break error,
                 },
-                Err(error) => {
+                Some(Err(LinesCodecError::MaxLineLengthExceeded)) => {
+                    break JsonRpcError::Malformed(format!(
+                        "JSON-RPC line exceeds {MAX_JSON_RPC_LINE_BYTES} bytes"
+                    ));
+                }
+                Some(Err(LinesCodecError::Io(error))) => {
                     self.fail_stdout_read(error).await;
-                    break;
+                    return;
                 }
             }
-        }
+        };
+        self.finish_stdout(error).await;
     }
 
     async fn route_message(&self, message: JsonRpcInbound) {
@@ -485,10 +546,14 @@ impl JsonRpcProcessRuntime {
     }
 
     async fn fail_stdout_read(&self, error: std::io::Error) {
-        let error = JsonRpcError::Io(error.to_string());
-        self.inner.closed.store(true, Ordering::Release);
-        self.fail_pending(error.clone()).await;
-        let _ = self.inner.inbound_tx.send(Err(error));
+        self.finish_stdout(JsonRpcError::Io(error.to_string()))
+            .await;
+    }
+
+    async fn finish_stdout(&self, error: JsonRpcError) {
+        if let Err(error) = self.close_runtime(error).await {
+            let _ = self.inner.inbound_tx.send(Err(error));
+        }
     }
 }
 
@@ -576,6 +641,252 @@ fn parse_message(line: &str) -> Result<JsonRpcInbound, JsonRpcError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    async fn assert_child_reaped(runtime: &JsonRpcProcessRuntime) {
+        let reaped = timeout(Duration::from_secs(2), async {
+            loop {
+                if runtime
+                    .inner
+                    .process
+                    .lock()
+                    .await
+                    .try_wait()
+                    .unwrap()
+                    .is_some()
+                {
+                    return;
+                }
+                tokio::task::yield_now().await;
+            }
+        })
+        .await;
+        if reaped.is_err() {
+            // Leave no child behind even when the regression assertion fails.
+            runtime.inner.process.lock().await.kill().await.unwrap();
+        }
+        assert!(
+            reaped.is_ok(),
+            "terminal protocol errors must reap the child"
+        );
+    }
+
+    #[tokio::test]
+    async fn oversized_unterminated_frame_fails_all_pending_requests_and_reaps_child() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
+            "read first; read second; head -c 8388609 /dev/zero | tr '\\000' x; read ignored",
+        ))
+        .await
+        .unwrap();
+        let (first, second) = tokio::join!(
+            runtime.request_with_timeout("first", Value::Null, Duration::from_secs(2)),
+            runtime.request_with_timeout("second", Value::Null, Duration::from_secs(2)),
+        );
+        // Cleanup is explicit before asserting, so RED does not leak the fixture.
+        if matches!(first, Err(JsonRpcError::Timeout)) {
+            runtime.shutdown().await.unwrap();
+        }
+        for result in [first, second] {
+            assert!(
+                matches!(result, Err(JsonRpcError::Malformed(ref message)) if message.contains("exceeds")),
+                "unexpected result: {result:?}"
+            );
+        }
+        assert_child_reaped(&runtime).await;
+        assert!(matches!(
+            runtime.request("after-close", Value::Null).await,
+            Err(JsonRpcError::ProcessExited)
+        ));
+    }
+
+    #[tokio::test]
+    async fn malformed_frame_reaps_child_before_shutdown() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
+            "read request; printf '%s\\n' '{invalid}'; read ignored",
+        ))
+        .await
+        .unwrap();
+        assert!(matches!(
+            runtime.request("malformed", Value::Null).await,
+            Err(JsonRpcError::Malformed(_))
+        ));
+        assert_child_reaped(&runtime).await;
+        runtime.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn invalid_utf8_frame_fails_pending_and_reaps_child() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
+            "read request; printf '\\377\\n'; read ignored",
+        ))
+        .await
+        .unwrap();
+        assert!(matches!(
+            runtime.request("invalid-utf8", Value::Null).await,
+            Err(JsonRpcError::Io(_))
+        ));
+        assert_child_reaped(&runtime).await;
+    }
+
+    #[tokio::test]
+    async fn cancellation_mid_frame_fails_pending_and_reaps_child() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
+            r#"read request; printf '%s\n' '{"method":"ready"}'; printf '{"id":1,"result":'; read ignored"#,
+        )).await.unwrap();
+        let mut ready = runtime.subscribe_notifications();
+        let request_runtime = runtime.clone();
+        let request =
+            tokio::spawn(async move { request_runtime.request("partial", Value::Null).await });
+        timeout(Duration::from_secs(2), ready.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        runtime.shutdown().await.unwrap();
+        assert_eq!(request.await.unwrap(), Err(JsonRpcError::Cancelled));
+        assert_child_reaped(&runtime).await;
+    }
+
+    #[tokio::test]
+    async fn shutdown_cancels_a_reader_even_while_its_pipe_remains_open() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell("read ignored"))
+            .await
+            .unwrap();
+        let (mut writer, reader) = tokio::io::duplex(128);
+        writer.write_all(b"{\"id\":1").await.unwrap();
+        let reader_runtime = runtime.clone();
+        let mut reader_task = tokio::spawn(async move {
+            reader_runtime.read_stdout(BufReader::new(reader)).await;
+        });
+        // Let the reader consume the partial frame and block before cancellation.
+        tokio::task::yield_now().await;
+        runtime.shutdown().await.unwrap();
+        let stopped = timeout(Duration::from_secs(1), &mut reader_task).await;
+        if stopped.is_err() {
+            reader_task.abort();
+        }
+        drop(writer);
+        assert!(
+            stopped.is_ok(),
+            "shutdown left a reader blocked on a partial frame"
+        );
+    }
+
+    #[tokio::test]
+    async fn shutdown_releases_pending_and_future_diagnostic_observers() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell("read ignored"))
+            .await
+            .unwrap();
+        let mut observers = tokio::task::JoinSet::new();
+        for _ in 0..3 {
+            let observer = runtime.clone();
+            observers.spawn(async move { observer.next_message().await });
+        }
+        tokio::task::yield_now().await;
+        runtime.shutdown().await.unwrap();
+        let completed = timeout(Duration::from_secs(1), async {
+            while let Some(result) = observers.join_next().await {
+                assert!(matches!(
+                    result.unwrap(),
+                    Err(JsonRpcError::Cancelled | JsonRpcError::ProcessExited)
+                ));
+            }
+        })
+        .await;
+        observers.abort_all();
+        assert!(
+            completed.is_ok(),
+            "shutdown stranded a pending diagnostic observer"
+        );
+        assert!(matches!(
+            timeout(Duration::from_secs(1), runtime.next_message()).await,
+            Ok(Err(JsonRpcError::Cancelled | JsonRpcError::ProcessExited))
+        ));
+    }
+
+    #[tokio::test]
+    async fn terminal_framing_error_remains_observable_after_its_broadcast_is_consumed() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell(
+            "read request; printf '%s\\n' '{invalid}'; read ignored",
+        ))
+        .await
+        .unwrap();
+        let error = runtime.request("malformed", Value::Null).await.unwrap_err();
+        assert!(matches!(error, JsonRpcError::Malformed(_)));
+        for _ in 0..3 {
+            assert_eq!(
+                timeout(Duration::from_secs(1), runtime.next_message()).await,
+                Ok(Err(error.clone()))
+            );
+        }
+        runtime.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn bounded_reader_preserves_utf8_crlf_empty_lines_and_final_unterminated_frame() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell("read ignored"))
+            .await
+            .unwrap();
+        let bytes = "\r\n  \n{\"method\":\"progress\",\"params\":\"é🦀\"}\r\n{\"id\":\"last\",\"result\":true}".as_bytes().to_vec();
+        runtime
+            .read_stdout(BufReader::new(BytewiseReader { bytes, offset: 0 }))
+            .await;
+        assert_eq!(
+            runtime.next_message().await.unwrap(),
+            JsonRpcInbound::Notification(JsonRpcNotification {
+                method: "progress".into(),
+                params: json!("é🦀")
+            })
+        );
+        assert_eq!(
+            runtime.next_message().await.unwrap(),
+            JsonRpcInbound::Response {
+                id: JsonRpcId::from_raw(json!("last")).unwrap(),
+                result: Ok(json!(true))
+            }
+        );
+        runtime.inner.process.lock().await.kill().await.unwrap();
+        runtime.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn bounded_reader_accepts_an_eight_mib_tool_result_frame() {
+        let runtime = JsonRpcProcessRuntime::spawn(JsonRpcProcessConfig::shell("read ignored"))
+            .await
+            .unwrap();
+        let framing = r#"{"id":1,"result":""}"#;
+        let result_length = 8 * 1024 * 1024 - framing.len();
+        let line = format!(
+            "{{\"id\":1,\"result\":\"{}\"}}\n",
+            "x".repeat(result_length)
+        );
+        runtime.read_stdout(BufReader::new(line.as_bytes())).await;
+        match runtime.next_message().await.unwrap() {
+            JsonRpcInbound::Response {
+                result: Ok(result), ..
+            } => assert_eq!(result.as_str().unwrap().len(), result_length),
+            other => panic!("expected tool result, got {other:?}"),
+        }
+        runtime.inner.process.lock().await.kill().await.unwrap();
+        runtime.shutdown().await.unwrap();
+    }
+
+    struct BytewiseReader {
+        bytes: Vec<u8>,
+        offset: usize,
+    }
+
+    impl AsyncRead for BytewiseReader {
+        fn poll_read(
+            mut self: std::pin::Pin<&mut Self>,
+            _context: &mut std::task::Context<'_>,
+            buffer: &mut tokio::io::ReadBuf<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            if self.offset < self.bytes.len() && buffer.remaining() > 0 {
+                buffer.put_slice(&self.bytes[self.offset..self.offset + 1]);
+                self.offset += 1;
+            }
+            std::task::Poll::Ready(Ok(()))
+        }
+    }
 
     #[test]
     fn parse_message_rejects_non_object_and_missing_response_ids() {

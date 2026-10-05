@@ -5,7 +5,7 @@ import { connect } from 'node:net';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { startCheckoutProvider, startCheckoutEgressProxy, checkoutProcessEnvironment, startConfiguredCheckoutFixture } from './checkout-browser-fixture.mjs';
@@ -336,6 +336,9 @@ test('configured launcher rejects missing or non-private runner proof before any
   t.after(() => rm(directory, { recursive: true, force: true }));
   const proof = path.join(directory, 'runtime.json');
   await writeFile(proof, '{}', { mode: 0o644 });
+  // Creation mode is masked by the caller's umask; this fixture specifically
+  // needs a non-private file to exercise the permission guard.
+  await chmod(proof, 0o644);
   await assert.rejects(startConfiguredCheckoutFixture({ environment: { OMNISOLO_E2E_CHECKOUT_RUNTIME: proof } }), /Invalid checkout runtime proof/);
 });
 
