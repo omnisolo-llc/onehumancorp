@@ -6,9 +6,12 @@ It preserves the existing protobuf dependency and wire payload. A build-time
 source manifest records source and selection hashes.
 
 Run `bash scripts/redis-reconnect/run.sh` with Redis server/CLI installed; the
-script owns and cleans up its loopback process. Alternatively supply
-`OHC_TEST_REDIS_URL=redis://127.0.0.1:<port>/` together with
-`OHC_REDIS_SERVICE_ISOLATION=1` for an explicitly owned disposable service. The
+script owns, PID-verifies, and cleans up its loopback process. Supplied service
+URLs are rejected, including shared CI services. First run
+`bash scripts/redis-reconnect/fetch.sh` to fetch the repository-locked dependencies.
+The required CI command is `python3 scripts/focused_ci_gate.py redis-reconnect`;
+it rejects fewer than 19 tests, failures, ignored tests, and filters. Source and
+selection hashes are verified after execution against unchanged input snapshots. The
 real service tests serialize connection termination and use unique keys; they
 never flush shared data. They issue `CLIENT KILL` and must not target a shared
 or production Redis service.

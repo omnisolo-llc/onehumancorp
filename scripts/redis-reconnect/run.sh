@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/../.."
+if [[ -n "${OHC_TEST_REDIS_URL:-}" ]]; then
+  echo 'This runner owns its Redis process; do not supply OHC_TEST_REDIS_URL' >&2
+  exit 1
+fi
+command -v redis-server >/dev/null
+command -v redis-cli >/dev/null
 fixture_pid=""
 fixture_dir=""
 cleanup() {
@@ -40,4 +46,12 @@ if [[ "${OHC_REDIS_SERVICE_ISOLATION:-}" != 1 ]]; then
   exit 1
 fi
 export REDIS_URL="$OHC_TEST_REDIS_URL"
-cargo test --locked --manifest-path scripts/redis-reconnect/Cargo.toml
+python3 scripts/redis-reconnect/verify_lock.py
+python3 scripts/redis-reconnect/verify_source.py snapshot >"$fixture_dir/source-before.json"
+status=0
+cargo test --locked --offline --manifest-path scripts/redis-reconnect/Cargo.toml --message-format=json | tee "$fixture_dir/cargo-output.log" || status=$?
+python3 scripts/redis-reconnect/verify_source.py snapshot >"$fixture_dir/source-after.json"
+cmp "$fixture_dir/source-before.json" "$fixture_dir/source-after.json"
+python3 scripts/redis-reconnect/verify_source.py restore "$fixture_dir/cargo-output.log"
+python3 scripts/redis-reconnect/verify_source.py verify
+exit "$status"

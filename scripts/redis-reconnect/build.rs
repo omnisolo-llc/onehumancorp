@@ -24,28 +24,13 @@ fn main() {
             "source_sha256":selected.source_sha256,"selection_sha256":selected.selection_sha256}),
         );
     }
-    for file in [
-        "Cargo.toml",
-        "src/server/queue.rs",
-        "src/server/utils/cache.rs",
-        "src/server/services/cache_invalidator.rs",
-        "src/server/utils/Cargo.toml",
-        "src/server/omnisolo/Cargo.toml",
-        "src/server/omnisolo/build.rs",
-        "src/server/omnisolo/mod.rs",
-        "src/proto/interop.proto",
-        "scripts/redis-reconnect/build.rs",
-        "scripts/redis-reconnect/probe.rs",
-        "scripts/redis-reconnect/test.rs",
-        "scripts/redis-reconnect/fault.rs",
-        "scripts/redis-reconnect/invalidator_dependencies.rs",
-        "scripts/redis-reconnect/Cargo.toml",
-        "scripts/redis-reconnect/Cargo.lock",
-        "scripts/rust-source-extract/Cargo.toml",
-        "scripts/rust-source-extract/src/lib.rs",
-    ] {
-        println!("cargo:rerun-if-changed={}", root.join(file).display());
-        proofs.push(serde_json::json!({"source":file,"source_sha256":sha256(&fs::read(root.join(file)).unwrap())}));
+    let inputs: Vec<String> = serde_json::from_slice(
+        &fs::read(root.join("scripts/redis-reconnect/source-inputs.json")).unwrap(),
+    )
+    .unwrap();
+    for file in inputs {
+        println!("cargo:rerun-if-changed={}", root.join(&file).display());
+        proofs.push(serde_json::json!({"source":file,"source_sha256":sha256(&fs::read(root.join(&file)).unwrap())}));
     }
     let mut protos: Vec<_> = fs::read_dir(root.join("src/proto"))
         .unwrap()
