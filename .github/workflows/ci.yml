@@ -344,9 +344,12 @@ jobs:
       - uses: ./.github/actions/setup-native
         id: native-setup
         with:
-          rust: 'false'
+          rust: 'true'
+          role: contract-parser
           node-scope: all
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Prepare the locked Rust parser for offline source contracts
+        run: cargo build --locked -p ohc-rust-source-extract
       - name: Install Python workflow-contract dependency
         run: sudo apt-get update && sudo apt-get install -y python3-yaml
       # Independent checks retain their own failing conclusions. A lint failure
