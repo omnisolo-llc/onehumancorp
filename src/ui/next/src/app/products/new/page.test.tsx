@@ -117,3 +117,41 @@ it('retains the written offering when generation returns an invalid successful e
   expect(screen.getByPlaceholderText('e.g., Guitar lessons for beginners, 1 hour')).toHaveValue('Owner-written service');
   expect(screen.queryByRole('button', { name: 'Looks Good' })).toBeNull();
 });
+
+it('preserves reviewed subscription fields from a valid photo extraction', async () => {
+  const extracted = {
+    title: 'Owner cake box', description: 'The uploaded offering', price: '12.99', category: 'Product',
+    isSubscription: true, subscriptionInterval: 'monthly', subscriptionDiscount: '10',
+  };
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => url.endsWith('/auto-catalog')
+    ? Response.json(extracted)
+    : new Promise<Response>(() => {})));
+  render(<AutoCatalogPage />);
+  const user = userEvent.setup();
+  await user.upload(screen.getByLabelText(/Take a photo or upload/), new File(['photo'], 'owner-cake.png', { type: 'image/png' }));
+  expect(await screen.findByRole('checkbox', { name: 'Enable Subscribe & Save' })).toBeChecked();
+  expect(screen.getByDisplayValue('10')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Looks Good' }));
+  const [url, options] = vi.mocked(fetch).mock.calls[1];
+  expect(url).toBe('/api/v1/catalog/product');
+  expect(JSON.parse(String(options?.body))).toMatchObject({
+    is_subscribable: true, subscription_frequency: 'monthly', subscription_discount_percent: 10,
+  });
+});
+
+it.each([
+  { isSubscription: 'true' },
+  { subscriptionInterval: 12 },
+  { subscriptionDiscount: { percent: 10 } },
+])('rejects malformed photo subscription fields %j without losing the photo', async (invalid) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+    title: 'Owner cake box', description: 'The uploaded offering', price: '12.99', category: 'Product',
+    ...invalid,
+  })));
+  render(<AutoCatalogPage />);
+  const user = userEvent.setup();
+  await user.upload(screen.getByLabelText(/Take a photo or upload/), new File(['photo'], 'owner-cake.png', { type: 'image/png' }));
+  expect(await screen.findByRole('alert')).toBeVisible();
+  expect(screen.getByText('owner-cake.png')).toBeVisible();
+  expect(screen.queryByRole('button', { name: 'Looks Good' })).toBeNull();
+});

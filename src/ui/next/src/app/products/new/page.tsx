@@ -19,19 +19,25 @@ function productDetails(value: unknown, categoryField: 'category' | 'item_type')
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const data = value as Record<string, unknown>;
   const category = data[categoryField];
+  const fromPhoto = categoryField === 'category';
+  const subscription = fromPhoto ? data.isSubscription : data.is_subscription;
   if (data.success === false || data.error != null
     || typeof data.title !== 'string' || !data.title.trim()
     || typeof data.description !== 'string'
     || typeof data.price !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(data.price)
     || !Number.isFinite(Number(data.price)) || Number(data.price) < 0 || Number(data.price) > 10_000_000
     || typeof category !== 'string' || !category.trim()
-    || (data.is_subscription != null && typeof data.is_subscription !== 'boolean')) return null;
+    || (subscription != null && typeof subscription !== 'boolean')
+    || (fromPhoto && data.subscriptionInterval != null && typeof data.subscriptionInterval !== 'string')
+    || (fromPhoto && data.subscriptionDiscount != null && typeof data.subscriptionDiscount !== 'string')) return null;
   return {
     title: data.title,
     description: data.description,
     price: data.price,
     category,
-    isSubscription: data.is_subscription === true,
+    isSubscription: subscription === true,
+    ...(fromPhoto && typeof data.subscriptionInterval === 'string' ? { subscriptionInterval: data.subscriptionInterval } : {}),
+    ...(fromPhoto && typeof data.subscriptionDiscount === 'string' ? { subscriptionDiscount: data.subscriptionDiscount } : {}),
   };
 }
 
