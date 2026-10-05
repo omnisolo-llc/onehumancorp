@@ -5,6 +5,8 @@ import { replaceAuditDocument, resolveAuditTarget, auditDocumentSignature, hasFr
 
 function documentPage(overrides: Record<string, unknown>): Page {
   return {
+    url: () => 'https://fixture.test/original',
+    viewportSize: () => ({ width: 1280, height: 720 }),
     evaluateHandle: vi.fn().mockResolvedValue({ dispose: vi.fn() }),
     evaluate: vi.fn().mockResolvedValue(true),
     ...overrides,
@@ -26,8 +28,13 @@ describe('audit document retirement', () => {
   });
 
   it('does not claim retirement when the committed navigation fails', async () => {
-    const page = documentPage({ goto: vi.fn().mockRejectedValue(new Error('navigation interrupted')), close: vi.fn(), context: () => ({ newPage: vi.fn() }) });
-    await expect(replaceAuditDocument(page)).rejects.toThrow('navigation interrupted');
+    const error = new Error('navigation interrupted');
+    const close = vi.fn();
+    const newPage = vi.fn();
+    const page = documentPage({ goto: vi.fn().mockRejectedValue(error), close, context: () => ({ newPage }) });
+    await expect(replaceAuditDocument(page)).rejects.toBe(error);
+    expect(close).not.toHaveBeenCalled();
+    expect(newPage).not.toHaveBeenCalled();
   });
 });
 
