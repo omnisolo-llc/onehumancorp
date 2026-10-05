@@ -46,6 +46,7 @@ initial = (ROOT/'src/server/migrations/001_initial.sql').read_text()
 inputs = [ROOT/'.github/workflows/ci.yml', ROOT/'scripts/focused_ci_gate.py', ROOT/'scripts/test_focused_ci_gate.py', ROOT/'scripts/agent-definition-contract/database_guard.py', ROOT/'docs/development/tenant-execution-receipts-postgres.md', ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'src/server/migrations/001_initial.sql', ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql', ROOT/'src/server/migrations/1022_tenant_workflow_receipts.sql', *paths.values()]
 inputs += [p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs')]
 inputs += [ROOT/'src/server/migrations/1025_usage_accounting.sql',ROOT/'src/server/lib.rs',ROOT/'src/server/hub.rs',ROOT/'src/server/db.rs',ROOT/'src/server/api/usage_api.rs',ROOT/'scripts/agent-workflow-contract/usage-api-proxy-proof.cjs',ROOT/'scripts/agent-workflow-contract/verify_node_lock.py',ROOT/'src/ui/next/package-lock.json']
+inputs += [ROOT/'scripts/agent-workflow-contract'/name for name in ['package.json','package-lock.json']]
 inputs += [p for p in (ROOT/'src/ui/next/src/lib/auth').glob('*') if p.is_file() and p.suffix in ('.ts','.json')]
 inputs += [p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 inputs += [p for p in (ROOT/'src/server/persistence').rglob('*') if p.suffix in ('.rs', '.sql')]

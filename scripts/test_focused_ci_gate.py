@@ -665,5 +665,73 @@ if sys.argv[1] == 'test':
             self.assertTrue(any(s.get('if')=='always()' and s['with']['path']=='target/focused-ci-results' for s in uploads), job_name)
 
 
+class WorkflowWitnessLockTests(unittest.TestCase):
+    def setUp(self):
+        import shutil
+        self.root = Path(__file__).resolve().parents[1]
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        sandbox = Path(temporary.name)
+        self.here = sandbox/'scripts/agent-workflow-contract'
+        self.here.mkdir(parents=True)
+        client = sandbox/'src/ui/next'
+        client.mkdir(parents=True)
+        shutil.copyfile(self.root/'scripts/agent-workflow-contract/verify_node_lock.py', self.here/'verify_node_lock.py')
+        shutil.copyfile(self.root/'src/ui/next/package-lock.json', client/'package-lock.json')
+        canonical = json.loads((client/'package-lock.json').read_text())['packages']
+        self.dependencies = {name: canonical[f'node_modules/{name}']['version'] for name in ['jose', 'typescript']}
+        self.packages = {'': {'dependencies': self.dependencies.copy()},
+                         **{f'node_modules/{name}': canonical[f'node_modules/{name}'].copy() for name in self.dependencies}}
+        for name in self.dependencies:
+            self.packages[f'node_modules/{name}'].pop('dev', None)
+
+    def verify(self, dependencies, packages):
+        import subprocess
+        import sys
+        (self.here/'package.json').write_text(json.dumps({'dependencies': dependencies}))
+        (self.here/'package-lock.json').write_text(json.dumps({'packages': packages}))
+        return subprocess.run([sys.executable, str(self.here/'verify_node_lock.py')], capture_output=True, text=True)
+
+    def test_complete_witness_matches_both_canonical_packages(self):
+        result = self.verify(self.dependencies, self.packages)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_typescript_only_witness_cannot_certify_the_session_proxy(self):
+        del self.dependencies['jose']
+        del self.packages['']['dependencies']['jose']
+        del self.packages['node_modules/jose']
+        self.assertNotEqual(self.verify(self.dependencies, self.packages).returncode, 0)
+
+    def test_witness_rejects_package_drift_and_unpaired_or_extra_dependencies(self):
+        import copy
+        for name in self.dependencies:
+            for field in ['version', 'resolved', 'integrity']:
+                with self.subTest(package=name, field=field):
+                    packages = copy.deepcopy(self.packages)
+                    packages[f'node_modules/{name}'][field] = 'mismatched'
+                    self.assertNotEqual(self.verify(self.dependencies, packages).returncode, 0)
+        for change in ['manifest_pin', 'lock_pin', 'extra_manifest', 'extra_package', 'missing_package', 'dev_only']:
+            with self.subTest(change=change):
+                dependencies = self.dependencies.copy()
+                packages = copy.deepcopy(self.packages)
+                if change == 'manifest_pin': dependencies['jose'] = '^'+dependencies['jose']
+                elif change == 'lock_pin': packages['']['dependencies']['jose'] = '^'+dependencies['jose']
+                elif change == 'extra_manifest': dependencies['unrelated'] = '1.0.0'
+                elif change == 'extra_package': packages['node_modules/unrelated'] = {'version': '1.0.0'}
+                elif change == 'dev_only': packages['node_modules/jose']['dev'] = True
+                else: del packages['node_modules/jose']
+                self.assertNotEqual(self.verify(dependencies, packages).returncode, 0)
+
+    def test_receipt_source_manifest_binds_the_shared_witness_installation(self):
+        import hashlib
+        import runpy
+        folder = self.root/'scripts/agent-receipt-postgres-contract'
+        runpy.run_path(str(folder/'prepare.py'))
+        manifest = json.loads((folder/'source-manifest.json').read_text())
+        for name in ['package.json', 'package-lock.json']:
+            path = self.root/'scripts/agent-workflow-contract'/name
+            self.assertEqual(manifest.get(str(path.relative_to(self.root))), hashlib.sha256(path.read_bytes()).hexdigest())
+
+
 if __name__ == '__main__':
     unittest.main()
