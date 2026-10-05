@@ -318,60 +318,52 @@ pub async fn list_feed_items(
     let limit = query.limit.unwrap_or(20);
     let offset = query.offset.unwrap_or(0);
 
-    let cache_key = format!(
-        "agent_feed:{}:{}:{}:{}",
-        tenant_id, limit, offset, mobile_optimized
-    );
-    let cache = get_agent_feed_cache();
-    let tag = format!("agent_feed_tenant:{}", tenant_id);
-
-    let result = cache
-        .get_or_fetch_with_tags_swr(
-            &cache_key,
-            vec![tag],
-            std::time::Duration::from_secs(60),
-            move || async move {
-                let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
-                    pool: pool.clone(),
-                    store: crate::db::DbStore::Postgres,
-                }));
-                match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
-                    Ok(items) => {
-                        let any_response = if mobile_optimized {
-                            let mobile_items = items
-                                .into_iter()
-                                .map(|item| MobileAgentFeedItem {
-                                    id: item.id,
-                                    event_source: item.event_source,
-                                    context_payload: None,
-                                    proposed_action: None,
-                                    lifecycle_state: item.lifecycle_state,
-                                    created_at: item.created_at,
-                                })
-                                .collect();
-                            AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse {
-                                items: mobile_items,
-                            })
-                        } else {
-                            AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
-                        };
-                        Some(any_response)
-                    }
-                    Err(e) => {
-                        tracing::error!("Failed to list agent feed items: {}", e);
-                        None
-                    }
-                }
-            },
-        )
-        .await;
+    // Approval lists must reflect the canonical store on every request.
+    // Tag invalidation cannot make process-local SWR snapshots authoritative.
+    let repo = AgentFeedRepository::new(std::sync::Arc::new(crate::db::DB {
+        pool: pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    }));
+    let result = match repo.list(&tenant_id, limit, offset, mobile_optimized).await {
+        Ok(items) => {
+            let any_response = if mobile_optimized {
+                let mobile_items = items
+                    .into_iter()
+                    .map(|item| MobileAgentFeedItem {
+                        id: item.id,
+                        event_source: item.event_source,
+                        context_payload: None,
+                        proposed_action: None,
+                        lifecycle_state: item.lifecycle_state,
+                        created_at: item.created_at,
+                    })
+                    .collect();
+                AnyAgentFeedListResponse::Mobile(MobileAgentFeedListResponse {
+                    items: mobile_items,
+                })
+            } else {
+                AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items })
+            };
+            Some(any_response)
+        }
+        Err(e) => {
+            tracing::error!("Failed to list agent feed items: {}", e);
+            None
+        }
+    };
 
     match result {
-        Some(any_response) => (StatusCode::OK, Json(any_response)).into_response(),
+        Some(any_response) => (
+            StatusCode::OK,
+            [("cache-control", "no-store")],
+            Json(any_response),
+        )
+            .into_response(),
         None => {
             if mobile_optimized {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
+                    [("cache-control", "no-store")],
                     Json(AnyAgentFeedListResponse::Mobile(
                         MobileAgentFeedListResponse { items: vec![] },
                     )),
@@ -380,6 +372,7 @@ pub async fn list_feed_items(
             } else {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
+                    [("cache-control", "no-store")],
                     Json(AnyAgentFeedListResponse::Standard(AgentFeedListResponse {
                         items: vec![],
                     })),
@@ -455,6 +448,107 @@ mod tests {
     async fn test_agent_feed_router_compiles() {
         // Just verify that the router can be instantiated
         let _router = agent_feed::router::<PgPool>();
+    }
+
+    // Exercise the mounted list route after claims extraction. This is a
+    // repository-failure contract, not evidence of authentication success.
+    async fn assert_cached_list_fails_closed(mobile_optimized: bool) {
+        use axum::body::{Body, to_bytes};
+        use axum::http::{Request, StatusCode};
+        use tower::ServiceExt;
+
+        let tenant_id = format!("feed-closed-pool-{}", uuid::Uuid::new_v4());
+        let cache_key = format!("agent_feed:{tenant_id}:20:0:{mobile_optimized}");
+        let cache = get_agent_feed_cache();
+        let item = super::AgentFeedItem {
+            id: format!("{tenant_id}-action"),
+            tenant_id: tenant_id.clone(),
+            event_source: "fixture".to_string(),
+            context_payload: None,
+            proposed_action: None,
+            lifecycle_state: "PENDING_APPROVAL".to_string(),
+            created_at: None,
+            updated_at: None,
+        };
+        let cached = if mobile_optimized {
+            AnyAgentFeedListResponse::Mobile(super::MobileAgentFeedListResponse {
+                items: vec![super::MobileAgentFeedItem {
+                    id: item.id,
+                    event_source: item.event_source,
+                    context_payload: None,
+                    proposed_action: None,
+                    lifecycle_state: item.lifecycle_state,
+                    created_at: item.created_at,
+                }],
+            })
+        } else {
+            AnyAgentFeedListResponse::Standard(AgentFeedListResponse { items: vec![item] })
+        };
+        cache
+            .set_with_tags(
+                &cache_key,
+                cached,
+                vec![format!("agent_feed_tenant:{tenant_id}")],
+                std::time::Duration::from_secs(60),
+            )
+            .await;
+        let warm =
+            serde_json::to_value(cache.get(&cache_key).await.expect("warm list entry")).unwrap();
+        assert_eq!(warm["items"][0]["lifecycle_state"], "PENDING_APPROVAL");
+
+        // A closed lazy pool fails immediately and never opens a DB connection.
+        let pool = sqlx::postgres::PgPoolOptions::new()
+            .connect_lazy("postgres://unused:unused@127.0.0.1:1/closed_fixture")
+            .unwrap();
+        pool.close().await;
+        assert!(pool.is_closed());
+        let claims = Claims {
+            sub: "closed-pool-owner".to_string(),
+            organization_id: Some(tenant_id),
+            roles: vec!["ADMIN".to_string()],
+            iat: 0,
+            username: "fixture".to_string(),
+            email: "fixture@example.test".to_string(),
+            exp: 9999999999,
+            jti: "closed-pool-fixture".to_string(),
+            session_id: Some("closed-pool-session".to_string()),
+        };
+        let response = agent_feed::router::<PgPool>()
+            .with_state(pool)
+            .layer(Extension(claims))
+            .oneshot(
+                Request::builder()
+                    .uri(format!(
+                        "/api/v1/agent-feed?limit=20&offset=0&mobile_optimized={mobile_optimized}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        let status = response.status();
+        let cache_control = response.headers().get("cache-control").cloned();
+        let body = to_bytes(response.into_body(), 64 * 1024).await.unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        cache.invalidate(&cache_key).await;
+
+        assert_eq!(
+            status,
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "a cached list must not conceal an unavailable canonical store"
+        );
+        assert_eq!(payload, serde_json::json!({ "items": [] }));
+        assert_eq!(cache_control.unwrap().to_str().unwrap(), "no-store");
+    }
+
+    #[tokio::test]
+    async fn test_agent_feed_standard_list_fails_closed_with_warm_cache() {
+        assert_cached_list_fails_closed(false).await;
+    }
+
+    #[tokio::test]
+    async fn test_agent_feed_mobile_list_fails_closed_with_warm_cache() {
+        assert_cached_list_fails_closed(true).await;
     }
 
     #[tokio::test]
