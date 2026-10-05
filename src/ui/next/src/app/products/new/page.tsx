@@ -5,6 +5,36 @@ import { optimizeImage } from "../../../lib/utils/imageOptimization";
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+interface ProductDetails {
+  title: string;
+  description: string;
+  price: string;
+  category: string;
+  isSubscription?: boolean;
+  subscriptionInterval?: string;
+  subscriptionDiscount?: string;
+}
+
+function productDetails(value: unknown, categoryField: 'category' | 'item_type'): ProductDetails | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const data = value as Record<string, unknown>;
+  const category = data[categoryField];
+  if (data.success === false || data.error != null
+    || typeof data.title !== 'string' || !data.title.trim()
+    || typeof data.description !== 'string'
+    || typeof data.price !== 'string' || !/^\d+(?:\.\d{1,2})?$/.test(data.price)
+    || !Number.isFinite(Number(data.price)) || Number(data.price) < 0 || Number(data.price) > 10_000_000
+    || typeof category !== 'string' || !category.trim()
+    || (data.is_subscription != null && typeof data.is_subscription !== 'boolean')) return null;
+  return {
+    title: data.title,
+    description: data.description,
+    price: data.price,
+    category,
+    isSubscription: data.is_subscription === true,
+  };
+}
+
 export default function AutoCatalogPage() {
   return (
     <React.Suspense fallback={<div className="p-4">Loading...</div>}>
@@ -26,15 +56,8 @@ function AutoCatalogContent() {
   const [splitContact, setSplitContact] = useState('');
   const [splitPercentage, setSplitPercentage] = useState<number>(70);
 
-  const [productData, setProductData] = useState<{
-    title: string;
-    description: string;
-    price: string;
-    category: string;
-    isSubscription?: boolean;
-    subscriptionInterval?: string;
-    subscriptionDiscount?: string;
-  } | null>(null);
+  const [productData, setProductData] = useState<ProductDetails | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<File | null>(null);
   const [published, setPublished] = useState(false);
   const [publishingStep, setPublishingStep] = useState<0 | 1 | 2>(0);
   const [error, setError] = useState<string | null>(null);
@@ -43,66 +66,47 @@ function AutoCatalogContent() {
   const [promptText, setPromptText] = useState('');
 
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setLoading(true);
-    setPublishingStep(1);
-      setError(null);
-      try {
-        const formData = new FormData();
-        const optimizedBlob = await optimizeImage(e.target.files[0]);
-        const ext = optimizedBlob.type === 'image/webp' ? '.webp' : e.target.files[0].name.substring(e.target.files[0].name.lastIndexOf('.'));
-        formData.append('image', optimizedBlob, e.target.files[0].name.replace(/\.[^.]+$/, ext));
+  const extractPhoto = async (file: File) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const formData = new FormData();
+      const optimizedBlob = await optimizeImage(file);
+      const ext = optimizedBlob.type === 'image/webp' ? '.webp' : file.name.substring(file.name.lastIndexOf('.'));
+      formData.append('image', optimizedBlob, file.name.replace(/\.[^.]+$/, ext));
 
-        const response = await fetch('/api/v1/auto-catalog', {
-          method: 'POST',
-          body: formData,
-        });
-        const data = await response.json();
-        if (!response.ok) {
-          if (subscriptionMode) {
-            setProductData({
-              title: 'Vegan Cake',
-              description: 'Monthly vegan cake box with rotating seasonal flavors.',
-              price: '50.00',
-              category: 'Subscription Box',
-              isSubscription: true,
-              subscriptionInterval,
-              subscriptionDiscount: '10',
-            });
-            return;
-          }
-          setError(data.message || 'Auto-catalog is unavailable.');
-          return;
-        }
-        setProductData(subscriptionMode ? { ...data, isSubscription: true, subscriptionInterval } : data);
-      } catch (error) {
-        console.error('Error auto-cataloging:', error);
-        if (subscriptionMode) {
-          setProductData({
-            title: 'Vegan Cake',
-            description: 'Monthly vegan cake box with rotating seasonal flavors.',
-            price: '50.00',
-            category: 'Subscription Box',
-            isSubscription: true,
-            subscriptionInterval,
-            subscriptionDiscount: '10',
-          });
-        } else {
-          setError('Auto-catalog is unavailable.');
-        }
-      } finally {
-        setLoading(false);
-      setPublishingStep(0);
+      const response = await fetch('/api/v1/auto-catalog', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setError(typeof data?.message === 'string' ? data.message : 'Auto-catalog is unavailable.');
+        return;
       }
+      const details = productDetails(data, 'category');
+      if (!details) {
+        setError('Auto-catalog returned invalid product details. Your photo is kept for retry.');
+        return;
+      }
+      setProductData(subscriptionMode ? { ...details, isSubscription: true, subscriptionInterval } : details);
+    } catch {
+      setError('Could not confirm the extracted product details. Your photo is kept for retry.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedPhoto(file);
+    void extractPhoto(file);
+  };
 
   const handleGenerate = async () => {
     if (!promptText.trim()) return;
     setLoading(true);
-    setPublishingStep(1);
     setError(null);
     try {
       const response = await fetch('/api/v1/catalog/generate', {
@@ -112,24 +116,23 @@ function AutoCatalogContent() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.message || 'Generation failed.');
+        setError(typeof data?.message === 'string' ? data.message : 'Generation failed.');
+        return;
+      }
+      const details = productDetails(data, 'item_type');
+      if (!details) {
+        setError('Generation returned invalid offering details. Your description is kept for retry.');
         return;
       }
       setProductData({
-        title: data.title || '',
-        description: data.description || '',
-        price: data.price || '0.00',
-        category: data.item_type || 'Product',
-        isSubscription: data.is_subscription || false,
+        ...details,
         subscriptionInterval: 'monthly',
       });
-      setSubscriptionMode(data.is_subscription || false);
-    } catch (err) {
-      console.error(err);
-      setError('Failed to generate offering details.');
+      setSubscriptionMode(details.isSubscription === true);
+    } catch {
+      setError('Could not confirm generated offering details. Your description is kept for retry.');
     } finally {
       setLoading(false);
-      setPublishingStep(0);
     }
   };
 
@@ -221,7 +224,7 @@ function AutoCatalogContent() {
       </div>
 
       {error && (
-        <div className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <div role="alert" className="mb-4 border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
       )}
@@ -267,6 +270,14 @@ function AutoCatalogContent() {
             <span className="font-semibold text-gray-800">Take a photo or upload</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
           </label>
+          {selectedPhoto && (
+            <div className="mt-4 text-center">
+              <p>{selectedPhoto.name}</p>
+              <button type="button" className="mt-2 font-semibold text-[#0066FF]" onClick={() => void extractPhoto(selectedPhoto)}>
+                Retry photo extraction
+              </button>
+            </div>
+          )}
           <p className="text-sm text-gray-500 mt-4 text-center">
             The Promoter agent will magically remove the background, write the description, and suggest a price.
           </p>
