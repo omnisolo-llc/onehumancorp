@@ -1,0 +1,45 @@
+{
+  "status": "blocked",
+  "reason": "Research report requested. Current scope override prevents starting new pricing, segment or feature epics without explicit authorization. The research findings provided in the issue description have been extracted, but no code implementation is required or authorized for this research-only task.",
+  "findings": {
+    "market_mapping": {
+      "top_10_general": ["Shopify", "Wix", "Squarespace", "Square", "HubSpot", "WooCommerce", "BigCommerce", "GoDaddy", "Weebly", "PrestaShop"],
+      "top_10_ai_native": ["Durable", "10Web", "Mixo", "Framer AI", "Lindy.ai", "Relevance AI", "Skyvern", "11x.ai", "Intercom Fin", "AGI"]
+    },
+    "competitor_audit": {
+      "shopify": {
+        "capabilities": ["Edits site themes", "drafts emails", "analyzes pricing strategy", "generates weekly summaries", "creates 'Sidekick Pulse' health signals"],
+        "success_factors": ["Deep integration with 8,000+ apps", "massive merchant base", "Shop Pay"],
+        "user_sentiment": "Platform complexity remains a huge barrier for non-technical users despite AI."
+      },
+      "durable": {
+        "capabilities": ["Autonomous website generation", "integrated invoicing", "simple AI business advisor"],
+        "success_factors": ["Zero technical hurdle", "Targets service providers"],
+        "user_sentiment": "Zero-to-One is solved, but One-to-N customization and growth is lacking."
+      }
+    },
+    "ohc_gaps": {
+      "setup_time": {"current": "1 Hour (Manual)", "target": "< 10 Minutes (Agentic)"},
+      "daily_ops": {"current": "Service-first", "target": "Assistant-first (Feed)"},
+      "client_intake": {"current": "Widget-based", "target": "Autonomous Negotiator"},
+      "inventory": {"current": "Database-backed", "target": "Predictive Auto-restock"}
+    },
+    "proposed_features": [
+      {
+        "title": "Zero-Click Onboarding Agent",
+        "priority": "P0",
+        "description": "Implement Zero-Click Onboarding Agent for Sub-10 Minute Setup via chat interface."
+      },
+      {
+        "title": "Agentic Negotiator for Autonomous Service Booking",
+        "priority": "P1",
+        "description": "Agentic workflow that intercepts inbound queries to gather job details, check calendar, issue quote, and request deposit autonomously."
+      },
+      {
+        "title": "Unified Triage Assistant",
+        "priority": "P1",
+        "description": "Centralized 'Work Feed' replacing traditional inbox, pre-drafting replies for one-tap approval."
+      }
+    ]
+  }
+}
