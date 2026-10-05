@@ -1,15 +1,19 @@
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxRate {
-    pub amount_to_collect: f64,
+    #[serde(rename = "amount_to_collect", with = "super::money")]
+    pub amount_to_collect_cents: i64,
+    #[serde(default)]
     pub rate: f64,
 }
 
+#[derive(Serialize)]
 pub struct TaxJarParams<'a> {
-    pub amount: f64,
-    pub shipping: f64,
+    #[serde(rename = "amount", serialize_with = "super::money::serialize")]
+    pub amount_cents: i64,
+    #[serde(rename = "shipping", serialize_with = "super::money::serialize")]
+    pub shipping_cents: i64,
     pub to_country: &'a str,
     pub to_zip: &'a str,
     pub to_state: &'a str,
@@ -53,52 +57,37 @@ impl TaxJarClient {
     pub async fn calculate_tax(&self, params: TaxJarParams<'_>) -> Result<TaxRate, String> {
         self.validate_credentials()?;
 
-        let payload = json!({
-            "from_country": params.from_country,
-            "from_zip": params.from_zip,
-            "from_state": params.from_state,
-            "to_country": params.to_country,
-            "to_zip": params.to_zip,
-            "to_state": params.to_state,
-            "amount": params.amount,
-            "shipping": params.shipping,
-        });
-
         let resp = self
             .http_client
             .post(format!("{}/taxes", Self::api_base()))
             .header("Authorization", format!("Bearer {}", self.api_key.trim()))
             .header("Content-Type", "application/json")
-            .json(&payload)
+            .json(&params)
             .send()
             .await
             .map_err(|e| format!("TaxJar request failed: {e}"))?;
 
         let status = resp.status();
-        let body: serde_json::Value = resp
-            .json()
+        let body = resp
+            .bytes()
             .await
-            .map_err(|e| format!("TaxJar response was not JSON: {e}"))?;
-
+            .map_err(|e| format!("TaxJar response could not be read: {e}"))?;
         if !status.is_success() {
-            return Err(format!("TaxJar API error {status}: {body}"));
+            return Err(format!(
+                "TaxJar API error {status}: {}",
+                String::from_utf8_lossy(&body)
+            ));
         }
 
-        let tax = body
-            .get("tax")
-            .ok_or_else(|| "TaxJar response missing tax object".to_string())?;
-
-        let amount_to_collect = tax
-            .get("amount_to_collect")
-            .and_then(|v| v.as_f64())
-            .unwrap_or(0.0);
-
-        let rate = tax.get("rate").and_then(|v| v.as_f64()).unwrap_or(0.0);
-
-        Ok(TaxRate {
-            amount_to_collect,
-            rate,
-        })
+        #[derive(Deserialize)]
+        struct TaxResponse {
+            tax: TaxRate,
+        }
+        // Decode directly from the response bytes. An intermediate JSON Value
+        // would round large decimal numbers before our money boundary sees them.
+        serde_json::from_slice::<TaxResponse>(&body)
+            .map(|response| response.tax)
+            .map_err(|e| format!("TaxJar response contains invalid tax: {e}"))
     }
 }
 
@@ -110,8 +99,8 @@ mod tests {
     async fn calculate_tax_requires_real_taxjar_credentials() {
         let client = TaxJarClient::new("dummy_token".to_string());
         let params = TaxJarParams {
-            amount: 100.0,
-            shipping: 10.0,
+            amount_cents: 10_000,
+            shipping_cents: 1_000,
             to_country: "US",
             to_zip: "90002",
             to_state: "CA",
