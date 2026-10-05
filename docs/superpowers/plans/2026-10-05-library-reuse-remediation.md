@@ -185,6 +185,47 @@ revocation constraints; no exporter was activated. The parent coordinates full
 acceptance and merging. This lane has performed no PR merge, deployment, release,
 live provider action or UI-owned feed/Help edit.
 
+## Combined checkpoint and UI-owned acceptance repair
+
+The schema and tenant/queue components were combined and independently reviewed
+at `5858301796e0880d3a726479fb860d53a68f21a8`, tree
+`3a2fbc0e7ea239e82507fac1999e736c06be40f9`. All 6,077 source hashes remained
+unchanged during verification. Actual-crate selections passed 129 tests and
+strict four-crate Clippy. Complete focused contracts passed builder 90, receipt
+97, Redis startup 23, reconnect 20 and MiniMax 24, with no ignored or filtered
+cases in those complete contracts. Receipt all-target Clippy, 50 validation
+guards, workspace formatting and root/three focused locked offline metadata
+also passed. These counts overlap in coverage and must not be summed as unique
+application tests.
+
+Two validation-runner incidents remain in the evidence: an owned compiler run
+was interrupted to correct a test-profile mismatch, and a later outer runner
+incorrectly expected 57 MiniMax tests. Independent source and actual binary
+inventory confirmed all 24 MiniMax tests executed and passed; 57 belonged to
+the separate provider-truthfulness harness. The failed outer result is retained,
+with separately recorded recovery checks. No repository assertion, test
+selection, source guard or discovery was weakened.
+
+After the earlier hosted runs finished, the parent supplied UI owner commit
+`c969fd8cff9ffa234cc7827570b3da126cfbc006` and UI head
+`04a5bbabbd1ef6d516faa5ee8bb5418fe3844dd9`. Independent review approved the
+canonical repository read, no-store responses, new standard/mobile freshness
+regressions and the exact owned approval test blob
+`abd0b81503b47def4e181e7e9fcee85a27aa74ea`. The three adopted files match the
+owner's published source. The approval test retains real PUT and SQL checks,
+reload, single-request and remaining-card assertions. No Help or other UI
+production changes were authored in this lane.
+
+Initial adopted head `c85524f9bb638f8ed66e453921e4db42a2f0dd96` passed E2E type
+checking, targeted lint and 20 native-contract groups with 6,033 source hashes
+unchanged. Followup `1951b87cfe36a5ce7da62be653068951db6ab619` and hardening
+`2533b0f5644535f7f98784b2a53a0e6c84db1cf3` preserve that exact ancestry. Their
+new full hosted runs are `37265718711`, `37265722692` and `37265725999`.
+This combined branch also adopts that ancestry; the prior 585 checkpoint does
+not certify later source. Fresh combined-source focused, full native and hosted
+results must be recorded separately before the parent merges. The native run
+uses two Vitest workers with unchanged timeouts, assertions and discovery.
+
 ## Review focus
 
 Lossy money conversion; provider replay after unknown outcome; raw signed body preservation; tenant/algorithm/identity confusion; unbounded allocation; process cleanup; persisted-format compatibility; dependency feature/toolchain/platform fit; exact final-source test evidence. Estimate benefits as fewer custom edge-case paths and known defects; do not invent performance/bundle savings.
