@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Head from 'next/head';
 import '../globals.css';
 
 export default function WhatsAppLinkGeneratorPage() {
@@ -68,9 +67,6 @@ export default function WhatsAppLinkGeneratorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 text-gray-900 font-inter">
-      <Head>
-        <title>WhatsApp Link Generator | OmniSolo OneHumanCorp</title>
-      </Head>
 
       <nav className="p-6 border-b border-gray-100 bg-white/80 backdrop-blur-[30px] saturate-[210%] sticky top-0 z-10">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
