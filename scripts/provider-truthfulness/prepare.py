@@ -11,6 +11,8 @@ paths = [
     'src/server/integrations/zoom/client.rs',
     'src/server/integrations/daily/client.rs',
     'src/server/integrations/meeting_receipt_tests.rs',
+    'src/server/integrations/cal_com/client.rs',
+    'src/server/integrations/cal_com/client_test.rs',
     'src/server/api/integrations_settings.rs',
     'scripts/provider-truthfulness/Cargo.toml',
     'scripts/provider-truthfulness/lib.rs',

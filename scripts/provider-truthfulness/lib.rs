@@ -2,6 +2,8 @@
 //! No provider calls, real credentials, or success substitutions are used.
 #![allow(dead_code)]
 extern crate self as server_omnisolo;
+#[path = "../../src/server/integrations/cal_com/client.rs"]
+pub mod cal_com_client;
 #[path = "../../src/server/integrations/daily/client.rs"]
 pub mod daily_client;
 #[path = "../../src/server/api/integrations_settings.rs"]
