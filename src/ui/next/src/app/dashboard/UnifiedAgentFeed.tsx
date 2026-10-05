@@ -29,6 +29,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   const hasFetchedCanonicalFeedRef = useRef(false);
   const decidedIdsRef = useRef<Set<string>>(new Set());
   const pendingDecisionIdsRef = useRef<Set<string>>(new Set());
+  const unconfirmedDecisionIdsRef = useRef<Set<string>>(new Set());
+  const decisionTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const decisionEpoch = useRef(0);
+  const [decisionStatus, setDecisionStatus] = useState('');
   const [items, setItems] = useState<AgentFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -136,6 +140,25 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   const [editQuotePrice, setEditQuotePrice] = useState<string>("");
   const [editQuoteScope, setEditQuoteScope] = useState<string>("");
 
+  useEffect(() => {
+    const clearTimers = () => {
+      for (const timer of decisionTimers.current) clearTimeout(timer);
+      decisionTimers.current.clear();
+    };
+    const retireDecisions = () => {
+      ++decisionEpoch.current;
+      clearTimers();
+      pendingDecisionIdsRef.current.clear();
+      unconfirmedDecisionIdsRef.current.clear();
+      decidedIdsRef.current.clear();
+      hasFetchedCanonicalFeedRef.current = true;
+      setItems([]); setActivities([]); setEditingId(null); setEditContent('');
+      setEditQuotePrice(''); setEditQuoteScope(''); setDecisionStatus('');
+    };
+    const unsubscribe = subscribeOnboardingInvalidation(retireDecisions);
+    return () => { ++decisionEpoch.current; clearTimers(); unsubscribe(); };
+  }, []);
+
   const tenantId = () => {
     if (typeof window === "undefined") return "default";
     return (
@@ -206,6 +229,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     let mounted = true;
 
     async function fetchAll(refresh = false) {
+      const generation = decisionEpoch.current;
       try {
         if (!refresh) {
           setError("");
@@ -453,12 +477,14 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
               proposed_action: safeParsePayload(item.proposed_action),
             }));
 
+            if (!mounted || generation !== decisionEpoch.current) return;
             setItems((previous) => [
-              ...previous.filter((item) => pendingDecisionIdsRef.current.has(item.id)),
+              ...previous.filter((item) => pendingDecisionIdsRef.current.has(item.id) || unconfirmedDecisionIdsRef.current.has(item.id)),
               ...parsedCombinedItems.filter(
                 (i) =>
                   !decidedIdsRef.current.has(i.id) &&
                   !pendingDecisionIdsRef.current.has(i.id) &&
+                  !unconfirmedDecisionIdsRef.current.has(i.id) &&
                   i.lifecycle_state !== "APPROVED" &&
                   i.lifecycle_state !== "DISMISSED" &&
                   i.lifecycle_state !== "PAUSED",
@@ -539,39 +565,35 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         return;
     }
 
-    if (
-      event_source === "triage" ||
-      event_source === "task" ||
-      event_source === "order"
-    ) {
-      const res = await fetch(
-        "/api/v1/triage/action",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved, edited_payload: modified_content }),
-        },
-      );
-      if (!res.ok) {
-        throw new Error("Failed to submit decision");
-      }
-      return;
-    }
-
-    const res = await fetch(`/api/v1/agent-feed/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        state: approved ? "APPROVED" : "DISMISSED",
-        modified_content,
-      }),
+    const expectedItem = items.find(item => item.id === id);
+    if (!expectedItem?.tenant_id) throw new Error("Decision was not sent. The proposal's tenant could not be verified.");
+    const legacy = event_source === "triage" || event_source === "task" || event_source === "order";
+    const state = approved ? "APPROVED" : "DISMISSED";
+    const res = await fetch(legacy ? "/api/v1/triage/action" : `/api/v1/agent-feed/${id}`, {
+      method: legacy ? "POST" : "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(legacy
+        ? { triage_item_id: id, approved, edited_payload: modified_content }
+        : { state, modified_content }),
     });
-
-    if (!res.ok) {
-      throw new Error("Failed to submit decision");
+    if (!res.ok) throw new Error("Failed to submit decision");
+    const value: unknown = await res.json().catch(() => null);
+    const record = (value: unknown): Record<string, unknown> | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+    const receipt = record(value), stored = legacy ? record(receipt?.item) : receipt;
+    let confirmed = res.status === 200 && receipt?.decision_recorded === true && receipt.error == null
+      && (!('success' in receipt) || receipt.success === true)
+      && (!legacy || receipt.success === true)
+      && stored?.id === id && stored.tenant_id === expectedItem.tenant_id && stored.lifecycle_state === state;
+    if (confirmed && modified_content !== undefined) {
+      if (legacy) confirmed = stored?.edited_payload === modified_content;
+      else {
+        const payload = record(stored?.proposed_action);
+        const content = payload && ['draft_reply', 'generated_response', 'summary', 'message']
+          .filter(key => typeof payload[key] === 'string').map(key => payload[key]);
+        confirmed = !!content?.length && content.every(text => text === modified_content);
+      }
     }
+    if (!confirmed) throw new Error("Outcome unconfirmed. Your card and draft are retained. Check recorded decisions before retrying.");
   };
 
   const handleDecision = async (
@@ -580,9 +602,13 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     modified_content?: string,
     event_source?: string,
   ): Promise<boolean> => {
-    if (pendingDecisionIdsRef.current.has(id)) return false;
+    if (pendingDecisionIdsRef.current.has(id) || decidedIdsRef.current.has(id)) return false;
+    const generation = decisionEpoch.current;
+    const expectedOwner = currentVerifiedQueueOwner();
+    const expectedTenant = items.find(item => item.id === id)?.tenant_id;
     pendingDecisionIdsRef.current.add(id);
     setError("");
+    setDecisionStatus(isOffline ? "Saving decision to the offline queue..." : "Waiting for the recorded decision. No execution or delivery is confirmed.");
     try {
       if (isOffline) {
         await enqueueAction({
@@ -591,22 +617,45 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           payload: { id, approved, modified_content, event_source },
           timestamp: Date.now(),
         });
+        if (generation !== decisionEpoch.current) return false;
         setOfflineActionsCount((prev) => prev + 1);
         setQueuedActionIds((prev) => new Set(prev).add(id));
-      } else {
-        await submitDecision(id, approved, modified_content, event_source);
-        // Preserve the card's acknowledgement animation after the server accepts
-        // the decision. A failed request must leave the proposal available.
-        if (approved) await new Promise((resolve) => window.setTimeout(resolve, 500));
+        unconfirmedDecisionIdsRef.current.delete(id);
+        setDecisionStatus("Decision queued offline. Approval or dismissal is not yet recorded.");
+        decidedIdsRef.current.add(id);
+        setItems((prev) => prev.filter((item) => item.id !== id));
+        return false;
       }
+      await submitDecision(id, approved, modified_content, event_source);
+      if (generation !== decisionEpoch.current) return false;
+      const currentOwner = currentVerifiedQueueOwner();
+      if (expectedOwner && (!currentOwner || !sameOwner(expectedOwner, currentOwner))) {
+        throw new Error("Your session changed. The decision outcome must be checked in the original account.");
+      }
+      unconfirmedDecisionIdsRef.current.delete(id);
+      setDecisionStatus(event_source === "review" ? "Review request accepted. Delivery is not verified." : approved
+        ? "Approval recorded. Execution or delivery is not verified by this decision."
+        : "Dismissal recorded.");
       decidedIdsRef.current.add(id);
-      setItems((prev) => prev.filter((item) => item.id !== id));
+      // Return the verified acknowledgment to the card before its exit animation.
+      const timer = setTimeout(() => {
+        decisionTimers.current.delete(timer);
+        pendingDecisionIdsRef.current.delete(id);
+        if (generation !== decisionEpoch.current) return;
+        const currentOwner = currentVerifiedQueueOwner();
+        if (expectedOwner && (!currentOwner || !sameOwner(expectedOwner, currentOwner))) return;
+        setItems(previous => previous.filter(item => item.id !== id || item.tenant_id !== expectedTenant));
+      }, 500);
+      decisionTimers.current.add(timer);
       return true;
     } catch (err) {
-      setError(errorMessage(err, "Failed to submit decision"));
+      if (generation !== decisionEpoch.current) return false;
+      unconfirmedDecisionIdsRef.current.add(id);
+      setDecisionStatus("");
+      setError(errorMessage(err, "Outcome unconfirmed. Your card and draft are retained."));
       return false;
     } finally {
-      pendingDecisionIdsRef.current.delete(id);
+      if (!decidedIdsRef.current.has(id)) pendingDecisionIdsRef.current.delete(id);
     }
   };
 
@@ -647,8 +696,9 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
           </button>
         </form>
       </div>
+      {decisionStatus && <p role="status" aria-label="Decision status" className="mb-4 text-sm">{decisionStatus}</p>}
       {error && (
-        <div className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
+        <div role="alert" className="w-full mb-6 p-4 bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[#FF3B30] text-[#FF3B30] text-center">
           {error}
         </div>
       )}
