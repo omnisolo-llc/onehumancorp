@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"Default capability for the app","local":true,"windows":["main"],"permissions":["core:default","updater:default"]}}
+{"default":{"identifier":"default","description":"Default capability for the app","local":true,"windows":["main"],"permissions":["core:default"]},"desktop-updater":{"identifier":"desktop-updater","description":"Updater access for bundled desktop code","local":true,"windows":["main"],"permissions":["updater:default"],"platforms":["linux","macOS","windows"]}}

@@ -24,8 +24,8 @@ pub mod provider {
     pub struct TwilioProvider;
     #[async_trait::async_trait]
     impl super::client::TwilioClientWrapper for TwilioProvider {
-        async fn send_sms(&self, _: &str, _: &str, _: &str) -> Result<(), String> { panic!("No SMS action belongs in this test") }
-        async fn send_whatsapp(&self, _: &str, _: &str, _: &str) -> Result<(), String> { panic!("No WhatsApp action belongs in this test") }
+        async fn send_sms(&self, _: &str, _: &str, _: &str) -> Result<super::client::MessageReceipt, super::client::MessageSendError> { panic!("No SMS action belongs in this test") }
+        async fn send_whatsapp(&self, _: &str, _: &str, _: &str) -> Result<super::client::MessageReceipt, super::client::MessageSendError> { panic!("No WhatsApp action belongs in this test") }
         async fn provision_number(&self, _: &str) -> Result<String, String> {
             super::EFFECTS.fetch_add(1, super::Ordering::SeqCst);
             tokio::task::yield_now().await;

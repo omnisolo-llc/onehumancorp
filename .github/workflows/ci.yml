@@ -344,9 +344,12 @@ jobs:
       - uses: ./.github/actions/setup-native
         id: native-setup
         with:
-          rust: 'false'
+          rust: 'true'
+          role: contract-parser
           node-scope: all
           cache: ${{ github.event.inputs.cold_cache != 'true' }}
+      - name: Prepare the locked Rust parser for offline source contracts
+        run: cargo build --locked -p ohc-rust-source-extract
       - name: Install Python workflow-contract dependency
         run: sudo apt-get update && sudo apt-get install -y python3-yaml
       # Independent checks retain their own failing conclusions. A lint failure
@@ -1049,6 +1052,16 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_feed_decision_test
           python3 scripts/focused_ci_gate.py agent-feed-decision-contract
+
+      - name: Fetch locked Redis reconnect dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/redis-reconnect/fetch.sh
+
+      - name: Verify owned Redis reconnect and non-replay behavior
+        if: ${{ !cancelled() }}
+        env:
+          CARGO_TARGET_DIR: target
+        run: python3 scripts/focused_ci_gate.py redis-reconnect
 
       - name: Fetch locked cash receipt dependencies
         if: ${{ !cancelled() }}

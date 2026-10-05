@@ -7,6 +7,12 @@ here = Path(__file__).resolve().parent
 root = here.parents[1]
 paths = [
     'src/server/integrations/twilio/client.rs',
+    'src/server/integrations/twilio/message_tests.rs',
+    'src/server/integrations/zoom/client.rs',
+    'src/server/integrations/daily/client.rs',
+    'src/server/integrations/meeting_receipt_tests.rs',
+    'src/server/integrations/cal_com/client.rs',
+    'src/server/integrations/cal_com/client_test.rs',
     'src/server/api/integrations_settings.rs',
     'scripts/provider-truthfulness/Cargo.toml',
     'scripts/provider-truthfulness/lib.rs',

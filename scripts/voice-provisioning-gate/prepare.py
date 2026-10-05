@@ -20,7 +20,7 @@ claims = common[begin:finish]
 template = (here / 'harness.rs.in').read_text()
 generated = template.replace('@ROOT@', str(root)).replace('@CLAIMS@', claims).replace('@ROUTES@', routes)
 (here / 'generated.rs').write_text(generated)
-paths = ['src/server/lib.rs', 'src/server/settings.rs', 'src/server/common/mod.rs', 'src/server/utils/fs.rs', 'src/server/api/voice_provisioning.rs', 'src/server/api/mod.rs', 'src/server/integrations/twilio/client.rs', 'scripts/voice-provisioning-gate/harness.rs.in', 'scripts/voice-provisioning-gate/Cargo.toml', 'scripts/voice-provisioning-gate/prepare.py', 'scripts/voice-provisioning-gate/run.sh', 'scripts/voice-provisioning-gate/verify_lock.py']
+paths = ['src/server/lib.rs', 'src/server/settings.rs', 'src/server/common/mod.rs', 'src/server/utils/fs.rs', 'src/server/api/voice_provisioning.rs', 'src/server/api/mod.rs', 'src/server/integrations/twilio/client.rs', 'src/server/integrations/twilio/message_tests.rs', 'scripts/voice-provisioning-gate/harness.rs.in', 'scripts/voice-provisioning-gate/Cargo.toml', 'scripts/voice-provisioning-gate/prepare.py', 'scripts/voice-provisioning-gate/run.sh', 'scripts/voice-provisioning-gate/verify_lock.py']
 manifest = {path: hashlib.sha256((root / path).read_bytes()).hexdigest() for path in paths}
 manifest['state_adapter'] = hashlib.sha256(routes.encode()).hexdigest()
 (here / 'source-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')

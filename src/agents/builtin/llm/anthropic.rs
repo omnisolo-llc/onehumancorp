@@ -369,6 +369,27 @@ impl LlmClient for AnthropicClient {
 #[cfg(test)]
 mod text_transport_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn generated_array_schema_survives_anthropic_request_serialization() {
+        let request = super::super::structured_output_test::array_request().await;
+        let expected = request.tools[0].parameters.clone();
+        let client = AnthropicClient::new("public-local-fixture-key");
+        let wire = client
+            .request(&client.request_payload(request))
+            .build()
+            .unwrap();
+        let body: Value = serde_json::from_slice(wire.body().unwrap().as_bytes().unwrap()).unwrap();
+        assert_eq!(body["tools"].as_array().unwrap().len(), 1);
+        assert_eq!(body["tools"][0]["input_schema"], expected);
+        assert_eq!(
+            body["tools"][0]["input_schema"]["properties"]["data"]["type"],
+            "array"
+        );
+        assert!(body["tools"][0].get("strict").is_none());
+        assert_eq!(wire.url().as_str(), "https://api.anthropic.com/v1/messages");
+        assert!(wire.headers().contains_key("anthropic-beta"));
+    }
     fn request() -> ChatRequest {
         ChatRequest {
             model: "owned-text-fixture".into(),

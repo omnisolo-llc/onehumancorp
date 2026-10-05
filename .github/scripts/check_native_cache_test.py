@@ -144,6 +144,22 @@ class NativeCacheTests(unittest.TestCase):
         node = next(s for s in self.steps if s.get('uses', '').startswith('actions/setup-node@'))
         self.assertFalse(node['with']['package-manager-cache'], 'no second implicit cache writer')
 
+    def test_node_contracts_prepare_locked_rust_parser_before_offline_guards(self):
+        steps = self.ci['jobs']['native-node']['steps']
+        setup = next(s for s in steps if s.get('uses') == './.github/actions/setup-native')
+        self.assertEqual(setup['with'].get('rust'), 'true', 'contracts execute the real Rust source parser')
+        self.assertEqual(setup['with']['role'], 'contract-parser')
+        preparations = [s for s in steps if 'ohc-rust-source-extract' in s.get('run', '')]
+        self.assertEqual(len(preparations), 1, 'cold runners need one required parser bootstrap')
+        prepare = preparations[0]
+        self.assertEqual(prepare['run'].split(), ['cargo', 'build', '--locked', '-p', 'ohc-rust-source-extract'])
+        self.assertNotIn('if', prepare, 'bootstrap must run on cold-cache requests too')
+        self.assertFalse(prepare.get('continue-on-error', False))
+        contracts = next(s for s in steps if s.get('run') == 'make test-contracts')
+        self.assertLess(steps.index(setup), steps.index(prepare))
+        self.assertLess(steps.index(prepare), steps.index(contracts))
+        self.assertFalse(contracts.get('continue-on-error', False))
+
     def test_locked_installer_obeys_scope_and_propagates_failure(self):
         body = self.step('Install locked Node dependencies')['run']
         for scope, expected in [('root', ['.']), ('web', ['.', 'src/ui/next']),

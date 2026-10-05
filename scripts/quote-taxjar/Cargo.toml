@@ -7,5 +7,17 @@ edition = "2024"
 sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "macros"] }
 tokio = { version = "1", features = ["full"] }
 uuid = { version = "1", features = ["v4"] }
+axum = "0.8.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["raw_value"] }
+tracing = "0.1"
+tower = { version = "0.5", features = ["util"] }
+server_common = { path = "../../src/server/common" }
+server_integrations_taxjar = { path = "../../src/server/integrations/taxjar" }
 [lib]
 path = "probe.rs"
+
+[build-dependencies]
+ohc-rust-source-extract = { path = "../rust-source-extract" }
+serde_json = "1"

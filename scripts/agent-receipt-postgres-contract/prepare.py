@@ -1,6 +1,8 @@
 """Compile the actual portable receipt/auth persistence against owned PostgreSQL."""
 from pathlib import Path
-import hashlib, json, re
+import hashlib, json, re, sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from rust_source import extract_item, input_paths as rust_source_inputs
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 paths = {name: ROOT / f'src/server/persistence/{name}.rs' for name in ['capabilities', 'connection', 'entities', 'migration']}
@@ -39,17 +41,42 @@ lines.append('pub mod db { pub enum DbStore {Postgres,Sqlite(sqlx::SqlitePool)} 
 lines.append('pub mod hub { pub struct TaskManager {pub db:std::sync::RwLock<Option<std::sync::Arc<crate::db::DB>>>} pub struct Hub {pub task_manager:TaskManager} impl Hub { '+block(hub,'pub fn usage_ledger(')+' } }')
 lines.append(f'#[path={json.dumps(str(ROOT / "src/server/api/usage_api.rs"))}] pub mod usage_api;')
 
+# Compile the actual dynamic-workflow route, manager, and both selected queue
+# implementations. Preserve complete items, including their attributes.
+queue_source = (ROOT/'src/server/queue.rs').read_text()
+queue = ['use async_trait::async_trait; use chrono::{DateTime,Utc}; use sqlx::Row; use server_common::auth_utils::set_org_context;']
+for kind, name in [('struct', 'Job'), ('trait', 'TaskQueue')]:
+    queue.append(extract_item(queue_source, kind, name))
+for name in ['PostgresTaskQueue', 'SqliteTaskQueue']:
+    queue.append(extract_item(queue_source, 'struct', name))
+    queue.append(extract_item(queue_source, 'impl', name))
+    queue.append(extract_item(queue_source, 'impl', name, impl_trait='TaskQueue'))
+lines.append('pub mod queue {\n'+'\n'.join(queue)+'\n}')
+lines.append(f'#[path={json.dumps(str(ROOT / "src/server/orchestration/dynamic_workflows.rs"))}] pub mod dynamic_workflow_manager;')
+lines.append('pub mod orchestration { pub use crate::dynamic_workflow_manager as dynamic_workflows; }')
+lines.append(f'#[path={json.dumps(str(ROOT / "src/server/api/dynamic_workflows.rs"))}] pub mod dynamic_workflow_api;')
+lines.append('pub mod api { pub use crate::dynamic_workflow_api as dynamic_workflows; }')
+lines.append(extract_item(server, 'function', 'protected_bearer_auth_middleware'))
+mounts = [line.strip() for line in server.splitlines() if '.nest("/api/v1/dynamic-workflows",' in line]
+assert len(mounts) == 1, 'dynamic workflow mount must be unique'
+mount = mounts[0]
+auth_layers = list(re.finditer(r'\.route_layer\(axum::middleware::from_fn_with_state\(\s*http_auth_store.clone\(\),\s*protected_bearer_auth_middleware,\s*\)\)', server))
+assert len(auth_layers) == 1 and server.index(mount) < auth_layers[0].start(), 'dynamic workflow mount must precede actual protected bearer layer'
+lines.append('fn mounted_dynamic_workflow_boundary(dynamic_workflow_manager:std::sync::Arc<dynamic_workflow_manager::DynamicWorkflowManager>,http_auth_store:std::sync::Arc<server_auth::Store>)->axum::Router { axum::Router::new()'+mount+auth_layers[0].group()+' }')
+
 lines.append('#[cfg(test)] #[path="test.rs"] mod tests;')
 (HERE / 'generated.rs').write_text('\n'.join(lines) + '\n')
 initial = (ROOT/'src/server/migrations/001_initial.sql').read_text()
 (HERE/'core_pg.sql').write_text('\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\);', initial, re.S).group() for name in ['tenants', 'users']))
-inputs = [ROOT/'.github/workflows/ci.yml', ROOT/'scripts/focused_ci_gate.py', ROOT/'scripts/test_focused_ci_gate.py', ROOT/'scripts/agent-definition-contract/database_guard.py', ROOT/'docs/development/tenant-execution-receipts-postgres.md', ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'src/server/migrations/001_initial.sql', ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql', ROOT/'src/server/migrations/1022_tenant_workflow_receipts.sql', *paths.values()]
+inputs = list(rust_source_inputs()) + [ROOT/'.github/workflows/ci.yml', ROOT/'scripts/focused_ci_gate.py', ROOT/'scripts/test_focused_ci_gate.py', ROOT/'scripts/agent-definition-contract/database_guard.py', ROOT/'docs/development/tenant-execution-receipts-postgres.md', ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'src/server/migrations/001_initial.sql', ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql', ROOT/'src/server/migrations/1022_tenant_workflow_receipts.sql', *paths.values()]
+inputs += [ROOT/'src/server'/path for path in ['api/dynamic_workflows.rs','orchestration/dynamic_workflows.rs','queue.rs','migrations/104_sub_agent_queue.sql']]
 inputs += [p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs')]
 inputs += [ROOT/'src/server/migrations/1025_usage_accounting.sql',ROOT/'src/server/lib.rs',ROOT/'src/server/hub.rs',ROOT/'src/server/db.rs',ROOT/'src/server/api/usage_api.rs',ROOT/'scripts/agent-workflow-contract/usage-api-proxy-proof.cjs',ROOT/'scripts/agent-workflow-contract/verify_node_lock.py',ROOT/'src/ui/next/package-lock.json']
+inputs += [ROOT/'scripts/agent-workflow-contract'/name for name in ['package.json','package-lock.json']]
 inputs += [p for p in (ROOT/'src/ui/next/src/lib/auth').glob('*') if p.is_file() and p.suffix in ('.ts','.json')]
 inputs += [p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 inputs += [p for p in (ROOT/'src/server/persistence').rglob('*') if p.suffix in ('.rs', '.sql')]
 for name in ['auth','common','config','harness','oidc','omnisolo','telemetry','pricing','utils']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','Cargo.lock','prepare.py','test.rs','run.sh','fetch.sh','verify_lock.py','README.md']]
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','Cargo.lock','prepare.py','test.rs','dynamic_workflow_test.rs','dynamic_queue_test.rs','run.sh','fetch.sh','verify_lock.py','README.md']]
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))},indent=2)+'\n')

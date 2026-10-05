@@ -1,4 +1,4 @@
-use super::client::{RealTwilioClient, TwilioClientWrapper};
+use super::client::{MessageReceipt, MessageSendError, RealTwilioClient, TwilioClientWrapper};
 use ::server_integrations_core::{IntegrationProvider, ProviderMetadata};
 use std::sync::Arc;
 
@@ -40,20 +40,34 @@ impl TwilioProvider {
         }
     }
 
-    pub async fn send_sms(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+    pub async fn send_sms(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError> {
         // Mock checking opt-out status
         if self.is_opted_out(to).await {
-            return Err("User opted out".to_string());
+            return Err(MessageSendError::OptedOut);
         }
-        self.client.send_sms(to, from, body).await
+        let receipt = self.client.send_sms(to, from, body).await?;
+        tracing::info!(message_sid = %receipt.sid, "Twilio accepted SMS");
+        Ok(receipt)
     }
 
-    pub async fn send_whatsapp(&self, to: &str, from: &str, body: &str) -> Result<(), String> {
+    pub async fn send_whatsapp(
+        &self,
+        to: &str,
+        from: &str,
+        body: &str,
+    ) -> Result<MessageReceipt, MessageSendError> {
         // Mock checking opt-out status
         if self.is_opted_out(to).await {
-            return Err("User opted out".to_string());
+            return Err(MessageSendError::OptedOut);
         }
-        self.client.send_whatsapp(to, from, body).await
+        let receipt = self.client.send_whatsapp(to, from, body).await?;
+        tracing::info!(message_sid = %receipt.sid, "Twilio accepted WhatsApp message");
+        Ok(receipt)
     }
 
     pub async fn provision_number(&self, area_code: &str) -> Result<String, String> {
@@ -86,14 +100,28 @@ mod tests {
 
     #[async_trait]
     impl TwilioClientWrapper for MockTwilioClient {
-        async fn send_sms(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_sms(
+            &self,
+            _to: &str,
+            _from: &str,
+            _body: &str,
+        ) -> Result<MessageReceipt, MessageSendError> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            Ok(MessageReceipt {
+                sid: "SM22222222222222222222222222222222".into(),
+            })
         }
 
-        async fn send_whatsapp(&self, _to: &str, _from: &str, _body: &str) -> Result<(), String> {
+        async fn send_whatsapp(
+            &self,
+            _to: &str,
+            _from: &str,
+            _body: &str,
+        ) -> Result<MessageReceipt, MessageSendError> {
             self.sent_messages.fetch_add(1, Ordering::SeqCst);
-            Ok(())
+            Ok(MessageReceipt {
+                sid: "SM22222222222222222222222222222222".into(),
+            })
         }
 
         async fn provision_number(&self, _area_code: &str) -> Result<String, String> {
@@ -112,10 +140,11 @@ mod tests {
         });
         let provider = TwilioProvider::with_client(mock);
 
-        provider
+        let receipt = provider
             .send_sms("+1234567890", "+0987654321", "Test message")
             .await
             .unwrap();
+        assert_eq!(receipt.sid, "SM22222222222222222222222222222222");
         assert_eq!(sent.load(Ordering::SeqCst), 1);
     }
 
