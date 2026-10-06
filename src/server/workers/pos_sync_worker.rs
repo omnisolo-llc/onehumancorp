@@ -102,7 +102,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
             .execute(&mut *tx)
             .await;
 
-            let notification_id = uuid::Uuid::new_v4().to_string();
+            let _notification_id = uuid::Uuid::new_v4().to_string();
             let notification_payload = serde_json::json!({
                 "product_id": product_id,
                 "transaction_id": transaction_id,
@@ -113,7 +113,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                  VALUES ($1, $2, 'customer_success', 'OfflinePaymentFailed', $3::jsonb, 'PENDING')"
             )
-            .bind(&notification_id)
+            .bind(&_notification_id)
             .bind(&job.tenant_id)
             .bind(&notification_payload)
             .execute(&mut *tx)
@@ -421,7 +421,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                 if is_conflict {
                     let ai_task_id = uuid::Uuid::new_v4().to_string();
 
-                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let _notification_id = uuid::Uuid::new_v4().to_string();
                     let notification_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": quantity_deducted,
@@ -433,7 +433,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                          VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
                     )
-                    .bind(&notification_id)
+                    .bind(&_notification_id)
                     .bind(&job.tenant_id)
                     .bind(&notification_payload)
                     .execute(&mut *tx)
@@ -458,7 +458,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     .await;
 
                     // Trigger an actionable push notification event via Operations Agent
-                    let notification_id = uuid::Uuid::new_v4().to_string();
+                    let _notification_id = uuid::Uuid::new_v4().to_string();
                     let notification_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": quantity_deducted,
@@ -779,7 +779,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         if is_conflict {
                             let ai_task_id = uuid::Uuid::new_v4().to_string();
 
-                            let notification_id = uuid::Uuid::new_v4().to_string();
+                            let _notification_id = uuid::Uuid::new_v4().to_string();
                             let notification_payload = serde_json::json!({
                                     "product_id": product_id,
                                     "expected_stock": qty,
@@ -791,7 +791,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
                                      VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')"
                                 )
-                                .bind(&notification_id)
+                                .bind(&_notification_id)
                                 .bind(&job.tenant_id)
                                 .bind(&notification_payload)
                                 .execute(&mut *tx)
@@ -816,7 +816,7 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .await;
 
                             // Trigger an actionable push notification event via Operations Agent
-                            let notification_id = uuid::Uuid::new_v4().to_string();
+                            let _notification_id = uuid::Uuid::new_v4().to_string();
                             let notification_payload = serde_json::json!({
                                     "product_id": product_id,
                                     "expected_stock": qty,
