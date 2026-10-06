@@ -4,28 +4,33 @@ test.describe('Global Help Widget', () => {
   test('should be present and functional on dashboard', async ({ page }) => {
     await page.goto('/api/v1/ui/dashboard.html');
 
-    // The floating help button should be visible
-    const helpBtn = page.locator('#ohc-floating-help-btn').first();
+    await expect(page).toHaveURL(url => url.pathname === '/dashboard');
+    const helpBtn = page.getByRole('button', { name: 'Open help chat', exact: true });
     await expect(helpBtn).toBeVisible();
-
-    // Clicking it should open the chat widget
     await helpBtn.click();
-    const chatWidget = page.locator('#ohc-floating-help-widget');
+    const chatWidget = page.locator('#omnisolo-floating-help-widget');
     await expect(chatWidget).toBeVisible();
+    await expect(chatWidget.getByRole('heading', { name: 'Help Center', exact: true })).toBeVisible();
 
-    // Close the widget
-    const closeBtn = page.locator('#ohc-floating-help-close');
-    await closeBtn.click();
-    await expect(chatWidget).not.toBeVisible();
+    await chatWidget.getByRole('button', { name: 'Close Help Widget', exact: true }).click();
+    await expect(chatWidget).toBeHidden();
+    await expect(helpBtn).toBeFocused();
+    await helpBtn.click();
+    await expect(chatWidget).toBeVisible();
+    await helpBtn.press('Escape');
+    await expect(chatWidget).toBeHidden();
+    await expect(helpBtn).toBeFocused();
+    await expect(page).toHaveURL(url => url.pathname === '/dashboard');
 
-    // Check that walkthrough can be triggered
-    const walkBtn = page.locator('#dashboard-walkthrough-btn');
-    await expect(walkBtn).toBeVisible();
+    const walkBtn = page.getByRole('button', { name: 'Start Tour', exact: true });
     await walkBtn.click();
-
-    // The walkthrough overlay should appear
+    const walkthrough = page.getByRole('dialog', { name: 'Business Analytics walkthrough step', exact: true });
+    await expect(walkthrough).toBeVisible();
     const overlay = page.locator('.omnisolo-walkthrough-overlay');
     await expect(overlay).toBeVisible();
+    await walkthrough.getByRole('button', { name: 'Close walkthrough', exact: true }).click();
+    await expect(walkthrough).toBeHidden();
+    await expect(overlay).toBeHidden();
   });
 
   test('should be present and functional on POS', async ({ page }) => {
