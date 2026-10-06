@@ -153,3 +153,34 @@ test('documentation readiness waits for the complete iframe operation identities
   browser.render(operations); await pending.result;
   assert.equal(browser.navigations(), 1);
 });
+
+test('POS compatibility navigation records the canonical terminal on every audit reset', async t => {
+  const browser = browserBoundary(); t.after(browser.close);
+  const goto = browser.page.goto;
+  browser.page.goto = async url => {
+    const response = await goto(url);
+    browser.moveTo(`${origin}/pos/terminal`);
+    return response;
+  };
+  const navigate = createAuditNavigation(origin, async () => {});
+  for (let reset = 0; reset < 2; reset += 1) {
+    assert.deepEqual({ ...await navigate(browser.page, '/pos') }, {
+      requestedUrl: `${origin}/pos`, finalUrl: `${origin}/pos/terminal`, redirected: true,
+    });
+  }
+  assert.equal(browser.navigations(), 2, 'each audit reset still visits the source route');
+});
+
+for (const destination of ['/pos/mpos', '/dashboard', 'https://outside.invalid/pos/terminal']) {
+  test(`POS compatibility navigation rejects an unclassified destination: ${destination}`, async t => {
+    const browser = browserBoundary(); t.after(browser.close);
+    const goto = browser.page.goto;
+    browser.page.goto = async url => {
+      const response = await goto(url);
+      browser.moveTo(new URL(destination, origin).href);
+      return response;
+    };
+    await assert.rejects(createAuditNavigation(origin, async () => {})(browser.page, '/pos'), /unclassified destination/);
+    assert.equal(browser.navigations(), 1);
+  });
+}

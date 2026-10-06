@@ -20,8 +20,8 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 it.each([null, '[]', ' [ \n ] '])('keeps the maintained terminal visible without a historical warning for %j', raw => {
   if (raw !== null) localStorage.setItem('pos_offline_queue', raw);
-  render(<POSLayout><h1>Terminal Locked</h1></POSLayout>);
-  expect(screen.getByRole('heading', { name: 'Terminal Locked' })).toBeVisible();
+  render(<POSLayout><h1>Open POS terminal</h1></POSLayout>);
+  expect(screen.getByRole('heading', { name: 'Open POS terminal' })).toBeVisible();
   expect(screen.queryByRole('status')).toBeNull();
   expect(localStorage.getItem('pos_offline_queue')).toBe(raw);
   expect(fetch).not.toHaveBeenCalled();
@@ -36,7 +36,7 @@ it.each([
   '',
 ])('preserves historical data byte-for-byte across reconnect and remount: %j', raw => {
   localStorage.setItem('pos_offline_queue', raw);
-  const view = render(<POSLayout><h1>Terminal Locked</h1></POSLayout>);
+  const view = render(<POSLayout><h1>Open POS terminal</h1></POSLayout>);
   expect(screen.getByRole('status')).toHaveTextContent('Historical POS data needs review');
   expect(screen.getByRole('status')).toHaveTextContent('Payment status and account ownership are unverified');
   expect(screen.getByRole('status')).toHaveTextContent('Nothing in this legacy queue will be sent or removed');
@@ -48,7 +48,7 @@ it.each([
     window.dispatchEvent(new StorageEvent('storage', { key: 'pos_offline_queue' }));
   });
   view.unmount();
-  render(<POSLayout><h1>Terminal Locked</h1></POSLayout>);
+  render(<POSLayout><h1>Open POS terminal</h1></POSLayout>);
   expect(screen.getByRole('status')).toHaveTextContent('Historical POS data needs review');
   expect(localStorage.getItem('pos_offline_queue')).toBe(raw);
   expect(fetch).not.toHaveBeenCalled();
@@ -56,15 +56,15 @@ it.each([
 
 it('reports unavailable storage without claiming there are no old payments or blocking the canonical screen', () => {
   vi.spyOn(localStorage, 'getItem').mockImplementation(() => { throw new DOMException('Storage blocked', 'SecurityError'); });
-  render(<POSLayout><h1>Terminal Locked</h1></POSLayout>);
+  render(<POSLayout><h1>Open POS terminal</h1></POSLayout>);
   expect(screen.getByRole('status')).toHaveTextContent('Historical POS data could not be checked');
   expect(screen.getByRole('status')).toHaveTextContent('Keep this browser’s stored data');
-  expect(screen.getByRole('heading', { name: 'Terminal Locked' })).toBeVisible();
+  expect(screen.getByRole('heading', { name: 'Open POS terminal' })).toBeVisible();
   expect(fetch).not.toHaveBeenCalled();
 });
 
 it('rechecks historical data when another tab saves a record, without claiming or replaying it', () => {
-  render(<POSLayout><h1>Terminal Locked</h1></POSLayout>);
+  render(<POSLayout><h1>Open POS terminal</h1></POSLayout>);
   expect(screen.queryByRole('status')).toBeNull();
   const raw = '[{"offline_id":"saved-by-old-tab"}]';
   localStorage.setItem('pos_offline_queue', raw);

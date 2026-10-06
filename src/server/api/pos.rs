@@ -423,16 +423,28 @@ mod tests {
     }
 }
 
+// POS access is verified from the signed account, never from a client PIN.
+// Deserialize a map first so non-object payloads cannot become empty requests.
 #[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PosAuthRequest {
-    pub pin: String,
+#[serde(try_from = "serde_json::Map<String, serde_json::Value>")]
+pub struct PosAuthRequest;
+
+impl TryFrom<serde_json::Map<String, serde_json::Value>> for PosAuthRequest {
+    type Error = &'static str;
+
+    fn try_from(fields: serde_json::Map<String, serde_json::Value>) -> Result<Self, Self::Error> {
+        if fields.is_empty() {
+            Ok(Self)
+        } else {
+            Err("POS access uses the signed account; the request must be an empty object")
+        }
+    }
 }
 
 pub async fn pos_auth_handler(
     claims: Option<Extension<::server_common::Claims>>,
     axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
-    axum::extract::Json(payload): axum::extract::Json<PosAuthRequest>,
+    axum::extract::Json(_payload): axum::extract::Json<PosAuthRequest>,
 ) -> impl IntoResponse {
     let Some(Extension(claims)) = claims else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
@@ -440,9 +452,6 @@ pub async fn pos_auth_handler(
     let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims) else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
-    if payload.pin.len() > 64 {
-        return axum::http::StatusCode::BAD_REQUEST.into_response();
-    }
 
     Json(json!({
         "success": true,
@@ -504,3 +513,7 @@ pub async fn translate_order_notes_handler(
 
     Json(json!({ "translatedNotes": translated })).into_response()
 }
+
+#[cfg(test)]
+#[path = "pos_auth_test.rs"]
+mod auth_tests;

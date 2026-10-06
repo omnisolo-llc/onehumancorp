@@ -107,16 +107,17 @@ async fn update_assistant_settings(
 ) -> Result<Json<serde_json::Value>, StatusCode> {
     let tenant_id =
         ::server_common::auth_utils::signed_tenant_id(&claims).ok_or(StatusCode::UNAUTHORIZED)?;
+    // Text-only tasks have no tool observations. Do not acknowledge a setting
+    // that is neither persisted nor connected to this execution runtime.
+    if payload.get("observationMasking").is_some() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     let agent_name = payload
         .get("agentName")
         .and_then(|value| value.as_str())
         .map(str::trim)
         .filter(|value| !value.is_empty() && value.chars().count() <= 100);
-    let observation_masking = payload
-        .get("observationMasking")
-        .and_then(|value| value.as_bool());
-
-    if agent_name.is_none() && observation_masking.is_none() {
+    if agent_name.is_none() {
         return Err(StatusCode::BAD_REQUEST);
     }
 
@@ -171,9 +172,6 @@ async fn update_assistant_settings(
     let mut settings = serde_json::Map::new();
     if let Some(name) = agent_name {
         settings.insert("agentName".to_string(), serde_json::json!(name));
-    }
-    if let Some(masking) = observation_masking {
-        settings.insert("observationMasking".to_string(), serde_json::json!(masking));
     }
 
     Ok(Json(serde_json::json!({
@@ -3037,6 +3035,61 @@ mod real_feature_state_tests {
         let (_, listed) = request_json(db, "GET", "/connectors", json!({})).await;
         assert_eq!(listed["connectors"][0]["name"], "Real Connector");
         assert_eq!(listed["connectors"][0]["status"], "disconnected");
+    }
+
+    #[tokio::test]
+    async fn text_settings_reject_unused_masking_and_preserve_real_name() {
+        let db = test_db().await;
+        let DbStore::Sqlite(pool) = &db.store else {
+            panic!("test_db must provide isolated SQLite");
+        };
+        sqlx::query(
+            "CREATE TABLE application_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT, updated_by TEXT)",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+        let (status, saved) = request_json(
+            db.clone(),
+            "PATCH",
+            "/settings",
+            json!({ "agentName": "Persisted assistant" }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(
+            saved,
+            json!({ "settings": { "agentName": "Persisted assistant" } })
+        );
+        for payload in [
+            json!({ "observationMasking": true }),
+            json!({ "observationMasking": false }),
+            json!({ "observationMasking": null }),
+            json!({ "agentName": "Must not replace", "observationMasking": true }),
+        ] {
+            let app = router::<()>(db.clone()).layer(Extension(claims()));
+            let request = Request::builder()
+                .method("PATCH")
+                .uri("/settings")
+                .header("content-type", "application/json")
+                .body(Body::from(payload.to_string()))
+                .unwrap();
+            assert_eq!(
+                app.oneshot(request).await.unwrap().status(),
+                StatusCode::BAD_REQUEST
+            );
+        }
+        let (_, read) = request_json(db.clone(), "GET", "/settings", json!({})).await;
+        assert_eq!(read, saved);
+        let rows: Vec<(String, String, String)> =
+            sqlx::query_as("SELECT key, value, updated_by FROM application_settings ORDER BY key")
+                .fetch_all(pool)
+                .await
+                .unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].0, "assistant.agent_name:tenant-real");
+        assert_eq!(rows[0].1, "Persisted assistant");
+        assert_eq!(rows[0].2, "user-1");
     }
 
     #[tokio::test]

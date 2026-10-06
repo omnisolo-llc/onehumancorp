@@ -446,3 +446,19 @@ test('task selection reflects real detail selection and cannot repeat a no-op ch
   expect(screen.getByRole('heading', { name: "Create this week's operating brief" })).toBeDefined();
   expect(screen.getByText('I am gathering context and drafting the brief.')).toBeDefined();
 });
+
+test('text-only assistant cannot claim a configurable tool observation masking effect', async () => {
+  renderAssistantPage();
+  await screen.findByRole('heading', { name: 'Agent Assistant' });
+  fireEvent.click(screen.getByRole('button', { name: 'System' }));
+  const toggle = await screen.findByRole('checkbox', { name: 'Observation Masking Toggle' });
+  const save = screen.getByRole('button', { name: 'Save UI Settings' });
+  expect(toggle).toBeDisabled(); expect(toggle).not.toBeChecked(); expect(save).toBeDisabled();
+  expect(screen.getByText(/This text-only Assistant has no tool observations to mask/)).toBeVisible();
+  fireEvent.click(toggle); fireEvent.click(save);
+  expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method === 'PATCH')).toHaveLength(0);
+  expect(screen.queryByText('Settings saved')).toBeNull();
+  const name = screen.getByRole('textbox', { name: 'Assistant name' });
+  fireEvent.change(name, { target: { value: 'Reviewed Assistant' } });
+  expect(screen.getByRole('button', { name: 'Save Name' })).toBeEnabled();
+});

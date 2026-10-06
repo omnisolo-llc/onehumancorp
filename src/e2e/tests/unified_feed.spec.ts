@@ -3,6 +3,7 @@ import type { Response } from '@playwright/test';
 import { authenticateRequest } from '../authenticate';
 import { e2eDbQuery } from '../db_utils';
 import { seedDashboardAuditOwner } from '../support/dashboard_audit_fixture';
+import { finishResponseBodyDiagnostics, observeResponseBody } from '../support/response_body_diagnostics';
 
 test.describe('Unified Feed E2E', () => {
   test('Complete flow: view feed and approve an item', async ({ anonymousPage: page, baseURL }, testInfo) => {
@@ -22,7 +23,7 @@ test.describe('Unified Feed E2E', () => {
     const responses: Record<string, unknown>[] = [];
     const states: Record<string, unknown>[] = [];
     const submittedDecisions: unknown[] = [];
-    const pendingBodies: Promise<void>[] = [];
+    const pendingBodies: ReturnType<typeof observeResponseBody>[] = [];
     const observeResponse = (response: Response) => {
       const request = response.request();
       const url = new URL(response.url());
@@ -40,17 +41,7 @@ test.describe('Unified Feed E2E', () => {
       };
       responses.push(receipt);
       // Observe actual owned-tenant bodies without routing, delaying, or replacing responses.
-      pendingBodies.push((async () => {
-        try {
-          receipt.body = await response.text();
-          receipt.finishedError = await response.finished();
-        } catch (error) {
-          receipt.captureError = String(error);
-        } finally {
-          receipt.completedAtMs = Date.now() - startedAt;
-          receipt.timing = request.timing();
-        }
-      })());
+      pendingBodies.push(observeResponseBody(response, startedAt));
     };
     const captureState = async (label: string) => {
       const receipt: Record<string, unknown> = { label, phase, startedAtMs: Date.now() - startedAt };
@@ -143,11 +134,14 @@ test.describe('Unified Feed E2E', () => {
     } finally {
       await captureState('finally');
       page.off('response', observeResponse);
-      await Promise.all(pendingBodies);
+      // The real decision/reload assertions above are authoritative. A canceled
+      // earlier read must not keep supplemental evidence waiting for teardown.
+      const bodies = await finishResponseBodyDiagnostics(pendingBodies);
+      const capturedResponses = responses.map((receipt, index) => ({ ...receipt, ...bodies[index] }));
       await testInfo.attach('unified-feed-actual-response-and-sql-diagnostics', {
         body: Buffer.from(JSON.stringify({
           itemId, remainingId, userId: owner.userId, tenantId: owner.tenantId,
-          startedAt, responses, states, submittedDecisions,
+          startedAt, responses: capturedResponses, states, submittedDecisions,
         }, null, 2)),
         contentType: 'application/json',
       });

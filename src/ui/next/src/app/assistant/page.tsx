@@ -2,7 +2,7 @@
 import { errorMessage } from '@/lib/errors';
 import { isRecord, recordOrEmpty } from '@/lib/records';
 import type { Step } from '@/components/Walkthrough';
-type ResourceData = Record<string, unknown> & { settings?: { observationMasking?: boolean } };
+type ResourceData = Record<string, unknown>;
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
@@ -693,16 +693,6 @@ function ResourcePage({
   const [agentNameInput, setAgentNameInput] = useState('');
   const [customConnector, setCustomConnector] = useState('');
   const [customSkill, setCustomSkill] = useState('');
-  const [observationMasking, setObservationMasking] = useState(
-    data?.settings?.observationMasking ?? true
-  );
-
-  useEffect(() => {
-    if (data?.settings?.observationMasking !== undefined) {
-      setObservationMasking(data.settings.observationMasking);
-    }
-  }, [data?.settings?.observationMasking]);
-
   const blocks = resourceBlocks(data, config.rootKeys);
 
   return (
@@ -787,13 +777,14 @@ function ResourcePage({
           <div className={styles.featureGridTwo}>
             <div className={styles.featureCard}>
               <div className={`${styles.cardTitle} cardTitle`}>Observation Masking</div>
-              <p className={styles.eyebrow}>Hides the raw output of old tools from the prompt, but keeps the tool_calls themselves visible so the model remembers what it did.</p>
+              <p id="assistant-masking-unavailable" className={styles.eyebrow}>This text-only Assistant has no tool observations to mask. Tenant masking controls are unavailable. Built-in agent masking is configured separately.</p>
               <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                   <input
                     type="checkbox"
-                    checked={observationMasking}
-                    onChange={(e) => setObservationMasking(e.target.checked)}
+                    checked={false}
+                    disabled
+                    aria-describedby="assistant-masking-unavailable"
                     aria-label="Observation Masking Toggle"
                   />
                   <span className={styles.eyebrow} style={{ margin: 0 }}>Enable Masking</span>
@@ -801,7 +792,8 @@ function ResourcePage({
                 <button
                   type="button"
                   className={styles.smallButton}
-                  onClick={() => onAction(section, { observationMasking })}
+                  disabled
+                  aria-describedby="assistant-masking-unavailable"
                 >
                   Save UI Settings
                 </button>

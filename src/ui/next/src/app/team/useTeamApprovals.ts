@@ -14,11 +14,29 @@ function heldChats(owner: QueueOwner): string[] {
   if (!Array.isArray(data) || !data.every(value => typeof value === 'string')) throw Error('Request history unavailable');
   return data;
 }
-function headersFor(owner: QueueOwner) { return { 'Content-Type': 'application/json', 'x-ohc-expected-user': owner.userId, 'x-ohc-expected-tenant': owner.tenantId }; }
+function headersFor(owner: QueueOwner, json = false) { return { ...(json ? { 'Content-Type': 'application/json' } : {}), 'x-ohc-expected-user': owner.userId, 'x-ohc-expected-tenant': owner.tenantId }; }
 function storedDecision(raw: string): Decision {
   const data = object(JSON.parse(raw));
   if (!data || !['APPROVED','DISMISSED'].includes(String(data.state)) || (data.proposed_action != null && !object(data.proposed_action))) throw Error('Unrecognized pending decision');
   return data as Decision;
+}
+// A concurrent canonical identity read temporarily suspends the shared lease.
+// Keep the finite response consumed, but never apply it until that suspension
+// resolves for the same owner. Abort/retirement still wins over a late reply.
+function settledVerification(valid: () => boolean, signal: AbortSignal): Promise<void> {
+  return new Promise(resolve => {
+    let done = false;
+    let unsubscribe = () => {};
+    const finish = () => {
+      if (done) return;
+      done = true; unsubscribe(); signal.removeEventListener('abort', finish); resolve();
+    };
+    const check = () => { if (!valid() || signal.aborted || !hasPendingQueueOwnerVerification()) finish(); };
+    signal.addEventListener('abort', finish, { once: true });
+    unsubscribe = subscribeQueueIdentityReadiness(check);
+    if (done) unsubscribe();
+    check();
+  });
 }
 export function useTeamApprovals() {
   const [items, setItems] = useState<Approval[]>([]), [loading, setLoading] = useState(true), [ready, setReady] = useState(false);
@@ -36,11 +54,16 @@ export function useTeamApprovals() {
     setReady(!!expected && hasVerifiedOfflineQueueOwner(expected));
     if (expected && !hasPendingQueueOwnerVerification() && !hasVerifiedOfflineQueueOwner(expected)) retire();
   }, [retire]);
-  const current = (expected: QueueOwner, epoch: number, identity: number) => active.current && epoch === generation.current && identity === queueIdentityGeneration() && !!owner.current && sameOwner(expected, owner.current) && hasVerifiedOfflineQueueOwner(expected);
+  const sameContext = (expected: QueueOwner, epoch: number, identity: number) => active.current && epoch === generation.current && identity === queueIdentityGeneration() && !!owner.current && sameOwner(expected, owner.current);
+  const current = (expected: QueueOwner, epoch: number, identity: number) => sameContext(expected, epoch, identity) && hasVerifiedOfflineQueueOwner(expected);
+  const waitCurrent = async (expected: QueueOwner, epoch: number, identity: number, signal: AbortSignal) => {
+    await settledVerification(() => sameContext(expected, epoch, identity), signal);
+    return !signal.aborted && current(expected, epoch, identity);
+  };
   const notice = (id: string, next: Notice) => setNotices(previous => new Map(previous).set(id, next));
   const refresh = useCallback(async () => {
     if (!active.current || working.current === generation.current) return;
-    const epoch = generation.current, identity = queueIdentityGeneration();
+    const epoch = generation.current, identity = queueIdentityGeneration(); let committed = false;
     working.current = epoch; setBusy(true); setLoading(true); setError('');
     const controller = new AbortController(); controllers.current.add(controller); const timer = setTimeout(() => controller.abort(), 30000);
     try {
@@ -52,10 +75,11 @@ export function useTeamApprovals() {
       do {
         const url = '/api/v1/agents/approvals?limit=100' + (cursor ? '&cursor=' + encodeURIComponent(cursor) : '');
         const res = await fetch(url, { headers: headersFor(verified), cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal });
-        if (!current(verified, epoch, identity)) return;
+        const data: unknown = await res.json().catch(() => null);
+        if (!await waitCurrent(verified, epoch, identity, controller.signal)) return;
         if ([401,403,409].includes(res.status)) { retire(); return; }
         if (res.status !== 200) throw Error('Approval list unavailable.');
-        const page = readApprovalPage(await res.json(), verified.tenantId);
+        const page = readApprovalPage(data, verified.tenantId);
         if (!current(verified, epoch, identity)) return;
         for (const item of page.items) {
           if (fetched.has(item.id)) throw Error('Conflicting approval pagination.');
@@ -72,22 +96,26 @@ export function useTeamApprovals() {
         try {
           const decision = storedDecision(localStorage.getItem(key)!);
           const res = await fetch(`/api/v1/agent-feed/${id}/decision`, { headers: headersFor(verified), cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal });
-          if (!current(verified, epoch, identity)) return;
+          const data: unknown = await res.json().catch(() => null);
+          if (!await waitCurrent(verified, epoch, identity, controller.signal)) return;
           if ([401,403,409].includes(res.status)) { retire(); return; }
           if (res.status !== 200) continue;
-          const message = readDecision(await res.json(), id, verified.tenantId, decision);
+          const message = readDecision(data, id, verified.tenantId, decision);
           if (!current(verified, epoch, identity)) return;
           nextNotices.set(id, { kind: 'recorded', message }); fetched.delete(id);
         } catch { /* Failed readback leaves the original exact decision held. */ }
       }
       if (!current(verified, epoch, identity)) return;
-      setItems([...fetched.values()]); setNotices(nextNotices);
+      committed = true; setItems([...fetched.values()]); setNotices(nextNotices);
       if (heldChats(verified).length) setChatNotice('A previous request outcome is unconfirmed. Review pending approvals before sending a different request; the original request will not be resent.');
     } catch {
       if (active.current && epoch === generation.current) { setItems([]); setError('Approvals are unavailable. No empty or completed state has been inferred.'); }
     } finally {
       clearTimeout(timer); controllers.current.delete(controller);
-      if (active.current && epoch === generation.current && working.current === epoch) { working.current = null; setBusy(false); setLoading(false); readiness(); }
+      if (active.current && epoch === generation.current && working.current === epoch) {
+        if (!committed) setError(previous => previous || 'Approvals are unavailable until this session is verified. Refresh to retry.');
+        working.current = null; setBusy(false); setLoading(false); readiness();
+      }
     }
   }, [readiness, retire]);
   useEffect(() => {
@@ -103,24 +131,25 @@ export function useTeamApprovals() {
     return () => { active.current = false; const retiredGeneration = generation.current++; if (working.current === retiredGeneration) working.current = null; owner.current = null; controllers.current.forEach(controller => controller.abort()); controllers.current.clear(); unsubscribe(); window.removeEventListener('omnisolo_auth_changed', retire); window.removeEventListener('pagehide', retire); window.removeEventListener('storage', storage); };
   }, [readiness, refresh, retire]);
 
-  const mutate = async (operation: (expected: QueueOwner, guard: () => boolean, signal: AbortSignal) => Promise<boolean>): Promise<boolean> => {
+  const mutate = async (operation: (expected: QueueOwner, guard: () => boolean, signal: AbortSignal, context: () => boolean) => Promise<boolean>): Promise<boolean> => {
     const expected = owner.current;
     if (!expected || !ready || error || working.current === generation.current || !navigator.onLine || !navigator.locks?.request) return false;
     const epoch = generation.current, identity = queueIdentityGeneration();
     working.current = epoch; setBusy(true);
     const controller = new AbortController(); controllers.current.add(controller); const timer = setTimeout(() => controller.abort(), 30000);
-    const guard = () => current(expected, epoch, identity) && !controller.signal.aborted;
+    const context = () => sameContext(expected, epoch, identity) && !controller.signal.aborted;
+    const guard = () => context() && hasVerifiedOfflineQueueOwner(expected);
     try {
       return await navigator.locks.request('omnisolo-team:' + scopeKey(expected), { mode: 'exclusive', signal: controller.signal }, async () => {
         const verified = await readQueueOwner(controller.signal);
-        if (!guard()) return false;
+        if (!await waitCurrent(expected, epoch, identity, controller.signal)) return false;
         if (!sameOwner(expected, verified)) { retire(); return false; }
-        return operation(expected, guard, controller.signal);
+        return operation(expected, guard, controller.signal, context);
       });
     } catch { return false; }
     finally { clearTimeout(timer); controllers.current.delete(controller); if (active.current && epoch === generation.current && working.current === epoch) { working.current = null; setBusy(false); readiness(); } }
   };
-  const decide = (id: string, state: Decision['state'], proposed_action?: Approval['payload']) => mutate(async (expected, guard, signal) => {
+  const decide = (id: string, state: Decision['state'], proposed_action?: Approval['payload']) => mutate(async (expected, guard, signal, context) => {
     if (!validId(id) || !items.some(item => item.id === id && item.tenant_id === expected.tenantId) || notices.has(id) && notices.get(id)?.kind !== 'rejected') return false;
     const key = prefix(expected) + id, decision: Decision = { state, ...(proposed_action ? { proposed_action } : {}) };
     if (localStorage.getItem(key) !== null) { notice(id, unknown); return false; }
@@ -128,11 +157,13 @@ export function useTeamApprovals() {
     try {
       localStorage.setItem(key, JSON.stringify(decision)); if (!guard()) return false;
       notice(id, { kind: 'pending', message: 'Recording decision; execution or delivery is not confirmed.' }); dispatched = true;
-      const res = await fetch(`/api/v1/agent-feed/${id}`, { method: 'PUT', headers: headersFor(expected), credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal, body: JSON.stringify(decision) });
+      const res = await fetch(`/api/v1/agent-feed/${id}`, { method: 'PUT', headers: headersFor(expected, true), credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal, body: JSON.stringify(decision) });
+      const data: unknown = await res.json().catch(() => null);
+      await settledVerification(context, signal);
       if (!guard()) return false;
       if ([401,403,409].includes(res.status)) { retire(); return false; }
       if (res.status !== 200) throw Error('Decision not confirmed');
-      const message = readDecision(await res.json(), id, expected.tenantId, decision);
+      const message = readDecision(data, id, expected.tenantId, decision);
       if (!guard()) return false;
       notice(id, { kind: 'recorded', message }); setItems(previous => previous.filter(item => item.id !== id)); return true;
     } catch {
@@ -140,7 +171,7 @@ export function useTeamApprovals() {
       return false;
     }
   });
-  const send = (message: string) => mutate(async (expected, guard, signal) => {
+  const send = (message: string) => mutate(async (expected, guard, signal, context) => {
     if (!message.trim() || message.length > 16000) return false;
     const key = chatKey(expected), fingerprint = canonical({ message: message.trim() });
     if (heldChats(expected).includes(fingerprint)) { setChatNotice('Request outcome is unconfirmed. Check pending approvals; this request will not be resent.'); return false; }
@@ -148,10 +179,11 @@ export function useTeamApprovals() {
     try {
       localStorage.setItem(key, JSON.stringify([...heldChats(expected), fingerprint])); if (!guard()) return false;
       setChatNotice('Saving your request for department review…'); dispatched = true;
-      const res = await fetch('/api/v1/agents/chat', { method: 'POST', headers: headersFor(expected), credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal, body: JSON.stringify({ message: message.trim() }) });
+      const res = await fetch('/api/v1/agents/chat', { method: 'POST', headers: headersFor(expected, true), credentials: 'same-origin', cache: 'no-store', redirect: 'error', signal, body: JSON.stringify({ message: message.trim() }) });
+      const data = object(await res.json().catch(() => null));
+      await settledVerification(context, signal);
       if (!guard()) return false;
       if ([401,403,409].includes(res.status)) { retire(); return false; }
-      const data = object(await res.json());
       if (!guard()) return false;
       if ([400, 422, 429].includes(res.status)) {
         localStorage.setItem(key, JSON.stringify(heldChats(expected).filter(value => value !== fingerprint)));

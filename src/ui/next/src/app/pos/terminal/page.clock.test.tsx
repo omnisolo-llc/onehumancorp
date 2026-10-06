@@ -30,7 +30,7 @@ const transport = vi.fn<typeof fetch>(async (input) => {
   throw new Error(`Unexpected fixture request: ${path}`);
 });
 async function unlock() {
-  for (const digit of ['1', '2', '3', '4']) fireEvent.click(screen.getByRole('button', { name: digit }));
+  fireEvent.click(screen.getByRole('button', { name: 'Continue with signed-in account' }));
   await act(async () => {});
   await screen.findByText('Recorded Staff');
 }
@@ -75,11 +75,11 @@ it.each(['lock', 'owner', 'epoch'] as const)('rejects a late clock receipt after
   const pending = pendingWrite(); render(<POSTerminal />); await unlock();
   fireEvent.click(screen.getByRole('button', { name: 'Clock In' }));
   await waitFor(() => expect(enqueue).toHaveBeenCalledTimes(1));
-  if (change === 'lock') fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+  if (change === 'lock') fireEvent.click(screen.getByRole('button', { name: 'Close terminal' }));
   else if (change === 'owner') { owner = 'user-b'; await act(async () => { await readQueueOwner(); }); }
   else localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY, 'replacement-session');
   await act(async () => pending.resolve());
-  expect(screen.getByText('Terminal Locked')).toBeVisible();
+  expect(screen.getByText('Open POS terminal')).toBeVisible();
   expect(screen.queryByRole('heading', { name: 'Clocked In' })).toBeNull();
   if (change === 'lock') {
     await unlock();
@@ -140,7 +140,7 @@ it('does not apply an old inventory body after locking and verifying a different
   inventoryRead = () => new Promise<Response>(resolve => { release = resolve; });
   render(<POSTerminal />); await unlock();
   await waitFor(() => expect(release).toBeDefined());
-  fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Close terminal' }));
   owner = 'user-b'; await act(async () => { await readQueueOwner(); });
   inventoryRead = async () => Response.json({ inventory: [{ id: 'b', name: 'Current inventory', description: '', price_cents: 100, stock: 2 }] });
   await unlock(); await screen.findByText('Current inventory');
@@ -197,7 +197,7 @@ it.each(['owner', 'epoch', 'unmount'] as const)('rejects a retained inventory bo
   } else view.unmount();
   await act(async () => { finishVerification(identity()); await pending; });
   expect(screen.queryByText('Private old inventory')).toBeNull();
-  if (change !== 'unmount') expect(screen.getByText('Terminal Locked')).toBeVisible();
+  if (change !== 'unmount') expect(screen.getByText('Open POS terminal')).toBeVisible();
 });
 
 it('keeps the inventory outcome if another same-owner verification starts as the first one settles', async () => {
@@ -247,7 +247,7 @@ it.each(['lease expiry', 'readiness timeout'] as const)('does not turn a retaine
   ownerExpiry = Date.now() + 60_000;
   await act(async () => { finishVerification(identity()); await pending; });
   expect(screen.queryByText('Private delayed inventory')).toBeNull();
-  if (boundary === 'lease expiry') expect(screen.getByText('Terminal Locked')).toBeVisible();
+  if (boundary === 'lease expiry') expect(screen.getByText('Open POS terminal')).toBeVisible();
   else expect(screen.getByText('Inventory is unavailable. Verify your session and retry.')).toBeVisible();
   expect(transport.mock.calls.filter(([url]) => String(url) === '/api/v1/pos/inventory')).toHaveLength(1);
 });
@@ -262,11 +262,11 @@ it('hides private staff and retires the original lease at expiry during pending 
   await act(async () => { request = readQueueOwner(); });
   try { expect(screen.getByText('Recorded Staff')).not.toBeVisible(); }
   finally {
-    await waitFor(() => expect(screen.getByText('Terminal Locked')).toBeVisible(), { timeout: 3000 });
+    await waitFor(() => expect(screen.getByText('Open POS terminal')).toBeVisible(), { timeout: 3000 });
     ownerExpiry = Date.now() + 60_000;
     await act(async () => { release(identity()); await request; });
   }
-  expect(screen.getByText('Terminal Locked')).toBeVisible();
+  expect(screen.getByText('Open POS terminal')).toBeVisible();
   expect(screen.queryByText('Recorded Staff')).toBeNull();
 });
 
@@ -335,7 +335,7 @@ it.each(['lock', 'owner', 'epoch'] as const)('never reports an old status check 
   else if (change === 'epoch') {
     localStorage.setItem(QUEUE_IDENTITY_EPOCH_KEY, 'new-session');
     await act(async () => window.dispatchEvent(new StorageEvent('storage', { key: QUEUE_IDENTITY_EPOCH_KEY })));
-  } else fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+  } else fireEvent.click(screen.getByRole('button', { name: 'Close terminal' }));
   await unlock();
   // Even an old read completing with confirmation cannot update the new lease.
   clockSummary.mockResolvedValue({ confirmed: 1, unconfirmed: 0, legacyHeld: 0 });

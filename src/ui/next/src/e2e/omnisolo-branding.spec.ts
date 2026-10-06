@@ -1,4 +1,7 @@
 import { expect, test } from "../../../../e2e/fixtures";
+import { randomUUID } from "node:crypto";
+import { createGrowthOwner } from "../../../../e2e/growth_owner";
+import { e2eDbQuery } from "../../../../e2e/db_utils";
 
 test.describe("OmniSolo browser branding", () => {
   test("login is a standalone OmniSolo surface", async ({ anonymousPage: page }) => {
@@ -202,14 +205,41 @@ test.describe("OmniSolo browser branding", () => {
     expect(socketUrls).toEqual([]);
   });
 
-  test("the POS route renders its catalog and cart interaction", async ({ page }) => {
-    await page.goto("/pos");
-    await expect(page.getByRole("heading", { name: "POS Terminal" })).toBeVisible();
-    await expect(page.getByText("Custom Cake")).toBeVisible();
+  test("the POS route redirects to an owned catalog and cart interaction", async ({ page, baseURL }) => {
+    const owner = await createGrowthOwner(page, baseURL);
+    const productId = randomUUID();
+    const title = `Owned POS product ${productId}`;
+    const amountCents = 1234;
+    expect(await e2eDbQuery(
+      `INSERT INTO products (id, tenant_id, title, type, price, price_cents, inventory_count, available_quantity, locked_quantity)
+       VALUES ($1, $2, $3, 'physical', $4::bigint::numeric / 100, $4, 2, 2, 0) RETURNING id`,
+      [productId, owner.tenantId, title, amountCents],
+    )).toEqual([{ id: productId }]);
 
-    await page.getByRole("button", { name: /Custom Cake/ }).click();
-    await expect(page.getByText("Cart (1)")).toBeVisible();
-    await expect(page.getByText("1x Custom Cake")).toBeVisible();
+    await page.goto("/pos");
+    await expect(page).toHaveURL(/\/pos\/terminal$/);
+    await expect(page.getByRole("heading", { name: "Open POS terminal", exact: true })).toBeVisible();
+    const origin = new URL(page.url()).origin;
+    const authentication = page.waitForResponse(response => new URL(response.url()).origin === origin
+      && new URL(response.url()).pathname === "/api/v1/pos/auth" && response.request().method() === "POST");
+    const inventory = page.waitForResponse(response => new URL(response.url()).origin === origin
+      && new URL(response.url()).pathname === "/api/v1/pos/inventory" && response.request().method() === "GET");
+    await page.getByRole("button", { name: "Continue with signed-in account", exact: true }).click();
+    const authResponse = await authentication;
+    expect(authResponse.status()).toBe(200);
+    expect(authResponse.request().postDataJSON()).toEqual({});
+    expect(await authResponse.json()).toMatchObject({
+      success: true, staff: { id: owner.userId, tenant_id: owner.tenantId, role: "ADMIN" },
+    });
+    const inventoryResponse = await inventory;
+    expect(inventoryResponse.status()).toBe(200);
+    expect((await inventoryResponse.json()).inventory).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: productId, name: title, price_cents: amountCents, stock: 2 }),
+    ]));
+    await expect(page.getByRole("heading", { name: "Product Catalog", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: new RegExp(title) }).click();
+    await expect(page.getByRole("button", { name: "1 item Charge $12.34", exact: true })).toBeVisible();
+    await expect(page.getByText("Payment Successful!", { exact: true })).toHaveCount(0);
   });
 
   test("the global commerce route renders through the shared app shell", async ({ page }) => {
