@@ -763,13 +763,23 @@ async fn apply_mutation(
         let available = level.unwrap_or(stock);
         if available < m.quantity_deducted {
             let c = json!({"transaction_id":m.transaction_id,"product_id":m.product_id,"shortage":i64::from(m.quantity_deducted)-i64::from(available)});
-            task(
-                tx.connection(),
-                tenant,
-                "operations",
-                "inventory.sync.conflict",
-                c.clone(),
+            let conflict_id = format!("sync_conflict_{}_{}", m.transaction_id, m.product_id);
+            let c_db = json!({
+                "transaction_id": m.transaction_id,
+                "product_id": m.product_id,
+                "expected_stock": m.quantity_deducted,
+                "actual_stock": available,
+                "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", m.product_id)
+            });
+            sqlx::query(
+                "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                 VALUES ($1, $2, 'terminal', 'operations', 'inventory.sync.conflict', 'Pending', 0.99, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                 ON CONFLICT DO NOTHING"
             )
+            .bind(&conflict_id)
+            .bind(tenant)
+            .bind(&c_db)
+            .execute(tx.connection())
             .await?;
             conflict = Some(c);
         }
