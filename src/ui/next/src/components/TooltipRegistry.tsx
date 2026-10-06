@@ -9,6 +9,7 @@ type TooltipContextType = {
   setActiveTooltip: (id: string | null) => void;
   tooltipRect: DOMRect | null;
   setTooltipRect: (rect: DOMRect | null) => void;
+  setTooltipTarget: (target: HTMLElement | null) => void;
   tooltipText: string;
   setTooltipText: (text: string) => void;
   getTooltip: (id: string) => string | undefined;
@@ -42,6 +43,7 @@ export const DEFAULT_TOOLTIPS: Record<string, string> = {
 export function TooltipProvider({ children }: { children: ReactNode }) {
   const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
   const [tooltipRect, setTooltipRect] = useState<DOMRect | null>(null);
+  const [tooltipTarget, setTooltipTarget] = useState<HTMLElement | null>(null);
   const [tooltipText, setTooltipText] = useState<string>("");
   const [tooltips, setTooltips] = useState<Record<string, string>>(DEFAULT_TOOLTIPS);
   const pathname = usePathname();
@@ -91,15 +93,22 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Dismiss the tooltip for this scroll event immediately. A delayed dismissal
-    // can otherwise close a new tooltip opened after scrolling its target into view.
-    const handleScroll = () => setActiveTooltip(null);
+    const handleScroll = () => {
+      if (!activeTooltip || !tooltipRect) return;
+      const currentRect = tooltipTarget?.isConnected ? tooltipTarget.getBoundingClientRect() : null;
+      // scrollIntoView can queue its scroll event until after pointer entry.
+      // Dismiss only when the anchor moved since this tooltip opened, not when
+      // an already-completed scroll or an unrelated panel delivers its event.
+      if (!currentRect || currentRect.top !== tooltipRect.top || currentRect.left !== tooltipRect.left) {
+        setActiveTooltip(null);
+      }
+    };
     window.addEventListener('scroll', handleScroll, true);
     return () => window.removeEventListener('scroll', handleScroll, true);
-  }, []);
+  }, [activeTooltip, tooltipRect, tooltipTarget]);
 
   return (
-    <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
+    <TooltipContext.Provider value={{ activeTooltip, setActiveTooltip, tooltipRect, setTooltipRect, setTooltipTarget, tooltipText, setTooltipText, getTooltip: (id: string) => tooltips[id] }}>
       {children}
 
       <AnimatePresence>
@@ -138,17 +147,18 @@ export function useTooltip() {
 }
 
 export function WithTooltip({ children, id, defaultText, className, tabIndex }: { children: ReactNode, id: string, defaultText?: string, className?: string, tabIndex?: number }) {
-  const { activeTooltip, setActiveTooltip, setTooltipRect, setTooltipText, getTooltip } = useTooltip();
+  const { activeTooltip, setActiveTooltip, setTooltipRect, setTooltipTarget, setTooltipText, getTooltip } = useTooltip();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const text = getTooltip(id) || defaultText || DEFAULT_TOOLTIPS[id] || id;
 
   const handleMouseEnter = React.useCallback(() => {
     if (wrapperRef.current) {
+      setTooltipTarget(wrapperRef.current);
       setTooltipRect(wrapperRef.current.getBoundingClientRect());
       setTooltipText(text);
       setActiveTooltip(id);
     }
-  }, [id, text, setActiveTooltip, setTooltipRect, setTooltipText]);
+  }, [id, text, setActiveTooltip, setTooltipRect, setTooltipTarget, setTooltipText]);
 
   const handleMouseLeave = React.useCallback(() => {
     setActiveTooltip(null);
