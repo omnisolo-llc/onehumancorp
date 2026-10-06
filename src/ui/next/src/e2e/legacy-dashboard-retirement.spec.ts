@@ -28,7 +28,9 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         for (const method of ['GET', 'HEAD']) {
           const response = await page.request.fetch(alias + query, { method, maxRedirects: 0 });
           expect(response.status()).toBe(307);
-          expect(response.headers().location).toBe(origin + '/dashboard' + query);
+          // Next may serialize a same-origin Location as relative; resolve it
+          // without normalizing away ordered keys or the opaque query bytes.
+          expect(new URL(response.headers().location, origin).href).toBe(origin + '/dashboard' + query);
           expect(response.headers()['cache-control']).toContain('no-store');
           await response.dispose();
         }

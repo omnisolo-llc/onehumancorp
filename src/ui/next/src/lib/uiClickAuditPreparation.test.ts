@@ -30,7 +30,12 @@ for (const embedded of [false, true]) for (const changes of [false, true]) it(`k
     focus(options);
   });
   if (changes) button.addEventListener('click', () => button.setAttribute('aria-expanded', 'true'));
-  const click = vi.fn(async () => button.click());
+  const click = vi.fn(async (options: { timeout: number; scroll?: 'auto' | 'none' }) => {
+    // Preserve the hovered position. Re-scrolling this tall frame at click
+    // time can place its operation under the sticky parent application header.
+    if (options.scroll !== 'none') throw new Error('Parent header intercepts the re-scrolled operation');
+    button.click();
+  });
   const target = { ...handle(button), hover: vi.fn(), focus: async () => button.focus(), click };
   const context = new EventEmitter();
   const page = Object.assign(new EventEmitter(), {
@@ -43,7 +48,7 @@ for (const embedded of [false, true]) for (const changes of [false, true]) it(`k
   expect(preparedFocus).toHaveBeenCalledTimes(1);
   expect(owner.activeElement).toBe(button);
   expect(target.hover).toHaveBeenCalledWith({ timeout: 5000 });
-  expect(click).toHaveBeenCalledExactlyOnceWith({ timeout: 5000 });
+  expect(click).toHaveBeenCalledExactlyOnceWith({ timeout: 5000, scroll: 'none' });
   expect(button).toHaveAttribute('aria-expanded', String(changes));
   expect(effect.changed).toBe(changes);
   expect(effect.focusSeen).toBe(false);

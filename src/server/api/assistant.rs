@@ -3043,64 +3043,100 @@ mod real_feature_state_tests {
     async fn task_mutations_use_database() {
         let db = test_db().await;
 
-        // 1. Create a task via POST /tasks
-        let task_id = "test-task-1".to_string();
-        let (status, _created) = request_json(
-            db.clone(),
-            "POST",
-            "/tasks",
-            json!({
-                "id": task_id,
-                "workspace_id": "test-ws",
-                "title": "Test Task",
-                "prompt": "Do something",
-                "status": "running",
-                "permission_profile": "Guarded",
-                "archived": false,
-                "created_at_unix": 0,
-                "updated_at_unix": 0
-            }),
-        )
-        .await;
-        assert_eq!(status, StatusCode::OK);
+        let auth = Arc::new(server_auth::Store::new());
+        let owner = auth
+            .create_user(
+                "task-fixture-owner".into(),
+                "task-fixture-owner@example.test".into(),
+                "public-local-task-fixture-password".into(),
+                vec![server_auth::ROLE_ADMIN.into()],
+                "tenant-real".into(),
+            )
+            .await
+            .unwrap();
+        let token = auth.issue_token(&owner).unwrap();
+        let execution = Arc::new(crate::workflow_execution::WorkflowExecution::unavailable(
+            auth.clone(),
+        ));
+        let app = router::<()>(db.clone())
+            .layer(Extension(execution))
+            .route_layer(axum::middleware::from_fn_with_state(
+                auth,
+                server_auth::strict_bearer_auth_middleware,
+            ));
+        let request_json = |method: &str, uri: &str, body: serde_json::Value| {
+            let app = app.clone();
+            let request = Request::builder()
+                .method(method)
+                .uri(uri)
+                .header("content-type", "application/json")
+                .header("authorization", format!("Bearer {token}"))
+                .header("idempotency-key", Uuid::new_v4().to_string())
+                .body(Body::from(body.to_string()))
+                .unwrap();
+            async move {
+                let response = app.oneshot(request).await.unwrap();
+                let status = response.status();
+                let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+                    .await
+                    .unwrap();
+                let value: serde_json::Value =
+                    serde_json::from_slice(&bytes).unwrap_or_else(|error| {
+                        panic!(
+                            "expected JSON, got status {status}: {error}; body: {}",
+                            String::from_utf8_lossy(&bytes)
+                        )
+                    });
+                (status, value)
+            }
+        };
 
-        // 2. Archive the task via PATCH /tasks/{id}
-        let (status, archived) = request_json(
-            db.clone(),
-            "PATCH",
-            &format!("/tasks/{}", task_id),
-            json!({
-                "action": "archive"
-            }),
+        // Modern creation requires a configured durable runtime, never a fabricated task row.
+        let (status, unavailable) =
+            request_json("POST", "/tasks", json!({ "prompt": "Do something" })).await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+        assert!(unavailable.get("error").is_some());
+        assert!(unavailable.get("id").is_none());
+
+        // Existing legacy metadata remains editable through its explicit mounted routes.
+        let task_id = "test-task-1".to_string();
+        let DbStore::Sqlite(pool) = &db.store else {
+            panic!("test_db must provide the isolated SQLite fixture");
+        };
+        sqlx::query(
+            "INSERT INTO assistant_tasks (id, tenant_id, workspace_id, title, prompt, status, permission_profile, archived) VALUES (?, 'tenant-real', 'test-ws', 'Test Task', 'Do something', 'running', 'Guarded', 0)",
         )
-        .await;
+        .bind(&task_id)
+        .execute(pool)
+        .await
+        .unwrap();
+        let task_uri = format!("/legacy-tasks/{task_id}");
+        let (status, archived) =
+            request_json("PATCH", &task_uri, json!({ "action": "archive" })).await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(archived["status"], "archived");
+        // Archiving changes visibility, not the recorded execution lifecycle.
+        assert_eq!(archived["status"], "running");
         assert_eq!(archived["archived"], true);
 
-        // 3. Rename the task
-        let (_, renamed) = request_json(
-            db.clone(),
+        let (status, renamed) = request_json(
             "PATCH",
-            &format!("/tasks/{}", task_id),
-            json!({
-                "action": "rename",
-                "title": "Renamed Task"
-            }),
+            &task_uri,
+            json!({ "action": "rename", "title": "Renamed Task" }),
         )
         .await;
+        assert_eq!(status, StatusCode::OK);
         assert_eq!(renamed["title"], "Renamed Task");
-
-        // 4. Hard delete
-        let (status, deleted) = request_json(
-            db.clone(),
-            "PATCH",
-            &format!("/tasks/{}", task_id),
-            json!({
-                "action": "hard_delete"
-            }),
+        let persisted: (String, String, i64) = sqlx::query_as(
+            "SELECT title, status, archived FROM assistant_tasks WHERE tenant_id = 'tenant-real' AND id = ?",
         )
-        .await;
+        .bind(&task_id)
+        .fetch_one(pool)
+        .await
+        .unwrap();
+        assert_eq!(persisted, ("Renamed Task".into(), "running".into(), 1));
+
+        let (status, deleted) =
+            request_json("PATCH", &task_uri, json!({ "action": "hard_delete" })).await;
         assert_eq!(status, StatusCode::OK);
         assert_eq!(deleted["deletedTask"]["id"], task_id);
 

@@ -41,8 +41,13 @@ describe('audit document retirement', () => {
   it('commits a blank document on the existing page without creating another recording', async () => {
     const close = vi.fn();
     const newPage = vi.fn();
-    const goto = vi.fn().mockResolvedValue(null);
-    const page = documentPage({ close, goto, context: () => ({ newPage }) });
+    let url = 'https://fixture.test/original';
+    const goto = vi.fn(async (destination: string, options: { waitUntil: string; timeout: number }) => {
+      expect(options.waitUntil).toBe('commit');
+      url = destination;
+      return null;
+    });
+    const page = documentPage({ url: () => url, close, goto, context: () => ({ newPage }) });
     for (let index = 0; index < 3; index += 1) {
       expect(await replaceAuditDocument(page)).toBe(page);
     }

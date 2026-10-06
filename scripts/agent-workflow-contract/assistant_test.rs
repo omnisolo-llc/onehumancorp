@@ -137,13 +137,25 @@ async fn assistant_inflight_stop_keeps_unknown_output_budget_hold_and_blocks_res
     let provider=OwnedHttpProvider::open(&f).await;provider.hold.store(true,std::sync::atomic::Ordering::SeqCst);f.execution=provider.execution.clone();
     let (_,accepted)=call(&f,Some(&f.a),"POST","/tasks",Some(&uuid::Uuid::new_v4().to_string()),task()).await;
     tokio::time::timeout(std::time::Duration::from_secs(5),provider.started.notified()).await.unwrap();
+    let reserved_before_stop=ledger.summary("workflow-tenant-a").await.unwrap().reserved_micros;
+    assert!(reserved_before_stop>0);
     let path=format!("/tasks/{}",accepted["id"].as_str().unwrap());
     let (status,stopped)=call(&f,Some(&f.a),"PATCH",&path,None,serde_json::json!({"action":"stop","sourceReceiptId":accepted["execution"]["id"]})).await;
     assert_eq!(status,StatusCode::OK);assert_eq!(stopped["status"],"outcome_unknown");assert!(stopped["execution"]["output"].is_null());
     let (status,_)=call(&f,Some(&f.a),"PATCH",&path,Some(&uuid::Uuid::new_v4().to_string()),serde_json::json!({"action":"resume","sourceReceiptId":accepted["execution"]["id"]})).await;
     assert_eq!(status,StatusCode::CONFLICT);assert_eq!(provider.requests.lock().unwrap().len(),1);
-    provider.release.notify_waiters();f.execution.wait_for_workers().await;
-    assert!(ledger.summary("workflow-tenant-a").await.unwrap().reserved_micros>0);
+    // Keep usage unobserved until the worker acknowledges cancellation. Releasing
+    // a valid usage receipt first may legitimately settle the outstanding hold.
+    tokio::time::timeout(std::time::Duration::from_secs(5),f.execution.wait_for_workers()).await.unwrap();
+    let record=&ledger.records("workflow-tenant-a","").await.unwrap()[0];
+    assert_eq!(record.state,"reconciliation_required");
+    assert_eq!(record.charged_micros,None);
+    assert_eq!(record.reserved_micros,reserved_before_stop);
+    let account=ledger.summary("workflow-tenant-a").await.unwrap();
+    assert!(account.reserved_micros>0);
+    assert_eq!(account.reserved_micros,reserved_before_stop);
+    assert_eq!(account.spent_micros,0);
+    provider.release.notify_waiters();
 }
 
 #[tokio::test]
