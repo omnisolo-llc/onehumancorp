@@ -1,11 +1,10 @@
 {
-  "finding": "Feature is already fully implemented.",
-  "evidence": [
-    "The issue claims there is no MemoryConsolidationWorker in the autodream_pipeline or VectorRepository.",
-    "However, src/agents/builtin/consolidation_worker.rs fully implements the MemoryConsolidationWorker.",
-    "The file contains ConsolidationWorker with a run_once and spawn_background_task methods.",
-    "The worker fetches the repository and calls prune_stale and auto_resolve_conflicts.",
-    "In src/server/lib.rs, the MemoryConsolidationWorker is instantiated and its spawn_background_task is called (inside start_workers logic).",
-    "There are exhaustive tests running and passing (e.g., test_worker_full_pipeline_with_conflict_and_pruning)."
-  ]
+  "issue_title": "Research OHC Owner Work Assistant: Competitive Research & Agentic Missions",
+  "issue_description": "We need to understand how OHC fits in the 2025 landscape against Shopify, Durable, Wix, Hubspot, etc.",
+  "issue_priority": "P0",
+  "issue_category": "Research",
+  "issue_type": "Exploration",
+  "issue_label": "agent-report",
+  "assignees": ["jules"],
+  "content": "A conversational checkout engine is required to solve the 'Setup Paralysis' and 'Missed Leads' pain points identified in research."
 }
