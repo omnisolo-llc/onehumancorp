@@ -34,6 +34,7 @@ beforeEach(() => {
   vi.stubGlobal('EventSource', class { addEventListener() {} close() {} });
   mockFetch.mockImplementation((url: string) => {
     if (url.endsWith('/session-identity')) return Promise.resolve(Response.json({ userId: 'agents-owner', tenantId: 'agents-tenant', expiresAt: Date.now() + 60_000 }));
+    if (url === '/api/v1/billing/my-plan') return Promise.resolve(Response.json({ current_plan: 'Free' }));
     if (url === '/api/v1/agents/execution-policy') return Promise.resolve(Response.json({ available: true, mode: 'text_analysis', workspace_access: false, tools: [], policy: { provider: 'ollama', model: 'configured-model', max_output_tokens: 2048 } }));
     if (url.includes('/api/v1/agents/workflows')) {
       return Promise.resolve({ ok: true, json: async () => ({ workflows: [] }) });

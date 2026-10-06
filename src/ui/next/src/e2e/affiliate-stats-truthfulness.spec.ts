@@ -8,14 +8,21 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
       // This seeded account has no affiliate records. Read only; do not create
       // links, mutate shared tables, or substitute any application responses.
       await loginAs(page, E2E_STARTER_USER);
+      const referringDocument = new URL('/dashboard/growth/affiliates', page.url());
+      // loginAs visits /dashboard, whose widget can still have this same GET in
+      // flight. Bind to the new document's immutable Referer, not its frame URL.
       const statistics = page.waitForResponse((response) => {
+        const request = response.request();
         const url = new URL(response.url());
-        return url.pathname === '/api/v1/growth/affiliate/stats' && response.request().method() === 'GET';
-      });
-      await page.goto('/dashboard/growth/affiliates', { waitUntil: 'domcontentloaded' });
-      const response = await statistics;
-      expect(response.status()).toBe(200);
-      expect(await response.json()).toEqual({ total_affiliates: 0, total_commission_cents: 0 });
+        return url.origin === referringDocument.origin && url.pathname === '/api/v1/growth/affiliate/stats'
+          && request.method() === 'GET' && request.frame() === page.mainFrame()
+          && request.headers().referer === referringDocument.href;
+      }).then(async response => ({ status: response.status(), body: await response.json() }));
+      const [, response] = await Promise.all([
+        page.goto(referringDocument.href, { waitUntil: 'domcontentloaded' }), statistics,
+      ]);
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ total_affiliates: 0, total_commission_cents: 0 });
 
       const affiliates = page.getByText('Total Affiliates', { exact: true }).locator('..');
       const referrals = page.getByText('Active Referrals', { exact: true }).locator('..');

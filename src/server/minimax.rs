@@ -611,4 +611,4 @@ impl LocalLLMClient {
 
 #[cfg(test)]
 #[path = "minimax_tests.rs"]
-mod truthful_provider_tests;
+pub(crate) mod truthful_provider_tests;

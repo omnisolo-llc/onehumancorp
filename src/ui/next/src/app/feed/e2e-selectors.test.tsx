@@ -31,13 +31,24 @@ type Locator = {
   and: (other: Locator) => Locator;
   click: () => Promise<void>;
 };
-type Page = { goto: (url: string) => Promise<void>; getByTestId: (id: string) => Locator };
+type Page = {
+  goto: (url: string) => Promise<void>;
+  getByTestId: (id: string) => Locator;
+  request: object;
+  context: () => { addInitScript: (script: (tenant: string) => void, tenant: string) => Promise<void> };
+};
 type SpecCase = (fixtures: { page: Page }) => Promise<void>;
-type BeforeCase = (fixtures: { page: Page }, info: { testId: string }) => Promise<void>;
+type BeforeCase = (fixtures: { page: Page; baseURL: string }, info: { testId: string }) => Promise<void>;
 
 // Execute the maintained journey against the real /feed renderer. Only the
 // browser/transport boundary is adapted; this does not replace real-stack E2E.
 async function runJourney(action: Action, missingContract?: ButtonContract) {
+  const baseURL = 'http://127.0.0.1:18789';
+  const owner = {
+    namespace: `case-${action}`, tenantId: `case-${action}-tenant`,
+    email: `case-${action}@example.test`, password: 'unit-fixture-password',
+  };
+  const storage = new Map<string, string>();
   let beforeCase: BeforeCase;
   const cases = new Map<string, SpecCase>();
   const test = Object.assign(
@@ -79,6 +90,8 @@ async function runJourney(action: Action, missingContract?: ButtonContract) {
     },
   });
   const page: Page = {
+    request: {},
+    context: () => ({ addInitScript: async (script, tenant) => { script(tenant); } }),
     goto: async url => {
       expect(url).toBe('/feed');
       cleanup();
@@ -97,7 +110,7 @@ async function runJourney(action: Action, missingContract?: ButtonContract) {
   const dependencies: Record<string, unknown> = {
     '../../../../e2e/fixtures': {
       test,
-      expect: (target: Locator) => ({
+      expect: (target: Locator | unknown[]) => Array.isArray(target) ? expect(target) : ({
         toBeVisible: async () => {
           const nodes = target.query();
           expect(nodes, target.label).toHaveLength(1);
@@ -110,22 +123,54 @@ async function runJourney(action: Action, missingContract?: ButtonContract) {
         },
       }),
     },
-    '../../../../e2e/db_utils': { db: {} },
+    '../../../../e2e/db_utils': { db: {
+      query: async (sql: string, values: unknown[]) => {
+        expect(sql).toBe('SELECT lifecycle_state, proposed_action FROM agent_feed_items WHERE id = $1 AND tenant_id = $2');
+        expect(values).toEqual(['owned-item', owner.tenantId]);
+        return items.filter(item => item.id === values[0] && item.tenant_id === values[1])
+          .map(({ lifecycle_state, proposed_action }) => ({ lifecycle_state, proposed_action }));
+      },
+    } },
+    '../../../../e2e/authenticate': {
+      authenticateRequest: async (request: object, credentials: unknown, origin: string) => {
+        expect(request).toBe(page.request);
+        expect(credentials).toEqual({ username: owner.email, password: owner.password, organizationId: owner.tenantId });
+        expect(origin).toBe(baseURL);
+      },
+    },
+    '../../../../e2e/support/dashboard_audit_fixture': {
+      seedDashboardAuditOwner: async (url: string) => {
+        expect(url).toBe(baseURL);
+        return owner;
+      },
+    },
+    '../../../../e2e/support/mobile_feed_geometry': {
+      expectMobileCardGeometry: () => { throw new Error('Browser geometry is outside this /feed selector unit adapter'); },
+    },
     '../../../../e2e/feed-fixtures': {
-      seedFeedItem: async (_page: Page, payload: Pick<AgentFeedItem, 'event_source' | 'context_payload' | 'proposed_action'>) => {
-        items.push({ ...payload, id: 'owned-item', lifecycle_state: 'PENDING_APPROVAL', created_at: '2026-10-04T12:00:00Z' });
+      seedFeedItem: async (targetPage: Page, payload: Pick<AgentFeedItem, 'event_source' | 'context_payload' | 'proposed_action'>,
+        tenantId: string, options: { requestOrigin: string }) => {
+        expect(targetPage).toBe(page);
+        expect(tenantId).toBe(owner.tenantId);
+        expect(options).toEqual({ requestOrigin: baseURL });
+        items.push({ ...payload, id: 'owned-item', tenant_id: tenantId, lifecycle_state: 'PENDING_APPROVAL', created_at: '2026-10-04T12:00:00Z' });
         return 'owned-item';
       },
     },
   };
   vm.runInNewContext(compiledSpec, {
     exports: {},
+    URL,
+    localStorage: { setItem: (key: string, value: string) => { storage.set(key, value); } },
     require: (name: string) => {
       expect(name in dependencies, `Unexpected spec dependency: ${name}`).toBe(true);
       return dependencies[name];
     },
   });
-  await beforeCase({ page }, { testId: `case-${action}` });
+  await beforeCase({ page, baseURL }, { testId: `case-${action}` });
+  expect(Object.fromEntries(storage)).toEqual({
+    tenant_id: owner.tenantId, tenant: owner.tenantId, business_display_name: owner.tenantId,
+  });
   await cases.get(`Feed Page should load items and ${action}`)!({ page });
   expect(writes).toEqual([{ id: 'owned-item', state: action === 'approve' ? 'APPROVED' : 'DISMISSED' }]);
   expect(queryAllByTestId(document.body, 'agent-feed-card')).toHaveLength(1);

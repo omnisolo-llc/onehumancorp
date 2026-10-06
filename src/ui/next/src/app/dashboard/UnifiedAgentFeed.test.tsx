@@ -69,9 +69,7 @@ describe("UnifiedAgentFeed activity surfaces", () => {
 
   it("refreshes through authenticated HTTP polling without opening a browser socket", async () => {
     vi.useFakeTimers();
-    const fetchMock = vi.fn().mockResolvedValue(
-      new Response(JSON.stringify({ items: [] }), { status: 200 }),
-    );
+    const fetchMock = vi.fn(async () => Response.json({ items: [] }));
     const webSocketMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
     vi.stubGlobal("WebSocket", webSocketMock);
@@ -102,6 +100,11 @@ const pendingItem = {
   lifecycle_state: 'PENDING_APPROVAL', created_at: '2026-09-30T00:00:00Z', updated_at: '2026-09-30T00:00:00Z',
 };
 
+const canonicalReceipt = (overrides = {}) => ({ ...pendingItem, lifecycle_state: 'APPROVED', decision_recorded: true, ...overrides });
+const legacyReceipt = (edited: string | null = null) => ({
+  success: true, decision_recorded: true, item: { id: pendingItem.id, tenant_id: pendingItem.tenant_id, lifecycle_state: 'APPROVED', edited_payload: edited },
+});
+
 const customerDraft = {
   ...pendingItem,
   id: 'customer-draft-1', event_source: 'CustomerSuccessAgent',
@@ -115,7 +118,7 @@ const customerTriageProjection = {
 };
 
 it('revalidates canonical actions when a late dashboard aggregate arrives', async () => {
-  const fetcher = vi.fn(async () => Response.json({ items: [pendingItem] }));
+  const fetcher = vi.fn(async (_url?: RequestInfo | URL, options?: RequestInit) => Response.json(options?.method === 'PUT' ? canonicalReceipt() : { items: [pendingItem] }));
   vi.stubGlobal('fetch', fetcher);
   const { rerender } = render(<UnifiedAgentFeed initialData={{ items: [] }} />);
   const approve = await screen.findByRole('button', { name: 'Approve proposal' });
@@ -197,7 +200,7 @@ it('preserves a distinct triage projection when a refresh omits that collection'
 });
 
 it.each(['triage', 'task', 'order'])('forwards the owner-edited %s draft to the durable action endpoint', async (event_source) => {
-  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ success: true })));
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(legacyReceipt('Owner-reviewed draft'))));
   render(<UnifiedAgentFeed initialData={{ items: [{ ...pendingItem, event_source }] }} />);
   const user = userEvent.setup();
   await user.click(await screen.findByTestId('edit-proposal'));
@@ -207,6 +210,8 @@ it.each(['triage', 'task', 'order'])('forwards the owner-edited %s draft to the 
   const [url, options] = vi.mocked(fetch).mock.calls[0];
   expect(url).toBe('/api/v1/triage/action');
   expect(JSON.parse(String(options?.body))).toEqual({ triage_item_id: 'decision-1', approved: true, edited_payload: 'Owner-reviewed draft' });
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded. Execution or delivery is not verified by this decision.');
+  await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument());
 });
 
 it('keeps the approval transition visible until the successful decision has been acknowledged', async () => {
@@ -216,9 +221,12 @@ it('keeps the approval transition visible until the successful decision has been
   const card = await screen.findByTestId('triage-card-decision-1');
   await userEvent.setup().click(screen.getByRole('button', { name: 'Approve proposal' }));
   expect(card).toBeVisible();
-  expect(card).toHaveClass('border-green-500', 'scale-95');
-  await act(async () => acknowledge(new Response('{}', { status: 200 })));
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Waiting for the recorded decision');
+  expect(card).not.toHaveClass('border-green-500', 'scale-95');
+  await act(async () => acknowledge(Response.json(canonicalReceipt())));
   expect(card).toBeVisible();
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded.');
+  expect(card).toHaveClass('border-green-500', 'scale-95');
   await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).toBeNull());
 });
 
@@ -274,4 +282,167 @@ it('does not claim all proposals are handled while a recorded proposal still awa
   await screen.findByTestId('triage-card-decision-1');
   expect(screen.queryByText('All caught up on automated triage proposals!')).not.toBeInTheDocument();
   expect(screen.getByText('1 recorded proposal in this feed.')).toBeVisible();
+});
+
+it.each([
+  ['canonical empty success', 'operations', {}],
+  ['canonical wrong id', 'operations', canonicalReceipt({ id: 'another-item' })],
+  ['canonical wrong tenant', 'operations', canonicalReceipt({ tenant_id: 'another-tenant' })],
+  ['canonical wrong lifecycle', 'operations', canonicalReceipt({ lifecycle_state: 'DISMISSED' })],
+  ['canonical semantic failure', 'operations', canonicalReceipt({ success: false })],
+  ['canonical unrecorded decision', 'operations', canonicalReceipt({ decision_recorded: false })],
+  ['triage bare success', 'triage', { success: true }],
+  ['task wrong tenant', 'task', { ...legacyReceipt(), item: { ...legacyReceipt().item, tenant_id: 'another-tenant' } }],
+  ['order wrong lifecycle', 'order', { ...legacyReceipt(), item: { ...legacyReceipt().item, lifecycle_state: 'DISMISSED' } }],
+])('retains the proposal after %s', async (_name, event_source, receipt) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(receipt)));
+  render(<UnifiedAgentFeed initialData={{ items: [{ ...pendingItem, event_source }] }} />);
+  await userEvent.setup().click(await screen.findByRole('button', { name: 'Approve proposal' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
+  expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Approve proposal' })).toBeEnabled();
+  expect(screen.queryByText('Approval recorded.')).not.toBeInTheDocument();
+});
+
+it.each(['operations', 'triage', 'task', 'order'])('rejects a %s acknowledgment that did not persist the edited content', async (event_source) => {
+  const receipt = event_source === 'operations'
+    ? canonicalReceipt({ proposed_action: { message: 'Old draft', draft_reply: 'Owner-reviewed draft' } })
+    : legacyReceipt('Old draft');
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(receipt)));
+  render(<UnifiedAgentFeed initialData={{ items: [{ ...pendingItem, event_source }] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
+  expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+  expect(screen.getByTestId('edit-proposal-textarea')).toHaveValue('Owner-reviewed draft');
+  expect(screen.getByTestId('save-proposal')).toBeEnabled();
+});
+
+it('records a canonical dismissal without a delivery claim', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(canonicalReceipt({ lifecycle_state: 'DISMISSED' }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await userEvent.setup().click(await screen.findByRole('button', { name: 'Reject proposal' }));
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Dismissal recorded.');
+  await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument());
+});
+
+
+it('keeps an unconfirmed edited proposal through a background refresh', async () => {
+  const fetcher = vi.fn(async (_url?: RequestInfo | URL, options?: RequestInit) => Response.json(options?.method === 'PUT'
+    ? canonicalReceipt({ proposed_action: { message: 'Old draft' } })
+    : { items: [canonicalReceipt({ proposed_action: { message: 'Old draft' } })] }));
+  vi.stubGlobal('fetch', fetcher);
+  const { rerender } = render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
+  rerender(<UnifiedAgentFeed initialData={{ items: [] }} />);
+  await waitFor(() => expect(fetcher).toHaveBeenCalledWith('/api/v1/agent-feed'));
+  expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+  expect(screen.getByTestId('edit-proposal-textarea')).toHaveValue('Owner-reviewed draft');
+});
+
+it('accepts a canonical receipt only when all returned edit fields match', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(canonicalReceipt({ proposed_action: { message: 'Owner-reviewed draft', draft_reply: 'Owner-reviewed draft' } }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(fetch).toHaveBeenCalledWith('/api/v1/agent-feed/decision-1', expect.objectContaining({ method: 'PUT', body: JSON.stringify({ state: 'APPROVED', modified_content: 'Owner-reviewed draft' }) }));
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded.');
+  expect(screen.getByTestId('triage-card-decision-1')).toHaveClass('border-green-500');
+  await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument());
+});
+
+it('queues offline decisions with pending wording and no recorded acknowledgment', async () => {
+  const queue = await import('../utils/offlineQueue');
+  const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+  vi.stubGlobal('fetch', vi.fn());
+  try {
+    render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Approve proposal' }));
+    expect(queue.enqueueAction).toHaveBeenCalledWith(expect.objectContaining({ type: 'approve_agent_feed', payload: expect.objectContaining({ id: pendingItem.id, approved: true }) }));
+    expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Decision queued offline. Approval or dismissal is not yet recorded.');
+    expect(screen.getByText('Pending Sync (1)')).toBeVisible();
+    expect(vi.mocked(fetch).mock.calls.filter(([, options]) => ['POST', 'PUT'].includes(options?.method ?? 'GET'))).toHaveLength(0);
+  } finally { online.mockRestore(); }
+});
+
+it('retires an unconfirmed card and editor when the account is invalidated', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({})));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Private owner draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
+  await act(async () => { window.dispatchEvent(new Event('omnisolo_auth_changed')); });
+  expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument();
+  expect(screen.queryByDisplayValue('Private owner draft')).not.toBeInTheDocument();
+});
+
+it('does not restore retired aggregate projections when a new account feed omits them', async () => {
+  vi.useFakeTimers();
+  try {
+    const oldAggregate = {
+      items: [pendingItem],
+      triage: [{ id: 'old-triage', tenant_id: 'tenant-1', context: 'Prior owner message', action_payload: 'Prior owner reply' }],
+      priority_tasks: [{ id: 'old-task', tenant_id: 'tenant-1', description: 'Prior owner task', status: 'PENDING' }],
+    };
+    const newItem = { ...pendingItem, id: 'new-owner-item', tenant_id: 'tenant-2', context_payload: { description: 'Current owner proposal' } };
+    const fetcher = vi.fn(async (url: RequestInfo | URL) => Response.json(String(url).includes('session-identity')
+      ? { userId: 'user-2', tenantId: 'tenant-2', expiresAt: Date.now() + 60_000 }
+      : { items: [newItem] }));
+    vi.stubGlobal('fetch', fetcher);
+    const { rerender } = render(<UnifiedAgentFeed initialData={oldAggregate} />);
+    expect(screen.getByTestId('triage-card-old-triage')).toBeVisible();
+    expect(screen.getByTestId('triage-card-old-task')).toBeVisible();
+    await act(async () => {
+      window.dispatchEvent(new Event('omnisolo_auth_changed'));
+      await readQueueOwner();
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(fetcher).toHaveBeenCalledWith('/api/v1/agent-feed');
+    expect(screen.getByTestId('triage-card-new-owner-item')).toBeVisible();
+    expect(screen.queryByTestId('triage-card-old-triage')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('triage-card-old-task')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument();
+    await act(async () => { rerender(<UnifiedAgentFeed initialData={{ ...oldAggregate }} />); });
+    expect(screen.getByTestId('triage-card-new-owner-item')).toBeVisible();
+    expect(screen.queryByText('Prior owner message')).not.toBeInTheDocument();
+    expect(screen.queryByText('Prior owner task')).not.toBeInTheDocument();
+  } finally { vi.useRealTimers(); }
+});
+
+it.each(['draft_message', 'draft_action'])('accepts an edited canonical receipt using %s', async (field) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(canonicalReceipt({ proposed_action: { [field]: 'Owner-reviewed draft' } }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded.');
+  await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument());
+});
+
+it.each(['draft_message', 'draft_action'])('rejects a stale canonical %s even when another edit field matches', async (field) => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json(canonicalReceipt({ proposed_action: { message: 'Owner-reviewed draft', [field]: 'Old draft' } }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByTestId('edit-proposal'));
+  await user.clear(screen.getByTestId('edit-proposal-textarea'));
+  await user.type(screen.getByTestId('edit-proposal-textarea'), 'Owner-reviewed draft');
+  await user.click(screen.getByTestId('save-proposal'));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
+  expect(screen.getByTestId('edit-proposal-textarea')).toHaveValue('Owner-reviewed draft');
 });

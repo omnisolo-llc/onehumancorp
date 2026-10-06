@@ -7,6 +7,16 @@ import React from "react";
 
 import type { AgentFeedItem } from '@/lib/agent-feed-types';
 
+const specializedFeatureTypes = new Set([
+  "ambassador_reply", "autonomous_booking_quote", "booking_draft",
+  "booking_reengagement", "create_product", "incident_resolution",
+  "instagram_dm", "invoice", "invoice_draft", "invoice_followup",
+  "newsletter_draft", "onboarding_welcome", "order", "proactive_ops",
+  "quote_draft", "review", "shift_reassignment", "social_post_draft",
+  "stockout_restock_and_price", "subscription_churn_risk",
+  "subscription_replenishment", "supply_order", "task", "triage",
+]);
+
 export interface AgentActionCardProps {
   approval: AgentFeedItem;
   queuedActionIds: Set<string>;
@@ -39,15 +49,14 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
     actionName?: string,
   ) => {
     try {
-      if (approved) {
-        setIsApproved(true);
-      }
       setLoadingAction(actionName || (approved ? "approve" : "dismiss"));
       const accepted = await rawHandleDecision(id, approved, editContentValue, event_source);
-      if (accepted === false) setIsApproved(false);
+      setIsApproved(approved && accepted === true);
+      return accepted === true;
     } catch (e) {
       console.error("Decision failed", e);
       setIsApproved(false);
+      return false;
     } finally {
       // If the component is still mounted, remove loading state
       setLoadingAction(null);
@@ -76,10 +85,16 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
   const parsedContext = safeJsonParse(approval.context_payload);
   const parsedDirectPayload = safeJsonParse(approval.payload);
   const actionPayload = Object.keys(parsedProposed).length > 0 ? parsedProposed : (Object.keys(parsedDirectPayload).length > 0 ? parsedDirectPayload : parsedContext);
+  const proposedText = [actionPayload.generated_response, actionPayload.draft_reply]
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0);
   const isDailyPrepChecklist = parsedProposed.action_type === "Daily Prep Checklist"
     || parsedContext.feature_type === "daily_prep_checklist"
     || actionPayload.feature_type === "daily_prep_checklist";
   const structuredContext = typeof actionPayload.context === "object" && actionPayload.context !== null ? actionPayload.context : {};
+  const hasSpecializedRenderer = isDailyPrepChecklist
+    || specializedFeatureTypes.has(actionPayload.feature_type)
+    || parsedContext.feature_type === "ambassador_reply"
+    || approval.event_source.toLowerCase() === "ambassador";
 
   if (
     actionPayload?.feature_type ===
@@ -151,7 +166,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             data-testid={`triage-dismiss-${approval.id}`}
             onClick={() => handleDecision(approval.id, false, undefined, approval.event_source)}
           >
-            Edit / Deny
+            Dismiss
           </button>
         </div>
       </div>
@@ -1559,6 +1574,16 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             )}
           </div>
         )}
+        {!hasSpecializedRenderer && proposedText && (
+          <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-[8px]">
+            <span className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+              Proposed draft
+            </span>
+            <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">
+              {proposedText}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 w-full mt-2">
@@ -2704,15 +2729,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             />
             <div className="flex gap-3 w-full">
               <button
-                onClick={() => {
-                  wrapDecision(
+                onClick={async () => {
+                  const accepted = await wrapDecision(
                     approval.id,
                     true,
                     editContent,
                     approval.event_source,
                     "approve",
                   );
-                  setEditingId(null);
+                  if (accepted) setEditingId(null);
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all shadow-md flex items-center justify-center"
                 data-testid="save-proposal"
@@ -2725,15 +2750,15 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 )}
               </button>
               <button
-                onClick={() => {
-                  wrapDecision(
+                onClick={async () => {
+                  const accepted = await wrapDecision(
                     approval.id,
                     true,
                     editContent,
                     approval.event_source,
                     "approve",
                   );
-                  setEditingId(null);
+                  if (accepted) setEditingId(null);
                 }}
                 className="flex-1 min-h-[44px] min-w-[44px] max-w-full overflow-hidden px-4 rounded-[8px] bg-green-500 text-white font-medium hover:bg-green-600 transition-all shadow-md flex items-center justify-center"
                 data-testid="feed-approve-btn"
@@ -2782,10 +2807,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 onClick={() => {
                   setEditingId(approval.id);
                   const textToEdit =
-                    actionPayload
-                      ?.generated_response ||
-                    actionPayload
-                      ?.draft_reply ||
+                    proposedText ||
                     approval.context_payload?.description ||
                     approval.proposed_action?.message ||
                     approval.proposed_action?.action_type ||
