@@ -203,7 +203,7 @@ pub async fn get_daily_work_handler(
                 tokio::spawn(async move {
                     let mut tx = pool_env.begin().await?;
                     ::server_common::auth_utils::set_org_context(&mut *tx, &t_env).await?;
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload::text AS payload, routing_history::text AS routing_history FROM task_envelopes WHERE tenant_id = $1 AND status != 'COMPLETED' ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&mut *tx).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = $1 AND status NOT IN ('COMPLETED', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload::text AS payload, routing_history::text AS routing_history FROM task_envelopes WHERE tenant_id = $1 AND status NOT IN ('COMPLETED', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&mut *tx).await?;
                     tx.commit().await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|e| {
@@ -354,7 +354,7 @@ pub async fn get_daily_work_handler(
                     Ok::<Vec<serde_json::Value>, sqlx::Error>(items)
                 }),
                 tokio::spawn(async move {
-                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status != 'COMPLETED' ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&pool_env).await?;
+                    let rows = sqlx::query(if mobile_optimized { "SELECT id, status FROM task_envelopes WHERE tenant_id = ? AND status NOT IN ('COMPLETED', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC" } else { "SELECT id, current_department, status, payload, routing_history FROM task_envelopes WHERE tenant_id = ? AND status NOT IN ('COMPLETED', 'APPROVED', 'DISMISSED') ORDER BY created_at DESC" }).bind(&t_env).fetch_all(&pool_env).await?;
                     use sqlx::Row;
                     let items: Vec<serde_json::Value> = rows.into_iter().map(|e| {
                         let mut map = serde_json::Map::new();

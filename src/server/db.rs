@@ -2255,6 +2255,17 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
+                    CREATE TABLE IF NOT EXISTS legacy_triage_decisions (
+                        tenant_id TEXT NOT NULL,
+                        action_id TEXT NOT NULL,
+                        approved BOOLEAN NOT NULL,
+                        edited_payload TEXT,
+                        receipt TEXT NOT NULL,
+                        actor_id TEXT NOT NULL,
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY (tenant_id, action_id)
+                    );
+
                     CREATE TABLE IF NOT EXISTS daily_work_items (
                         id TEXT PRIMARY KEY,
                         tenant_id TEXT NOT NULL,
