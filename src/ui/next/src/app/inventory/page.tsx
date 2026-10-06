@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
+import { SupplyRecords } from './SupplyRecords';
 import { currentVerifiedQueueLease, QUEUE_IDENTITY_EPOCH_KEY, readQueueOwner, sameOwner, type QueueOwner } from '@/lib/sync/queueIdentity';
 
 type Product = { id: string; name: string; description: string | null; price_cents: number | null; currency: string | null; stock: number; inventory_version: string };
@@ -188,5 +189,6 @@ export default function InventoryDashboard() {
         </div>)}
       </div>}
     </section>
+    <SupplyRecords />
   </AppShell>;
 }

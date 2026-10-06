@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import InventoryDashboard from './page';
 
+// Supply has separate integration tests; keep these stock-receipt safety cases isolated.
+vi.mock('./SupplyRecords', () => ({ SupplyRecords: () => null }));
 vi.mock('../components/AppShell', () => ({ AppShell: ({ children }: { children: React.ReactNode }) => <main>{children}</main> }));
 const version = 'a'.repeat(64);
 const product = { id: 'owned-product', name: 'Owner-made item', description: null, price_cents: 1250, currency: 'USD', stock: 3, inventory_version: version };
