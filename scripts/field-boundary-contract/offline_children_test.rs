@@ -226,14 +226,33 @@ async fn child_routes_inventory_replay_and_foreign_row_boundaries_survive_owner_
         .execute(&f.admin)
         .await
         .unwrap();
-    let mut sale = quote("stock");
-    sale["mutation_type"] = json!("inventory_sale");
-    sale["product_id"] = json!("p");
-    sale["quantity_deducted"] = json!(3);
+    let mut sale = json!({
+        "transaction_id": "stock",
+        "client_mutation_id": "stock",
+        "product_id": "p",
+        "quantity_deducted": 3,
+        "mutation_type": "inventory_sale",
+        "payload": null
+    });
+    // Quote prose is not inventory evidence. Reject that malformed identity
+    // without reserving its receipt, then accept the explicit inventory request.
+    let mut malformed = sale.clone();
+    malformed["payload"] = quote("stock")["payload"].clone();
+    let rejected = send(&f, OFFLINE, &f.token, malformed).await;
+    assert_eq!(rejected.0, StatusCode::OK, "{rejected:?}");
+    assert_eq!(rejected.1["outcomes"][0]["status"], "blocked");
+    assert_eq!(
+        rejected.1["outcomes"][0]["reason"],
+        "explicit_consistent_operation_required"
+    );
+    assert_eq!(counts(&f).await, (0, 0, 0, 0));
     for _ in 0..2 {
+        let accepted = send(&f, OFFLINE, &f.token, sale.clone()).await;
+        assert_eq!(accepted.0, StatusCode::OK, "{accepted:?}");
         assert_eq!(
-            send(&f, OFFLINE, &f.token, sale.clone()).await.1["outcomes"][0]["status"],
-            "acknowledged"
+            accepted.1["outcomes"][0]["status"],
+            "acknowledged",
+            "{accepted:?}"
         );
     }
     assert_eq!(

@@ -109,3 +109,14 @@ describe('DashboardViralInviteWidget', () => {
     expect(screen.getByRole('button', { name: 'Get My Invite Link' })).toBeDisabled(); expect(posts()).toHaveLength(0);
   });
 });
+
+it('preserves WhatsApp sharing only for a verified invitation receipt', async () => {
+  render(<DashboardViralInviteWidget />);
+  expect(screen.queryByRole('link', { name: 'Share on WhatsApp' })).toBeNull();
+  await create();
+  const share = await screen.findByRole('link', { name: 'Share on WhatsApp' });
+  const url = new URL(share.getAttribute('href')!);
+  expect(url.origin + url.pathname).toBe('https://wa.me/');
+  expect(url.searchParams.get('text')).toBe(`Join me on OmniSolo OneHumanCorp: ${receipt}`);
+  expect(share).toHaveAttribute('rel', 'noopener noreferrer');
+});

@@ -7,10 +7,11 @@ import { e2eDbTransaction } from '../db_utils';
 import { authenticateRequest } from '../authenticate';
 import { createAuditNavigation, type AuditNavigationReceipt } from './ui_audit_navigation';
 import { observeAuditRequests } from './audit_request_lifecycle';
+import { waitForInventoryAuditReady } from './inventory_audit';
 import { navigateQuoteAudit, quoteAuditRoutes } from './quote_audit_fixture';
 
 export const isolatedClickAuditRoutes = new Set([
-  ...quoteAuditRoutes,
+  ...quoteAuditRoutes, '/inventory',
   '/', '/dashboard', '/unified-feed', '/dashboard/unified-feed', '/feed', '/action-center', '/builder', '/website-builder', '/onboarding', '/share-card',
 ]);
 
@@ -71,6 +72,7 @@ export async function prepareClickAuditState(page: Page, route: string, state: s
 }
 
 const initialRouteReads: Record<string, string[]> = {
+  '/inventory': ['/api/v1/ui/inventory', '/api/v1/ui/supply'],
   '/': ['/api/v1/ui/dashboard/unified-feed'],
   '/dashboard': ['/api/v1/ui/dashboard/unified-feed'],
   '/unified-feed': ['/api/v1/agent-feed'],
@@ -153,7 +155,9 @@ export async function createDashboardAuditCase(browser: Browser, baseURL: string
         if (response.status() !== 200) throw new Error(`${route} baseline read failed: HTTP ${response.status()}`);
         await response.finished();
       }
-      if (route === '/' || route === '/dashboard') {
+      if (route === '/inventory') {
+        await waitForInventoryAuditReady(page);
+      } else if (route === '/' || route === '/dashboard') {
         await page.getByText('Loading business metrics…', { exact: true }).waitFor({ state: 'hidden' });
         await page.getByText('Loading Agent Proposals...', { exact: true }).waitFor({ state: 'hidden' });
       } else if (route === '/unified-feed' || route === '/dashboard/unified-feed') {

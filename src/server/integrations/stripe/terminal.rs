@@ -1,5 +1,18 @@
 use super::client::StripeClient;
 
+#[derive(Clone, Debug, serde::Deserialize, serde::Serialize)]
+pub struct TerminalIntentReceipt {
+    pub id: String,
+    pub amount: i64,
+    pub amount_received: i64,
+    pub amount_capturable: i64,
+    pub currency: String,
+    pub status: String,
+    pub metadata: std::collections::HashMap<String, String>,
+    #[serde(default, skip_serializing)]
+    pub client_secret: Option<String>,
+}
+
 /// Authenticated tenant, amount and replay identity for one terminal operation.
 #[derive(Clone, Copy)]
 pub struct TerminalPaymentRequest<'a> {
@@ -77,10 +90,10 @@ impl StripeClient {
             .ok_or_else(|| "Missing secret in Stripe Terminal token response".to_string())
     }
 
-    pub async fn create_terminal_payment_intent(
+    pub async fn create_terminal_payment_intent_receipt(
         &self,
         request: TerminalPaymentRequest<'_>,
-    ) -> Result<(String, String), String> {
+    ) -> Result<TerminalIntentReceipt, String> {
         let TerminalPaymentRequest {
             tenant_id,
             amount_cents,
@@ -138,50 +151,104 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        let json: serde_json::Value = res
-            .json()
+        res.json::<TerminalIntentReceipt>()
             .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        let secret = json["client_secret"]
-            .as_str()
-            .ok_or_else(|| "Missing client_secret in response".to_string())?;
-        let payment_intent_id = json["id"]
-            .as_str()
-            .ok_or_else(|| "Missing id in response".to_string())?;
-
-        Ok((payment_intent_id.to_string(), secret.to_string()))
+            .map_err(|_| "Invalid Stripe terminal intent receipt".to_string())
     }
 
-    pub async fn capture_terminal_payment_intent(
+    pub async fn create_terminal_payment_intent(
         &self,
-        payment_intent_id: &str,
-    ) -> Result<String, String> {
-        let api_key = self.require_api_key()?;
-        let res = reqwest::Client::new()
-            .post(format!(
-                "{}/v1/payment_intents/{}/capture",
-                Self::api_base(),
-                payment_intent_id
-            ))
-            .basic_auth(api_key, Some(""))
+        request: TerminalPaymentRequest<'_>,
+    ) -> Result<(String, String), String> {
+        let receipt = self.create_terminal_payment_intent_receipt(request).await?;
+        let secret = receipt.client_secret.ok_or("Missing client secret")?;
+        Ok((receipt.id, secret))
+    }
+
+    async fn terminal_intent_receipt_request(
+        &self,
+        id: &str,
+        capture_amount: Option<i64>,
+    ) -> Result<TerminalIntentReceipt, String> {
+        if !id.starts_with("pi_")
+            || id.len() <= 3
+            || id.len() > 128
+            || !id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        {
+            return Err("Invalid payment intent ID".into());
+        }
+        if capture_amount.is_some_and(|amount| !(1..=99_999_999).contains(&amount)) {
+            return Err("A positive bounded capture amount is required".into());
+        }
+        let key = self.require_api_key()?;
+        let http = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(20))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|_| "Provider transport unavailable")?;
+        let url = format!(
+            "{}/v1/payment_intents/{}{}",
+            Self::api_base(),
+            id,
+            if capture_amount.is_some() {
+                "/capture"
+            } else {
+                ""
+            }
+        );
+        let request = if let Some(amount) = capture_amount {
+            http.post(url)
+                .header(
+                    "Idempotency-Key",
+                    format!("ohc_terminal_capture:{id}:{amount}"),
+                )
+                .form(&[("amount_to_capture", amount.to_string())])
+        } else {
+            http.get(url)
+        };
+        let response = request
+            .basic_auth(key, Some(""))
             .send()
             .await
-            .map_err(|e| format!("Stripe API capture request failed: {}", e))?;
-
-        if !res.status().is_success() {
-            let status = res.status();
-            let text = res.text().await.unwrap_or_default();
-            return Err(format!("Stripe API error ({}): {}", status, text));
+            .map_err(|_| "Terminal provider outcome is unconfirmed")?;
+        if !response.status().is_success() {
+            return Err("Terminal provider did not confirm the requested operation".into());
         }
-
-        let json: serde_json::Value = res
+        response
             .json()
             .await
-            .map_err(|e| format!("Failed to parse response: {}", e))?;
-        json["status"]
-            .as_str()
-            .map(|s| s.to_string())
-            .ok_or_else(|| "Missing status in capture response".to_string())
+            .map_err(|_| "Invalid terminal provider receipt".into())
+    }
+
+    pub async fn retrieve_terminal_payment_intent(
+        &self,
+        id: &str,
+    ) -> Result<TerminalIntentReceipt, String> {
+        self.terminal_intent_receipt_request(id, None).await
+    }
+
+    pub async fn capture_terminal_payment_intent_receipt(
+        &self,
+        id: &str,
+        amount_cents: i64,
+    ) -> Result<TerminalIntentReceipt, String> {
+        self.terminal_intent_receipt_request(id, Some(amount_cents))
+            .await
+    }
+
+    /// Compatibility entry point: no caller may capture by ID without a saved
+    /// authorized amount. Legacy offline callers require reconciliation first.
+    pub async fn capture_terminal_payment_intent(
+        &self,
+        _payment_intent_id: &str,
+    ) -> Result<String, String> {
+        self.require_api_key()?;
+        Err(
+            "A persisted authorized capture amount is required; reconcile the original operation."
+                .into(),
+        )
     }
 }
 

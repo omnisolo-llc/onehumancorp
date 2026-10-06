@@ -3789,7 +3789,7 @@
           committedPreparation = {...receipt,status:'launched'};
         }
         const completedKey=legacyKey('completion'); if(completedKey)localStorage.setItem(completedKey,'true');
-        window.location.href = 'dashboard.html'; return true;
+        window.location.href = '/dashboard'; return true;
       }
       // Read-only recovery uses a protected receipt, never mutable draft status.
       async function restoreProtectedPreparation() {

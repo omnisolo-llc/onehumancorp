@@ -48,6 +48,7 @@ pub struct StripeEventData {
 pub trait PaymentFailureNotifier: Send + Sync {
     async fn send_payment_failure_sms(
         &self,
+        tenant_id: &str,
         subscriber_id: &str,
         message: &str,
     ) -> Result<(), String>;
@@ -62,17 +63,27 @@ pub trait PaymentFailureMessageGenerator: Send + Sync {
     ) -> String;
 }
 
-pub struct CriticalSmsPaymentFailureNotifier;
+pub struct CriticalSmsPaymentFailureNotifier {
+    pub event_id: String,
+}
 pub struct LlmPaymentFailureMessageGenerator;
 
 #[async_trait::async_trait]
 impl PaymentFailureNotifier for CriticalSmsPaymentFailureNotifier {
     async fn send_payment_failure_sms(
         &self,
+        tenant_id: &str,
         _subscriber_id: &str,
         message: &str,
     ) -> Result<(), String> {
-        crate::dispatch_critical_sms("failed_payment", message).await
+        crate::api::sms_settings::dispatch_critical_sms(
+            tenant_id,
+            &self.event_id,
+            "failed_payment",
+            message,
+        )
+        .await
+        .map(|_| ())
     }
 }
 
@@ -111,6 +122,7 @@ impl PaymentFailureMessageGenerator for LlmPaymentFailureMessageGenerator {
 pub async fn send_payment_failure_dunning<N, G>(
     notifier: &N,
     generator: &G,
+    tenant_id: &str,
     subscriber_id: &str,
     business_name: &str,
 ) -> Result<(), String>
@@ -122,7 +134,7 @@ where
         .generate_payment_failure_message(subscriber_id, business_name)
         .await;
     notifier
-        .send_payment_failure_sms(subscriber_id, &message)
+        .send_payment_failure_sms(tenant_id, subscriber_id, &message)
         .await
 }
 
@@ -206,7 +218,7 @@ pub fn payment_failure_lookup(object: &Value) -> PaymentFailureLookup {
 async fn find_subscriber_for_payment_failure(
     webhook_state: &WebhookState,
     lookup: &PaymentFailureLookup,
-) -> Result<Option<String>, String> {
+) -> Result<Option<(String, String)>, String> {
     let subscription_id = lookup.stripe_subscription_id.as_deref().unwrap_or("");
     let customer_id = lookup.customer_id.as_deref().unwrap_or("");
     if subscription_id.is_empty() && customer_id.is_empty() {
@@ -215,34 +227,42 @@ async fn find_subscriber_for_payment_failure(
 
     match &webhook_state.db.store {
         DbStore::Sqlite(pool) => {
-            let row: Option<(String,)> = sqlx::query_as(
-                "SELECT id FROM subscribers \
-                 WHERE (?1 != '' AND stripe_subscription_id = ?1) \
-                    OR (?2 != '' AND customer_id = ?2) \
-                 LIMIT 1",
+            let rows: Vec<(String, String)> = sqlx::query_as(
+                "SELECT id, tenant_id FROM subscribers \
+                 WHERE (?1 != '' AND stripe_subscription_id = ?1 AND (?2 = '' OR customer_id = ?2)) \
+                    OR (?1 = '' AND ?2 != '' AND customer_id = ?2) \
+                 LIMIT 2",
             )
             .bind(subscription_id)
             .bind(customer_id)
-            .fetch_optional(pool)
+            .fetch_all(pool)
             .await
             .map_err(|e| format!("Failed to lookup failed-payment subscriber: {e}"))?;
-            Ok(row.map(|(id,)| id))
+            if rows.len() > 1 {
+                Err("Failed-payment subscriber identity is ambiguous".into())
+            } else {
+                Ok(rows.into_iter().next())
+            }
         }
         DbStore::Postgres => {
             let mut transaction = begin_webhook_system_transaction(&webhook_state.db.pool).await?;
-            let row: Option<(String,)> = sqlx::query_as(
-                "SELECT id FROM subscribers \
-                 WHERE ($1 != '' AND stripe_subscription_id = $1) \
-                    OR ($2 != '' AND customer_id = $2) \
-                 LIMIT 1",
+            let rows: Vec<(String, String)> = sqlx::query_as(
+                "SELECT id, tenant_id FROM subscribers \
+                 WHERE ($1 != '' AND stripe_subscription_id = $1 AND ($2 = '' OR customer_id = $2)) \
+                    OR ($1 = '' AND $2 != '' AND customer_id = $2) \
+                 LIMIT 2",
             )
             .bind(subscription_id)
             .bind(customer_id)
-            .fetch_optional(&mut *transaction)
+            .fetch_all(&mut *transaction)
             .await
             .map_err(|e| format!("Failed to lookup failed-payment subscriber: {e}"))?;
             transaction.commit().await.map_err(|e| e.to_string())?;
-            Ok(row.map(|(id,)| id))
+            if rows.len() > 1 {
+                Err("Failed-payment subscriber identity is ambiguous".into())
+            } else {
+                Ok(rows.into_iter().next())
+            }
         }
     }
 }
@@ -250,11 +270,13 @@ async fn find_subscriber_for_payment_failure(
 async fn mark_subscriber_past_due(
     webhook_state: &WebhookState,
     subscriber_id: &str,
+    tenant_id: &str,
 ) -> Result<(), String> {
     match &webhook_state.db.store {
         DbStore::Sqlite(pool) => {
-            sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = ?")
+            sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = ? AND tenant_id = ?")
                 .bind(subscriber_id)
+                .bind(tenant_id)
                 .execute(pool)
                 .await
                 .map(|_| ())
@@ -262,11 +284,14 @@ async fn mark_subscriber_past_due(
         }
         DbStore::Postgres => {
             let mut transaction = begin_webhook_system_transaction(&webhook_state.db.pool).await?;
-            sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1")
-                .bind(subscriber_id)
-                .execute(&mut *transaction)
-                .await
-                .map_err(|e| e.to_string())?;
+            sqlx::query(
+                "UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1 AND tenant_id = $2",
+            )
+            .bind(subscriber_id)
+            .bind(tenant_id)
+            .execute(&mut *transaction)
+            .await
+            .map_err(|e| e.to_string())?;
             transaction.commit().await.map_err(|e| e.to_string())
         }
     }
@@ -284,18 +309,29 @@ where
     G: PaymentFailureMessageGenerator,
 {
     let lookup = payment_failure_lookup(object);
-    let Some(subscriber_id) = find_subscriber_for_payment_failure(webhook_state, &lookup).await?
+    let Some((subscriber_id, tenant_id)) =
+        find_subscriber_for_payment_failure(webhook_state, &lookup).await?
     else {
         return Ok(None);
     };
 
-    mark_subscriber_past_due(webhook_state, &subscriber_id).await?;
+    if tenant_id.trim().is_empty() {
+        return Err("Failed-payment subscriber has no authoritative tenant".into());
+    }
+    mark_subscriber_past_due(webhook_state, &subscriber_id, &tenant_id).await?;
     let business_name = object
         .get("metadata")
         .and_then(|metadata| metadata.get("business_name"))
         .and_then(|value| value.as_str())
         .unwrap_or("Your business");
-    send_payment_failure_dunning(notifier, generator, &subscriber_id, business_name).await?;
+    send_payment_failure_dunning(
+        notifier,
+        generator,
+        &tenant_id,
+        &subscriber_id,
+        business_name,
+    )
+    .await?;
 
     Ok(Some(subscriber_id))
 }
@@ -1094,11 +1130,19 @@ pub async fn stripe_webhook_handler(
             StatusCode::OK.into_response()
         }
         "invoice.payment_failed" => {
+            if payload.id.trim().is_empty()
+                || payload.id.len() > 240
+                || payload.id.chars().any(char::is_control)
+            {
+                return StatusCode::BAD_REQUEST.into_response();
+            }
             let obj = &payload.data.object;
             match process_invoice_payment_failed(
                 &webhook_state,
                 obj,
-                &CriticalSmsPaymentFailureNotifier,
+                &CriticalSmsPaymentFailureNotifier {
+                    event_id: format!("stripe:{}", payload.id),
+                },
                 &LlmPaymentFailureMessageGenerator,
             )
             .await

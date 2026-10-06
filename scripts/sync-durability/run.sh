@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 : "${OHC_SYNC_TEST_DATABASE_URL:?Supply an isolated PostgreSQL test database}"
 export OMNISOLO_DATABASE_URL="$OHC_SYNC_TEST_DATABASE_URL"
+export OHC_INVENTORY_TEST_DATABASE_URL="$OHC_SYNC_TEST_DATABASE_URL"
 export OMNISOLO_STANDALONE_MODE=false
 export JWT_SECRET=local-sync-regression-secret
 export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}" CARGO_INCREMENTAL=0 CARGO_PROFILE_DEV_DEBUG=0

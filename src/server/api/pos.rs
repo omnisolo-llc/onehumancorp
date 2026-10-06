@@ -161,193 +161,74 @@ pub struct InventoryAdjustment {
     pub location_id: Option<String>,
 }
 
+#[path = "pos_inventory.rs"]
+mod inventory;
+
 pub async fn post_inventory_handler(
-    axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
+    State(_hub): State<Arc<Hub>>,
     claims: Option<Extension<::server_common::Claims>>,
-    axum::Json(payloads): axum::Json<Vec<serde_json::Value>>,
-) -> impl axum::response::IntoResponse {
-    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+    Json(payloads): Json<Vec<serde_json::Value>>,
+) -> axum::response::Response {
+    let Some(tenant) = pos_tenant(claims.as_ref()) else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
-    if payloads.len() > 100 {
+    if payloads.is_empty() || payloads.len() > 100 {
         return axum::http::StatusCode::BAD_REQUEST.into_response();
     }
-
-    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
-        for payload in payloads {
-            let Some(value) = payload.get("payload") else {
-                continue;
-            };
-            let Some(item_id) = value.get("item_id").and_then(|value| value.as_str()) else {
-                continue;
-            };
-            let quantity_change = value
-                .get("quantity_change")
-                .and_then(|value| value.as_i64())
-                .unwrap_or(0);
-            if let Err(error) = sqlx::query(
-                "UPDATE products
-                 SET inventory_count = GREATEST(0, COALESCE(inventory_count, 0) + ?)
-                 WHERE id = ? AND tenant_id = ?",
-            )
-            .bind(quantity_change)
-            .bind(item_id)
-            .bind(&tenant_id)
-            .execute(&pool)
-            .await
-            {
-                tracing::error!("Failed to update MySQL inventory: {error}");
-                return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
-            }
-        }
-        return Json(json!({"status": "ok"})).into_response();
-    }
-
-    let pool = crate::db::get_pool();
-    for payload in payloads {
-        if let Some(p) = payload.get("payload") {
-            let item_id = p.get("item_id").and_then(|v| v.as_str()).unwrap_or("");
-            let quantity_change = p
-                .get("quantity_change")
-                .and_then(|v| v.as_i64())
-                .unwrap_or(0) as i32;
-            let location_id = p
-                .get("location_id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("default_loc");
-            let is_sold_out = p
-                .get("is_sold_out")
-                .and_then(|v| v.as_bool())
-                .unwrap_or(false);
-            let client_mutation_id = payload.get("id").and_then(|v| v.as_str()).unwrap_or("");
-
-            if !item_id.is_empty()
-                && let Ok(mut tx) = pool.begin().await
-            {
-                if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                    .await
-                    .is_err()
+    let requests: Vec<inventory::Mutation> = match payloads.into_iter().map(serde_json::from_value).collect::<Result<Vec<_>, _>>() {
+        Ok(requests) if requests.iter().all(inventory::Mutation::valid) => requests,
+        _ => return (axum::http::StatusCode::BAD_REQUEST, Json(json!({"success":false,"error":"A valid observed inventory version and stable adjustment identity are required"}))).into_response(),
+    };
+    let mut outcomes = Vec::with_capacity(requests.len());
+    let mut success = true;
+    for request in requests {
+        let result = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            inventory::apply_mysql(&pool, &tenant, &request).await
+        } else {
+            inventory::apply_postgres(&crate::db::get_pool(), &tenant, &request).await
+        };
+        match result {
+            Ok(receipt) => {
+                // Invalidate only after the business mutation and receipt commit.
+                if let Some(client) = crate::get_redis_client()
+                    && let Ok(mut connection) = client.get_multiplexed_async_connection().await
                 {
-                    continue;
+                    let payload = json!({"event":"inventory.updated","tags":[format!("tenant-id:{}", tenant),format!("entity:product:{}", receipt.item_id)]}).to_string();
+                    let _: Result<(), _> = redis::cmd("PUBLISH")
+                        .arg("cache_invalidation_events")
+                        .arg(payload)
+                        .query_async(&mut connection)
+                        .await;
                 }
-                if !client_mutation_id.is_empty() {
-                    let exists: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM applied_client_mutations WHERE client_mutation_id = $1 AND tenant_id = $2")
-                            .bind(client_mutation_id)
-                            .bind(&tenant_id)
-                            .fetch_one(&mut *tx)
-                            .await
-                            .unwrap_or((0,));
-
-                    if exists.0 > 0 {
-                        let _ = tx.rollback().await;
-                        continue;
-                    }
-
-                    let _ = sqlx::query("INSERT INTO applied_client_mutations (client_mutation_id, tenant_id) VALUES ($1, $2)")
-                            .bind(client_mutation_id)
-                            .bind(&tenant_id)
-                            .execute(&mut *tx)
-                            .await;
-                }
-
-                // Ensure product exists in legacy products table first so foreign keys and legacy updates succeed
-                let _ = sqlx::query("INSERT INTO products (id, tenant_id, title, description, price_cents, inventory_count, available_quantity, is_sold_out) VALUES ($1, $2, 'Chocolate Cake', 'Delicious chocolate cake with fudge frosting.', 2500, 12, 12, $3) ON CONFLICT (id) DO NOTHING")
-                    .bind(item_id)
-                    .bind(&tenant_id)
-                    .bind(is_sold_out)
-                    .execute(&mut *tx)
+                let cache = crate::builder::edge::get_edge_cache();
+                cache
+                    .invalidate_by_tag(&format!("entity:product:{}", receipt.item_id))
                     .await;
-
-                // Sync to legacy products for compatibility
-                let update_legacy = sqlx::query("UPDATE products SET inventory_count = GREATEST(0, inventory_count + $1), available_quantity = GREATEST(0, available_quantity + $1), is_sold_out = $2 WHERE id = $3 AND tenant_id = $4")
-                        .bind(quantity_change)
-                        .bind(is_sold_out)
-                        .bind(item_id)
-                        .bind(&tenant_id)
-                        .execute(&mut *tx)
-                        .await;
-
-                // Update centralized inventory level
-                let update_res = sqlx::query("UPDATE inventory_levels SET available_count = GREATEST(0, available_count + $1), updated_at = CURRENT_TIMESTAMP WHERE variant_id = $2 AND tenant_id = $3 RETURNING id")
-                        .bind(quantity_change)
-                        .bind(item_id)
-                        .bind(&tenant_id)
-                        .fetch_optional(&mut *tx)
-                        .await;
-
-                let mut inv_lvl_id: String = "".to_string();
-                if let Ok(Some(row)) = &update_res {
-                    inv_lvl_id = sqlx::Row::get(row, "id");
-                } else if let Ok(None) = &update_res {
-                    // Insert if not exists
-                    inv_lvl_id = uuid::Uuid::new_v4().to_string();
-                    let _ = sqlx::query("INSERT INTO inventory_levels (id, tenant_id, variant_id, location_id, available_count, committed_count) VALUES ($1, $2, $3, $4, GREATEST(0, 12 + $5), 0)")
-                            .bind(&inv_lvl_id)
-                            .bind(&tenant_id)
-                            .bind(item_id)
-                            .bind(location_id)
-                            .bind(quantity_change)
-                            .execute(&mut *tx)
-                            .await;
-                }
-
-                if !inv_lvl_id.is_empty() && quantity_change != 0 {
-                    let t_id = uuid::Uuid::new_v4().to_string();
-                    let _ = sqlx::query("INSERT INTO inventory_transactions (id, tenant_id, inventory_level_id, type, quantity_change) VALUES ($1, $2, $3, 'adjustment', $4)")
-                             .bind(&t_id)
-                             .bind(&tenant_id)
-                             .bind(&inv_lvl_id)
-                             .bind(quantity_change)
-                             .execute(&mut *tx)
-                             .await;
-                }
-
-                if update_legacy.is_ok() {
-                    let _ = tx.commit().await;
-
-                    if let Some(client) = crate::get_redis_client()
-                        && let Ok(mut conn) = client.get_multiplexed_async_connection().await
-                    {
-                        let invalidation_topic = "cache_invalidation_events";
-                        let invalidation_payload = serde_json::json!({
-                            "event": "inventory.updated",
-                            "tags": [
-                                format!("tenant-id:{}", tenant_id),
-                                format!("entity:product:{}", item_id)
-                            ]
-                        })
-                        .to_string();
-                        let _: Result<(), _> = redis::cmd("PUBLISH")
-                            .arg(invalidation_topic)
-                            .arg(invalidation_payload)
-                            .query_async(&mut conn)
-                            .await;
+                cache
+                    .invalidate_by_tag(&format!("tenant-id:{}", tenant))
+                    .await;
+                let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
+                cdn.invalidate_by_tag(&format!("entity:product:{}", receipt.item_id))
+                    .await;
+                cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant))
+                    .await;
+                outcomes.push(json!(receipt));
+            }
+            Err(error) => {
+                success = false;
+                let (status, reason) = match error {
+                    inventory::Error::Blocked(reason) => ("blocked", reason),
+                    inventory::Error::Unconfirmed(reason) => ("unconfirmed", reason),
+                    inventory::Error::Database(error) => {
+                        tracing::warn!(%error,"Inventory adjustment is unconfirmed; replay its identity to reconcile");
+                        ("unconfirmed", "storage_unavailable_or_commit_unknown")
                     }
-
-                    let edge_cache = crate::builder::edge::get_edge_cache();
-                    edge_cache
-                        .invalidate_by_tag(&format!("entity:product:{}", item_id))
-                        .await;
-                    edge_cache
-                        .invalidate_by_tag(&format!("tenant-id:{}", tenant_id))
-                        .await;
-
-                    let item_id_owned = item_id.to_string();
-                    let tenant_id_owned = tenant_id.to_string();
-                    tokio::spawn(async move {
-                        let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                        cdn.invalidate_by_tag(&format!("entity:product:{}", item_id_owned))
-                            .await;
-                        cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant_id_owned))
-                            .await;
-                    });
-                } else {
-                    let _ = tx.rollback().await;
-                }
+                };
+                outcomes.push(json!({"id":request.id,"item_id":request.payload.item_id,"quantity_change":request.payload.quantity_change,"previous_version":request.payload.expected_version,"status":status,"reason":reason}));
             }
         }
     }
-    Json(json!({"status": "ok"})).into_response()
+    Json(json!({"status":if success {"ok"} else {"incomplete"},"success":success,"outcomes":outcomes})).into_response()
 }
 
 async fn get_orders_handler(
@@ -391,86 +272,59 @@ async fn get_orders_handler(
     Json(result).into_response()
 }
 
+#[derive(serde::Deserialize)]
+pub struct InventoryQuery {
+    pub adjustment_id: Option<String>,
+}
+
 pub async fn get_inventory_handler(
     State(_hub): State<Arc<Hub>>,
     claims: Option<Extension<::server_common::Claims>>,
-) -> impl axum::response::IntoResponse {
-    let Some(tenant_id) = pos_tenant(claims.as_ref()) else {
+    axum::extract::Query(query): axum::extract::Query<InventoryQuery>,
+) -> axum::response::Response {
+    let Some(tenant) = pos_tenant(claims.as_ref()) else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
-    if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
-        let rows = match sqlx::query(
-            "SELECT id, title, description, price_cents, inventory_count
-             FROM products WHERE tenant_id = ? ORDER BY id ASC",
-        )
-        .bind(&tenant_id)
-        .fetch_all(&pool)
-        .await
-        {
-            Ok(rows) => rows,
+    if let Some(id) = query.adjustment_id {
+        let receipt = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+            inventory::receipt_mysql(&pool, &tenant, &id).await
+        } else {
+            inventory::receipt_postgres(&crate::db::get_pool(), &tenant, &id).await
+        };
+        let mut response = match receipt {
+            Ok(Some(receipt)) => Json(json!({"success":true,"outcomes":[receipt]})).into_response(),
+            Ok(None) => (
+                axum::http::StatusCode::NOT_FOUND,
+                Json(json!({"success":false,"receipt_status":"not_found","id":id})),
+            )
+                .into_response(),
             Err(error) => {
-                tracing::error!("Failed to read MySQL inventory: {error}");
-                return axum::http::StatusCode::SERVICE_UNAVAILABLE.into_response();
+                tracing::warn!(?error, "Inventory receipt lookup is unconfirmed");
+                (axum::http::StatusCode::SERVICE_UNAVAILABLE, Json(json!({"success":false,"error":"The saved adjustment could not be checked"}))).into_response()
             }
         };
-        let inventory: Vec<Value> = rows
-            .into_iter()
-            .map(|row| {
-                json!({
-                    "id": row.get::<String, _>("id"),
-                    "name": row.get::<String, _>("title"),
-                    "description": row.try_get::<Option<String>, _>("description").unwrap_or(None),
-                    "price_cents": row.try_get::<Option<i64>, _>("price_cents").unwrap_or(None).unwrap_or(0),
-                    "currency": "USD",
-                    "stock": row.try_get::<Option<i32>, _>("inventory_count").unwrap_or(None).unwrap_or(0),
-                    "is_subscribable": false,
-                    "subscription_discount_percent": 0,
-                    "subscription_frequency": "",
-                })
-            })
-            .collect();
-        return Json(json!({ "inventory": inventory })).into_response();
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("no-store"),
+        );
+        return response;
     }
-    let pool = crate::db::get_pool();
-    let mut tx = match pool.begin().await {
-        Ok(tx) => tx,
-        Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+    let result = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
+        inventory::read_mysql(&pool, &tenant).await
+    } else {
+        inventory::read_postgres(&crate::db::get_pool(), &tenant).await
     };
-    if ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-        .await
-        .is_err()
-    {
-        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    match result {
+        Ok(inventory) => Json(json!({"inventory":inventory})).into_response(),
+        Err(error) => {
+            tracing::warn!(?error, "Inventory snapshot unavailable");
+            (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"success":false,"error":"Inventory is unavailable"})),
+            )
+                .into_response()
+        }
     }
-    let rows = sqlx::query("SELECT id, title, description, COALESCE(price_cents, 0) AS price_cents, COALESCE(currency, 'USD') AS currency, COALESCE(inventory_count, 0) AS inventory_count, COALESCE(is_subscribable, FALSE) AS is_subscribable, COALESCE(subscription_discount_percent, 0) AS subscription_discount_percent, subscription_frequency, is_sold_out, updated_at FROM products WHERE tenant_id = $1")
-        .bind(&tenant_id)
-        .fetch_all(&mut *tx)
-        .await;
-    let rows = match rows {
-        Ok(rows) => rows,
-        Err(_) => return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-    };
-    if tx.commit().await.is_err() {
-        return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
-    }
-
-    let inventory: Vec<Value> = rows.into_iter().map(|row| {
-        json!({
-            "id": row.get::<String, _>("id"),
-            "name": row.get::<String, _>("title"),
-            "description": row.get::<Option<String>, _>("description"),
-            "price_cents": row.get::<i64, _>("price_cents"),
-            "currency": row.get::<String, _>("currency"),
-            "stock": row.get::<i32, _>("inventory_count"),
-            "is_sold_out": row.try_get::<Option<bool>, _>("is_sold_out").unwrap_or(None),
-            "updated_at": row.try_get::<chrono::DateTime<chrono::Utc>, _>("updated_at").ok().map(|value| value.to_rfc3339()),
-            "is_subscribable": row.try_get::<bool, _>("is_subscribable").unwrap_or(false),
-            "subscription_discount_percent": row.try_get::<i32, _>("subscription_discount_percent").unwrap_or(0),
-            "subscription_frequency": row.try_get::<String, _>("subscription_frequency").unwrap_or_default(),
-        })
-    }).collect();
-
-    Json(json!({ "inventory": inventory })).into_response()
 }
 
 #[cfg(test)]
@@ -537,10 +391,14 @@ mod tests {
             );
         }
 
-        let source = include_str!("pos.rs");
-        assert!(source.contains("COALESCE(price_cents, 0) AS price_cents"));
-        assert!(source.contains("COALESCE(currency, 'USD') AS currency"));
-        assert!(source.contains("COALESCE(inventory_count, 0) AS inventory_count"));
+        let source = include_str!("pos_inventory.rs");
+        assert!(source.contains("SELECT to_jsonb(p) FROM products p WHERE tenant_id=$1"));
+        for field in ["price_cents", "currency", "inventory_count"] {
+            assert!(
+                source.contains(field),
+                "missing inventory projection field {field}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -565,16 +423,28 @@ mod tests {
     }
 }
 
+// POS access is verified from the signed account, never from a client PIN.
+// Deserialize a map first so non-object payloads cannot become empty requests.
 #[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct PosAuthRequest {
-    pub pin: String,
+#[serde(try_from = "serde_json::Map<String, serde_json::Value>")]
+pub struct PosAuthRequest;
+
+impl TryFrom<serde_json::Map<String, serde_json::Value>> for PosAuthRequest {
+    type Error = &'static str;
+
+    fn try_from(fields: serde_json::Map<String, serde_json::Value>) -> Result<Self, Self::Error> {
+        if fields.is_empty() {
+            Ok(Self)
+        } else {
+            Err("POS access uses the signed account; the request must be an empty object")
+        }
+    }
 }
 
 pub async fn pos_auth_handler(
     claims: Option<Extension<::server_common::Claims>>,
     axum::extract::State(_hub): axum::extract::State<Arc<Hub>>,
-    axum::extract::Json(payload): axum::extract::Json<PosAuthRequest>,
+    axum::extract::Json(_payload): axum::extract::Json<PosAuthRequest>,
 ) -> impl IntoResponse {
     let Some(Extension(claims)) = claims else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
@@ -582,9 +452,6 @@ pub async fn pos_auth_handler(
     let Some(tenant_id) = ::server_common::auth_utils::signed_tenant_id(&claims) else {
         return axum::http::StatusCode::UNAUTHORIZED.into_response();
     };
-    if payload.pin.len() > 64 {
-        return axum::http::StatusCode::BAD_REQUEST.into_response();
-    }
 
     Json(json!({
         "success": true,
@@ -646,3 +513,7 @@ pub async fn translate_order_notes_handler(
 
     Json(json!({ "translatedNotes": translated })).into_response()
 }
+
+#[cfg(test)]
+#[path = "pos_auth_test.rs"]
+mod auth_tests;

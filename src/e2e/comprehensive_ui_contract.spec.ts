@@ -11,6 +11,7 @@ import { E2E_ADMIN_USER } from './identities';
 import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui_audit_navigation';
 import { createDashboardAuditCase, isolatedClickAuditRoutes, clickAuditStates, prepareClickAuditState } from './support/dashboard_audit_fixture';
 import { prepareQuoteAudit, quoteAuditRoutes } from './support/quote_audit_fixture';
+import { observeInventoryAuditClick } from './support/inventory_audit';
 import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
 import { runFiniteClickInventory, runDynamicClickInventory, scopeClickInventory, FINITE_CLICK_CASE_BUDGET } from '../../scripts/ui-audit-inventory.cjs';
 
@@ -232,7 +233,9 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
             const target = await timed('resolve', () => resolveAuditTarget(owned.page, candidate.sourceKey, () => tagClickTargets(owned.page, owned.actor.namespace, owned.actor.canonicalIds)), candidate.label);
             audited.add(candidate.key);
             try {
-              const observed = await timed('observe', () => observeClickEffects(owned.page, target), candidate.label);
+              const observed = await timed('observe', () => route === '/inventory'
+                ? observeInventoryAuditClick(owned.page, target, owned.actor, () => observeClickEffects(owned.page, target))
+                : observeClickEffects(owned.page, target), candidate.label);
               audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
               if (!hasMeaningfulClickEffect(observed)) {
                 if (observed.dialogSeen) failures.push(`${route}: "${candidate.label}" only opened a browser dialog`);

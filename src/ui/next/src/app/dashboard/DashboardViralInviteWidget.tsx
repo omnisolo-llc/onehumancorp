@@ -58,6 +58,12 @@ export function DashboardViralInviteWidget() {
                 {clipboard.state === 'copied' ? 'Copied!' : clipboard.state === 'pending' ? 'Copying…' : 'Copy'}
               </button>
               <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Join me on OmniSolo OneHumanCorp: ${referralLink}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="app-button"
+              >Share on WhatsApp</a>
+              <a
                 id="dashboard-share-x-btn"
                 href={shareUrl}
                 target="_blank"

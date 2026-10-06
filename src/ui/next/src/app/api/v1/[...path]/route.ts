@@ -27,6 +27,7 @@ async function proxy(request: Request, context: RouteContext): Promise<Response>
     return Response.json({ error: "invalid API path" }, { status: 400 });
   }
   if (isPublicationOwnerPath(path)) return proxyPublicationOwnerRequest(request, path);
+  const hasRequestBody = request.method !== "GET" && request.method !== "HEAD";
   const isJson = request.headers
     .get("content-type")
     ?.toLowerCase()
@@ -34,7 +35,7 @@ async function proxy(request: Request, context: RouteContext): Promise<Response>
   const streamResponse = /^\/api\/v1\/agents\/(?:metrics\/stream|[A-Za-z0-9._~-]+\/stream|orchestrate)$/.test(path);
   return proxyBackendRequest(request, path, {
     ...(streamResponse ? { streamResponse: true as const } : {}),
-    ...(isJson ? { transformRequestBody: stripBrowserIdentityJsonRequestBody } : {}),
+    ...(isJson && hasRequestBody ? { transformRequestBody: stripBrowserIdentityJsonRequestBody } : {}),
   });
 }
 

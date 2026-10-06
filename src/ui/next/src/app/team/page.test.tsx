@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import TeamPage from './page';
+import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 
 vi.mock('../components/GrowthReferralWidget', () => ({
@@ -18,11 +19,8 @@ global.fetch = vi.fn();
 
 describe('TeamPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(global.fetch, { partial: true }).mockResolvedValue({
-      ok: true,
-      json: async () => ({ pending_approvals: [] }),
-    });
+    vi.clearAllMocks(); localStorage.clear(); invalidateQueueOwner();
+    vi.mocked(global.fetch).mockImplementation(async url => String(url).endsWith('/session-identity') ? Response.json({ userId: 'owner-a', tenantId: 'tenant-a', expiresAt: Date.now() + 60000 }) : Response.json({ pending_approvals: [], next_cursor: null }));
   });
 
   it('renders the team page headers and widget', async () => {

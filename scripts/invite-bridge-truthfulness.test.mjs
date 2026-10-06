@@ -11,7 +11,7 @@ const invites = context => context.requests.filter(request => request.init?.meth
 const markerEntries = context => Object.entries(context.window.localStorage).filter(([key]) => key.startsWith('omnisolo_invite_creation_v1:'));
 const generate = async context => { context.document.getElementById('generate-link-btn').click(); await turn(); await turn(); };
 async function dashboard(path, options = {}) {
-  const requests = [], copied = [], opened = [], scriptErrors = [];
+  const requests = [], copied = [], opened = [], scriptErrors = [], expiryCallbacks = [];
   const console = new VirtualConsole(); console.on('jsdomError', error => scriptErrors.push(error.message));
   const window = new JSDOM(await readFile(path, 'utf8'), {
     url: 'https://example.test/dashboard.html', runScripts: 'dangerously', virtualConsole: console,
@@ -31,6 +31,7 @@ async function dashboard(path, options = {}) {
       window.fetch = async (url, init) => {
         requests.push({ url: String(url), init });
         if (String(url).endsWith('/auth/session-identity')) return options.identityReply ? options.identityReply() : Response.json({ userId: 'owner-a', tenantId: 'tenant-a', expiresAt: Date.now() + 60_000 });
+        if (String(url).includes('/growth/milestones/check') && options.milestoneReply) return options.milestoneReply();
         if (init?.method === 'POST' && /(?:cloud-bridge\/invite|team-invites)$/.test(String(url))) return options.inviteReply ? options.inviteReply(init) : options.rejectInvite ? Response.json({ error: 'unavailable' }, { status: 503 }) : Response.json({ invite_link: 'https://omnisolo.co/invite/inv-recorded' });
         return Response.json({});
       };
@@ -42,10 +43,11 @@ async function dashboard(path, options = {}) {
   const moduleScript = window.document.querySelector('script[type="module"][src="invite-bridge.mjs"]');
   if (moduleScript) {
     const bridge = await import(pathToFileURL(resolve(dirname(path), 'invite-bridge.mjs')).href);
+    if (options.captureExpiry) window.setTimeout = (callback, delay) => { expiryCallbacks.push({ callback, delay }); return 0; };
     bridge.installInviteBridge(window);
   }
   await turn(); await turn();
-  return { window, document: window.document, requests, copied, opened, scriptErrors };
+  return { window, document: window.document, requests, copied, opened, scriptErrors, expiryCallbacks };
 }
 for (const path of pages) {
   test(`${path}: one Generate click dispatches only one invitation request`, async () => {
@@ -222,3 +224,66 @@ test('corrupt own history is held without deleting it or dispatching', async () 
     assert.equal(c.document.getElementById('generate-link-btn').disabled, true);
   } finally { c.window.close(); }
 });
+
+test('legacy milestone consumers can read only the currently verified invitation', async () => {
+  const c = await dashboard(primary);
+  try {
+    assert.equal(c.window.getVerifiedDashboardInvitation(), null);
+    await generate(c);
+    assert.equal(c.window.getVerifiedDashboardInvitation(), 'https://omnisolo.co/invite/inv-recorded');
+    c.window.dispatchEvent(new c.window.Event('omnisolo_auth_changed'));
+    assert.equal(c.window.getVerifiedDashboardInvitation(), null);
+  } finally { c.window.close(); }
+});
+
+
+for (const path of pages) {
+  for (const event of ['auth', 'storage', 'null-storage', 'pagehide', 'expiry']) test(`${path}: ${event} clears every actual invitation consumer`, async () => {
+    const c = await dashboard(path, { captureExpiry: event === 'expiry' });
+    try {
+      await generate(c);
+      c.document.getElementById('referral-tier-copy-btn').click(); await turn();
+      assert.equal(c.document.getElementById('referral-link-input').value, 'https://omnisolo.co/invite/inv-recorded');
+      if (event === 'expiry') {
+        const timer = c.expiryCallbacks.find(timer => timer.delay > 50000 && timer.delay <= 60000);
+        assert.ok(timer, 'The bridge must arm the verified owner expiry'); timer.callback();
+      }
+      else c.window.dispatchEvent(event === 'auth' ? new c.window.Event('omnisolo_auth_changed') : event === 'pagehide' ? new c.window.Event('pagehide') : new c.window.StorageEvent('storage', { key: event === 'storage' ? 'omnisolo_queue_identity_epoch_v2' : null }));
+      assert.equal(c.window.getVerifiedDashboardInvitation(), null);
+      assert.equal(c.document.getElementById('referral-link').value, '');
+      assert.equal(c.document.getElementById('referral-link-input').value, '');
+    } finally { c.window.close(); }
+  });
+  for (const outcome of ['resolve', 'reject']) test(`${path}: a late referral clipboard ${outcome} cannot report for a retired owner`, async () => {
+    const pending = deferred(); const c = await dashboard(path, { copyReply: () => pending.promise });
+    const messages = []; c.window.showStatus = message => messages.push(message);
+    try {
+      await generate(c); c.document.getElementById('referral-tier-copy-btn').click(); await turn();
+      c.window.dispatchEvent(new c.window.Event('omnisolo_auth_changed'));
+      if (outcome === 'resolve') pending.resolve(); else pending.reject(new Error('denied'));
+      await turn();
+      assert.deepEqual(messages, []);
+      assert.equal(c.document.getElementById('referral-link-input').value, '');
+    } finally { c.window.close(); }
+  });
+}
+
+for (const path of pages) {
+  for (const outcome of ['resolve', 'reject']) test(`${path}: a late milestone clipboard ${outcome} cannot release a retired owner control`, async () => {
+    const pending = deferred(); const c = await dashboard(path, {
+      copyReply: () => pending.promise,
+      milestoneReply: () => Response.json({ milestones: [{ id: 'first_sale', title: 'First recorded order', description: 'Recorded milestone', reached: true }] }),
+    });
+    const messages = []; c.window.showStatus = message => messages.push(message);
+    try {
+      await generate(c); c.document.getElementById('milestone-copy-btn').click(); await turn();
+      assert.equal(c.copied.length, 1);
+      c.window.dispatchEvent(new c.window.Event('omnisolo_auth_changed'));
+      if (outcome === 'resolve') pending.resolve(); else pending.reject(new Error('denied'));
+      await turn();
+      assert.deepEqual(messages, []);
+      assert.equal(c.document.getElementById('milestone-copy-btn').disabled, true);
+      assert.equal(c.window.localStorage.getItem('dismissed_milestone_first_sale'), null);
+    } finally { c.window.close(); }
+  });
+}

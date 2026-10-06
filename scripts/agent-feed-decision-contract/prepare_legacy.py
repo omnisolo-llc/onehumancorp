@@ -16,6 +16,11 @@ def extend_legacy_contract(root, here, paths, lines, read):
             + r'[^\n]*post\(crate::api::legacy_triage::action\)[^\n]*Extension\(http_auth_store.clone\(\)\)',
             mounted,
         ), f'Legacy compatibility route must mount the actual canonical-auth handler: {route}'
+    assert re.search(
+        re.escape('.route("/api/v1/ui/triage/decisions/{id}",')
+        + r'[^\n]*get\(crate::api::legacy_triage::read_decision\)[^\n]*Extension\(http_auth_store.clone\(\)\)',
+        mounted,
+    ), 'The read-only legacy decision reconciliation route must be mounted with canonical authority'
     lines.append(f'#[path={json.dumps(str(module))}]pub mod legacy_triage;')
     lines.append('pub async fn invalidate_legacy_triage_caches(_: &str) {}')
     task_queries = []

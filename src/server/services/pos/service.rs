@@ -207,13 +207,7 @@ impl PosService for MyPosService {
 
                 // Queue job
                 let job_id = Uuid::new_v4().to_string();
-                let payload = serde_json::json!({
-                    "pos_transaction_id": tx_id,
-                    "client_id": client_id_clone,
-                    "amount_cents": tx.amount_cents,
-                    "currency": tx.currency,
-                    "payload": tx.payload,
-                }).to_string();
+                let payload = grpc_offline_job(&tx_id, &client_id_clone, tx.amount_cents, &tx.currency, &tx.payload).to_string();
 
                 let job_res = sqlx::query(
                     "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
@@ -518,6 +512,22 @@ impl PosService for MyPosService {
             }
         }
     }
+}
+
+fn grpc_offline_job(
+    id: &str,
+    client: &str,
+    amount: i64,
+    currency: &str,
+    payload: &str,
+) -> serde_json::Value {
+    let parsed: Option<serde_json::Value> = serde_json::from_str(payload).ok();
+    let kind = parsed
+        .as_ref()
+        .and_then(|v| v.get("mutation_type"))
+        .and_then(serde_json::Value::as_str);
+    serde_json::json!({"pos_transaction_id":id,"client_id":client,"amount_cents":amount,
+        "currency":currency,"payload":payload,"mutation_type":kind})
 }
 
 #[cfg(test)]

@@ -59,8 +59,11 @@ transactions are held because the existing downstream worker only supports USD.
 ## POS read-to-sync preconditions
 
 The gate also extracts the complete POS order reader and inventory GET handler,
-their signed-tenant helper, and the original SQLite order-query regression. Its
-read-to-sync HTTP fixture uses the actual strict bearer middleware and PostgreSQL user store.
+their signed-tenant helper, and the original SQLite order-query regression. The
+inventory query type and full production inventory module are included unchanged.
+The module's own unit and restricted-role PostgreSQL tests remain discovered;
+their separate schemas use the same explicitly supplied disposable database.
+The read-to-sync HTTP fixture uses the actual strict bearer middleware and PostgreSQL user store.
 It reads microsecond row timestamps and stored sold-out state through the real
 GET responses, then uses those exact fields to obtain committed product/order
 sync acknowledgements while a forged tenant header cannot select another tenant.

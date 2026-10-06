@@ -19,9 +19,10 @@ test.describe('Walkthrough and Tooltips features', () => {
     await expect(bubble).toContainText('Welcome');
 
     // Close the walkthrough
-    const closeBtn = page.locator('.omnisolo-walkthrough-close');
+    const closeBtn = bubble.getByRole('button', { name: 'Close walkthrough', exact: true });
     await closeBtn.click();
-    await expect(overlay).not.toBeVisible();
+    await expect(overlay).toBeHidden();
+    await expect(bubble).toBeHidden();
   });
 
   test('Storefront walkthrough and help center elements are visible and work', async ({ page }) => {
@@ -100,12 +101,32 @@ test.describe('Walkthrough and Tooltips features', () => {
   });
 
   test('Tooltips are injected into the page', async ({ page }) => {
+    const loaded = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/tooltips' && response.request().method() === 'GET');
     await page.goto('/api/v1/ui/dashboard.html');
+    const response = await loaded;
+    expect(response.status()).toBe(200);
+    const tooltips = await response.json() as Record<string, string>;
+    const expectedText = tooltips['help-btn-tooltip'];
+    expect(expectedText).toEqual(expect.any(String));
+    expect(expectedText.trim().length).toBeGreaterThan(0);
 
-    // Check tooltips registry is available
-    const tooltips = await page.evaluate(() => window['OMNISOLO_TOOLTIPS']);
-    expect(tooltips).toBeDefined();
-    expect(tooltips['dashboard-walkthrough-btn']).toBe('Take a tour of the dashboard');
+    // Observe the loaded provider through its accessible UI, not an asynchronous global.
+    const target = page.locator('#help-btn-tooltip');
+    const helpButton = target.getByRole('button', { name: 'Open help chat', exact: true });
+    await expect(target).toHaveAttribute('data-tooltip', expectedText);
+    await helpButton.hover();
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toHaveText(expectedText);
+    await expect(tooltip).toBeVisible();
+    await page.mouse.move(0, 0);
+    await expect(tooltip).toBeHidden();
+    await helpButton.focus();
+    await expect(tooltip).toBeVisible();
+    await expect(target).toHaveAttribute('aria-describedby', 'help-btn-tooltip-description');
+    await helpButton.press('Escape');
+    await expect(tooltip).toBeHidden();
+    await expect(helpButton).toBeFocused();
   });
 
   test('Help Center elements are visible', async ({ page }) => {

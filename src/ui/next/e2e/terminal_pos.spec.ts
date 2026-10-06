@@ -5,11 +5,8 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     // Navigate to POS terminal path
     await page.goto('/pos/terminal');
 
-    // Unlock the terminal
-    const pins = ['1', '2', '3', '4'];
-    for (const p of pins) {
-      await page.getByRole('button', { name: p, exact: true }).click();
-    }
+    // Verify the signed account before opening the terminal.
+    await page.getByRole('button', { name: 'Continue with signed-in account', exact: true }).click();
 
     // Clock in
     await page.getByRole('button', { name: 'Clock In' }).click();
@@ -22,12 +19,16 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     await expect(page.getByRole('button', { name: 'New Order' })).toBeVisible();
 
     // The native runner strips Stripe credentials. The real BFF must reject
-    // the backend error envelope instead of returning a fabricated reader secret.
+    // the missing verified tenant connection without returning a reader secret.
     const token = await page.request.post('/api/v1/payments/terminal/token', {
       headers: { origin: new URL(page.url()).origin, 'sec-fetch-site': 'same-origin' },
     });
-    expect(token.status()).toBe(502);
-    expect(await token.json()).toEqual({ error: 'Backend response did not include a Terminal secret' });
+    expect(token.status()).toBe(503);
+    expect(token.headers()['cache-control']).toBe('private, no-store');
+    expect(await token.json()).toEqual({
+      success: false, status: 'rejected', error: 'A verified tenant payment connection is required.',
+    });
+    await token.dispose();
     await expect(page.getByRole('button', { name: 'Discover Readers' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Connect', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Charge \$/ })).toHaveCount(0);

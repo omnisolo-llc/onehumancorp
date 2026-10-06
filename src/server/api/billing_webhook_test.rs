@@ -105,7 +105,7 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
     use std::sync::{Arc, Mutex};
 
     struct RecordingNotifier {
-        sent: Arc<Mutex<Vec<(String, String)>>>,
+        sent: Arc<Mutex<Vec<(String, String, String)>>>,
     }
 
     struct FixedGenerator;
@@ -114,13 +114,15 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
     impl PaymentFailureNotifier for RecordingNotifier {
         async fn send_payment_failure_sms(
             &self,
+            tenant_id: &str,
             subscriber_id: &str,
             message: &str,
         ) -> Result<(), String> {
-            self.sent
-                .lock()
-                .unwrap()
-                .push((subscriber_id.to_string(), message.to_string()));
+            self.sent.lock().unwrap().push((
+                tenant_id.to_string(),
+                subscriber_id.to_string(),
+                message.to_string(),
+            ));
             Ok(())
         }
     }
@@ -136,50 +138,23 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
         }
     }
 
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1/".to_string());
-    let client = match redis::Client::open(redis_url) {
-        Ok(c) => c,
-        Err(_) => return,
+    // This business-persistence regression needs neither a running Redis service
+    // nor a configured external database. Any fixture failure must fail the test.
+    let client = redis::Client::open("redis://127.0.0.1:1/").expect("synthetic client URL");
+    let sqlite = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .expect("isolated billing SQLite fixture");
+    sqlx::raw_sql("CREATE TABLE subscribers(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,customer_id TEXT NOT NULL,subscription_plan_id TEXT,status TEXT NOT NULL,stripe_subscription_id TEXT); INSERT INTO subscribers VALUES('subscriber_failed_payment','tenant_1','cus_failed','plan_1','ACTIVE','sub_failed');")
+        .execute(&sqlite).await.expect("billing fixture schema and row");
+    let unused_pg = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://fixture@127.0.0.1:1/unused")
+        .expect("unused compatibility pool");
+    let db = DB {
+        pool: unused_pg,
+        store: crate::db::DbStore::Sqlite(sqlite.clone()),
     };
-    if client.get_multiplexed_async_connection().await.is_err() {
-        return;
-    }
-
-    let db = match DB::new().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-
-    if sqlx::query(
-        "CREATE TABLE IF NOT EXISTS subscribers (
-            id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL,
-            customer_id TEXT NOT NULL,
-            subscription_plan_id TEXT,
-            plan_id TEXT,
-            status TEXT NOT NULL DEFAULT 'ACTIVE',
-            stripe_subscription_id TEXT,
-            created_at BIGINT DEFAULT 0
-        )",
-    )
-    .execute(&db.pool)
-    .await
-    .is_err()
-    {
-        return;
-    }
-
-    if sqlx::query(
-        "INSERT INTO subscribers (id, tenant_id, customer_id, subscription_plan_id, status, stripe_subscription_id)
-         VALUES ('subscriber_failed_payment', 'tenant_1', 'cus_failed', 'plan_1', 'ACTIVE', 'sub_failed')
-         ON CONFLICT DO NOTHING",
-    )
-    .execute(&db.pool)
-    .await
-    .is_err()
-    {
-        return;
-    }
 
     let db_arc = std::sync::Arc::new(db);
     let transport = Arc::new(InProcessTransport::new());
@@ -211,13 +186,14 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
     assert_eq!(processed.as_deref(), Some("subscriber_failed_payment"));
     let row: (String,) =
         sqlx::query_as("SELECT status FROM subscribers WHERE id = 'subscriber_failed_payment'")
-            .fetch_one(&state.db.pool)
+            .fetch_one(&sqlite)
             .await
             .expect("subscriber status should be readable");
     assert_eq!(row.0, "PAST_DUE");
     assert_eq!(
         sent.lock().unwrap().as_slice(),
         &[(
+            "tenant_1".to_string(),
             "subscriber_failed_payment".to_string(),
             "Maya Cakes:subscriber_failed_payment:update payment".to_string()
         )]

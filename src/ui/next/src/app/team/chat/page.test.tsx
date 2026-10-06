@@ -1,76 +1,32 @@
-import { AppRouterContext } from "next/dist/shared/lib/app-router-context.shared-runtime";
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { beforeEach, expect, test, vi } from 'vitest';
+import { cleanup, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import TeamChatPage from './page';
-
-const mockFetch = vi.fn();
-const router = { bfcacheId: 'unit-test', back: vi.fn(), forward: vi.fn(), refresh: vi.fn(), push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() };
-
+import { invalidateQueueOwner } from '@/lib/sync/queueIdentity';
+import { installOnboardingLocks } from '../../onboarding/testLocks';
+let response: () => Promise<Response>;
 beforeEach(() => {
-  vi.clearAllMocks();
-  global.fetch = mockFetch;
-
-  Object.defineProperty(window, 'localStorage', {
-    value: {
-      getItem: vi.fn(() => 'test-token'),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-    },
-    writable: true,
-  });
+  localStorage.clear(); invalidateQueueOwner(); installOnboardingLocks();
+  vi.stubGlobal('fetch', vi.fn(async (url) => String(url).endsWith('/session-identity')
+    ? Response.json({ userId: 'owner-a', tenantId: 'tenant-a', expiresAt: Date.now() + 60000 })
+    : String(url).startsWith('/api/v1/agents/approvals') ? Response.json({ pending_approvals: [], next_cursor: null }) : response()));
 });
-
-test('shows a latency state while an AI action is being drafted', async () => {
-  let resolveFetch: (value: Response) => void = () => {};
-  mockFetch.mockReturnValue(
-    new Promise<Response>((resolve) => {
-      resolveFetch = resolve;
-    }),
-  );
-
-  render(<AppRouterContext.Provider value={router}><TeamChatPage /></AppRouterContext.Provider>);
-
-  fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Quote the sink repair' },
-  });
+afterEach(() => { cleanup(); invalidateQueueOwner(); vi.unstubAllGlobals(); });
+async function send() {
+  render(<TeamChatPage />);
+  await waitFor(() => expect(screen.getByTestId('team-chat-input')).toBeEnabled());
+  fireEvent.change(screen.getByTestId('team-chat-input'), { target: { value: 'Quote the sink repair' } });
   fireEvent.click(screen.getByTestId('team-chat-send'));
-
-  expect(await screen.findByText('Working on your request...')).toBeInTheDocument();
-  expect(screen.getByText('The team is still drafting the action.')).toBeInTheDocument();
-
-  resolveFetch(
-    new Response(
-      JSON.stringify({
-        agent: 'The Salesperson',
-        description: 'Draft quote for Plumbing Fix',
-      }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    ),
-  );
-
-  await waitFor(() => {
-    expect(screen.queryByText('Working on your request...')).not.toBeInTheDocument();
-  });
-  expect(screen.getByText('Draft quote for Plumbing Fix')).toBeInTheDocument();
+}
+test('shows pending acceptance without claiming a drafted business action', async () => {
+  let finish!: (value: Response) => void; response = () => new Promise(resolve => { finish = resolve; });
+  await send(); expect(await screen.findByText('Saving your request for department review…')).toBeVisible();
+  finish(Response.json({ success: true, department_assigned: 'sales', approval: { id: 'stored-quote', tenant_id: 'tenant-a', department: 'Sales', description: 'Task routed via semantic gateway to Sales', status: 'PendingApproval', action_risk: 'DraftForReview', payload: { original_request: 'Quote the sink repair', action: 'semantic_routed_task' } } }));
+  expect(await screen.findByText('Task routed via semantic gateway to Sales')).toBeVisible();
+  expect(screen.queryByText("I've drafted an action for your approval.")).toBeNull();
 });
-
-test('renders an actionable error card when AI action execution fails', async () => {
-  mockFetch.mockResolvedValue(
-    new Response(JSON.stringify({ error: 'AI Budget exhausted' }), {
-      status: 429,
-      headers: { 'Content-Type': 'application/json' },
-    }),
-  );
-
-  render(<AppRouterContext.Provider value={router}><TeamChatPage /></AppRouterContext.Provider>);
-
-  fireEvent.change(screen.getByTestId('team-chat-input'), {
-    target: { value: 'Run the agent action' },
-  });
-  fireEvent.click(screen.getByTestId('team-chat-send'));
-
-  expect(await screen.findByText('Action needs attention')).toBeInTheDocument();
-  expect(screen.getByText('AI Budget exhausted')).toBeInTheDocument();
-  expect(screen.getByText('Try again')).toBeInTheDocument();
+test('shows a definitive rejection and keeps the unsent prompt available', async () => {
+  response = async () => Response.json({ error: 'AI Budget exhausted' }, { status: 429 });
+  await send(); expect(await screen.findByText('Request rejected (HTTP 429). AI Budget exhausted')).toBeVisible();
+  expect(screen.getByTestId('team-chat-input')).toHaveValue('Quote the sink repair');
+  expect(screen.queryByRole('button', { name: 'Record approval' })).toBeNull();
 });

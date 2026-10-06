@@ -12,6 +12,8 @@ import {
 
 const NOW = 1_800_000_000;
 const retiredPages = [
+  ["/api/ui/dashboard.html", "/dashboard"],
+  ["/api/v1/ui/dashboard.html", "/dashboard"],
   ["/integrations.html", "/integrations"],
   ["/ui/integrations.html", "/integrations"],
   ["/api-docs.html", "/api-docs"],
@@ -436,5 +438,29 @@ describe("protected-by-default auth middleware", () => {
       deps,
     );
     expect(accepted).toMatchObject({ kind: "next", clearCookie: false });
+  });
+});
+
+describe('reviewed API dashboard aliases', () => {
+  for (const path of ['/api/ui/dashboard.html', '/api/v1/ui/dashboard.html']) {
+    it(`${path} preserves ordered opaque queries and does not expand redirect methods`, async () => {
+      const deps = await dependencies(); const session = await cookie(deps);
+      const query = '?filter=first&filter=second&opaque=%e2%9c%93+%20&path=%2f%2F';
+      for (const method of ['GET', 'HEAD']) {
+        expect(await evaluateAuthMiddleware(request(path + query, { method }, session), deps)).toMatchObject({ kind: 'redirect', location: '/dashboard' + query });
+        expect(await evaluateAuthMiddleware(request(path + query, { method }), deps)).toMatchObject({ kind: 'response', status: 401 });
+      }
+      for (const method of ['POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']) {
+        expect(await evaluateAuthMiddleware(request(path, { method, headers: { origin: config.canonicalOrigin, 'sec-fetch-site': 'same-origin' } }, session), deps)).toMatchObject({ kind: 'next' });
+      }
+      expect(await evaluateAuthMiddleware(request(path, { method: 'POST', headers: { origin: 'https://other.example' } }, session), deps)).toMatchObject({ kind: 'response', status: 403 });
+      for (const unlisted of [path + '/extra', path.toUpperCase(), path.replace('.html', '%2ehtml')]) {
+        expect((await evaluateAuthMiddleware(request(unlisted, {}, session), deps)).kind).not.toBe('redirect');
+      }
+    });
+  }
+  it.each(['/dashboard.html', '/ui/dashboard.html'])('keeps the explicitly retained %s implementation', async path => {
+    const deps = await dependencies();
+    expect(await evaluateAuthMiddleware(request(path, {}, await cookie(deps)), deps)).toMatchObject({ kind: 'next' });
   });
 });

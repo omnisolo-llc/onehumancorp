@@ -71,6 +71,7 @@ initial = (ROOT/'src/server/migrations/001_initial.sql').read_text()
 inputs = list(rust_source_inputs()) + [ROOT/'.github/workflows/ci.yml', ROOT/'scripts/focused_ci_gate.py', ROOT/'scripts/test_focused_ci_gate.py', ROOT/'scripts/agent-definition-contract/database_guard.py', ROOT/'docs/development/tenant-execution-receipts-postgres.md', ROOT/'Cargo.toml', ROOT/'Cargo.lock', ROOT/'src/server/migrations/001_initial.sql', ROOT/'src/server/migrations/1018_agent_definition_marketplace.sql', ROOT/'src/server/migrations/1022_tenant_workflow_receipts.sql', *paths.values()]
 inputs += [ROOT/'src/server'/path for path in ['api/dynamic_workflows.rs','orchestration/dynamic_workflows.rs','queue.rs','migrations/104_sub_agent_queue.sql']]
 inputs += [p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs')]
+inputs += [ROOT/'src/server/migrations/1042_assistant_execution.sql',ROOT/'src/server/api/assistant.rs']
 inputs += [ROOT/'src/server/migrations/1025_usage_accounting.sql',ROOT/'src/server/lib.rs',ROOT/'src/server/hub.rs',ROOT/'src/server/db.rs',ROOT/'src/server/api/usage_api.rs',ROOT/'scripts/agent-workflow-contract/usage-api-proxy-proof.cjs',ROOT/'scripts/agent-workflow-contract/verify_node_lock.py',ROOT/'src/ui/next/package-lock.json']
 inputs += [ROOT/'scripts/agent-workflow-contract'/name for name in ['package.json','package-lock.json']]
 inputs += [p for p in (ROOT/'src/ui/next/src/lib/auth').glob('*') if p.is_file() and p.suffix in ('.ts','.json')]
@@ -78,5 +79,5 @@ inputs += [p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and 
 inputs += [p for p in (ROOT/'src/server/persistence').rglob('*') if p.suffix in ('.rs', '.sql')]
 for name in ['auth','common','config','harness','oidc','omnisolo','telemetry','pricing','utils']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','Cargo.lock','prepare.py','test.rs','dynamic_workflow_test.rs','dynamic_queue_test.rs','run.sh','fetch.sh','verify_lock.py','README.md']]
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','Cargo.lock','prepare.py','test.rs','dynamic_workflow_test.rs','dynamic_queue_test.rs','assistant_test.rs','run.sh','fetch.sh','verify_lock.py','README.md']]
 (HERE/'source-manifest.json').write_text(json.dumps({str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(set(inputs))},indent=2)+'\n')

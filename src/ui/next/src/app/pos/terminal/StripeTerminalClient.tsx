@@ -2,7 +2,7 @@
 
 
 import { errorMessage } from '@/lib/errors';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { loadStripeTerminal, type Terminal, type Reader } from '@stripe/terminal-js';
 import '../../../lib/sync/SyncManager';
 import { MutationService } from '../../../lib/sync/MutationService';
@@ -37,14 +37,34 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   const cashPending = useRef(false);
   const cashVersion = useRef(0);
   const cashStartedHere = useRef<string | null>(null);
-  const currentCart = useRef({ amount, productId, cart, onOptimisticReserve, onSuccess });
-  currentCart.current = { amount, productId, cart, onOptimisticReserve, onSuccess };
+  const currentCart = useRef({ amount, productId, tenantId, cart, onOptimisticReserve, onSuccess });
+  currentCart.current = { amount, productId, tenantId, cart, onOptimisticReserve, onSuccess };
+  // A changed sale invalidates an attempt even if it later returns to the old
+  // amount. Bind every cart field and the view's tenant, not just queue identity.
+  const saleViewKey = JSON.stringify([tenantId, amount, productId, cart ?? []]);
+  const saleView = useRef({ key:saleViewKey, version:0 });
+  if (saleView.current.key !== saleViewKey) {
+    saleView.current = { key:saleViewKey, version:saleView.current.version + 1 };
+  }
+  const cardPending = useRef(false);
+  const cardHeldRef = useRef(false);
+  const cardFinished = useRef(false);
+  const [cardHeld, setCardHeld] = useState(false);
+  const setCardHold = useCallback((held: boolean) => { cardHeldRef.current = held; setCardHeld(held); }, []);
   const [cashHeld, setCashHeld] = useState<CashAttempt | null>(null);
   const [cashRecorded, setCashRecorded] = useState(false);
   const [cashRetryAllowed, setCashRetryAllowed] = useState(false);
   const [cashRecoveryError, setCashRecoveryError] = useState(false);
   const methodRef = useRef(selectedMethod);
   methodRef.current = selectedMethod;
+
+  useEffect(() => {
+    if (saleView.current.version > 0 && !cardFinished.current && (cardPending.current || cardHeldRef.current)) {
+      setCardHold(true);
+      setReserving(false);
+      setStatus('Payment view changed. Reconcile the original payment before starting another charge.');
+    }
+  }, [saleViewKey, setCardHold]);
 
   useEffect(() => {
     const invalidate = () => {
@@ -104,6 +124,26 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   }, []);
 
   useEffect(() => {
+    const restore = () => {
+      if (cardPending.current || cardFinished.current) return;
+      const owner = currentVerifiedQueueOwner();
+      if (!owner || owner.tenantId !== tenantId) return;
+      try {
+        const held = localStorage.getItem(`omnisolo_terminal_payment_v1:${JSON.stringify([owner.userId, owner.tenantId])}`) !== null;
+        setCardHold(held);
+        if (held) setStatus('An earlier card payment needs reconciliation. Do not start a replacement charge.');
+      } catch {
+        setCardHold(true);
+        setStatus('Payment recovery storage is unavailable. Review previous payments before continuing.');
+      }
+    };
+    const unsubscribe = subscribeQueueIdentityReadiness(restore);
+    window.addEventListener('storage', restore);
+    restore();
+    return () => { unsubscribe(); window.removeEventListener('storage', restore); };
+  }, [tenantId, setCardHold]);
+
+  useEffect(() => {
     async function initTerminal() {
       const StripeTerminal = await loadStripeTerminal();
       if (!StripeTerminal) {
@@ -130,7 +170,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
         }
       });
       setTerminal(term);
-      if (methodRef.current === 'tap') setStatus('Terminal initialized. Ready to discover readers.');
+      if (methodRef.current === 'tap' && !cardHeldRef.current) setStatus('Terminal initialized. Ready to discover readers.');
     }
     initTerminal();
   }, []);
@@ -195,70 +235,113 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
   };
 
   const processPayment = async () => {
-    if (!terminal && (typeof window !== 'undefined' && navigator.onLine)) {
-      setStatus('Terminal not ready.');
-      return;
-    }
-
+    if (cardPending.current || cardHeldRef.current || cardFinished.current) return;
     if (typeof window !== 'undefined' && !navigator.onLine) {
       await queueOfflineSale('tap_to_pay');
       return;
     }
-
-    setStatus('Waiting for card tap...');
-
-    // We must create an intent first by calling the backend
-    let intentSecret: string;
-    let lockId: string;
-    try {
-        const intentRes = await fetch('/api/v1/payments/terminal/intent', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ amount_cents: amount, tenant_id: tenantId, product_id: productId })
-        });
-        const intentData = await intentRes.json();
-        intentSecret = intentData.client_secret;
-        if (!intentSecret) {
-            setStatus('Failed to fetch payment intent secret');
-            if (onOptimisticRollback) onOptimisticRollback();
-            return;
-        }
-        lockId = intentData.lock_id || '';
-    } catch  {
-        setStatus('Failed to fetch payment intent');
-        if (onOptimisticRollback) onOptimisticRollback();
-        return;
+    if (!terminal) { setStatus('Terminal not ready.'); return; }
+    // The previous online path sent an entire cart's amount with only its first
+    // product. Do not enable it until stock and every line are durably bound.
+    if (cart?.length || !['', 'custom-charge', 'quick_charge'].includes(productId)) {
+      setStatus('Catalog card payments need a persisted cart reservation and are currently unavailable. No card payment was started.');
+      return;
     }
-
-    const res = await terminal.collectPaymentMethod(intentSecret);
-    if ('error' in res) {
-      setStatus('Payment failed: ' + res.error.message);
-      if (onOptimisticRollback) onOptimisticRollback();
-    } else {
-      setStatus('Processing payment...');
-      const processRes = await terminal.processPayment(res.paymentIntent);
-      if ('error' in processRes) {
-        setStatus('Payment failed: ' + processRes.error.message);
-        if (onOptimisticRollback) onOptimisticRollback();
-      } else {
-        setStatus('Payment authorized. Capturing...');
-        try {
-            const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ payment_intent_id: res.paymentIntent.id, product_id: productId, lock_id: lockId, amount_cents: amount })
-            });
-            const captured = await captureRes.json();
-            if (captureRes.ok && captured.success === true && captured.status === 'succeeded') {
-                setStatus('Payment successful!');
-                if (mounted.current) onSuccess?.(amount);
-            } else {
-                setStatus('Failed to capture intent');
-            }
-        } catch  {
-            setStatus('Failed to capture intent');
+    if (!Number.isSafeInteger(amount) || amount <= 0 || amount > 99_999_999) {
+      setStatus('Enter a valid payment amount.'); return;
+    }
+    const clickedOwner = currentVerifiedQueueOwner();
+    if (!clickedOwner || clickedOwner.tenantId !== tenantId) {
+      setStatus('Verify the payment account before starting a charge.'); return;
+    }
+    cardPending.current = true;
+    setReserving(true);
+    const version = cashVersion.current;
+    const startingAmount = amount;
+    const startingProduct = productId;
+    const startingTenant = tenantId;
+    const startingSaleVersion = saleView.current.version;
+    const current = () => {
+      const activeOwner = currentVerifiedQueueOwner();
+      return mounted.current && version === cashVersion.current
+        && currentCart.current.amount === startingAmount && currentCart.current.productId === startingProduct
+        && currentCart.current.tenantId === startingTenant && saleView.current.version === startingSaleVersion
+        && !!activeOwner && sameOwner(activeOwner, clickedOwner);
+    };
+    try {
+      const owner = await readQueueOwner();
+      if (!current() || !sameOwner(owner, clickedOwner)) throw new Error('Payment account changed.');
+      if (!navigator.locks) throw new Error('Payment coordination is unavailable.');
+      const key = `omnisolo_terminal_payment_v1:${JSON.stringify([owner.userId, owner.tenantId])}`;
+      await navigator.locks.request(key, { mode:'exclusive', ifAvailable:true }, async lock => {
+        if (!current()) return;
+        if (!lock || localStorage.getItem(key) !== null) {
+          setCardHold(true); setStatus('An earlier card payment needs reconciliation. Do not start a replacement charge.'); return;
         }
-      }
+        const operation = crypto.randomUUID();
+        localStorage.setItem(key, JSON.stringify({ operation_id:operation, amount_cents:amount, currency:'usd' }));
+        setCardHold(true);
+        const headers = { 'Content-Type':'application/json', 'x-ohc-expected-user':owner.userId, 'x-ohc-expected-tenant':owner.tenantId };
+        try {
+          setStatus('Creating payment intent...');
+          const intentRes = await fetch('/api/v1/payments/terminal/intent', {
+            method:'POST', headers, credentials:'same-origin', cache:'no-store', redirect:'error',
+            body:JSON.stringify({ amount_cents:amount, currency:'usd', idempotency_key:operation }),
+          });
+          const intent: unknown = await intentRes.json();
+          if (!current()) return;
+          if (!intentRes.ok) {
+            if (intent && typeof intent === 'object' && 'status' in intent && intent.status === 'rejected') {
+              localStorage.removeItem(key); setCardHold(false);
+            }
+            throw new Error('Payment intent was not confirmed.');
+          }
+          if (!intent || typeof intent !== 'object' || !('payment_intent_id' in intent)
+            || typeof intent.payment_intent_id !== 'string' || !/^pi_[A-Za-z0-9_]+$/.test(intent.payment_intent_id)
+            || !('client_secret' in intent) || typeof intent.client_secret !== 'string'
+            || !intent.client_secret.startsWith(`${intent.payment_intent_id}_secret_`)
+            || !('operation_id' in intent) || intent.operation_id !== operation
+            || !('amount_cents' in intent) || intent.amount_cents !== amount
+            || !('currency' in intent) || intent.currency !== 'usd') throw new Error('Payment identity mismatch.');
+          const collected = await terminal.collectPaymentMethod(intent.client_secret);
+          if (!current()) return;
+          if ('error' in collected || collected.paymentIntent.id !== intent.payment_intent_id) throw new Error('Card collection was not confirmed.');
+          const processed = await terminal.processPayment(collected.paymentIntent);
+          if (!current()) return;
+          if ('error' in processed || processed.paymentIntent.id !== intent.payment_intent_id || processed.paymentIntent.status !== 'requires_capture') throw new Error('Card authorization was not confirmed.');
+          setStatus('Payment authorized. Capturing...');
+          const captureRes = await fetch('/api/v1/payments/terminal/intent/capture', {
+            method:'POST', headers, credentials:'same-origin', cache:'no-store', redirect:'error',
+            body:JSON.stringify({ payment_intent_id:intent.payment_intent_id, amount_cents:amount }),
+          });
+          const receipt = await captureRes.json();
+          if (!captureRes.ok || receipt?.success !== true || receipt.status !== 'succeeded'
+            || receipt.payment_intent_id !== intent.payment_intent_id || receipt.operation_id !== operation
+            || receipt.amount_cents !== amount || receipt.currency !== 'usd') throw new Error('Capture was not confirmed.');
+          if (!current()) {
+            const prior = JSON.parse(localStorage.getItem(key) ?? 'null');
+            if (prior?.operation_id === operation) {
+              localStorage.setItem(key, JSON.stringify({ ...prior, confirmed_capture:{
+                payment_intent_id:receipt.payment_intent_id, operation_id:operation,
+                amount_cents:amount, currency:'usd', status:'succeeded',
+              } }));
+            }
+            return;
+          }
+          localStorage.removeItem(key);
+          // Keep this mounted payment disabled even after the recovery record is retired.
+          cardFinished.current = true;
+          setStatus('Payment successful!');
+          onSuccess?.(amount);
+        } catch {
+          if (current()) setStatus('Payment outcome is unconfirmed. Reconcile the original operation before retrying.');
+        }
+      });
+    } catch {
+      if (current()) setStatus('Payment identity or recovery storage is unavailable. No replacement charge was started.');
+    } finally {
+      cardPending.current = false;
+      if (current()) setReserving(false);
     }
   };
 
@@ -388,7 +471,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
              <h2 className="text-lg font-bold font-outfit text-gray-900">
                {selectedMethod === 'tap' ? 'Tap to Pay Active' : selectedMethod === 'link' ? 'Send Payment Link' : 'Record Cash Sale'}
              </h2>
-             <button disabled={reserving || cashHeld !== null || cashRecorded || cashRecoveryError} onClick={() => setSelectedMethod(null)} className="text-sm font-bold text-gray-500 hover:text-gray-700">Back</button>
+             <button disabled={reserving || cardHeld || cashHeld !== null || cashRecorded || cashRecoveryError} onClick={() => setSelectedMethod(null)} className="text-sm font-bold text-gray-500 hover:text-gray-700">Back</button>
           </div>
           <p className={`text-sm mb-6 font-medium p-3 rounded-xl border ${status?.toLowerCase()?.includes('fail') || status?.toLowerCase()?.includes('error') || status?.toLowerCase()?.includes('sold out') ? 'bg-red-50/80 backdrop-blur-[30px] saturate-[210%] text-red-800 border-red-200' : 'text-gray-600 border-transparent'}`}>Status: {status}</p>
 
@@ -440,36 +523,7 @@ export default function StripeTerminalClient({ amount, productId, cart, tenantId
 
           {selectedMethod === 'tap' && connectedReader && (
             <div className="mt-4">
-              <button onClick={async () => {
-                if (typeof window !== 'undefined' && !navigator.onLine) {
-                  await processPayment();
-                  return;
-                }
-                setStatus('Initializing Tap to Pay...');
-                setReserving(true);
-                try {
-                  const sessionRes = await fetch('/api/v1/checkout/session', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ tenant_id: tenantId, type: 'IN_PERSON', amount_cents: amount, cart_payload: cart })
-                  });
-                  if (!sessionRes.ok) {
-                     if (sessionRes.status === 409) {
-                         setStatus('Error: Oops! Item just sold out.');
-                     } else {
-                         setStatus('Failed to create checkout session.');
-                     }
-                     if (onOptimisticRollback) onOptimisticRollback();
-                     return;
-                  }
-                  if (onOptimisticReserve) onOptimisticReserve();
-                  await processPayment();
-                } catch(e) {
-                  setStatus('Error: ' + errorMessage(e, ''));
-                } finally {
-                  setReserving(false);
-                }
-              }} id="tap-to-pay-btn" disabled={reserving || offlineQueued} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
+              <button onClick={() => { void processPayment(); }} id="tap-to-pay-btn" disabled={reserving || offlineQueued || cardHeld} className={`w-full bg-gradient-to-b from-[#0066FF] to-[#0052CC] text-white px-6 py-4 min-h-[56px] rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/30 transition-all ${reserving ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-blue-500/40 hover:scale-[1.02] active:scale-[0.98]'}`}>
                 {reserving ? 'Processing...' : `Charge $${(amount / 100).toFixed(2)}`}
               </button>
             </div>

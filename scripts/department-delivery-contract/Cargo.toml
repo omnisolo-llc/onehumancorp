@@ -1,0 +1,26 @@
+[package]
+name = "ohc-department-delivery-contract"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+async-trait = "0.1"
+chrono = {version="0.4",features=["serde"]}
+serde = {version="1",features=["derive"]}
+serde_json = "1"
+sha2 = "0.10"
+sqlx = {version="0.8",features=["postgres","sqlite","runtime-tokio-rustls","chrono","uuid","macros"]}
+tokio = {version="1",features=["full"]}
+tracing = "0.1"
+uuid = {version="1",features=["v4"]}
+url = "2"
+reqwest = {version="0.12",default-features=false,features=["json","rustls-tls","stream","multipart"]}
+lazy_static = "1.5.0"
+regex = "1.10"
+server_integrations_core = {path="../../src/server/integrations/core"}
+server_integrations_twilio = {path="../../src/server/integrations/twilio"}
+[lib]
+path="generated.rs"
+[profile.dev]
+debug=0
+incremental=false

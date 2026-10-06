@@ -117,6 +117,13 @@ export default function AiTimeSavingsWidget() {
     {!canDisplay ? <p role="status">Verify your account to read time-savings data.</p> : error ? <p role="status">{error}</p> : !savings ? <p role="status">Loading recorded time-savings data…</p> : <>
       <p>Recorded estimate: {savings.hours_saved} hours saved.</p>
       <p>Customer inquiries handled: {savings.inquiries_handled ?? 'not reported'}. Appointments scheduled: {savings.appointments_scheduled ?? 'not reported'}.</p>
+      <a
+        className="app-button"
+        href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Recorded estimate: ${savings.hours_saved} hours saved using OmniSolo OneHumanCorp.`)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={event => { if (!pendingRead.current?.canDisplay()) event.preventDefault(); }}
+      >Share recorded savings on X</a>
     </>}
     <p>Sharing does not verify a trial grant or its duration.</p>
     <button type="button" disabled={checking} onClick={() => void checkTrial()} className="app-button">{checking ? 'Checking…' : 'Check trial availability'}</button>
