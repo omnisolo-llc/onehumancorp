@@ -47,8 +47,12 @@ export const test = base.extend<{ teamOwner: TeamOwner }>({
 export { expect };
 
 export function captureTeamResponse(page: Page, owner: TeamOwner, path: string, method = 'GET') {
-  return page.waitForResponse(response => new URL(response.url()).origin === owner.origin
-    && new URL(response.url()).pathname === path && response.request().method() === method).then(response => {
+  // A response event only confirms headers. Navigation can cancel that body.
+  // Wait for the real request's completed body before asserting its exact JSON.
+  return page.waitForEvent('requestfinished', { predicate: request => new URL(request.url()).origin === owner.origin
+    && new URL(request.url()).pathname === path && request.method() === method }).then(async request => {
+    const response = await request.response();
+    if (!response) throw new Error('Completed Team request has no response');
     expect(response.status()).toBe(200);
     expect(response.request().headers()['x-ohc-expected-user']).toBe(owner.userId);
     expect(response.request().headers()['x-ohc-expected-tenant']).toBe(owner.tenantId);
@@ -65,6 +69,16 @@ export async function readTeamPage(page: Page, owner: TeamOwner, requests: TeamR
   await expect(page.getByRole('button', { name: 'Refresh recorded decisions', exact: true })).toBeEnabled();
   await expect.poll(() => page.getByRole('alert').evaluateAll(applicationAlertTexts)).toEqual([]);
   await expect(page.getByText(`Private foreign request ${owner.foreignId}`, { exact: true })).toHaveCount(0);
+  if (new URL(page.url()).pathname === '/team') {
+    const manager = page.getByRole('button').filter({ has: page.getByRole('heading', { name: 'The Manager', exact: true }) });
+    if (requests.length) {
+      await expect(manager).toBeEnabled();
+      await expect(manager).toContainText(`${requests.length} item${requests.length === 1 ? '' : 's'} awaiting approval`);
+    } else {
+      await expect(manager).toBeDisabled();
+      await expect(manager).toContainText('No pending approvals');
+    }
+  }
 }
 
 export async function assertPendingRequests(page: Page, owner: TeamOwner, requests: TeamRequest[]) {

@@ -5,11 +5,8 @@ test.describe('Terminal POS - Mobile First & Inventory Sync', () => {
     // Navigate to POS terminal path
     await page.goto('/pos/terminal');
 
-    // Unlock the terminal
-    const pins = ['1', '2', '3', '4'];
-    for (const p of pins) {
-      await page.getByRole('button', { name: p, exact: true }).click();
-    }
+    // Verify the signed account before opening the terminal.
+    await page.getByRole('button', { name: 'Continue with signed-in account', exact: true }).click();
 
     // Clock in
     await page.getByRole('button', { name: 'Clock In' }).click();

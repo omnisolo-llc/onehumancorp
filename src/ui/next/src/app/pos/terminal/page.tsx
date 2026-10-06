@@ -49,8 +49,7 @@ export default function POSTerminal() {
   const [authenticationError, setAuthenticationError] = useState('');
   const [authenticating, setAuthenticating] = useState(false);
   const authenticationPending = useRef(false);
-  const [pin, setPin] = useState('');
-  const [locked, setLocked] = useState(true);
+  const [closed, setClosed] = useState(true);
   const [clockedIn, setClockedIn] = useState(false);
   const [clockPending, setClockPending] = useState(false);
   const [clockError, setClockError] = useState('');
@@ -91,17 +90,17 @@ export default function POSTerminal() {
   const [showPaymentSheet, setShowPaymentSheet] = useState(false);
   const [posMode, setPosMode] = useState<'catalog' | 'quick_charge'>('catalog');
 
-  const [, setSessionId] = useState<string | null>(null);
+  const [sessionRegistration, setSessionRegistration] = useState<'pending' | 'unconfirmed' | null>(null);
   const [deviceId, setDeviceId] = useState<string>('');
 
   const retireTerminal = () => {
     terminalVersion.current += 1; terminalLease.current = null; committedClock.current = null;
     clearTimeout(leaseTimer.current); inventoryVersion.current += 1; setInventoryError('');
-    authenticationPending.current = false; setAuthenticating(false); setPin('');
+    authenticationPending.current = false; setAuthenticating(false); setSessionRegistration(null);
     clockPendingRef.current = false; setClockPending(false); setClockError('');
     clockCheckPendingRef.current = false; setClockCheckPending(false); setClockCheckError('');
     setClockSummary({ confirmed: 0, unconfirmed: 0, legacyHeld: 0 });
-    setQueueIdentityReady(false); setClockedIn(false); setLocked(true); setActiveStaff(null);
+    setQueueIdentityReady(false); setClockedIn(false); setClosed(true); setActiveStaff(null);
     setInventory([]); setCart([]); setCheckoutComplete(false); setCheckoutQueued(false);
   };
 
@@ -187,7 +186,7 @@ export default function POSTerminal() {
         } catch {
           // Keep recovery notices mounted and do not invent a device identity
           // when this browser cannot preserve its existing local records.
-          setAuthenticationError('Device storage is unavailable. Enable browser storage before unlocking the terminal.');
+          setAuthenticationError('Device storage is unavailable. Enable browser storage before opening the terminal.');
         }
 
         setIsOffline(!navigator.onLine);
@@ -210,91 +209,75 @@ export default function POSTerminal() {
     }
   }, []);
 
-  const handlePinEntry = async (digit: string) => {
+  const handleOpenTerminal = async () => {
     if (authenticationPending.current) return;
     setAuthenticationError('');
-    if (pin.length < 4) {
-      const newPin = pin + digit;
-      setPin(newPin);
-      if (newPin.length === 4) {
-        if (!deviceId) {
-          setAuthenticationError('Device storage is unavailable. Enable browser storage before unlocking the terminal.');
-          setPin('');
-          return;
-        }
-        if (isOffline || !navigator.onLine) {
-           setAuthenticationError('Connect to the server to verify your staff identity. Offline access has not been authorized.');
-           setPin('');
-           return;
-        }
+    if (!deviceId) {
+      setAuthenticationError('Device storage is unavailable. Enable browser storage before opening the terminal.');
+      return;
+    }
+    if (isOffline || !navigator.onLine) {
+      setAuthenticationError('Connect to the server to verify your staff identity. Offline access has not been authorized.');
+      return;
+    }
 
-        authenticationPending.current = true;
-        setAuthenticating(true);
-        const attempt = ++terminalVersion.current;
-        try {
-          const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
-          const current = () => mounted.current && attempt === terminalVersion.current && storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
-          const expectedOwner = await openOnboardingSession();
-          const lease = await waitForTerminalLease(expectedOwner, current);
-          if (!current()) return;
-          const res = await fetch('/api/v1/pos/auth', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-ohc-expected-user': expectedOwner.userId, 'x-ohc-expected-tenant': expectedOwner.tenantId },
-            body: JSON.stringify({ pin: newPin })
-          });
-          const staff = res.ok ? confirmedStaff(await res.json()) : null;
-          if (staff) {
-            const owner = await readQueueOwner();
-            await waitForTerminalLease(expectedOwner, current);
-            if (!current()) return;
-            if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || owner.userId !== staff.id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
-            terminalLease.current = lease;
-            clearTimeout(leaseTimer.current);
-            leaseTimer.current = setTimeout(() => { if (terminalLease.current === lease) retireTerminal(); }, Math.min(lease.expiresAt - Date.now(), 2_147_483_647));
-            setQueueIdentityReady(hasVerifiedOfflineQueueOwner(owner));
-            setActiveStaff(staff);
-            setLocked(false);
-            setPin('');
+    authenticationPending.current = true;
+    setAuthenticating(true);
+    const attempt = ++terminalVersion.current;
+    try {
+      const storageEpoch = localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+      const current = () => mounted.current && attempt === terminalVersion.current && storageEpoch === localStorage.getItem(QUEUE_IDENTITY_EPOCH_KEY);
+      const expectedOwner = await openOnboardingSession();
+      const lease = await waitForTerminalLease(expectedOwner, current);
+      if (!current()) return;
+      const headers = { 'Content-Type': 'application/json', 'x-ohc-expected-user': expectedOwner.userId, 'x-ohc-expected-tenant': expectedOwner.tenantId };
+      const res = await fetch('/api/v1/pos/auth', {
+        method: 'POST', headers, body: JSON.stringify({}),
+      });
+      const staff = res.ok ? confirmedStaff(await res.json()) : null;
+      if (!current()) return;
+      if (!staff) {
+        setAuthenticationError('Your staff identity could not be verified. The terminal remains closed.');
+        return;
+      }
+      const owner = await readQueueOwner();
+      await waitForTerminalLease(expectedOwner, current);
+      if (!current()) return;
+      if (!sameOwner(owner, expectedOwner) || owner.tenantId !== staff.tenant_id || owner.userId !== staff.id || lease.expiresAt <= Date.now()) throw new Error('Terminal staff and signed identity differ');
+      terminalLease.current = lease;
+      clearTimeout(leaseTimer.current);
+      leaseTimer.current = setTimeout(() => { if (terminalLease.current === lease) retireTerminal(); }, Math.min(lease.expiresAt - Date.now(), 2_147_483_647));
+      setQueueIdentityReady(hasVerifiedOfflineQueueOwner(owner));
+      setActiveStaff(staff);
+      setSessionRegistration('pending');
+      setClosed(false);
 
-            // Initialize terminal session
-            try {
-              const sessionRes = await fetch('/api/v1/payments/terminal/session/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ device_id: deviceId })
-              });
-              const sessionData = await sessionRes.json();
-              if (sessionData.success && mounted.current && attempt === terminalVersion.current) {
-                setSessionId(sessionData.session_id);
-              } else {
-                console.error("Failed to start terminal session", sessionData.error_message);
-              }
-            } catch(e) {
-               console.error("Failed to fetch session", e);
-            }
-
-          } else if (mounted.current && attempt === terminalVersion.current) {
-            setAuthenticationError('Your staff identity could not be verified. The terminal remains locked.');
-            setPin('');
-          }
-        } catch {
-           if (!mounted.current || attempt !== terminalVersion.current) return;
-           setAuthenticationError('The authentication service is unavailable. The terminal remains locked.');
-           setActiveStaff(null);
-           setLocked(true);
-           setPin('');
-        } finally {
-           if (mounted.current && attempt === terminalVersion.current) {
-             authenticationPending.current = false; setAuthenticating(false);
-           }
-        }
+      // Account verification does not establish terminal registration or payment readiness.
+      try {
+        const sessionRes = await fetch('/api/v1/payments/terminal/session/start', {
+          method: 'POST', headers, body: JSON.stringify({ device_id: deviceId }),
+        });
+        const sessionData = await sessionRes.json();
+        if (!current() || terminalLease.current !== lease) return;
+        const confirmed = sessionRes.ok && sessionData?.success === true
+          && typeof sessionData.session_id === 'string' && !!sessionData.session_id.trim();
+        setSessionRegistration(confirmed ? null : 'unconfirmed');
+      } catch {
+        if (current() && terminalLease.current === lease) setSessionRegistration('unconfirmed');
+      }
+    } catch {
+      if (!mounted.current || attempt !== terminalVersion.current) return;
+      setAuthenticationError('The authentication service is unavailable. The terminal remains closed.');
+      setActiveStaff(null);
+      setClosed(true);
+    } finally {
+      if (mounted.current && attempt === terminalVersion.current) {
+        authenticationPending.current = false; setAuthenticating(false);
       }
     }
   };
 
-  const handleClear = () => setPin('');
-
-  const handleLock = () => {
+  const handleClose = () => {
     retireTerminal();
   };
 
@@ -339,10 +322,10 @@ export default function POSTerminal() {
   };
 
   useEffect(() => {
-    if (!locked && activeStaff) {
+    if (!closed && activeStaff) {
       loadDashboard();
     }
-  }, [locked, activeStaff]);
+  }, [closed, activeStaff]);
 
   const handleClockAction = async (action: 'CLOCK_IN' | 'CLOCK_OUT') => {
     const lease = terminalLease.current;
@@ -505,60 +488,29 @@ export default function POSTerminal() {
      setIsCartOpen(true);
   };
 
-  if (locked) {
+  if (closed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#F5F5F7] md:p-10 font-inter px-4 w-full overflow-hidden">
         <div className="w-full max-w-[375px] mx-auto bg-white rounded-3xl shadow-xl overflow-hidden p-8 border border-gray-100 relative">
            <div className="text-center mb-8">
              <div className="w-16 h-16 bg-gray-900 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-lg">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4h16v12H4zM8 20h8m-4-4v4" /></svg>
              </div>
-             <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Terminal Locked')}</h1>
-             <p className="text-gray-500 text-sm mt-2">{t('Enter PIN to access terminal')}</p>
+             <h1 className="text-2xl font-bold text-gray-900 font-outfit">{t('Open POS terminal')}</h1>
+             <p className="text-gray-500 text-sm mt-2">{t('Access uses your signed-in account. Close the terminal to hide its contents; sign out of your account before leaving a shared device.')}</p>
              {authenticationError && <p role="alert" className="mt-3 text-sm text-red-700">{authenticationError}</p>}
              {queueError && <p role="status" className="mt-3 text-sm text-amber-800">{queueError}</p>}
              {isOffline && <p className="text-[#FF9500] font-bold text-xs mt-2 bg-orange-50 inline-block px-2 py-1 rounded">{t('Offline Mode Active')}</p>}
            </div>
 
-           <div className="flex justify-center mb-8">
-             <div className="flex space-x-4">
-               {[...Array(4)].map((_, i) => (
-                 <div key={i} className={`w-4 h-4 rounded-full transition-all ${i < pin.length ? 'bg-[#0071E3] scale-110 shadow-sm' : 'bg-gray-200'}`} />
-               ))}
-             </div>
-           </div>
-
-           <div id="pos-keypad" className="grid grid-cols-3 gap-y-6 gap-x-6 max-w-[280px] mx-auto">
-             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-               <div key={num} className="flex justify-center">
-                 <button
-                   onClick={() => handlePinEntry(num.toString())}
-                   disabled={authenticating}
-                   className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-50 text-3xl font-light text-gray-800 hover:bg-gray-100 hover:shadow-inner active:bg-gray-200 transition-all flex items-center justify-center min-h-[44px] min-w-[44px]"
-                 >
-                   {num}
-                 </button>
-               </div>
-             ))}
-             <div className="col-start-2">
-               <button
-                 onClick={() => handlePinEntry('0')}
-                 disabled={authenticating}
-                 className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-800 text-3xl font-light hover:bg-gray-700 active:bg-gray-600 transition-colors flex items-center justify-center mx-auto min-h-[44px] min-w-[44px]"
-               >
-                 0
-               </button>
-             </div>
-             <div className="col-start-3 flex items-center justify-center">
-               <button
-                 onClick={handleClear}
-                 disabled={!pin}
-                 className="text-gray-400 hover:text-white disabled:opacity-40 disabled:hover:text-gray-400 min-h-[44px] min-w-[44px]"
-               >
-                 {t('Clear')}
-               </button>
-             </div>
-           </div>
+           <button
+             type="button"
+             onClick={handleOpenTerminal}
+             disabled={authenticating}
+             className="w-full py-4 rounded-xl bg-[#0071E3] text-white font-semibold disabled:opacity-50 min-h-[44px]"
+           >
+             {authenticating ? t('Verifying signed-in account...') : t('Continue with signed-in account')}
+           </button>
 
            {syncing && <div className="absolute bottom-4 left-4 text-xs text-blue-400">{t('Saved actions awaiting confirmation')}</div>}
         </div>
@@ -589,11 +541,17 @@ export default function POSTerminal() {
           </div>
           <div className="flex items-center gap-3">
             <LocalizationToggle />
-            <button onClick={handleLock} className="text-sm font-semibold text-gray-500 hover:text-gray-900 min-h-[44px] min-w-[44px]">
-              {t('Lock')}
+            <button onClick={handleClose} className="text-sm font-semibold text-gray-500 hover:text-gray-900 min-h-[44px] min-w-[44px]">
+              {t('Close terminal')}
             </button>
           </div>
         </div>
+
+        {sessionRegistration && <p role="status" aria-label="Terminal session status" className="p-3 text-sm text-amber-800">
+          {sessionRegistration === 'pending'
+            ? 'Registering this terminal session. Signing in does not confirm payment readiness.'
+            : 'Terminal session registration could not be confirmed. Signing in does not confirm payment readiness.'}
+        </p>}
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 bg-[#F5F5F7]">

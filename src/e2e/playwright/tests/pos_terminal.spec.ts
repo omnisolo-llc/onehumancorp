@@ -21,11 +21,29 @@ test.describe('Legacy POS entry uses the maintained terminal', () => {
     const writes = watchBrowserPaymentWrites(page);
     await page.goto('/pos');
     await expect(page).toHaveURL(/\/pos\/terminal$/);
-    await expect(page.getByRole('heading', { name: 'Terminal Locked', exact: true })).toBeVisible();
-    await expect(page.locator('#pos-keypad')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Open POS terminal', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with signed-in account', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: /Custom Cake|Consultation Hour|Repair Kit|Charge via Tap-to-Pay/ })).toHaveCount(0);
     await expect(page.getByText(/Payment processed successfully|Offline transactions synced successfully/)).toHaveCount(0);
     expect(writes).toEqual([]);
+  });
+
+  test('verifies the signed account and rejects obsolete PIN or caller-selected identities', async ({ page, baseURL }) => {
+    const owner = await createGrowthOwner(page, baseURL);
+    await page.goto('/pos/terminal');
+    const headers = { origin: new URL(page.url()).origin, 'sec-fetch-site': 'same-origin' };
+    const response = await page.request.post('/api/v1/pos/auth', { headers, data: {} });
+    expect(response.status()).toBe(200);
+    expect(response.headers()['cache-control']).toBe('private, no-store');
+    expect(await response.json()).toMatchObject({ success: true, staff: { id: owner.userId, tenant_id: owner.tenantId, role: 'ADMIN' } });
+    await response.dispose();
+    for (const data of [{ pin: '1234' }, { pin: '' }, { staff_id: 'another-user' }, { tenant_id: 'another-tenant' }, { role: 'ADMIN' }, []]) {
+      const rejected = await page.request.post('/api/v1/pos/auth', { headers, data });
+      expect(rejected.status()).toBe(422);
+      await rejected.dispose();
+    }
+    await expect(page.getByRole('heading', { name: 'Open POS terminal', exact: true })).toBeVisible();
+    await expect(page.locator('#pos-keypad')).toHaveCount(0);
   });
 
   test('rejects missing tenant payment credentials without creating a payment operation', async ({ page, baseURL }) => {
@@ -33,7 +51,7 @@ test.describe('Legacy POS entry uses the maintained terminal', () => {
     const writes = watchBrowserPaymentWrites(page);
     await page.goto('/pos');
     await expect(page).toHaveURL(/\/pos\/terminal$/);
-    await expect(page.getByRole('heading', { name: 'Terminal Locked', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Open POS terminal', exact: true })).toBeVisible();
     const headers = { origin: new URL(page.url()).origin, 'sec-fetch-site': 'same-origin' };
     const rejected = { success: false, status: 'rejected', error: 'A verified tenant payment connection is required.' };
     const token = await page.request.post('/api/v1/payments/terminal/token', { headers });
@@ -62,7 +80,7 @@ test.describe('Legacy POS entry uses the maintained terminal', () => {
     test(`holds ${label} across reconnect, reload and the legacy route`, async ({ page, context }) => {
       const writes = watchBrowserPaymentWrites(page);
       await page.goto('/pos/terminal');
-      await expect(page.getByRole('heading', { name: 'Terminal Locked', exact: true })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Open POS terminal', exact: true })).toBeVisible();
       // Seed once. Re-seeding on every navigation would hide accidental deletion.
       await page.evaluate(value => localStorage.setItem('pos_offline_queue', value), raw);
       await page.reload();

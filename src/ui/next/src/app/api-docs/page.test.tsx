@@ -45,10 +45,17 @@ describe('ApiDocsPage', () => {
   it('rejects foreign and retired frame messages after navigation and remount', async () => {
     const first = render(<TooltipProvider><ApiDocsPage /></TooltipProvider>);
     const oldFrame = await screen.findByTitle('Interactive API documentation') as HTMLIFrameElement;
+    await act(async () => { fireEvent.load(oldFrame); });
     const retiredWindow = oldFrame.contentWindow;
     first.unmount();
     render(<TooltipProvider><ApiDocsPage /></TooltipProvider>);
     const frame = await screen.findByTitle('Interactive API documentation') as HTMLIFrameElement;
+    // Finding the iframe proves DOM insertion, not that passive effects have
+    // finished. Complete the owned load/ready handshake before probing rejection.
+    await act(async () => { fireEvent.load(frame); });
+    act(() => window.dispatchEvent(new MessageEvent('message', { source: frame.contentWindow, origin: window.location.origin, data: { type: 'ohc-api-docs:ready' } })));
+    expect(frame).toHaveAttribute('aria-busy', 'false');
+    expect(frame.contentWindow === retiredWindow).toBe(false);
     for (const message of [
       { source: retiredWindow, origin: window.location.origin },
       { source: frame.contentWindow, origin: 'https://foreign.invalid' },

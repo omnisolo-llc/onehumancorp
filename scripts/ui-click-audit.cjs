@@ -19,7 +19,7 @@ const GLOBAL_TITLES = [
   'layouts do not overflow or overlap click targets on desktop and mobile',
 ];
 // Only these source-defined pages intentionally redirect before any control discovery.
-function expectedAuditPath(route) { return route === '/' ? '/dashboard' : route === '/share-card' ? '/onboarding' : route; }
+function expectedAuditPath(route) { return route === '/' ? '/dashboard' : route === '/share-card' ? '/onboarding' : route === '/pos' ? '/pos/terminal' : route; }
 const hash = value => crypto.createHash('sha256').update(value).digest('hex');
 function requireTrue(condition, reason) { if (!condition) throw new Error(`Click coverage: ${reason}`); }
 function exact(a, b) { return JSON.stringify(a) === JSON.stringify(b); }

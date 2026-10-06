@@ -40,16 +40,16 @@ it('retires an older queue read when another tab changes the canonical auth epoc
  await act(async()=>release(0));expect(screen.getByText(/queue.*unavailable|queue.*could not be verified/i)).toBeVisible();
 });
 
-it.each(['getItem','setItem'] as const)('keeps the real terminal locked and its recovery notice visible when device storage %s fails',async method=>{
+it.each(['getItem','setItem'] as const)('keeps the real terminal closed and its recovery notice visible when device storage %s fails',async method=>{
  queue.mockRejectedValue(new DOMException('Storage blocked','SecurityError'));
  localStorage.setItem('pos_offline_queue','[{"offline_id":"held-record"}]');
  vi.spyOn(localStorage,method).mockImplementation(()=>{throw new DOMException('Storage blocked','SecurityError');});
  expect(()=>render(<POSLayout><POSTerminal/></POSLayout>)).not.toThrow();
- expect(await screen.findByRole('heading',{name:'Terminal Locked'})).toBeVisible();
+ expect(await screen.findByRole('heading',{name:'Open POS terminal'})).toBeVisible();
  expect(screen.getByRole('heading',{name:method==='getItem'?'Historical POS data could not be checked':'Historical POS data needs review'})).toBeVisible();
- for(const digit of ['1','2','3','4']) fireEvent.click(screen.getByRole('button',{name:digit}));
- expect(screen.getByText('Device storage is unavailable. Enable browser storage before unlocking the terminal.')).toBeVisible();
- expect(screen.getByRole('heading',{name:'Terminal Locked'})).toBeVisible();
+ fireEvent.click(screen.getByRole('button',{name:'Continue with signed-in account'}));
+ expect(screen.getByText('Device storage is unavailable. Enable browser storage before opening the terminal.')).toBeVisible();
+ expect(screen.getByRole('heading',{name:'Open POS terminal'})).toBeVisible();
  expect(screen.queryByRole('button',{name:/Charge \$/})).toBeNull();
  expect(fetch).not.toHaveBeenCalled();
 });

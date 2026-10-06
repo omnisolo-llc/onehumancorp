@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import TeamPage from './page';
 import TeamChatPage from './chat/page';
-import { invalidateQueueOwner, notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
+import { invalidateQueueOwner, notifyQueueIdentityChange, readQueueOwner } from '@/lib/sync/queueIdentity';
 
 vi.mock('../components/GrowthReferralWidget', () => ({ default: () => null }));
 vi.mock('../../components/TooltipRegistry', () => ({ WithTooltip: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
@@ -218,4 +218,58 @@ test('previously verified empty inbox suspends its empty claim during refresh', 
   expect(screen.queryByText('All Caught Up!')).toBeNull();
   await act(async () => finish(Response.json({ pending_approvals: [], next_cursor: null })));
   expect(await screen.findByText('All Caught Up!')).toBeVisible();
+});
+
+test('bodyless approval and decision reads carry owner preconditions without a JSON body type', async () => {
+  await chat();
+  fireEvent.click(screen.getByRole('button', { name: 'Record approval' }));
+  await screen.findByText(/Approval recorded.*queued.*not verified/i);
+  cleanup(); rows = [];
+  render(<TeamPage />);
+  await screen.findByText(/Approval recorded.*queued.*not verified/i);
+  const reads = calls.filter(([url, options]) => !['POST', 'PUT'].includes(options?.method ?? 'GET')
+    && (url.startsWith('/api/v1/agents/approvals') || url.endsWith('/decision')));
+  expect(reads.some(([url]) => url.endsWith('/decision'))).toBe(true);
+  for (const [, options] of reads) {
+    const headers = new Headers(options?.headers);
+    expect(headers.get('content-type')).toBeNull();
+    expect(headers.get('x-ohc-expected-user')).toBe('owner-a');
+    expect(headers.get('x-ohc-expected-tenant')).toBe('tenant-a');
+  }
+  const writes = calls.filter(([, options]) => ['POST', 'PUT'].includes(options?.method ?? 'GET'));
+  expect(writes).toHaveLength(2);
+  for (const [, options] of writes) expect(new Headers(options?.headers).get('content-type')).toBe('application/json');
+});
+
+test.each([true, false])('a finite approval body is consumed while overlapping verification settles; same owner=%s', async sameOwner => {
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let finishList!: (response: Response) => void, finishIdentity!: (response: Response) => void;
+  let overlap = false;
+  const finite = Response.json({ pending_approvals: [approval()], next_cursor: null });
+  vi.mocked(fetch).mockImplementation((input, options) => {
+    const url = String(input);
+    if (url.startsWith('/api/v1/agents/approvals')) return new Promise(resolve => { finishList = resolve; });
+    if (url.endsWith('/session-identity') && overlap) return new Promise(resolve => { finishIdentity = resolve; });
+    return original(input, options);
+  });
+  render(<TeamPage />);
+  await waitFor(() => expect(finishList).toBeTypeOf('function'));
+  overlap = true;
+  const verification = readQueueOwner();
+  await waitFor(() => expect(finishIdentity).toBeTypeOf('function'));
+  await act(async () => finishList(finite));
+  await waitFor(() => expect(finite.bodyUsed).toBe(true));
+  expect(screen.queryByText('No pending approvals')).toBeNull();
+  await act(async () => {
+    finishIdentity(Response.json({ userId: sameOwner ? 'owner-a' : 'owner-b', tenantId: sameOwner ? 'tenant-a' : 'tenant-b', expiresAt: Date.now() + 60000 }));
+    await verification;
+  });
+  if (sameOwner) {
+    expect(await screen.findByRole('button', { name: /The Ambassador.*1 item/ })).toBeEnabled();
+    expect(screen.queryByRole('alert')).toBeNull();
+  } else {
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your session changed');
+    expect(screen.queryByRole('button', { name: /The Ambassador.*1 item/ })).toBeNull();
+    expect(screen.queryByText('Review customer reply')).toBeNull();
+  }
 });
