@@ -432,8 +432,13 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
                 return Ok(true);
             }
 
+            let mut scope = "Proposal Scope".to_string();
+            if !line_items.is_empty() {
+                scope = line_items[0].description.clone();
+            }
+
             // Insert line items
-            for item in line_items {
+            for item in &line_items {
                 let id = Uuid::new_v4();
                 let res_is_err = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
                     sqlx::query("INSERT INTO quote_line_items (id, tenant_id, quote_id, description, unit_price_cents, quantity, is_optional, service_item_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
@@ -478,6 +483,58 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
                     }
                     return Ok(true);
                 }
+            }
+
+            let agent_feed_item_id = format!("quote_draft_{}", quote_id);
+            let raw_inquiry = payload.get("inquiry").and_then(|v| v.as_str()).unwrap_or("");
+
+            let proposed_action = serde_json::json!({
+                "feature_type": "quote_draft",
+                "quote_id": quote_id.to_string(),
+                "customer_inquiry": raw_inquiry,
+                "scope": scope,
+                "suggested_price": total_amount_cents / 100
+            });
+
+            let feed_insert_err = if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+                sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'Sales Agent', '{}'::jsonb, $3::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING"
+                )
+                .bind(&agent_feed_item_id)
+                .bind(&tenant_id)
+                .bind(proposed_action.to_string())
+                .execute(&mut **pg_tx_opt.as_mut().unwrap())
+                .await.is_err()
+            } else {
+                sqlx::query(
+                    "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES (?, ?, 'Sales Agent', '{}', ?, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT(id) DO NOTHING"
+                )
+                .bind(&agent_feed_item_id)
+                .bind(&tenant_id)
+                .bind(proposed_action.to_string())
+                .execute(&mut **sqlite_tx_opt.as_mut().unwrap())
+                .await.is_err()
+            };
+
+            if feed_insert_err {
+                tracing::warn!("Failed to insert agent feed item for quote {}", quote_id);
+                // Rollback job, do not commit.
+                if let Some(tx) = pg_tx_opt.take() {
+                    let _ = tx.rollback().await;
+                }
+                if let Some(tx) = sqlite_tx_opt.take() {
+                    let _ = tx.rollback().await;
+                }
+                if matches!(&self.db.store, crate::db::DbStore::Postgres) {
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = $1")
+                        .bind(&job_id)
+                        .execute(&self.db.pool).await;
+                } else if let crate::db::DbStore::Sqlite(pool) = &self.db.store {
+                    let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
+                        .bind(&job_id)
+                        .execute(pool).await;
+                }
+                return Ok(true);
             }
 
             let commit_ok = if let Some(tx) = pg_tx_opt.take() {
