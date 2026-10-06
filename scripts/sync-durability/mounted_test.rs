@@ -61,6 +61,10 @@ async fn fixture() -> (sqlx::PgPool, server_auth::Store) {
     .execute(&pool)
     .await
     .unwrap();
+    sqlx::raw_sql("ALTER TABLE inventory_levels ADD COLUMN id TEXT NOT NULL DEFAULT 'fixture-level', ADD COLUMN committed_count INTEGER NOT NULL DEFAULT 0;")
+        .execute(&pool)
+        .await
+        .unwrap();
     sqlx::raw_sql(include_str!(
         "../../src/server/migrations/234_sync_durable_receipts.sql"
     ))

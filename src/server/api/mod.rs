@@ -9,6 +9,7 @@ pub mod staff_mesh;
 pub mod staff_timecards;
 pub mod sync;
 pub mod terminal_api;
+pub(crate) mod terminal_offline_authority;
 pub mod twilio_voice;
 pub mod twilio_webhook;
 
@@ -91,3 +92,5 @@ pub(crate) mod fixture_boundary;
 
 #[cfg(test)]
 mod staff_timecards_test;
+
+pub mod sms_settings;

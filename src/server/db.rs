@@ -3247,6 +3247,14 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                 sqlx::raw_sql(include_str!("persistence/agent_definitions_sqlite.sql"))
                     .execute(sqlite_pool)
                     .await?;
+                sqlx::raw_sql(include_str!(
+                    "persistence/department_message_delivery_sqlite.sql"
+                ))
+                .execute(sqlite_pool)
+                .await?;
+                sqlx::raw_sql(include_str!("persistence/manual_inbox_requests_sqlite.sql"))
+                    .execute(sqlite_pool)
+                    .await?;
                 crate::api::fulfillment::storage::ensure_sqlite_schema(sqlite_pool).await?;
                 ensure_sqlite_column(
                     sqlite_pool,
@@ -3298,6 +3306,17 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
             }
             (_, Some(mysql_pool)) => {
                 let schema = r#"
+                    CREATE TABLE IF NOT EXISTS inventory_adjustment_receipts (
+                        tenant_id VARCHAR(255) NOT NULL,
+                        client_mutation_id VARCHAR(128) NOT NULL,
+                        item_id TEXT NOT NULL,
+                        request_identity TEXT NOT NULL,
+                        receipt_json TEXT NOT NULL,
+                        created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                        PRIMARY KEY (tenant_id, client_mutation_id),
+                        INDEX inventory_adjustment_receipts_product (tenant_id, item_id(128))
+                    );
+
                     CREATE TABLE IF NOT EXISTS agent_session_data (
                         session_id VARCHAR(255) PRIMARY KEY,
                         agent_id VARCHAR(255) NOT NULL,

@@ -651,7 +651,11 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         pendingDecisionIdsRef.current.delete(id);
         if (generation !== decisionEpoch.current) return;
         const currentOwner = currentVerifiedQueueOwner();
-        if (expectedOwner && (!currentOwner || !sameOwner(expectedOwner, currentOwner))) return;
+        // The matching receipt already confirmed this decision. Other widgets
+        // temporarily clear cached identity while revalidating the same owner;
+        // that does not cancel cleanup of this exact tenant/record. Account
+        // invalidation is fenced above, and a verified different owner below.
+        if (expectedOwner && currentOwner && !sameOwner(expectedOwner, currentOwner)) return;
         setItems(previous => previous.filter(item => item.id !== id || item.tenant_id !== expectedTenant));
       }, 500);
       decisionTimers.current.add(timer);

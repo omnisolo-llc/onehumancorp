@@ -1,4 +1,6 @@
 import { test, expect } from './fixtures';
+import { createGrowthOwner } from './growth_owner';
+import { assertUnavailableAssistantComposer } from './support/assistant_execution';
 
 test.describe('Assistant WorkBuddy Parity', () => {
   test('renders the assistant shell with core capability tabs', async ({ page }) => {
@@ -31,21 +33,11 @@ test.describe('Assistant WorkBuddy Parity', () => {
     await expect(page.getByRole('button', { name: 'Connectors' }).first()).toBeVisible();
   });
 
-  test('can interact with the task composer', async ({ page }) => {
+  test('unconfigured task composer preserves the no-execution boundary', async ({ page, baseURL }) => {
+    const owner = await createGrowthOwner(page, baseURL);
     await page.goto('/dashboard');
     await page.getByRole('link', { name: 'Assistant Tasks' }).first().click();
-
-    await page.getByRole('button', { name: 'New Task' }).first().click();
-    const promptInput = page.getByLabel('Task prompt');
-    await promptInput.fill('Research next.js features and output a markdown file');
-
-    const startButton = page.getByRole('button', { name: 'Start Task' }).first();
-    await expect(startButton).toBeVisible();
-    await startButton.click();
-
-    // Once we click Start Task, it's typically creating a new running task
-    // It should appear in the Conversation area or the Task List.
-    await expect(page.getByRole('heading', { name: 'Research next.js features and output a markdown file' })).toBeVisible();
+    await assertUnavailableAssistantComposer(page, owner, 'Analyze the supplied numbers 14 and 28');
   });
 
   test('can access Parity Audit Panel', async ({ page }) => {

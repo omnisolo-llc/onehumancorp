@@ -646,7 +646,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         <h2 class="milestone-title" id="milestone-title">Loading...</h2>
         <p class="milestone-desc" id="milestone-desc">Loading...</p>
         <div class="milestone-actions">
-          <button class="btn-primary" id="milestone-copy-btn" data-testid="milestone-share-btn">
+          <button class="btn-primary" id="milestone-copy-btn" data-invitation-control data-testid="milestone-share-btn">
             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
             Copy Link
           </button>
@@ -665,11 +665,11 @@ window.renderWalkthroughStep = renderWalkthroughStep;
             <p id="referral-tier-progress" style="margin: 0; font-weight: 600;"></p>
         </div>
 
-        <input type="text" id="referral-link-input" readonly style="min-height: 44px; min-width: 44px; width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px; background: white; text-align: center; color: #1d1d1f; font-family: monospace;" value="Loading link..." />
+        <input type="text" id="referral-link-input" data-invitation-mirror readonly style="min-height: 44px; min-width: 44px; width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.1); margin-bottom: 12px; background: white; text-align: center; color: #1d1d1f; font-family: monospace;" value="Loading link..." />
 
         <div style="display: flex; gap: 8px;">
-          <button class="btn-primary" id="referral-tier-copy-btn" style="min-height: 44px; min-width: 44px; flex: 1; padding: 12px;">Copy Link</button>
-          <button class="btn-outline" id="referral-tier-share-x-btn" style="min-height: 44px; min-width: 44px; flex: 1; padding: 12px;">Share on X</button>
+          <button class="btn-primary" id="referral-tier-copy-btn" data-invitation-control style="min-height: 44px; min-width: 44px; flex: 1; padding: 12px;">Copy Link</button>
+          <button class="btn-outline" id="referral-tier-share-x-btn" data-invitation-control style="min-height: 44px; min-width: 44px; flex: 1; padding: 12px;">Share on X</button>
         </div>
       </div>
 
@@ -1072,7 +1072,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                     Welcome to OmniSolo OneHumanCorp!
                 </h3>
                 <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
-                    Your business is ready. Check out your generated storefront and see what's next.
+                    Review your business setup and available work. No completed storefront is confirmed by this feed.
                 </p>
                 <a onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: flex; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; align-items: center; justify-content: center;">Review Storefront</a>
             </div>
@@ -1339,7 +1339,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                   <div style="min-height: 44px; min-width: 44px; width: 100%; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid rgba(255, 255, 255, 0.4);">
                     <img src="/api/v1/growth/milestone/card?milestone_id=10th_order&tenant=${tenant}" alt="10th Order Milestone" style="min-height: 44px; min-width: 44px; width: 100%; height: auto; display: block;" />
                   </div>
-                  <a href="https://wa.me/?text=I%20just%20hit%20my%2010th%20order%20on%20OmniSolo!%20Check%20it%20out:%20https://cloud.omnisolo.co/invite/${tenant}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-color: #25D366; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
+                  <a href="https://wa.me/?text=I%20just%20hit%20my%2010th%20order%20on%20OmniSolo!" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background-color: #25D366; color: white; padding: 12px 24px; border-radius: 16px; font-weight: 600; text-decoration: none; width: 100%; box-sizing: border-box; transition: transform 0.1s;">
                     <svg style="width: 16px; height: 16px;" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                     Share to WhatsApp
                   </a>
@@ -1509,7 +1509,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
         if (softPaywallShareBtn) {
           softPaywallShareBtn.addEventListener('click', async () => {
             const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'DEFAULT';
-            const message = `I just discovered Advanced AI Automations on OmniSolo OneHumanCorp! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co/invite/${tenantId}`;
+            const message = `I just discovered Advanced AI Automations on OmniSolo OneHumanCorp! This is going to revolutionize how I work. 🚀 #OmniSolo #SmallBiz https://omnisolo.co`;
             const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`;
 
             // Open share dialog
@@ -1684,34 +1684,18 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               const copyBtn = document.getElementById('milestone-copy-btn');
               const xBtn = document.getElementById('milestone-close-btn');
 
-              async function getInviteLink() {
-                if (window.__TAURI__ && window.__TAURI__.core) {
-                  try {
-                    return await window.__TAURI__.core.invoke("generate_cloud_invite");
-                  } catch(e) {
-                    return "";
-                  }
-                } else {
-                  return "https://cloud.omnisolo.co/invite/test-" + Date.now();
-                }
-              }
-
               copyBtn.addEventListener('click', async () => {
-                const link = await getInviteLink();
-                const textToCopy = `I just hit a huge business milestone (${reachedMilestone.title}) using OmniSolo OneHumanCorp! Launch your own store today: ${link} ⚡ OmniSolo`;
-                const tempInput = document.createElement('textarea');
-                tempInput.value = textToCopy;
-                document.body.appendChild(tempInput);
-                tempInput.select();
-                document.execCommand('copy');
-                document.body.removeChild(tempInput);
-                localStorage.setItem(dismissedKey, 'true');
-
-                const originalText = copyBtn.innerHTML;
-                copyBtn.innerHTML = '<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Copied Text!';
-                setTimeout(() => {
-                  copyBtn.innerHTML = originalText;
-                }, 2000);
+                const link = window.getVerifiedDashboardInvitation?.();
+                if (!link) { window.showStatus('Create a verified invitation in Grow Your Team before sharing this milestone.', false); return; }
+                const textToCopy = `I reached a recorded business milestone (${reachedMilestone.title}) using OmniSolo OneHumanCorp. Join me: ${link}`;
+                copyBtn.disabled = true;
+                try {
+                  await navigator.clipboard.writeText(textToCopy);
+                  if (window.getVerifiedDashboardInvitation?.() !== link) return;
+                  try { localStorage.setItem(dismissedKey, 'true'); } catch { /* Copy does not depend on dismissal storage. */ }
+                  window.showStatus('Milestone and verified invitation copied.');
+                } catch { if (window.getVerifiedDashboardInvitation?.() === link) window.showStatus('Copy failed. Your milestone has not been dismissed.', false); }
+                finally { if (window.getVerifiedDashboardInvitation?.() === link) copyBtn.disabled = false; }
               });
 
               xBtn.addEventListener('click', async () => {
@@ -1747,22 +1731,20 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               }
               document.getElementById('referral-tier-progress').innerHTML = progressText;
 
-              const inviteLink = window.__TAURI__ && window.__TAURI__.core
-                ? await window.__TAURI__.core.invoke("generate_cloud_invite")
-                : "https://omnisolo.co/join?ref=" + tenantId;
-
               const inputEl = document.getElementById('referral-link-input');
-              inputEl.value = inviteLink;
-
-              document.getElementById('referral-tier-copy-btn').addEventListener('click', () => {
-                  navigator.clipboard.writeText(inviteLink);
-                  document.getElementById('referral-tier-copy-btn').innerText = 'Copied!';
-                  setTimeout(() => { document.getElementById('referral-tier-copy-btn').innerText = 'Copy Link'; }, 2000);
+              inputEl.value = window.getVerifiedDashboardInvitation?.() || '';
+              document.getElementById('referral-tier-copy-btn').addEventListener('click', async () => {
+                const link = window.getVerifiedDashboardInvitation?.();
+                if (!link) { window.showStatus('Create a verified invitation in Grow Your Team before sharing.', false); return; }
+                inputEl.value = link;
+                try { await navigator.clipboard.writeText(link); if (window.getVerifiedDashboardInvitation?.() === link) window.showStatus('Verified invitation copied.'); }
+                catch { if (window.getVerifiedDashboardInvitation?.() === link) window.showStatus('Copy failed. Select the verified invitation to copy it manually.', false); }
               });
-
               document.getElementById('referral-tier-share-x-btn').addEventListener('click', () => {
-                  const text = `I manage my business with OmniSolo! Join using my invite link and get 1 month free: ${inviteLink}\n\n⚡ OmniSolo`;
-                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
+                const link = window.getVerifiedDashboardInvitation?.();
+                if (!link) { window.showStatus('Create a verified invitation in Grow Your Team before sharing.', false); return; }
+                inputEl.value = link;
+                window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Join me on OmniSolo OneHumanCorp: ${link}`)}`, '_blank', 'noopener,noreferrer');
               });
 
           } catch (e) {
@@ -1877,7 +1859,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
                       Welcome to OmniSolo OneHumanCorp!
                   </h3>
                   <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
-                      Your business is ready. Check out your generated storefront and see what's next.
+                      Review your business setup and available work. No completed storefront is confirmed by this feed.
                   </p>
                   <a onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
               </div>
@@ -1885,22 +1867,12 @@ window.renderWalkthroughStep = renderWalkthroughStep;
           } else {
             renderTriageItems(agentFeedItems);
           }
+          await window.reconcileDashboardDecisions?.();
           connectAgentFeedWebSocket();
         } catch (err) {
           console.error("Unified Feed load error:", err);
-          // Show fallback onboarding welcome card for the "Day One" experience if API fails
-          triageQueue.innerHTML = `
-            <div class="triage-item glassmorphism" data-testid="onboarding-welcome-card" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 20px; border: 1px solid rgba(0, 102, 255, 0.2); box-shadow: 0 4px 16px rgba(0, 102, 255, 0.1);">
-                <h3 style="margin-top: 0; color: #1D1D1F; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(0, 102, 255, 0.1); color: #0066FF; border-radius: 50%;">✨</span>
-                    Welcome to OmniSolo OneHumanCorp!
-                </h3>
-                <p style="color: #48484A; font-size: 14px; line-height: 1.5; margin-bottom: 16px;">
-                    Your business is ready. Check out your generated storefront and see what's next.
-                </p>
-                <a onclick="window.location.href='storefront.html?tenant=' + encodeURIComponent(localStorage.getItem('tenant_id') || 'e2e-tenant'); return false;" id="reputation-engine-link" data-testid="review-storefront-btn" style="display: block; background-color: #0066FF; color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; text-align: center; width: 100%; box-sizing: border-box; min-height: 44px; display: flex; align-items: center; justify-content: center;">Review Storefront</a>
-            </div>
-          `;
+          // An unavailable feed cannot establish setup or publication readiness.
+          triageQueue.innerHTML = '<div role="alert" class="triage-card empty">Agent feed unavailable. Your work status could not be verified. <button type="button" onclick="loadUnifiedFeed()">Retry feed</button> <a href="/dashboard">Open maintained dashboard</a></div>';
         }
       }
 
@@ -1959,6 +1931,10 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       connectAgentFeedWebSocket();
 
       function renderTriageItems(items) {
+        try { renderDashboardTriageItems(items); }
+        finally { restoreDashboardDecisionHolds(); }
+      }
+      function renderDashboardTriageItems(items) {
         if (currentTriageTab === 'proposals') {
           // If items use 'status' (ui/triage) instead of 'lifecycle_state' (agent-feed)
           const proposals = items.filter(i => i.status !== 'resolved' && i.status !== 'dismissed' && i.lifecycle_state !== 'APPROVED' && i.lifecycle_state !== 'DISMISSED');
@@ -2001,7 +1977,7 @@ window.renderWalkthroughStep = renderWalkthroughStep;
               const headerText = `${group.length} new ${groupKey.replace(/_/g, ' ')}`;
               const idsStr = JSON.stringify(group.map(i => i.id)).replace(/"/g, '&quot;');
               groupedCardsHTML.push(`
-                <div class="triage-item glassmorphism" id="triage-group-${groupKey}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
+                <div class="triage-item glassmorphism" id="triage-group-${groupKey}" data-dashboard-decision-ids="${idsStr}" style="background: rgba(255, 255, 255, 0.65); backdrop-filter: blur(40px) saturate(220%); -webkit-backdrop-filter: blur(40px) saturate(220%); border-radius: 16px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.4); margin-bottom: 12px;">
                   <div class="triage-header" style="margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div class="triage-source" style="display: flex; align-items: center; gap: 8px; font-weight: 600;">
                       <span style="font-size: 18px;">📂</span> <strong style="color: #1D1D1F; font-family: Outfit, sans-serif;">${headerText}</strong>
@@ -2729,154 +2705,282 @@ window.renderWalkthroughStep = renderWalkthroughStep;
       };
 
 
-      window.handleGroupAction = async function(groupKey, itemIdsStr, state) {
-        const itemIds = JSON.parse(itemIdsStr.replace(/&quot;/g, '"'));
-        const groupEl = document.getElementById('triage-group-' + groupKey);
-        if (groupEl) groupEl.style.opacity = '0.5';
-
-        const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-        const token = localStorage.getItem('omnisolo_token');
-
-        try {
-          await Promise.all(itemIds.map(id => {
-            const isAgentFeed = !id.startsWith('triage-') && !id.startsWith('action-');
-            let url, method, bodyPayload;
-
-            if (isAgentFeed) {
-              url = '/api/v1/agent-feed/' + encodeURIComponent(id) + '/state';
-              method = 'PUT';
-              let finalState = 'APPROVED';
-              if (typeof state === 'boolean') {
-                  finalState = state ? 'APPROVED' : 'DISMISSED';
-              } else {
-                  finalState = state === 'APPROVED' ? 'APPROVED' : 'DISMISSED';
-              }
-              bodyPayload = { state: finalState };
-            } else {
-              url = '/api/v1/ui/triage/action?tenant_id=' + encodeURIComponent(tenantId);
-              method = 'POST';
-              if (typeof state === 'boolean') {
-                  bodyPayload = { triage_item_id: id, approved: state };
-              } else {
-                  bodyPayload = { triage_item_id: id, approved: state === 'APPROVED' };
-              }
-            }
-
-            return fetch(url, {
-              method: method,
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Tenant-ID': tenantId,
-                'X-User-ID': 'default',
-                'Authorization': token ? 'Bearer ' + token : ''
-              },
-              body: JSON.stringify(bodyPayload)
-            });
-          }));
-
-          if (groupEl) groupEl.remove();
-
-          if (window.showStatus) {
-            window.showStatus(state ? "Group approved successfully" : "Group dismissed");
-          }
-
-          // Optionally reload the feed
-          setTimeout(loadUnifiedFeed, 500);
-        } catch (err) {
-          console.error('Failed group action:', err);
-          if (groupEl) groupEl.style.opacity = '1';
-          alert('Failed to process group action.');
+      // Durable dashboard decisions: unknown writes are held across reloads, never replayed by a click.
+      const pendingDashboardDecisions = new Set();
+      const dashboardDecisionPrefix = 'omnisolo_dashboard_decision_v1:';
+      let dashboardDecisionEpoch = 0;
+      let dashboardReconciliationRunning = false;
+      let dashboardVerifiedDecisionOwner = null;
+      let dashboardVerifiedDecisionIdentity = null;
+      function retireDashboardDecisionView() {
+        dashboardDecisionEpoch++;
+        dashboardVerifiedDecisionOwner = null; dashboardVerifiedDecisionIdentity = null;
+        restoreDashboardDecisionHolds();
+      }
+      window.addEventListener('omnisolo_auth_changed', retireDashboardDecisionView);
+      window.addEventListener('pagehide', retireDashboardDecisionView);
+      window.addEventListener('storage', event => {
+        if (event.key === null || event.key === 'omnisolo_queue_identity_epoch_v2') retireDashboardDecisionView();
+        else if (event.key?.startsWith(dashboardDecisionPrefix)) restoreDashboardDecisionHolds();
+      });
+      function dashboardDecisionState(state) {
+        if (state === true || state === 'APPROVED') return 'APPROVED';
+        if (state === false || state === 'DISMISSED') return 'DISMISSED';
+        throw new Error('Unsupported decision. Your card and draft are retained.');
+      }
+      function dashboardDecisionIdentity() {
+        return JSON.stringify([dashboardDecisionEpoch, localStorage.getItem('tenant_id'), localStorage.getItem('tenant'), localStorage.getItem('omnisolo_queue_identity_epoch_v2')]);
+      }
+      function dashboardDecisionKey(owner, id) {
+        return dashboardDecisionPrefix + encodeURIComponent(JSON.stringify([owner.userId, owner.tenantId, id]));
+      }
+      function dashboardDecisionHolds() {
+        const holds = [];
+        for (let index = 0; index < localStorage.length; index++) {
+          const key = localStorage.key(index);
+          if (!key?.startsWith(dashboardDecisionPrefix)) continue;
+          const hold = JSON.parse(localStorage.getItem(key));
+          if (hold?.version !== 1 || !hold.owner?.userId || !hold.owner?.tenantId || !hold.id || !hold.operation
+              || !['unknown', 'confirmed', 'rejected'].includes(hold.phase) || typeof hold.legacy !== 'boolean'
+              || !['APPROVED', 'DISMISSED'].includes(hold.state) || (hold.edit !== undefined && typeof hold.edit !== 'string')
+              || key !== dashboardDecisionKey(hold.owner, hold.id)) throw new Error('Decision recovery history is unavailable. No decision was sent.');
+          holds.push(hold);
         }
-      };
-window.handleTriageAction = async function(id, state) {
-
-        const itemEl = document.getElementById(`triage-${id}`);
-        if (itemEl) {
-            itemEl.style.opacity = '0.5';
-            const btn = itemEl.querySelector('.triage-btn-approve');
-            if (btn) {
-                const text = btn.querySelector('.btn-text');
-                const loader = btn.querySelector('.btn-loader');
-                if (text && loader) {
-                    text.style.display = 'none';
-                    loader.style.display = 'inline-block';
-                }
-            }
+        return holds;
+      }
+      function saveDashboardDecision(hold) {
+        const key = dashboardDecisionKey(hold.owner, hold.id);
+        const bytes = JSON.stringify(hold);
+        localStorage.setItem(key, bytes);
+        if (localStorage.getItem(key) !== bytes) throw new Error('Decision recovery history could not be saved.');
+      }
+      async function dashboardDecisionOwner() {
+        const identity = dashboardDecisionIdentity();
+        const response = await fetch('/api/v1/auth/session-identity', { credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+        const owner = await response.json();
+        if (response.status !== 200 || owner?.error != null || typeof owner?.userId !== 'string' || !owner.userId
+            || typeof owner.tenantId !== 'string' || !owner.tenantId || !Number.isFinite(owner.expiresAt) || owner.expiresAt <= Date.now()) throw new Error('Verified decision owner is unavailable.');
+        if (dashboardDecisionIdentity() !== identity) throw new Error('Decision view was retired.');
+        dashboardVerifiedDecisionOwner = owner; dashboardVerifiedDecisionIdentity = identity;
+        restoreDashboardDecisionHolds();
+        return owner;
+      }
+      function dashboardSameOwner(first, second) {
+        return first.userId === second.userId && first.tenantId === second.tenantId;
+      }
+      async function assertDashboardDecisionOwnerCurrent(owner, identity) {
+        if (dashboardDecisionIdentity() !== identity) throw new Error('Decision view was retired. The original hold remains.');
+        const current = await dashboardDecisionOwner();
+        if (dashboardDecisionIdentity() !== identity || !dashboardSameOwner(owner, current)) throw new Error('Decision owner changed. The original hold remains.');
+      }
+      function dashboardDecisionHeaders(owner) {
+        const headers = new Headers({ 'Content-Type': 'application/json', 'x-ohc-expected-user': owner.userId, 'x-ohc-expected-tenant': owner.tenantId });
+        if (headers.get('x-ohc-expected-user') !== owner.userId || headers.get('x-ohc-expected-tenant') !== owner.tenantId) throw new Error('Decision owner cannot be bound.');
+        return headers;
+      }
+      function confirmedDashboardReceipt(hold, response, value) {
+        const record = value => value !== null && typeof value === 'object' && !Array.isArray(value) ? value : null;
+        const receipt = record(value), stored = hold.legacy ? record(receipt?.item) : receipt;
+        let confirmed = response.status === 200 && receipt?.decision_recorded === true && receipt.error == null
+          && (!('success' in receipt) || receipt.success === true) && (!hold.legacy || receipt.success === true)
+          && stored?.id === hold.id && stored.tenant_id === hold.owner.tenantId && stored.lifecycle_state === hold.state;
+        if (confirmed && hold.legacy) confirmed = stored.edited_payload === null || typeof stored.edited_payload === 'string';
+        if (confirmed && hold.edit !== undefined) {
+          if (hold.legacy) confirmed = stored.edited_payload === hold.edit;
+          else {
+            const action = record(stored.proposed_action);
+            const values = action && ['draft_reply', 'generated_response', 'summary', 'message', 'draft_message', 'draft_action']
+              .filter(key => typeof action[key] === 'string').map(key => action[key]);
+            confirmed = !!values?.length && values.every(value => value === hold.edit);
+          }
         }
-
+        return confirmed;
+      }
+      function restoreDashboardDecisionHolds() {
+        const setHeld = (scope, held) => scope?.querySelectorAll('button, textarea').forEach(control => {
+          if (held) {
+            if (!('dashboardDecisionDisabled' in control.dataset)) control.dataset.dashboardDecisionDisabled = String(control.disabled);
+            control.disabled = true;
+          } else if ('dashboardDecisionDisabled' in control.dataset) {
+            control.disabled = control.dataset.dashboardDecisionDisabled === 'true';
+            delete control.dataset.dashboardDecisionDisabled;
+          }
+        });
         try {
-          const tenantId = localStorage.getItem('tenant_id') || localStorage.getItem('tenant') || 'default';
-
-          // Determine if this is a new agent feed item or legacy triage item based on the ID format
-          // New agent feed items usually use pure UUIDs, legacy uses "triage-UUID" or "action-test"
-          const isAgentFeed = !id.startsWith('triage-') && !id.startsWith('action-');
-
-          let url;
-          let method;
-          let bodyPayload;
-
-          let editedPayload = undefined;
-          const textarea = document.getElementById(`triage-textarea-${id}`);
-          if (textarea) {
-            editedPayload = textarea.value;
+          const holds = dashboardDecisionHolds().filter(hold => hold.phase === 'unknown');
+          const verified = dashboardVerifiedDecisionOwner?.expiresAt > Date.now()
+            && dashboardVerifiedDecisionIdentity === dashboardDecisionIdentity() ? dashboardVerifiedDecisionOwner : null;
+          const heldIds = new Set();
+          for (const item of agentFeedItems) {
+            const hold = holds.find(value => value.id === item.id && value.owner.tenantId === item.tenant_id);
+            const card = document.getElementById(`triage-${item.id}`);
+            setHeld(card, !!hold);
+            if (!hold) continue;
+            heldIds.add(item.id);
+            const draft = card?.querySelector('textarea');
+            if (draft) {
+              if (!verified || !dashboardSameOwner(hold.owner, verified)) draft.value = '';
+              else if (hold.edit !== undefined) draft.value = hold.edit;
+            }
           }
-
-          if (isAgentFeed) {
-             url = `/api/v1/agent-feed/${encodeURIComponent(id)}/state`;
-             method = 'PUT';
-             let finalState = 'APPROVED';
-             if (typeof state === 'boolean') {
-                 finalState = state ? 'APPROVED' : 'DISMISSED';
-             } else {
-                 finalState = state === 'APPROVED' ? 'APPROVED' : 'DISMISSED';
-             }
-             bodyPayload = { state: finalState, edited_payload: editedPayload };
-          } else {
-             url = `/api/v1/ui/triage/action?tenant_id=${encodeURIComponent(tenantId)}`;
-             method = 'POST';
-             if (typeof state === 'boolean') {
-                 bodyPayload = { triage_item_id: id, approved: state, edited_payload: editedPayload };
-             } else {
-                 bodyPayload = { triage_item_id: id, approved: state === 'APPROVED', edited_payload: editedPayload };
-             }
-          }
-
-          const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json', 'X-Tenant-ID': tenantId, 'X-User-ID': 'default', 'Authorization': `Bearer ${localStorage.getItem('omnisolo_token')}` },
-            body: JSON.stringify(bodyPayload)
+          document.querySelectorAll('[data-dashboard-decision-ids]').forEach(group => {
+            const ids = JSON.parse(group.dataset.dashboardDecisionIds);
+            setHeld(group, !Array.isArray(ids) || ids.some(id => heldIds.has(id)));
           });
-
-          if (!res.ok) throw new Error("Update failed");
-
-          // window.showStatus('Approving...', true);
-          // window.showStatus((state === 'APPROVED' || state === true) ? 'Approved!' : 'Dismissed.', true);
-
-          if (state === 'APPROVED' || state === true) {
-              const isPro = localStorage.getItem('has_pro') === 'true';
-              if (agentSuccessModal) {
-                  agentSuccessTitle.innerText = "Agent Action Executed ✨";
-                  agentSuccessDesc.innerText = "Your AI teammate successfully completed the task.";
-
-                  if (isPro) {
-                      agentSuccessUpsellContainer.style.display = 'none';
-                      if (window.showStatus) window.showStatus("Approved!", true);
-                  } else {
-                      agentSuccessUpsellContainer.style.display = 'block';
-                      agentSuccessModal.style.display = 'flex';
-                  }
-              } else if (window.showStatus) {
-                  window.showStatus("Approved!", true);
-              }
-          } else if (window.showStatus) {
-              window.showStatus("Dismissed.", true);
+        } catch {
+          // An unreadable journal cannot release newly rendered decision controls.
+          setHeld(document.getElementById('triage-queue') || document.getElementById('triage-section') || document.body, true);
+        }
+      }
+      function showDashboardDecisionHold(hold) {
+        restoreDashboardDecisionHolds();
+        if (hold.phase !== 'unknown') {
+          if (!dashboardDecisionHolds().some(value => value.phase === 'unknown' && dashboardSameOwner(value.owner, hold.owner))) document.getElementById('dashboard-decision-recovery')?.remove();
+          return;
+        }
+        let recovery = document.getElementById('dashboard-decision-recovery');
+        if (!recovery) {
+          recovery = document.createElement('div'); recovery.id = 'dashboard-decision-recovery'; recovery.setAttribute('role', 'status');
+          recovery.append(document.createTextNode('A decision outcome is unconfirmed. Its original request is held; edits and new decisions must wait. '));
+          const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Check recorded decisions';
+          button.onclick = () => { void window.reconcileDashboardDecisions(); }; recovery.append(button);
+          (document.getElementById('triage-section') || document.body).append(recovery);
+        }
+      }
+      async function readDashboardDecision(hold, owner, identity) {
+        if (dashboardDecisionIdentity() !== identity) throw new Error('Decision view was retired.');
+        if (!dashboardSameOwner(hold.owner, owner)) throw new Error('Return to the original account to reconcile its held decision.');
+        const path = hold.legacy ? `/api/v1/ui/triage/decisions/${encodeURIComponent(hold.id)}` : `/api/v1/agent-feed/${encodeURIComponent(hold.id)}/decision`;
+        const response = await fetch(path, { method: 'GET', headers: dashboardDecisionHeaders(owner), credentials: 'same-origin', cache: 'no-store', redirect: 'error' });
+        const value = await response.json().catch(() => null);
+        if (!confirmedDashboardReceipt(hold, response, value)) throw new Error('Outcome remains unconfirmed. The original request is held; no mutation was retried.');
+        await assertDashboardDecisionOwnerCurrent(owner, identity);
+        const current = dashboardDecisionHolds().find(value => dashboardDecisionKey(value.owner, value.id) === dashboardDecisionKey(hold.owner, hold.id));
+        if (current?.operation !== hold.operation) throw new Error('Decision recovery history changed.');
+        hold.phase = 'confirmed'; saveDashboardDecision(hold); showDashboardDecisionHold(hold);
+      }
+      window.reconcileDashboardDecisions = async function() {
+        if (dashboardReconciliationRunning) return;
+        dashboardReconciliationRunning = true;
+        const identity = dashboardDecisionIdentity();
+        let confirmed = 0;
+        try {
+          const holds = dashboardDecisionHolds().filter(hold => hold.phase === 'unknown');
+          if (!holds.length) return;
+          const owner = await dashboardDecisionOwner();
+          for (const hold of holds) {
+            if (!dashboardSameOwner(hold.owner, owner)) continue;
+            if (dashboardDecisionIdentity() !== identity) return;
+            showDashboardDecisionHold(hold);
+            try {
+              if (!navigator.locks?.request) continue;
+              await navigator.locks.request(dashboardDecisionKey(owner, hold.id), { mode: 'exclusive', ifAvailable: true }, async lock => {
+                if (lock) { await readDashboardDecision(hold, owner, identity); confirmed++; }
+              });
+            } catch { /* Preserve unknown requests, including explicit no-record reads. */ }
           }
-
+          if (dashboardDecisionIdentity() !== identity || !dashboardSameOwner(owner, await dashboardDecisionOwner())) return;
+          if (confirmed) window.showStatus?.(`${confirmed} recorded decision${confirmed === 1 ? '' : 's'} reconciled. Execution or delivery is not verified.`);
+          if (!dashboardDecisionHolds().some(hold => hold.phase === 'unknown' && dashboardSameOwner(hold.owner, owner))) document.getElementById('dashboard-decision-recovery')?.remove();
+        } catch { window.showStatus?.('Decision reconciliation is unavailable. Original requests remain held.', false); }
+        finally { dashboardReconciliationRunning = false; }
+      };
+      async function recordDashboardDecision(expected, state, editedPayload) {
+        if (!expected?.tenant_id || !agentFeedItems.includes(expected)) throw new Error('Decision was not sent. The proposal identity is unconfirmed.');
+        const identity = dashboardDecisionIdentity();
+        const owner = await dashboardDecisionOwner();
+        if (owner.tenantId !== expected.tenant_id || !dashboardDecisionCurrent(identity, [expected])) throw new Error('The original proposal owner is no longer active.');
+        const legacy = ['triage', 'task', 'order'].includes(expected.event_source) || expected.id.startsWith('triage-') || expected.id.startsWith('action-');
+        const edit = state === 'APPROVED' ? editedPayload : undefined;
+        if (!navigator.locks?.request) throw new Error('Coordinated decision recovery is unavailable. No decision was sent.');
+        const key = dashboardDecisionKey(owner, expected.id);
+        await navigator.locks.request(key, { mode: 'exclusive', ifAvailable: true }, async lock => {
+          if (!lock) throw new Error('Another decision or reconciliation is active.');
+          if (!dashboardSameOwner(owner, await dashboardDecisionOwner()) || !dashboardDecisionCurrent(identity, [expected])) throw new Error('Decision owner changed before dispatch.');
+          const holds = dashboardDecisionHolds();
+          if (holds.some(hold => hold.id === expected.id && hold.owner.tenantId === owner.tenantId && !dashboardSameOwner(hold.owner, owner) && hold.phase !== 'rejected')) throw new Error('Return to the original account to reconcile its held decision.');
+          let hold = holds.find(value => dashboardDecisionKey(value.owner, value.id) === key);
+          if (hold && hold.phase !== 'rejected') {
+            showDashboardDecisionHold(hold);
+            // Even a changed button/draft can only read the original intent's receipt.
+            await readDashboardDecision(hold, owner, identity);
+            if (hold.state !== state || hold.legacy !== legacy || hold.edit !== edit) throw new Error('The original decision is recorded. Refresh its current state before choosing another intent.');
+            return;
+          }
+          hold = { version: 1, operation: crypto.randomUUID(), owner: { userId: owner.userId, tenantId: owner.tenantId }, id: expected.id, legacy, state, ...(edit === undefined ? {} : { edit }), phase: 'unknown' };
+          saveDashboardDecision(hold); showDashboardDecisionHold(hold);
+          const body = legacy ? { triage_item_id: hold.id, approved: state === 'APPROVED' } : { state };
+          if (edit !== undefined) body[legacy ? 'edited_payload' : 'modified_content'] = edit;
+          const response = await fetch(legacy ? '/api/v1/ui/triage/action' : `/api/v1/agent-feed/${encodeURIComponent(hold.id)}/state`, {
+            method: legacy ? 'POST' : 'PUT', headers: dashboardDecisionHeaders(owner), body: JSON.stringify(body), credentials: 'same-origin', cache: 'no-store', redirect: 'error',
+          });
+          const value = await response.json().catch(() => null);
+          if (!confirmedDashboardReceipt(hold, response, value)) {
+            if ([400, 401, 403, 404, 409, 422].includes(response.status) && value?.decision_recorded === false && typeof value.error === 'string') {
+              await assertDashboardDecisionOwnerCurrent(owner, identity);
+              hold.phase = 'rejected'; saveDashboardDecision(hold); showDashboardDecisionHold(hold);
+              throw new Error('The server rejected this decision without recording it. Your draft is retained.');
+            }
+            throw new Error('Outcome unconfirmed. The original request is held; use Check recorded decisions before any new intent.');
+          }
+          await assertDashboardDecisionOwnerCurrent(owner, identity);
+          if (!agentFeedItems.includes(expected)) throw new Error('Decision view changed. Reconcile the original hold.');
+          hold.phase = 'confirmed'; saveDashboardDecision(hold); showDashboardDecisionHold(hold);
+        });
+      }
+      function dashboardDecisionCurrent(identity, items) {
+        return dashboardDecisionIdentity() === identity && items.every(item => agentFeedItems.includes(item));
+      }
+      window.handleGroupAction = async function(groupKey, itemIdsStr, state) {
+        let ids = [], expected = [], identity, groupEl;
+        const acquired = [];
+        let recorded = 0;
+        try {
+          const decision = dashboardDecisionState(state);
+          ids = JSON.parse(itemIdsStr.replace(/&quot;/g, '"'));
+          if (!Array.isArray(ids) || !ids.length || ids.some(id => typeof id !== 'string') || new Set(ids).size !== ids.length) throw new Error('Invalid group. Cards are retained.');
+          if (ids.some(id => pendingDashboardDecisions.has(id))) return;
+          expected = ids.map(id => agentFeedItems.find(item => item.id === id));
+          if (expected.some(item => !item?.tenant_id)) throw new Error('Proposal identity is unconfirmed. Cards are retained.');
+          identity = dashboardDecisionIdentity();
+          groupEl = document.getElementById('triage-group-' + groupKey);
+          ids.forEach(id => { pendingDashboardDecisions.add(id); acquired.push(id); });
+          if (groupEl) groupEl.style.opacity = '0.5';
+          for (const item of expected) {
+            if (!dashboardDecisionCurrent(identity, expected)) return;
+            await recordDashboardDecision(item, decision);
+            recorded++;
+          }
+          if (!dashboardDecisionCurrent(identity, expected)) return;
+          if (groupEl) groupEl.remove();
+          window.showStatus?.(decision === 'APPROVED' ? 'Approval recorded for this group. Execution or delivery is not verified.' : 'Dismissal recorded for this group.');
           loadUnifiedFeed();
-        } catch (err) {
-          console.error(err);
+        } catch (error) {
+          if (identity && !dashboardDecisionCurrent(identity, expected)) return;
+          if (groupEl) groupEl.style.opacity = '1';
+          alert(recorded ? `${recorded} of ${ids.length} decisions recorded; remaining outcomes are unconfirmed. Cards and drafts are retained. Check recorded decisions before retrying.` : `Outcome unconfirmed. Cards and drafts are retained. ${error.message}`);
+        } finally { acquired.forEach(id => pendingDashboardDecisions.delete(id)); }
+      };
+      window.handleTriageAction = async function(id, state) {
+        if (pendingDashboardDecisions.has(id)) return;
+        const expected = agentFeedItems.find(item => item.id === id);
+        const identity = dashboardDecisionIdentity();
+        const itemEl = document.getElementById(`triage-${id}`);
+        pendingDashboardDecisions.add(id);
+        try {
+          const decision = dashboardDecisionState(state);
+          const textarea = document.getElementById(`triage-textarea-${id}`);
+          if (itemEl) itemEl.style.opacity = '0.5';
+          await recordDashboardDecision(expected, decision, decision === 'APPROVED' && textarea ? textarea.value : undefined);
+          if (!dashboardDecisionCurrent(identity, [expected])) return;
+          window.showStatus?.(decision === 'APPROVED' ? 'Approval recorded. Execution or delivery is not verified by this decision.' : 'Dismissal recorded.');
+          loadUnifiedFeed();
+        } catch (error) {
+          if (dashboardDecisionIdentity() !== identity || (expected && !agentFeedItems.includes(expected))) return;
+          alert(`Outcome unconfirmed. Your card and draft are retained. ${error.message}`);
+        } finally {
+          pendingDashboardDecisions.delete(id);
           if (itemEl) itemEl.style.opacity = '1';
-          alert('Failed to update agent feed action.');
         }
       };
 // Load on start

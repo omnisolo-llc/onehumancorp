@@ -8,54 +8,30 @@ type Props = {
   departmentName: string;
   approvals: ApprovalRequest[];
   onBack: () => void;
-  onApprove: (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => void;
-  onReject: (id: string) => void;
+  onApprove: (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => Promise<boolean>;
+  onReject: (id: string) => Promise<boolean>;
+  blocked: (id: string) => boolean;
+  status: React.ReactNode;
+  readState: 'loading' | 'unavailable' | 'ready';
 };
 
 export default function ApprovalInbox({
-  departmentId,
   departmentName,
   approvals,
   onBack,
   onApprove,
   onReject,
+  blocked,
+  status,
+  readState,
 }: Props) {
-  const [reviewAll, setReviewAll] = useState(true);
   const [selectedReview, setSelectedReview] = useState<ApprovalRequest | null>(
     null,
   );
   const [editedQuote, setEditedQuote] = useState<{ suggested_price: string, scope: string } | null>(null);
   const [editedDraft, setEditedDraft] = useState<string | null>(null);
 
-  const handleToggle = async () => {
-    const newValue = !reviewAll;
-    setReviewAll(newValue);
-    try {
-      await fetch(`/api/v1/agents/settings/${departmentId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tone_of_voice: "Friendly",
-          auto_approve_limits: newValue ? 0.0 : 1000.0,
-        }),
-      });
-    } catch (e) {
-      console.error(e);
-      setReviewAll(!newValue); // Revert on failure
-    }
-  };
-
-  const extractPayload = (description: string) => {
-    const parts = description.split(" | Payload: ");
-    if (parts.length > 1) {
-      try {
-        return { desc: parts[0], payload: JSON.parse(parts[1]) };
-      } catch  {
-        return { desc: parts[0], payload: null };
-      }
-    }
-    return { desc: description, payload: null };
-  };
+  const extractPayload = (request: ApprovalRequest) => ({ desc: request.description, payload: request.payload });
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 font-inter py-10">
@@ -90,24 +66,17 @@ export default function ApprovalInbox({
           </div>
         </div>
 
-        {/* Settings Toggle */}
-        <div className="px-6 py-4 bg-white/40 border-b border-white/40 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700">
-            Review all messages before sending
-          </span>
-          <button
-            onClick={handleToggle}
-            className={`w-12 h-6 rounded-full p-1 transition-colors flex ${reviewAll ? "bg-[#0066FF] justify-end" : "bg-gray-300 justify-start"}`}
-          >
-            <div
-              className={`w-4 h-4 bg-white rounded-full transition-transform`}
-            />
-          </button>
+        <div className="px-6 py-4 border-b border-gray-100 text-sm text-gray-600">
+          <p>Department policy cannot be verified or changed in this review view.</p>
+          <button type="button" disabled aria-label="Department policy unavailable">Policy unavailable</button>
         </div>
 
+        {status}
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 space-y-4 hide-scrollbar">
-          {approvals.length === 0 ? (
+          {readState !== 'ready' ? (
+            <p role="status">{readState === 'loading' ? 'Refreshing recorded approvals…' : 'The approval list could not be verified.'}</p>
+          ) : approvals.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 text-center px-8">
               <div className="w-16 h-16 bg-green-50 text-[#34C759] rounded-full flex items-center justify-center mb-4">
                 <svg
@@ -133,7 +102,7 @@ export default function ApprovalInbox({
             </div>
           ) : (
             approvals.map((req) => {
-              const { desc, payload } = extractPayload(req.description);
+              const { desc, payload } = extractPayload(req);
               return (
                 <div
                   key={req.id}
@@ -161,6 +130,10 @@ export default function ApprovalInbox({
                   <p className="text-gray-800 text-sm leading-relaxed mb-6 font-medium">
                     {desc}
                   </p>
+
+                  {req.payload && !['ambassador_reply', 'lead_recovery', 'case_study', 'social_post_draft', 'quote_draft', 'low_stock_restock', 'abandoned_cart'].includes(req.payload.feature_type ?? '') && (
+                    <pre className="mb-4 whitespace-pre-wrap break-words text-xs" aria-label="Recorded action payload">{JSON.stringify(req.payload, null, 2)}</pre>
+                  )}
 
                   {req.payload?.feature_type === "ambassador_reply" && (
                     <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
@@ -221,7 +194,7 @@ export default function ApprovalInbox({
                         Missed Lead Detected
                       </div>
                       <div className="text-xs text-orange-700 font-medium">
-                        {payload?.description || "A potential customer hasn't received a follow-up in over 2 hours."}
+                        {payload?.description || "No lead context was returned."}
                       </div>
 
                       <div className="app-card p-3 rounded-lg border border-orange-100 relative mt-2">
@@ -229,7 +202,7 @@ export default function ApprovalInbox({
                           AI Draft
                         </div>
                         <p className="text-xs text-gray-700 italic">
-                          "{payload?.draft_reply || 'Hi there! Just checking in to see if you still needed help with this?'}"
+                          "{payload?.draft_reply || 'No reply draft was returned.'}"
                         </p>
                       </div>
 
@@ -244,117 +217,8 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "legal_compliance" && (
-                    <div className="mb-6 p-4 rounded-xl bg-orange-50 border border-orange-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-orange-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                          />
-                        </svg>
-                        Compliance Warning
-                      </div>
-                      <div className="text-xs text-orange-700">
-                        Sales are approaching €10,000. New tax rules require an
-                        updated Privacy Policy.
-                      </div>
-                      <div className="app-card p-3 rounded-lg border border-orange-100 text-xs text-gray-600">
-                        Drafting updated European privacy policy...
-                      </div>
-                    </div>
-                  )}
 
-                  {req.payload?.feature_type === "global_localization" && (
-                    <div className="mb-6 p-4 rounded-xl bg-indigo-50 border border-indigo-100 flex flex-col gap-3">
-                      <div className="flex items-center justify-between text-indigo-800 font-semibold text-sm">
-                        <div className="flex items-center gap-2">
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
-                            />
-                          </svg>
-                          Global Reach Preview
-                        </div>
-                        <span className="text-[10px] bg-indigo-100 px-2 py-0.5 rounded">
-                          Spanish
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div className="app-card p-2 rounded border border-indigo-50">
-                          <span className="text-gray-400 block mb-1">
-                            Original (EN)
-                          </span>
-                          <div>
-                            Vegan Cake
-                            <br />
-                            $25.00
-                          </div>
-                        </div>
-                        <div className="app-card p-2 rounded border border-indigo-100 ring-1 ring-indigo-500/20">
-                          <span className="text-indigo-400 block mb-1">
-                            Preview (ES)
-                          </span>
-                          <div>
-                            Pastel Vegano
-                            <br />
-                            €23.50
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
-                  {req.payload?.feature_type === "ai_geo" && (
-                    <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-                          />
-                        </svg>
-                        Smart Search Setup
-                      </div>
-                      <div className="text-xs text-emerald-700">
-                        Updating your store's information so it can be easily
-                        found by AI search tools like ChatGPT.
-                      </div>
-                      <div className="flex gap-2 text-[10px] text-emerald-600 mt-1">
-                        <span className="bg-emerald-100 px-2 py-1 rounded">
-                          Smart Formatting
-                        </span>
-                        <span className="bg-emerald-100 px-2 py-1 rounded">
-                          Search Engine Data
-                        </span>
-                        <span className="bg-emerald-100 px-2 py-1 rounded">
-                          Answer Formatting
-                        </span>
-                      </div>
-                    </div>
-                  )}
 
                   {req.payload?.feature_type === "case_study" && (
                     <div className="mb-6 p-4 rounded-xl glassmorphism border border-blue-100 flex flex-col gap-3">
@@ -401,65 +265,6 @@ export default function ApprovalInbox({
                     </div>
                   )}
 
-                  {req.payload?.feature_type === "social_calendar" && (
-                    <div className="mb-6 p-4 rounded-xl bg-purple-50 border border-purple-100 flex flex-col gap-3">
-                      <div className="flex items-center gap-2 text-purple-800 font-semibold text-sm">
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        7-Day Social Calendar Generated
-                      </div>
-                      <div className="text-xs text-purple-700">
-                        The Generative Promoter has created a week of content
-                        based on your new product.
-                      </div>
-
-                      <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(
-                          (day, idx) => (
-                            <div
-                              key={day}
-                              className="flex-shrink-0 w-24 bg-white rounded-lg border border-purple-100 p-2 shadow-sm"
-                            >
-                              <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">
-                                {day}
-                              </div>
-                              <div className="w-full h-16 bg-gray-100 rounded mb-1 flex items-center justify-center text-xl">
-                                {
-                                  ["📸", "✨", "🎂", "🎉", "🌟", "🛍️", "🔥"][
-                                    idx
-                                  ]
-                                }
-                              </div>
-                              <div className="text-[8px] text-gray-500 leading-tight line-clamp-2">
-                                {
-                                  [
-                                    "New flavor drop!",
-                                    "Behind the scenes",
-                                    "Customer favorite",
-                                    "Special discount",
-                                    "Weekend vibes",
-                                    "Shop local",
-                                    "Sunday showcase",
-                                  ][idx]
-                                }
-                              </div>
-                            </div>
-                          ),
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   {req.payload?.feature_type === "social_post_draft" && (
                     <div className="mb-6 p-4 rounded-xl bg-pink-50 border border-pink-100 flex flex-col gap-3">
@@ -663,6 +468,7 @@ export default function ApprovalInbox({
 
                   <div className="flex gap-3">
                     <button
+                      disabled={blocked(req.id)}
                       onClick={() => {
                         if (payload && (payload.original_message || payload.feature_type === "quote_draft" || payload.feature_type === "ambassador_reply")) {
                           setSelectedReview(req);
@@ -672,7 +478,7 @@ export default function ApprovalInbox({
                               scope: payload.scope || ''
                             });
                           } else if (payload.feature_type === "ambassador_reply") {
-                            setEditedDraft(payload.generated_response || payload.draft_reply || payload.reply || '');
+                            setEditedDraft(payload.generated_response || payload.draft_reply || '');
                           }
                         } else {
                           onReject(req.id);
@@ -685,28 +491,11 @@ export default function ApprovalInbox({
                         : "Reject / Edit"}
                     </button>
                     <button
-                      onClick={() => {
-                        if (req.payload?.feature_type === "quote_draft" && editedQuote) {
-                           onApprove(req.id, {
-                             ...req.payload,
-                             suggested_price: parseFloat(editedQuote.suggested_price) || 0,
-                             scope: editedQuote.scope
-                           });
-                        } else {
-                           onApprove(req.id);
-                        }
-                      }}
+                      disabled={blocked(req.id)}
+                      onClick={() => { void onApprove(req.id); }}
                       className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                     >
-                      {req.payload?.feature_type === "case_study"
-                        ? "Publish to Website"
-                        : req.payload?.feature_type === "social_post_draft"
-                        ? "Schedule Post"
-                        : req.payload?.feature_type === "quote_draft"
-                        ? "Approve & Send"
-                        : req.payload?.feature_type === "ambassador_reply"
-                        ? "Send Draft"
-                        : "Approve"}
+                      Record approval
                     </button>
                   </div>
                 </div>
@@ -733,12 +522,12 @@ export default function ApprovalInbox({
                   Context
                 </p>
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-sm text-gray-700">
-                  {extractPayload(selectedReview.description).payload
-                    ?.original_message || extractPayload(selectedReview.description).payload?.customer_inquiry || "N/A"}
+                  {extractPayload(selectedReview).payload
+                    ?.original_message || extractPayload(selectedReview).payload?.customer_inquiry || "N/A"}
                 </div>
               </div>
 
-              {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? (
+              {extractPayload(selectedReview).payload?.feature_type === "quote_draft" ? (
                 <div className="mb-6 space-y-4">
                   <div>
                     <label className="block text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">Suggested Price ($)</label>
@@ -761,7 +550,7 @@ export default function ApprovalInbox({
                     />
                   </div>
                 </div>
-              ) : extractPayload(selectedReview.description).payload?.feature_type === "ambassador_reply" ? (
+              ) : extractPayload(selectedReview).payload?.feature_type === "ambassador_reply" ? (
                 <div className="mb-6">
                   <p className="text-xs text-gray-500 font-medium uppercase tracking-wider mb-1">
                     Edit Draft Reply
@@ -780,16 +569,17 @@ export default function ApprovalInbox({
                     Draft
                   </p>
                   <div className="glassmorphism p-3 rounded-xl border border-blue-100 text-sm text-gray-800 italic relative">
-                    {extractPayload(selectedReview.description).payload
-                      ?.generated_response || extractPayload(selectedReview.description).payload?.draft_reply || extractPayload(selectedReview.description).payload?.reply || "N/A"}
+                    {extractPayload(selectedReview).payload
+                      ?.generated_response || extractPayload(selectedReview).payload?.draft_reply || "N/A"}
                   </div>
                 </div>
               )}
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    onReject(selectedReview.id);
+                  disabled={blocked(selectedReview.id)}
+                  onClick={async () => {
+                    if (!await onReject(selectedReview.id)) return;
                     setSelectedReview(null);
                     setEditedQuote(null);
                     setEditedDraft(null);
@@ -809,31 +599,30 @@ export default function ApprovalInbox({
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    if (extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" && editedQuote) {
-                      onApprove(selectedReview.id, {
-                         ...extractPayload(selectedReview.description).payload,
+                  disabled={blocked(selectedReview.id)}
+                  onClick={async () => {
+                    let recorded: boolean;
+                    if (extractPayload(selectedReview).payload?.feature_type === "quote_draft" && editedQuote) {
+                      recorded = await onApprove(selectedReview.id, {
+                         ...extractPayload(selectedReview).payload,
                          suggested_price: parseFloat(editedQuote.suggested_price) || 0,
                          scope: editedQuote.scope
                       });
-                    } else if (extractPayload(selectedReview.description).payload?.feature_type === "ambassador_reply" && editedDraft !== null) {
-                      onApprove(selectedReview.id, {
-                         ...extractPayload(selectedReview.description).payload,
+                    } else if (extractPayload(selectedReview).payload?.feature_type === "ambassador_reply" && editedDraft !== null) {
+                      recorded = await onApprove(selectedReview.id, {
+                         ...extractPayload(selectedReview).payload,
                          generated_response: editedDraft,
                          draft_reply: editedDraft,
-                         reply: editedDraft
                       });
                     } else {
-                      onApprove(selectedReview.id);
+                      recorded = await onApprove(selectedReview.id);
                     }
-                    setSelectedReview(null);
-                    setEditedQuote(null);
-                    setEditedDraft(null);
+                    if (recorded) { setSelectedReview(null); setEditedQuote(null); setEditedDraft(null); }
                   }}
                   className="flex-1 py-3 px-4 rounded-xl font-bold text-sm bg-[#0066FF] text-white hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all min-h-[44px] min-w-[44px] w-full"
                   data-testid="modal-approve-btn"
                 >
-                  {extractPayload(selectedReview.description).payload?.feature_type === "quote_draft" ? "Approve & Send" : "Send Draft"}
+                  Record approval
                 </button>
               </div>
             </div>

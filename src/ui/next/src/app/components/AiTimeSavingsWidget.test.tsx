@@ -34,3 +34,26 @@ it('holds private metrics while owner verification is unavailable and ignores a 
   await act(async () => resolve({ hours_saved: 99 }));
   expect(screen.queryByText(/99 hours/)).not.toBeInTheDocument(); expect(screen.getByText('Verify your account to read time-savings data.')).toBeVisible();
 });
+
+it('preserves a truthful measured-savings X share without claiming a reward', async () => {
+  render(<Widget />);
+  const share = await screen.findByRole('link', { name: 'Share recorded savings on X' });
+  const url = new URL(share.getAttribute('href')!);
+  expect(url.origin + url.pathname).toBe('https://twitter.com/intent/tweet');
+  expect(url.searchParams.get('text')).toBe('Recorded estimate: 3 hours saved using OmniSolo OneHumanCorp.');
+  expect(share).toHaveAttribute('rel', 'noopener noreferrer');
+  expect(plan.claimTrial).not.toHaveBeenCalled();
+  expect(screen.queryByText(/7 Days|Trial Extended/)).not.toBeInTheDocument();
+});
+it('removes measured-savings sharing when the verified owner is retired', async () => {
+  const view = render(<Widget />);
+  expect(await screen.findByRole('link', { name: 'Share recorded savings on X' })).toBeVisible();
+  plan.verifiedOwner = null; plan.ownerRevision += 1; view.rerender(<Widget />);
+  expect(screen.queryByRole('link', { name: 'Share recorded savings on X' })).not.toBeInTheDocument();
+});
+it('does not offer sharing for unavailable measurements', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ error: 'unavailable' }, { status: 503 })));
+  render(<Widget />);
+  expect(await screen.findByText('Recorded time-savings data is unavailable.')).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'Share recorded savings on X' })).not.toBeInTheDocument();
+});

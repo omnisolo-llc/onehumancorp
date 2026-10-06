@@ -14,8 +14,10 @@ test.describe("In-App Help Center", () => {
     // Should see help button in the main navigation or shell
     const helpButton = page.locator("nav").locator("a", { hasText: "Help" });
     await expect(helpButton).toBeVisible();
+    await expect(helpButton).toHaveAttribute("href", "/help");
     await helpButton.click();
-    await expect(page).toHaveURL(/\/api\/ui\/help\.html/);
+    await expect(page).toHaveURL(url => url.pathname === "/help");
+    await expect(page.getByRole("heading", { level: 1, name: "In-App Help Center", exact: true })).toBeVisible();
   });
 
   test("should provide help resources and allow searching", async ({

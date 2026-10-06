@@ -19,19 +19,33 @@ test.describe('Documentation Flows', () => {
   });
 
   test('Tooltips load and display properly', async ({ page }) => {
-    // Go to the dashboard
+    const loaded = page.waitForResponse(response =>
+      new URL(response.url()).pathname === '/api/v1/tooltips' && response.request().method() === 'GET');
     await page.goto('/api/v1/ui/dashboard.html');
+    const response = await loaded;
+    expect(response.status()).toBe(200);
+    const tooltips = await response.json() as Record<string, string>;
+    const expectedText = tooltips['help-btn-tooltip'];
+    expect(expectedText).toEqual(expect.any(String));
+    expect(expectedText.trim().length).toBeGreaterThan(0);
 
-    // Make sure the help button exists
-    const walkBtn = page.locator('#dashboard-walkthrough-btn');
-    await expect(walkBtn).toBeVisible();
+    // The maintained Help launcher owns the tooltip; Start Tour is a plain button.
+    const target = page.locator('#help-btn-tooltip');
+    const helpButton = target.getByRole('button', { name: 'Open help chat', exact: true });
+    await expect(target).toHaveAttribute('data-tooltip', expectedText);
+    await expect(helpButton).toBeVisible();
+    await helpButton.dispatchEvent('touchstart');
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toHaveText(expectedText);
+    await expect(tooltip).toBeVisible();
+    await expect(target).toHaveAttribute('aria-describedby', 'help-btn-tooltip-description');
 
-    // Hover over the help button to trigger the tooltip
-    await walkBtn.dispatchEvent('touchstart');
-    await page.waitForTimeout(600); // 500ms for long press
-
-    // Verify the tooltip loads with expected content from our backend
-    const tooltipText = page.getByText(/Start an interactive guide to learn how to use OmniSolo./i).last();
-    await expect(tooltipText).toBeVisible({ timeout: 10000 });
+    // Scrolling cancels a held touch; a later long press can still open and dismiss it.
+    await helpButton.dispatchEvent('touchmove');
+    await expect(tooltip).toBeHidden();
+    await helpButton.dispatchEvent('touchstart');
+    await expect(tooltip).toBeVisible();
+    await helpButton.dispatchEvent('touchend');
+    await expect(tooltip).toBeHidden();
   });
 });

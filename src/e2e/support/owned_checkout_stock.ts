@@ -123,12 +123,13 @@ export function waitForCheckoutPost(page: Page, path: string): Promise<Response>
 
 export async function prepareCashCart(page: Page, stock: OwnedStock, userId: string) {
   await page.goto('/pos/terminal');
-  await expect(page.locator('#pos-keypad')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue with signed-in account', exact: true })).toBeVisible();
   const authentication = waitForCheckoutPost(page, '/api/v1/pos/auth');
   const inventory = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/pos/inventory' && response.request().method() === 'GET');
-  for (const digit of ['1', '2', '3', '4']) await page.locator('#pos-keypad').getByRole('button', { name: digit, exact: true }).click();
+  await page.getByRole('button', { name: 'Continue with signed-in account', exact: true }).click();
   const authenticationResponse = await authentication;
   expect(authenticationResponse.status()).toBe(200);
+  expect(authenticationResponse.request().postDataJSON()).toEqual({});
   expect(await authenticationResponse.json()).toMatchObject({
     success: true, staff: { id: userId, tenant_id: stock.tenantId, role: 'ADMIN' },
   });

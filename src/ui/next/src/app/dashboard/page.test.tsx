@@ -144,3 +144,40 @@ test('reports unavailable migration instead of inventing a completed import', as
     vi.useRealTimers();
   }
 }, 30000);
+
+test.each([
+  [undefined, 'Unavailable'],
+  [{ error: 'supply_unavailable', success: false }, 'Unavailable'],
+  [{ vendors: null, raw_materials: [], bom_items: [] }, 'Unavailable'],
+  [{ vendors: [], raw_materials: [], bom_items: [] }, '0'],
+  [{ vendors: [{ id: 'owned-vendor', name: 'Recorded vendor' }], raw_materials: [], bom_items: [] }, '1'],
+])('vendor summary distinguishes unavailable supply from valid empty data: %j', async (supply, expected) => {
+  global.fetch = vi.fn(async (url: string) => Response.json(url.startsWith('/api/v1/ui/dashboard/unified-feed')
+    ? { supply, orders: [{ id: 'owned-order', status: 'pending', total_amount: 12, customer_name: 'Recorded customer' }] }
+    : {}));
+  await act(async () => { render(<TooltipProvider><Dashboard /></TooltipProvider>); });
+  const card = screen.getByText('Vendors', { exact: true }).parentElement!;
+  expect(within(card).getByText(expected, { exact: true })).toBeVisible();
+  expect(screen.getByText('Operations Map')).toBeVisible();
+  expect(screen.getByText('Recorded customer')).toBeVisible();
+}, 30000);
+
+test('vendor summary remains loading until supply is observed', async () => {
+  let finish!: (response: Response) => void;
+  global.fetch = vi.fn(async (url: string) => url.startsWith('/api/v1/ui/dashboard/unified-feed')
+    ? new Promise<Response>(resolve => { finish = resolve; }) : Response.json({}));
+  render(<TooltipProvider><Dashboard /></TooltipProvider>);
+  const card = screen.getByText('Vendors', { exact: true }).parentElement!;
+  expect(within(card).getByText('Loading…')).toBeVisible();
+  await act(async () => { finish(Response.json({ supply: { vendors: [], raw_materials: [], bom_items: [] } })); });
+  await waitFor(() => expect(within(card).getByText('0', { exact: true })).toBeVisible());
+}, 30000);
+
+test('mobile supply without thresholds never invents a healthy zero stock warning count', async () => {
+  global.fetch = vi.fn(async (url: string) => Response.json(url.startsWith('/api/v1/ui/dashboard/unified-feed')
+    ? { supply: { vendors: [{ id: 'vendor', name: 'Vendor' }], raw_materials: [{ id: 'flour', name: 'Flour', current_quantity: 2 }], bom_items: [] } }
+    : {}));
+  await act(async () => { render(<TooltipProvider><Dashboard /></TooltipProvider>); });
+  expect(within(screen.getByText('Low Stock', { exact: true }).parentElement!).getByText('Unavailable')).toBeVisible();
+  expect(within(screen.getByText('Vendors', { exact: true }).parentElement!).getByText('1', { exact: true })).toBeVisible();
+}, 30000);

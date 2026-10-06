@@ -12,11 +12,11 @@ test('OpenRouter configuration cannot invent a verified connection or assistant 
   const taskList = await loaded;
   expect(taskList.status()).toBe(200);
   const current = await taskList.json();
-  expect(current.capabilities.modelProviders).toEqual(['Auto', 'Agent']);
+  expect(current.capabilities.modelProviders).toEqual(['Auto']);
   await page.getByRole('button', { name: 'New Task', exact: true }).click();
   const model = page.getByRole('combobox', { name: 'Model', exact: true });
   await expect(model).toBeVisible();
-  await expect(model.getByRole('option')).toHaveText(['Auto', 'Agent']);
+  await expect(model.getByRole('option')).toHaveText(['Auto']);
 
   // The production vault does not support OpenRouter. This synthetic credential
   // must be rejected before network verification, storage or model invocation.

@@ -3,7 +3,7 @@ from pathlib import Path
 import hashlib,json,re
 HERE=Path(__file__).resolve().parent
 ROOT=HERE.parents[1]
-modules={'field_ops':'src/server/api/field_ops.rs','field_service_routing':'src/server/api/field_service_routing.rs','cache':'src/server/utils/cache.rs','offline_sync':'src/server/api/offline_sync.rs','sync_transaction':'src/server/api/sync_transaction.rs'}
+modules={'field_ops':'src/server/api/field_ops.rs','field_service_routing':'src/server/api/field_service_routing.rs','cache':'src/server/utils/cache.rs','offline_sync':'src/server/api/offline_sync.rs','sync_transaction':'src/server/api/sync_transaction.rs','terminal_offline_authority':'src/server/api/terminal_offline_authority.rs'}
 parts=['''extern crate self as omnisolo_builtin_agent;
 extern crate self as server_utils;
 pub mod common { pub use server_common::auth_utils; }
@@ -43,7 +43,7 @@ for name,path in modules.items():
    text=re.sub(r'(?m)^(pub(?:\(crate\))? )?mod '+child.stem+r';',lambda m:f'#[path={json.dumps(str(child))}] '+m.group(0),text)
   target=HERE/'generated_field_ops.rs';target.write_text(text)
  parts.append(f'#[path={json.dumps(str(target))}] pub mod {name};')
-parts.append('pub mod api { pub use crate::{field_ops,field_service_routing,offline_sync}; }')
+parts.append('pub mod api { pub use crate::{field_ops,field_service_routing,offline_sync,terminal_offline_authority}; }')
 source=(ROOT/'src/server/lib.rs').read_text()
 field_setup=re.search(r'let field_ops_pool\s*=\s*.*?;',source,re.S).group()
 field_setup+='\n'+re.search(r'let sync_events_state\s*=\s*.*?;',source,re.S).group()

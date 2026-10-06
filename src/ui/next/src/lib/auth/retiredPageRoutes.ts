@@ -1,6 +1,8 @@
 // These obsolete public-directory implementations have backend-backed Next pages.
 // This map is intentionally exact and is applied only after authentication.
 const destinations = new Map<string, string>([
+  ["/api/ui/dashboard.html", "/dashboard"],
+  ["/api/v1/ui/dashboard.html", "/dashboard"],
   ["/integrations.html", "/integrations"],
   ["/ui/integrations.html", "/integrations"],
   ["/api-docs.html", "/api-docs"],

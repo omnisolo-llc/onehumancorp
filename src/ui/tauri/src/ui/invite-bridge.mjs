@@ -25,14 +25,21 @@ export function installInviteBridge(view = window) {
     generate.insertAdjacentElement('afterend', status);
   }
   let owner = null; let epoch = 0; let busy = false; let link = ''; let copyVersion = 0; let expiry;
-  const controls = [copy, whatsapp, twitter].filter(Boolean);
+  const controls = [copy, whatsapp, twitter, ...document.querySelectorAll('[data-invitation-control]')].filter(Boolean);
   const keyFor = value => PREFIX + encodeURIComponent(JSON.stringify([value.userId, value.tenantId]));
   const note = message => { status.textContent = message; };
   const available = () => !!owner && owner.expiresAt > Date.now();
+  // Legacy milestone/referral controls must use this owner-bound receipt, never a URL guess.
+  view.getVerifiedDashboardInvitation = () => {
+    if (!available()) { if (link) invalidate(); return null; }
+    return link || null;
+  };
   const shareText = () => `Join my team on OmniSolo OneHumanCorp! Here is your invite link:\n\n${link}\n\n⚡ OmniSolo`;
   function clear() {
     epoch += 1; copyVersion += 1; view.clearTimeout(expiry); owner = null; link = ''; busy = false;
-    input.value = ''; container.style.display = 'none'; generate.style.display = ''; generate.disabled = true;
+    input.value = '';
+    document.querySelectorAll('[data-invitation-mirror]').forEach(field => { field.value = ''; });
+    container.style.display = 'none'; generate.style.display = ''; generate.disabled = true;
     copy.textContent = 'Copy'; for (const control of controls) control.disabled = true;
   }
   function invalidate() { clear(); note('Your session changed. Reload to verify invitation access.'); }

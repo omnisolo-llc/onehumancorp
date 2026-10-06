@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnifiedAgentFeed } from "./UnifiedAgentFeed";
@@ -445,4 +445,73 @@ it.each(['draft_message', 'draft_action'])('rejects a stale canonical %s even wh
   await user.click(screen.getByTestId('save-proposal'));
   expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
   expect(screen.getByTestId('edit-proposal-textarea')).toHaveValue('Owner-reviewed draft');
+});
+
+it.each([
+  ['dismissal', 'Reject proposal', 'DISMISSED', 'Dismissal recorded.'],
+  ['approval', 'Approve proposal', 'APPROVED', 'Approval recorded.'],
+])('removes a confirmed %s while another widget revalidates queue identity', async (_name, button, lifecycle_state, status) => {
+  const fetcher = vi.fn(async (url: RequestInfo | URL) => Response.json(String(url).endsWith('/session-identity')
+    ? { userId: 'user-1', tenantId: 'tenant-1', expiresAt: Date.now() + 60_000 }
+    : canonicalReceipt({ lifecycle_state })));
+  vi.stubGlobal('fetch', fetcher);
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await screen.findByTestId('triage-card-decision-1');
+  vi.useFakeTimers();
+  try {
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: button })); });
+    expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent(status);
+
+    // Queue summaries and sync both reverify identity independently. During
+    // that read, the cached owner is deliberately unavailable, even though
+    // this decision already has its matching tenant/id/state receipt.
+    let finishIdentity!: (response: Response) => void;
+    fetcher.mockImplementationOnce(() => new Promise<Response>(resolve => { finishIdentity = resolve; }));
+    let revalidation!: Promise<unknown>;
+    await act(async () => { revalidation = readQueueOwner(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    // Settle the unrelated request before asserting, so no verification is
+    // left pending if this regression fails.
+    await act(async () => {
+      finishIdentity(Response.json({ userId: 'user-1', tenantId: 'tenant-1', expiresAt: Date.now() + 60_000 }));
+      await revalidation;
+    });
+    expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent(status);
+  } finally { vi.useRealTimers(); }
+});
+
+it('does not apply a confirmed decision exit after a different owner is verified', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: RequestInfo | URL) => Response.json(String(url).endsWith('/session-identity')
+    ? { userId: 'other-user', tenantId: 'tenant-1', expiresAt: Date.now() + 60_000 }
+    : canonicalReceipt({ lifecycle_state: 'DISMISSED' }))));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await screen.findByTestId('triage-card-decision-1');
+  vi.useFakeTimers();
+  try {
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Reject proposal' })); });
+    expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Dismissal recorded.');
+    await act(async () => { await readQueueOwner(); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+  } finally { vi.useRealTimers(); }
+});
+
+it('cancels a confirmed decision exit when the account is invalidated', async () => {
+  const nextOwnerItem = { ...pendingItem, tenant_id: 'tenant-2', context_payload: { description: 'New owner proposal' } };
+  vi.stubGlobal('fetch', vi.fn(async (_url: RequestInfo | URL, options?: RequestInit) => Response.json(options?.method === 'PUT'
+    ? canonicalReceipt({ lifecycle_state: 'DISMISSED' })
+    : { items: [nextOwnerItem] })));
+  const { rerender } = render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await screen.findByTestId('triage-card-decision-1');
+  vi.useFakeTimers();
+  try {
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Reject proposal' })); });
+    expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Dismissal recorded.');
+    await act(async () => { window.dispatchEvent(new Event('omnisolo_auth_changed')); });
+    await act(async () => { rerender(<UnifiedAgentFeed initialData={{ items: [] }} />); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(500); });
+    expect(screen.getByTestId('triage-card-decision-1')).toHaveTextContent('New owner proposal');
+    expect(screen.queryByRole('status', { name: 'Decision status' })).not.toBeInTheDocument();
+  } finally { vi.useRealTimers(); }
 });

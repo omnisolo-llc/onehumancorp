@@ -145,8 +145,6 @@ static UI_ANALYTICS_BRIEFING_CACHE: std::sync::OnceLock<
 static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<
     ::server_utils::cache::HybridCache<serde_json::Value>,
 > = std::sync::OnceLock::new();
-static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> =
-    std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> =
     std::sync::OnceLock::new();
 
@@ -587,231 +585,7 @@ async fn invalidate_ui_omni_inbox_cache(tenant_id: &str) {
     }
 }
 
-#[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct OmniInboxActionPayload {
-    pub message_id: String,
-    pub approved: bool,
-    pub edited_reply: Option<String>,
-}
-
-struct OmniReplyDispatch {
-    source: String,
-    sender_id: String,
-    reply: String,
-    integration_id: String,
-    account_sid: String,
-    auth_token: String,
-    from_phone: String,
-}
-
-async fn dispatch_omni_reply(dispatch: OmniReplyDispatch) {
-    if dispatch.integration_id == "whatsapp_cloud_api" {
-        use crate::integrations::meta::provider::MetaProvider;
-        let provider = MetaProvider::new(dispatch.auth_token, Some(dispatch.from_phone));
-        let to = dispatch
-            .sender_id
-            .strip_prefix("whatsapp:")
-            .unwrap_or(&dispatch.sender_id);
-        if let Err(error) = provider.send_message("whatsapp", to, &dispatch.reply).await {
-            tracing::error!("Failed to send approved WhatsApp reply: {error:?}");
-        }
-        return;
-    }
-
-    if dispatch.account_sid.is_empty()
-        || dispatch.auth_token.is_empty()
-        || dispatch.from_phone.is_empty()
-    {
-        tracing::error!(
-            "Cannot send approved Twilio reply: integration credentials are incomplete"
-        );
-        return;
-    }
-
-    use crate::integrations::twilio::provider::TwilioProvider;
-    let provider = TwilioProvider::new(dispatch.account_sid, dispatch.auth_token);
-    let result = if dispatch.source == "whatsapp" {
-        let to = if dispatch.sender_id.starts_with("whatsapp:") {
-            dispatch.sender_id
-        } else {
-            format!("whatsapp:{}", dispatch.sender_id)
-        };
-        provider
-            .send_whatsapp(&to, &dispatch.from_phone, &dispatch.reply)
-            .await
-    } else {
-        let to = dispatch
-            .sender_id
-            .strip_prefix("sms:")
-            .unwrap_or(&dispatch.sender_id);
-        provider
-            .send_sms(to, &dispatch.from_phone, &dispatch.reply)
-            .await
-    };
-    if let Err(error) = result {
-        tracing::error!("Failed to send approved omni-inbox reply: {error:?}");
-    }
-}
-
-#[derive(Debug)]
-enum OmniInboxActionError {
-    NotFound,
-    Database(sqlx::Error),
-}
-
-impl From<sqlx::Error> for OmniInboxActionError {
-    fn from(error: sqlx::Error) -> Self {
-        Self::Database(error)
-    }
-}
-
-async fn apply_omni_inbox_action(
-    db: &crate::db::DB,
-    tenant_id: &str,
-    payload: &OmniInboxActionPayload,
-) -> Result<Option<OmniReplyDispatch>, OmniInboxActionError> {
-    let status = if payload.approved {
-        "resolved"
-    } else {
-        "dismissed"
-    };
-
-    match &db.store {
-        crate::db::DbStore::Postgres => {
-            let mut tx = db.pool.begin().await?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
-            let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
-                "UPDATE omni_inbox_messages SET status = $1
-                 WHERE id = $2 AND tenant_id = $3
-                 RETURNING source, sender_id",
-            )
-            .bind(status)
-            .bind(&payload.message_id)
-            .bind(tenant_id)
-            .fetch_optional(&mut *tx)
-            .await?
-            .ok_or(OmniInboxActionError::NotFound)?;
-
-            let mut dispatch = None;
-            if payload.approved
-                && let Some(reply) = payload.edited_reply.as_deref()
-            {
-                sqlx::query(
-                    "INSERT INTO inbox_messages
-                         (id, tenant_id, source, content, draft_reply, status)
-                         VALUES ($1, $2, $3, $4, '', 'sent')",
-                )
-                .bind(format!("msg-{}", uuid::Uuid::new_v4()))
-                .bind(tenant_id)
-                .bind("Omni Inbox Action")
-                .bind(reply)
-                .execute(&mut *tx)
-                .await?;
-
-                if let (Some(source), Some(sender_id)) = (source, sender_id)
-                        && (source == "whatsapp" || source == "sms")
-                            && let Some((integration_id, account_sid, auth_token, from_phone)) =
-                                sqlx::query_as::<_, (String, String, String, String)>(
-                                    "SELECT integration_id, COALESCE(bot_token, ''),
-                                            COALESCE(api_token, ''), COALESCE(from_phone, '')
-                                     FROM integration_credentials
-                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
-                                       AND tenant_id = $1
-                                     ORDER BY CASE
-                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
-                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
-                                     LIMIT 1",
-                                )
-                                .bind(tenant_id)
-                                .fetch_optional(&mut *tx)
-                                .await?
-                            {
-                                dispatch = Some(OmniReplyDispatch {
-                                    source,
-                                    sender_id,
-                                    reply: reply.to_string(),
-                                    integration_id,
-                                    account_sid,
-                                    auth_token,
-                                    from_phone,
-                                });
-                            }
-            }
-            tx.commit().await?;
-            Ok(dispatch)
-        }
-        crate::db::DbStore::Sqlite(pool) => {
-            let mut tx = pool.begin().await?;
-            let updated = sqlx::query(
-                "UPDATE omni_inbox_messages SET status = ? WHERE id = ? AND tenant_id = ?",
-            )
-            .bind(status)
-            .bind(&payload.message_id)
-            .bind(tenant_id)
-            .execute(&mut *tx)
-            .await?;
-            if updated.rows_affected() != 1 {
-                return Err(OmniInboxActionError::NotFound);
-            }
-            let (source, sender_id): (Option<String>, Option<String>) = sqlx::query_as(
-                "SELECT source, sender_id FROM omni_inbox_messages WHERE id = ? AND tenant_id = ?",
-            )
-            .bind(&payload.message_id)
-            .bind(tenant_id)
-            .fetch_one(&mut *tx)
-            .await?;
-
-            let mut dispatch = None;
-            if payload.approved
-                && let Some(reply) = payload.edited_reply.as_deref()
-            {
-                sqlx::query(
-                    "INSERT INTO inbox_messages
-                         (id, tenant_id, source, content, draft_reply, status)
-                         VALUES (?, ?, ?, ?, '', 'sent')",
-                )
-                .bind(format!("msg-{}", uuid::Uuid::new_v4()))
-                .bind(tenant_id)
-                .bind("Omni Inbox Action")
-                .bind(reply)
-                .execute(&mut *tx)
-                .await?;
-
-                if let (Some(source), Some(sender_id)) = (source, sender_id)
-                        && (source == "whatsapp" || source == "sms")
-                            && let Some((integration_id, account_sid, auth_token, from_phone)) =
-                                sqlx::query_as::<_, (String, String, String, String)>(
-                                    "SELECT integration_id, COALESCE(bot_token, ''),
-                                            COALESCE(api_token, ''), COALESCE(from_phone, '')
-                                     FROM integration_credentials
-                                     WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio')
-                                       AND tenant_id = ?
-                                     ORDER BY CASE
-                                        WHEN integration_id = 'whatsapp_cloud_api' THEN 1
-                                        WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END
-                                     LIMIT 1",
-                                )
-                                .bind(tenant_id)
-                                .fetch_optional(&mut *tx)
-                                .await?
-                            {
-                                dispatch = Some(OmniReplyDispatch {
-                                    source,
-                                    sender_id,
-                                    reply: reply.to_string(),
-                                    integration_id,
-                                    account_sid,
-                                    auth_token,
-                                    from_phone,
-                                });
-                            }
-            }
-            tx.commit().await?;
-            Ok(dispatch)
-        }
-    }
-}
+pub use crate::orchestration::departments::message_delivery::manual_inbox::ManualAction as OmniInboxActionPayload;
 
 async fn load_ui_omni_inbox_from_db(
     db: &crate::db::DB,
@@ -1752,10 +1526,6 @@ use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status, transport::Server};
-// OTP Cache for verification
-pub static OTP_STORE: std::sync::LazyLock<
-    std::sync::Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>,
-> = std::sync::LazyLock::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
 
 use hub::Hub;
 
@@ -3959,65 +3729,6 @@ impl HubService for MyHubService {
     }
 }
 
-pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
-    let store = crate::settings::Store::global();
-    let settings = store.get();
-
-    let should_send = match event_type {
-        "failed_payment" => settings.sms_alert_failed_payment,
-        "new_order" => settings.sms_alert_new_order,
-        "urgent_booking" => settings.sms_alert_urgent_booking,
-        "draft_approval" => true, // Ensure approval notifications are sent
-        _ => false,
-    };
-
-    if !should_send {
-        return Ok(());
-    }
-
-    if let Some(phone) = settings.sms_critical_phone {
-        let account_sid = match std::env::var("TWILIO_ACCOUNT_SID") {
-            Ok(value) if !value.trim().is_empty() => value,
-            _ => {
-                tracing::warn!(
-                    "Skipping critical SMS because TWILIO_ACCOUNT_SID is not configured."
-                );
-                return Ok(());
-            }
-        };
-        let auth_token = match std::env::var("TWILIO_AUTH_TOKEN") {
-            Ok(value) if !value.trim().is_empty() => value,
-            _ => {
-                tracing::warn!(
-                    "Skipping critical SMS because TWILIO_AUTH_TOKEN is not configured."
-                ); // pii-safe
-                return Ok(());
-            }
-        };
-        let from_number = match std::env::var("TWILIO_FROM_NUMBER") {
-            Ok(value) if !value.trim().is_empty() => value,
-            _ => {
-                tracing::warn!(
-                    "Skipping critical SMS because TWILIO_FROM_NUMBER is not configured."
-                );
-                return Ok(());
-            }
-        };
-
-        let provider =
-            crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
-
-        provider
-            .send_sms(&phone, &from_number, message)
-            .await
-            .map_err(|error| {
-                tracing::warn!(%error, "Critical SMS was not confirmed");
-                error.to_string()
-            })?;
-    }
-    Ok(())
-}
-
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     crate::utils::fs::cleanup_stale_temp_files();
     // Initialize logging
@@ -4853,6 +4564,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(std::io::Error::other)?;
     let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
+    let sms_service = api::sms_settings::SmsService::configured(http_auth_store.clone());
+    api::sms_settings::install_global(sms_service.clone())?;
+    let _order_sms_worker = sms_service.start_order_notifications();
     if legacy_sqlx_background_enabled {
         let agent_action_worker = std::sync::Arc::new(
             crate::workers::agent_action_worker::AgentActionWorker::new(
@@ -5226,43 +4940,63 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
         axum::extract::Json(payload): axum::extract::Json<OmniInboxActionPayload>,
     ) -> axum::response::Response {
+        use crate::orchestration::departments::message_delivery::{Error, Store, manual_inbox};
         use axum::response::IntoResponse;
-        let tenant_id = match strict_ui_claim_tenant(&claims) {
-            Some(tenant_id) => tenant_id,
-            None => return axum::http::StatusCode::UNAUTHORIZED.into_response(),
+        let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+            return axum::http::StatusCode::UNAUTHORIZED.into_response();
         };
-        if payload.message_id.is_empty()
-            || payload.message_id.len() > 200
-            || !payload.message_id.chars().all(|character| {
-                character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
-            })
-            || payload
-                .edited_reply
-                .as_ref()
-                .is_some_and(|reply| reply.chars().count() > 16_000)
-        {
-            return axum::http::StatusCode::BAD_REQUEST.into_response();
-        }
-        let dispatch = match apply_omni_inbox_action(db.as_ref(), &tenant_id, &payload).await {
-            Ok(dispatch) => dispatch,
-            Err(OmniInboxActionError::NotFound) => {
-                return axum::http::StatusCode::NOT_FOUND.into_response();
-            }
-            Err(OmniInboxActionError::Database(error)) => {
-                tracing::error!("Failed to apply tenant-scoped omni-inbox action: {error:?}"); // pii-safe
-                return axum::http::StatusCode::INTERNAL_SERVER_ERROR.into_response();
-            }
-        };
-        invalidate_ui_omni_inbox_cache(&tenant_id).await;
-        if let Some(dispatch) = dispatch {
-            tokio::spawn(dispatch_omni_reply(dispatch));
-        }
-
-        (
-            axum::http::StatusCode::OK,
-            axum::Json(serde_json::json!({"success": true})),
+        let result = manual_inbox::apply(
+            &Store::from_db(db.as_ref()),
+            &tenant_id,
+            &claims.sub,
+            &payload,
         )
-            .into_response()
+        .await;
+        // A lost response/finalization may still have a durable unknown claim.
+        invalidate_ui_omni_inbox_cache(&tenant_id).await;
+        match result {
+            Ok(receipt) => (
+                axum::http::StatusCode::OK,
+                [("cache-control", "private, no-store")],
+                axum::Json(receipt),
+            )
+                .into_response(),
+            Err(error) => {
+                let status = match &error {
+                    Error::Storage => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                    Error::Invalid(_) => axum::http::StatusCode::CONFLICT,
+                };
+                (
+                    status,
+                    [("cache-control", "private, no-store")],
+                    axum::Json(serde_json::json!({"error":error.to_string()})),
+                )
+                    .into_response()
+            }
+        }
+    }
+
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields)]
+    pub struct ManualInboxReadQuery {
+        pub message_id: String,
+        pub request_id: Option<String>,
+    }
+    pub async fn read_ui_omni_inbox_action_handler(
+        axum::extract::State(db): axum::extract::State<std::sync::Arc<crate::db::DB>>,
+        axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
+        axum::extract::Query(query): axum::extract::Query<ManualInboxReadQuery>,
+    ) -> axum::response::Response {
+        use crate::orchestration::departments::message_delivery::{Store, manual_inbox};
+        use axum::response::IntoResponse;
+        let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
+            return axum::http::StatusCode::UNAUTHORIZED.into_response();
+        };
+        match manual_inbox::read(&Store::from_db(db.as_ref()), &tenant_id, &claims.sub, &query.message_id, query.request_id.as_deref()).await {
+            Ok(Some(receipt)) => (axum::http::StatusCode::OK, [("cache-control", "private, no-store")], axum::Json(receipt)).into_response(),
+            Ok(None) => axum::http::StatusCode::NOT_FOUND.into_response(),
+            Err(_) => (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({"error":"Saved reply status unavailable; do not resend until reconciled"}))).into_response(),
+        }
     }
 
     #[derive(Debug, Clone, serde::Serialize)]
@@ -5607,97 +5341,54 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         tenant_id: &str,
         mobile_optimized: bool,
     ) -> Result<serde_json::Value, sqlx::Error> {
+        // Query and decode errors remain unavailable data, never empty inventory.
+        // The same transaction installs PostgreSQL RLS context and owns all reads.
         match &db.store {
             crate::db::DbStore::Postgres => {
-                let pool1 = db.pool.clone();
-                let pool2 = db.pool.clone();
-                let pool3 = db.pool.clone();
-                let t1 = tenant_id.to_string();
-                let t2 = tenant_id.to_string();
-                let t3 = tenant_id.to_string();
-                let (v_res, rm_res, bi_res) = if mobile_optimized {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query(
-                                "SELECT id, name FROM vendors WHERE tenant_id = $1 ORDER BY name",
-                            )
-                            .bind(&t1)
-                            .fetch_all(&pool1)
-                            .await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                } else {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name").bind(&t1).fetch_all(&pool1).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                };
-                let v_res = v_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let rm_res = rm_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let bi_res = bi_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let vendors = v_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") }) }).collect::<Vec<_>>();
-                let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") }) }).collect::<Vec<_>>();
-                let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        let mut value = serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?});
+                        if !mobile_optimized { value["contact_info"] = serde_json::json!(row.try_get::<String, _>("contact_info")?); }
+                        Ok(value)
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?, "current_quantity": row.try_get::<i32, _>("current_quantity")?, "reorder_threshold": row.try_get::<i32, _>("reorder_threshold")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "finished_good_id": row.try_get::<String, _>("finished_good_id")?, "raw_material_id": row.try_get::<String, _>("raw_material_id")?, "quantity_required": row.try_get::<i32, _>("quantity_required")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                tx.commit().await?;
                 Ok(
                     serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }),
                 )
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let pool1 = pool.clone();
-                let pool2 = pool.clone();
-                let pool3 = pool.clone();
-                let t1 = tenant_id.to_string();
-                let t2 = tenant_id.to_string();
-                let t3 = tenant_id.to_string();
-                let (v_res, rm_res, bi_res) = if mobile_optimized {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query(
-                                "SELECT id, name FROM vendors WHERE tenant_id = ? ORDER BY name",
-                            )
-                            .bind(&t1)
-                            .fetch_all(&pool1)
-                            .await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = ? ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                } else {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name").bind(&t1).fetch_all(&pool1).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                };
-                let v_res = v_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let rm_res = rm_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let bi_res = bi_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let vendors = v_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") }) }).collect::<Vec<_>>();
-                let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") }) }).collect::<Vec<_>>();
-                let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
+                let mut tx = pool.begin().await?;
+                let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        let mut value = serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?});
+                        if !mobile_optimized { value["contact_info"] = serde_json::json!(row.try_get::<String, _>("contact_info")?); }
+                        Ok(value)
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?, "current_quantity": row.try_get::<i32, _>("current_quantity")?, "reorder_threshold": row.try_get::<i32, _>("reorder_threshold")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "finished_good_id": row.try_get::<String, _>("finished_good_id")?, "raw_material_id": row.try_get::<String, _>("raw_material_id")?, "quantity_required": row.try_get::<i32, _>("quantity_required")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                tx.commit().await?;
                 Ok(
                     serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }),
                 )
@@ -6884,10 +6575,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
         // Supply should not be cached because it changes continuously (inventory counts),
         // so we fetch supply and merge it on cache hit or miss.
-        let supply_val = supply_future
-            .await
-            .unwrap_or_else(|_| Err(sqlx::Error::RowNotFound))
-            .unwrap_or_else(|_| serde_json::json!({}));
+        let supply_val = match supply_future.await {
+            Ok(Ok(supply)) => supply,
+            _ => serde_json::json!({"error": "supply_unavailable", "success": false}),
+        };
         if let Some(obj) = final_result.as_object_mut() {
             obj.insert("supply".to_string(), supply_val.clone());
         }
@@ -7494,34 +7185,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         };
         let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-        let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
-        let cache = UI_SUPPLY_CACHE
-            .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-
-        let item_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
-        let db = db.clone();
-        let t = tenant_id.clone();
-        move || async move {
-            match load_ui_supply_from_db(&db, &t, mobile_optimized).await {
-                Ok(items) => Some(items),
-                Err(sqlx::Error::RowNotFound) => Some(serde_json::json!({"vendors": [], "raw_materials": [], "bom_items": []})),
-                Err(_) => None,
-            }
-        }
-    }).await;
-
-        match item_opt {
-            Some(item) => {
+        // An explicit reload must not return a stale-while-revalidate snapshot.
+        match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
+            Ok(item) => {
                 let fields = query.fields.as_deref();
                 let shaped = ::server_utils::payload_shaper::shape_payload(item, fields);
                 (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
             }
-            None => {
-                tracing::error!("Failed to fetch UI supply");
+            Err(error) => {
+                tracing::error!("Failed to fetch UI supply: {}", error);
                 (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     axum::Json(
-                        serde_json::json!({"vendors": [], "raw_materials": [], "bom_items": []}),
+                        serde_json::json!({"error": "supply_unavailable", "success": false}),
                     ),
                 )
                     .into_response()
@@ -7775,107 +7451,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::configured_router(db.pool.clone(), field_ops_pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
 
-        .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-            use axum::response::IntoResponse;
-            let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-            // Generate OTP securely
-            let otp = format!("{:06}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos() % 900000 + 100000);
-
-            {
-                let mut store = crate::OTP_STORE.lock().unwrap();
-                if store.len() > 1000 {
-                    store.retain(|_, (_, time)| time.elapsed().as_secs() < 300); // 5 mins expiry
-                }
-                store.insert(phone.clone(), (otp.clone(), std::time::Instant::now()));
-            }
-
-            let account_sid = match std::env::var("TWILIO_ACCOUNT_SID") {
-                Ok(value) if !value.trim().is_empty() => value,
-                _ => {
-                    return (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
-                        "success": false,
-                        "message": "Twilio is not configured"
-                    }))).into_response();
-                }
-            };
-            let auth_token = match std::env::var("TWILIO_AUTH_TOKEN") {
-                Ok(value) if !value.trim().is_empty() => value,
-                _ => {
-                    return (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
-                        "success": false,
-                        "message": "Twilio is not configured"
-                    }))).into_response();
-                }
-            };
-            let from_number = match std::env::var("TWILIO_FROM_NUMBER") {
-                Ok(value) if !value.trim().is_empty() => value,
-                _ => {
-                    return (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
-                        "success": false,
-                        "message": "Twilio is not configured"
-                    }))).into_response();
-                }
-            };
-
-            let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
-
-            let body = format!("Your OmniSolo verification code is {}", otp);
-            let phone_clone = phone.clone();
-
-            // Fire and forget gracefully
-            tokio::spawn(async move {
-                let res = provider.send_sms(&phone_clone, &from_number, &body).await;
-                if let Err(_e) = res {
-                    tracing::warn!("Failed to send SMS. This is expected if Twilio is not configured.");
-                }
-            });
-
-            axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" })).into_response()
-        }))
-        .route("/api/v1/settings/sms-confirm", axum::routing::post({
-            let _settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
-
-                let valid = {
-                    let mut store = crate::OTP_STORE.lock().unwrap();
-                    if let Some((stored_otp, time)) = store.get(&phone) {
-                        if stored_otp == otp && time.elapsed().as_secs() < 300 {
-                            store.remove(&phone);
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                };
-
-                if valid {
-                    axum::response::Json(serde_json::json!({ "success": true }))
-                } else {
-                    axum::response::Json(serde_json::json!({ "success": false, "message": "Invalid or expired OTP" }))
-                }
-            }
-        }))
-        .route("/api/v1/settings/sms-preferences", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
-                let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
-                let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
-
-                if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
-                    ::server_telemetry::record_error_signal("[bug] Failed to save SMS preferences");
-                    tracing::error!("Failed to save SMS preferences: {}", e);
-                    return axum::response::Json(serde_json::json!({ "success": false }));
-                }
-                axum::response::Json(serde_json::json!({ "success": true }))
-            }
-        }))
+        .merge(api::sms_settings::router(sms_service).route_layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware,
+        )))
         .route("/api/v1/settings/delivery", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
@@ -7988,9 +7566,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/v1/ui/inbox", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
                 .route("/api/v1/ui/inbox/messages", axum::routing::get(list_ui_inbox_handler).with_state(db.clone()))
                 .route("/api/v1/ui/omni_inbox", axum::routing::get(list_ui_omni_inbox_handler).with_state(db.clone()))
-                .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
+                .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).get(read_ui_omni_inbox_action_handler).with_state(db.clone()))
                 .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
                 .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+                .route("/api/v1/ui/triage/decisions/{id}", axum::routing::get(crate::api::legacy_triage::read_decision).with_state(db.clone()).layer(axum::extract::Extension(http_auth_store.clone())))
                 .route("/api/v1/ui/triage/action", axum::routing::post(crate::api::legacy_triage::action).with_state(db.clone()).layer(axum::extract::Extension(http_auth_store.clone())))
                 .route("/api/v1/triage/action", axum::routing::post(crate::api::legacy_triage::action).with_state(db.clone()).layer(axum::extract::Extension(http_auth_store.clone())))
                 .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))
@@ -8188,7 +7767,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         )
-        .nest("/api/v1/assistant", api::assistant::router(db.clone()))
+        .nest("/api/v1/assistant", api::assistant::router(db.clone()).layer(axum::Extension(workflow_execution.clone())))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest(
             "/api/v1/fulfillment",
@@ -9494,7 +9073,7 @@ mod tests {
              )",
             "CREATE TABLE inbox_messages (
                 id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, source TEXT,
-                content TEXT, draft_reply TEXT, status TEXT,
+                content TEXT, draft_reply TEXT, status TEXT, sender_id TEXT,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
              )",
             "CREATE TABLE integration_credentials (
@@ -9504,6 +9083,16 @@ mod tests {
         ] {
             sqlx::query(statement).execute(&pool).await.unwrap();
         }
+        sqlx::raw_sql(include_str!(
+            "migrations/1044_department_message_delivery_receipts.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::raw_sql(include_str!("migrations/1045_manual_inbox_requests.sql"))
+            .execute(&pool)
+            .await
+            .unwrap();
         for table in [
             "omni_inbox_messages",
             "inbox_messages",
@@ -9569,20 +9158,35 @@ mod tests {
             message_id: "message-b".to_string(),
             approved: true,
             edited_reply: Some("tamper".to_string()),
+            request_id: Some("foreign-request".into()),
+            prepare_only: true,
         };
-        assert!(matches!(
-            super::apply_omni_inbox_action(&db, "tenant-a", &foreign).await,
-            Err(super::OmniInboxActionError::NotFound)
-        ));
+        assert!(
+            crate::orchestration::departments::message_delivery::manual_inbox::apply(
+                &crate::orchestration::departments::message_delivery::Store::from_db(&db),
+                "tenant-a",
+                "owner-a",
+                &foreign,
+            )
+            .await
+            .is_err()
+        );
         let owned = super::OmniInboxActionPayload {
             message_id: "message-a".to_string(),
             approved: true,
             edited_reply: Some("approved reply".to_string()),
+            request_id: Some("owned-request".into()),
+            prepare_only: true,
         };
-        let dispatch = super::apply_omni_inbox_action(&db, "tenant-a", &owned)
-            .await
-            .unwrap();
-        assert!(dispatch.is_some());
+        let dispatch = crate::orchestration::departments::message_delivery::manual_inbox::apply(
+            &crate::orchestration::departments::message_delivery::Store::from_db(&db),
+            "tenant-a",
+            "owner-a",
+            &owned,
+        )
+        .await
+        .unwrap();
+        assert_eq!(dispatch.state, "pending");
 
         let mut tenant_a_tx = pool.begin().await.unwrap();
         ::server_common::auth_utils::set_org_context(&mut *tenant_a_tx, "tenant-a")
@@ -9594,13 +9198,14 @@ mod tests {
         .fetch_one(&mut *tenant_a_tx)
         .await
         .unwrap();
-        let reply: String =
-            sqlx::query_scalar("SELECT content FROM inbox_messages WHERE tenant_id = 'tenant-a'")
-                .fetch_one(&mut *tenant_a_tx)
-                .await
-                .unwrap();
+        let reply: String = sqlx::query_scalar(
+            "SELECT body FROM manual_inbox_requests WHERE tenant_id = 'tenant-a'",
+        )
+        .fetch_one(&mut *tenant_a_tx)
+        .await
+        .unwrap();
         tenant_a_tx.commit().await.unwrap();
-        assert_eq!(status, "resolved");
+        assert_eq!(status, "unread");
         assert_eq!(reply, "approved reply");
 
         let mut tenant_b_tx = pool.begin().await.unwrap();
@@ -9618,9 +9223,23 @@ mod tests {
                 .fetch_one(&mut *tenant_b_tx)
                 .await
                 .unwrap();
+        // No explicit tenant predicate: forced RLS must also hide tenant A's
+        // newly persisted manual request from this tenant B transaction.
+        let tenant_b_manual_requests: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM manual_inbox_requests")
+                .fetch_one(&mut *tenant_b_tx)
+                .await
+                .unwrap();
+        let tenant_b_dispatches: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM department_message_dispatches")
+                .fetch_one(&mut *tenant_b_tx)
+                .await
+                .unwrap();
         tenant_b_tx.commit().await.unwrap();
         assert_eq!(tenant_b_status, "unread");
         assert_eq!(tenant_b_replies, 0);
+        assert_eq!(tenant_b_manual_requests, 0);
+        assert_eq!(tenant_b_dispatches, 0);
 
         pool.close().await;
         sqlx::query(&format!("DROP SCHEMA {schema} CASCADE"))

@@ -1,26 +1,27 @@
-import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { redirect } from 'next/navigation';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import POSPage from './page';
 
-describe('POSPage', () => {
-  beforeEach(() => {
-    Object.defineProperty(navigator, 'onLine', {
-      configurable: true,
-      value: true,
-    });
-  });
+beforeEach(() => {
+  localStorage.clear();
+  vi.clearAllMocks();
+  vi.stubGlobal('fetch', vi.fn(async () => Response.json({ success: false }, { status: 503 })));
+});
+afterEach(() => { vi.unstubAllGlobals(); });
 
-  it('renders the catalog and adds a product to the cart', async () => {
-    render(<POSPage />);
+it('routes the legacy POS entry to the maintained terminal without rendering a second catalog', () => {
+  render(<POSPage />);
+  expect(redirect).toHaveBeenCalledWith('/pos/terminal');
+  expect(screen.queryByText('Custom Cake')).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Charge via Tap-to-Pay' })).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
+});
 
-    await waitFor(() => expect(screen.getByText('Custom Cake')).toBeInTheDocument());
-    expect(screen.getByRole('heading', { name: 'POS Terminal' })).toBeInTheDocument();
-    expect(screen.getByText('Cart (0)')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Custom Cake/ }));
-
-    expect(screen.getByText('Cart (1)')).toBeInTheDocument();
-    expect(screen.getByText('1x Custom Cake')).toBeInTheDocument();
-  });
+it('does not resend or remove historical unconfirmed payments when opening the legacy entry', async () => {
+  const raw = '[ { "offline_id": "unknown-outcome", "total": 70 } ]';
+  localStorage.setItem('pos_offline_queue', raw);
+  render(<POSPage />);
+  expect(fetch).not.toHaveBeenCalled();
+  expect(localStorage.getItem('pos_offline_queue')).toBe(raw);
 });

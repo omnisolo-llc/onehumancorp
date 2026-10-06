@@ -1,0 +1,23 @@
+[package]
+name = "ohc-terminal-payment-integrity"
+version = "0.1.0"
+edition = "2024"
+[workspace]
+[dependencies]
+axum = "0.8.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sqlx = { version = "0.8", features = ["postgres", "runtime-tokio-rustls", "macros", "json"] }
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+tower = { version = "0.5", features = ["util"] }
+server_common = { path = "../../src/server/common" }
+server_integrations_stripe = { path = "../../src/server/integrations/stripe" }
+[lib]
+path = "lib.rs"
+[profile.dev]
+debug = 0
+incremental = false

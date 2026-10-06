@@ -3,6 +3,8 @@
 use server_common::Claims;
 use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
 
+#[path = "workflow_execution/assistant.rs"]
+pub(crate) mod assistant;
 #[path = "workflow_execution/dispatch.rs"]
 pub(crate) mod dispatch;
 #[path = "workflow_execution/funding.rs"]

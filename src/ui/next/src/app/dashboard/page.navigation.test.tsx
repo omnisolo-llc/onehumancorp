@@ -39,3 +39,9 @@ it('opens and dismisses the actual quick-action links alongside shell actions', 
   fireEvent.click(toggle);
   expect(screen.queryByRole('link', { name: '📦 New Product' })).toBeNull();
 });
+
+it('keeps standalone agent-card and certificate navigation after API dashboard retirement', async () => {
+  await act(async () => { render(<TooltipProvider><Dashboard /></TooltipProvider>); });
+  expect(screen.getByRole('link', { name: 'Create Agent Card' })).toHaveAttribute('href', '/agent-card.html');
+  expect(screen.getByRole('link', { name: 'Certificate Generator' })).toHaveAttribute('href', '/viral-certificate-generator.html');
+});

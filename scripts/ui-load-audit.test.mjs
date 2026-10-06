@@ -62,6 +62,7 @@ async function auditPages(pages, capture = {}) {
       return { finalUrl: row.finalUrl ?? `http://127.0.0.1:44041${route}` };
     } },
     './support/dashboard_audit_fixture': {},
+    './support/inventory_audit': { observeInventoryAuditClick: () => { throw new Error('The read-only load audit must not dispatch stock controls'); } },
     './support/quote_audit_fixture': { quoteAuditRoutes: new Set(quoteRoutes), prepareQuoteAudit: async (page, _baseURL, route) => {
       preparedQuotes.push(route);
       const row = await navigate(page, route);

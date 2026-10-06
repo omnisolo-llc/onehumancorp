@@ -42,11 +42,11 @@ it('serializes saves and reports success only after the server acknowledges', as
   const toggle = await screen.findByRole('checkbox', { name: 'Enable Product Telemetry (Standalone Mode)' });
   await userEvent.click(toggle);
   expect(toggle).toBeDisabled();
-  expect(screen.getByRole('status')).toHaveTextContent('Saving telemetry preference');
+  expect(screen.getByText('Saving telemetry preference…')).toHaveAttribute('role', 'status');
   await act(async () => resolve(Response.json({ success: true })));
   await waitFor(() => expect(toggle).toBeEnabled());
   expect(toggle).toBeChecked();
-  expect(screen.getByRole('status')).toHaveTextContent('Telemetry preference saved');
+  expect(screen.getByText('Telemetry preference saved.')).toHaveAttribute('role', 'status');
 });
 it('does not treat unavailable telemetry settings as a verified opt-out', async () => {
   vi.mocked(fetch).mockImplementation(async (url: string | URL | Request) => String(url).includes('/settings/telemetry') ? new Response('{}', { status: 500 }) : Response.json({}));

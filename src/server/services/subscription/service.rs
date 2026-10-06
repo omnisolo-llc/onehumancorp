@@ -12,6 +12,7 @@ use uuid::Uuid;
 pub trait DunningNotifier: Send + Sync {
     async fn send_payment_failure_sms(
         &self,
+        tenant_id: &str,
         subscriber_id: &str,
         message: &str,
     ) -> Result<(), String>;
@@ -26,17 +27,27 @@ pub trait DunningMessageGenerator: Send + Sync {
     ) -> String;
 }
 
-pub struct CriticalSmsDunningNotifier;
+pub struct CriticalSmsDunningNotifier {
+    pub event_id: String,
+}
 pub struct LlmDunningMessageGenerator;
 
 #[async_trait::async_trait]
 impl DunningNotifier for CriticalSmsDunningNotifier {
     async fn send_payment_failure_sms(
         &self,
+        tenant_id: &str,
         _subscriber_id: &str,
         message: &str,
     ) -> Result<(), String> {
-        crate::dispatch_critical_sms("failed_payment", message).await
+        crate::api::sms_settings::dispatch_critical_sms(
+            tenant_id,
+            &self.event_id,
+            "failed_payment",
+            message,
+        )
+        .await
+        .map(|_| ())
     }
 }
 
@@ -78,6 +89,7 @@ pub fn build_payment_failure_sms(business_name: &str) -> String {
 pub async fn send_dunning_sms<N: DunningNotifier, G: DunningMessageGenerator>(
     notifier: &N,
     generator: &G,
+    tenant_id: &str,
     subscriber_id: &str,
     business_name: &str,
 ) -> Result<(), String> {
@@ -85,7 +97,7 @@ pub async fn send_dunning_sms<N: DunningNotifier, G: DunningMessageGenerator>(
         .generate_payment_failure_message(subscriber_id, business_name)
         .await;
     notifier
-        .send_payment_failure_sms(subscriber_id, &message)
+        .send_payment_failure_sms(tenant_id, subscriber_id, &message)
         .await
 }
 
@@ -267,9 +279,25 @@ impl SubscriptionService {
         Ok(subscriber)
     }
 
-    pub async fn trigger_dunning(&self, subscriber_id: &str) -> Result<(), String> {
-        self.trigger_dunning_with_notifier(subscriber_id, &CriticalSmsDunningNotifier)
-            .await
+    pub async fn trigger_dunning(&self, _subscriber_id: &str) -> Result<(), String> {
+        Err("A stable payment-failure event ID is required before sending SMS".into())
+    }
+
+    pub async fn trigger_dunning_for_event(
+        &self,
+        subscriber_id: &str,
+        event_id: &str,
+    ) -> Result<(), String> {
+        if event_id.trim().is_empty() {
+            return Err("A stable payment-failure event ID is required".into());
+        }
+        self.trigger_dunning_with_notifier(
+            subscriber_id,
+            &CriticalSmsDunningNotifier {
+                event_id: event_id.into(),
+            },
+        )
+        .await
     }
 
     pub async fn trigger_dunning_with_notifier<N: DunningNotifier>(
@@ -294,26 +322,39 @@ impl SubscriptionService {
         notifier: &N,
         generator: &G,
     ) -> Result<(), String> {
-        match &self.db.store {
+        let tenant_id: String = match &self.db.store {
             DbStore::Postgres => {
                 let mut transaction = self.begin_system_transaction().await?;
-                sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1")
-                    .bind(subscriber_id)
-                    .execute(&mut *transaction)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let tenant: Option<String> = sqlx::query_scalar(
+                    "UPDATE subscribers SET status = 'PAST_DUE' WHERE id = $1 RETURNING tenant_id",
+                )
+                .bind(subscriber_id)
+                .fetch_optional(&mut *transaction)
+                .await
+                .map_err(|e| e.to_string())?;
                 transaction.commit().await.map_err(|e| e.to_string())?;
+                tenant.ok_or("Subscription tenant unavailable")?
             }
             DbStore::Sqlite(pool) => {
-                sqlx::query("UPDATE subscribers SET status = 'PAST_DUE' WHERE id = ?")
-                    .bind(subscriber_id)
-                    .execute(pool)
-                    .await
-                    .map_err(|e| e.to_string())?;
+                let tenant: Option<String> = sqlx::query_scalar(
+                    "UPDATE subscribers SET status = 'PAST_DUE' WHERE id = ? RETURNING tenant_id",
+                )
+                .bind(subscriber_id)
+                .fetch_optional(pool)
+                .await
+                .map_err(|e| e.to_string())?;
+                tenant.ok_or("Subscription tenant unavailable")?
             }
-        }
+        };
 
-        send_dunning_sms(notifier, generator, subscriber_id, "Your business").await?;
+        send_dunning_sms(
+            notifier,
+            generator,
+            &tenant_id,
+            subscriber_id,
+            "Your business",
+        )
+        .await?;
 
         Ok(())
     }
@@ -323,6 +364,20 @@ impl SubscriptionService {
         event_type: &str,
         subscription_id: &str,
     ) -> Result<(), String> {
+        self.handle_stripe_webhook_for_event(event_type, subscription_id, None)
+            .await
+    }
+
+    pub async fn handle_stripe_webhook_for_event(
+        &self,
+        event_type: &str,
+        subscription_id: &str,
+        event_id: Option<&str>,
+    ) -> Result<(), String> {
+        if event_type == "invoice.payment_failed" && event_id.is_none_or(|id| id.trim().is_empty())
+        {
+            return Err("A stable payment-failure event ID is required before sending SMS".into());
+        }
         match event_type {
             "invoice.payment_succeeded" => match &self.db.store {
                 crate::db::DbStore::Postgres => {
@@ -369,7 +424,11 @@ impl SubscriptionService {
                 };
 
                 if let Some(sub_id) = subscriber_id {
-                    self.trigger_dunning(&sub_id).await?;
+                    self.trigger_dunning_for_event(
+                        &sub_id,
+                        event_id.ok_or("Payment-failure event identity unavailable")?,
+                    )
+                    .await?;
                 }
             }
             "customer.subscription.deleted" => match &self.db.store {
@@ -669,6 +728,7 @@ mod tests {
     impl DunningNotifier for RecordingDunningNotifier {
         async fn send_payment_failure_sms(
             &self,
+            _tenant_id: &str,
             subscriber_id: &str,
             message: &str,
         ) -> Result<(), String> {
@@ -686,7 +746,7 @@ mod tests {
         let notifier = RecordingDunningNotifier { sent: sent.clone() };
         let generator = FixedDunningMessageGenerator;
 
-        send_dunning_sms(&notifier, &generator, "sub_123", "Maya's Cakes")
+        send_dunning_sms(&notifier, &generator, "tenant-a", "sub_123", "Maya's Cakes")
             .await
             .unwrap();
 

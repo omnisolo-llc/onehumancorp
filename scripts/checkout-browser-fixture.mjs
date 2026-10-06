@@ -14,6 +14,8 @@ import { gunzipSync, inflateSync, brotliDecompressSync } from 'node:zlib';
 import { verifiedFixtureDatabaseUrl } from './e2e-fixture-database.mjs';
 import { validateWebArtifact } from './package-web.mjs';
 import { verifyNativeBinaryProof } from './native-binary-proof.mjs';
+import { startAssistantProvider } from './assistant-browser-provider.mjs';
+export { ASSISTANT_PROMPT, ASSISTANT_OUTPUT, ASSISTANT_MAXIMUM, assistantRequest } from './assistant-browser-provider.mjs';
 
 const repository = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -434,6 +436,15 @@ async function stopChild(child) {
 
 /** Starts the existing native outputs, never builds or copies dependencies. */
 export async function startConfiguredCheckoutFixture({ environment = process.env } = {}) {
+  return startOwnedApplicationFixture({ environment, kind: 'checkout' });
+}
+
+/** A separate owned text runtime; the default native runner stays unconfigured. */
+export async function startConfiguredAssistantFixture({ tenantId, environment = process.env } = {}) {
+  return startOwnedApplicationFixture({ environment, kind: 'assistant', tenantId });
+}
+
+async function startOwnedApplicationFixture({ environment, kind, tenantId }) {
   const proofPath = environment.OMNISOLO_E2E_CHECKOUT_RUNTIME;
   if (!proofPath) throw new Error('Configured checkout requires the native runner runtime proof');
   const stat = await lstat(proofPath);
@@ -495,7 +506,9 @@ export async function startConfiguredCheckoutFixture({ environment = process.env
   try {
     const apiPort = await freePort(), grpcPort = await freePort(), webPort = await freePort();
     const apiOrigin = `http://127.0.0.1:${apiPort}`, origin = `http://127.0.0.1:${webPort}`;
-    provider = await startCheckoutProvider({ runId: runtime.runId, appOrigin: origin });
+    provider = kind === 'assistant'
+      ? await startAssistantProvider({ runId: runtime.runId, tenantId })
+      : await startCheckoutProvider({ runId: runtime.runId, appOrigin: origin });
     proxy = await startCheckoutEgressProxy({ appOrigin: origin });
     const home = path.join(temp, 'home'); await mkdir(home);
     const env = { ...checkoutProcessEnvironment(environment), ...provider.environment,
@@ -518,6 +531,7 @@ export async function startConfiguredCheckoutFixture({ environment = process.env
     const frontend = start(process.execPath, [runtime.web], 'web.log', { ...env, PORT: String(webPort), HOSTNAME: '127.0.0.1', NODE_ENV: 'production' });
     await waitReady(`${origin}/login`, frontend);
     return { origin, apiOrigin, proxy: { server: proxy.server, bypass: proxy.bypass },
+      ...(kind === 'assistant' ? { receiptId: provider.receiptId, waitForRequest: provider.waitForRequest, release: provider.release } : {}),
       register(product) { provider.register(product); proxy.registerCheckout(product); },
       armClockResponseLoss(registration) { proxy.armClockResponseLoss(registration); },
       evidence,

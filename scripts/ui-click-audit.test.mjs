@@ -303,3 +303,30 @@ test('quote isolation cannot substitute an editing inventory for an entry reset 
   missing.audit.navigations.splice(1, 1); missing.audit.isolation.cases.splice(1, 1);
   assert.throws(() => validateReceipts(missing.shards, missing.context, 2), /quote|inventory/i);
 });
+
+test('POS compatibility receipts retain separate source and canonical routes with every target observed', () => {
+  const f = fixture(['/pos', '/pos/terminal']);
+  for (const navigation of f.shards[0].tests[0].attachments[0].navigations) {
+    navigation.finalUrl = 'https://fixture.test/pos/terminal';
+    navigation.redirected = true;
+  }
+  assert.deepEqual(validateReceipts(f.shards, f.context, 2), { shards: 2, routes: 2, targets: 2, tests: 11 });
+  const routes = protocol.discoverAppRoutes(path.resolve('.'));
+  assert.ok(routes.includes('/pos'));
+  assert.ok(routes.includes('/pos/terminal'));
+});
+
+for (const [label, mutate] of [
+  ['a different terminal', n => { n.finalUrl = 'https://fixture.test/pos/mpos'; }],
+  ['an unrelated page', n => { n.finalUrl = 'https://fixture.test/dashboard'; }],
+  ['another origin', n => { n.finalUrl = 'https://outside.invalid/pos/terminal'; }],
+  ['a false redirect flag', n => { n.redirected = false; }],
+]) test(`POS receipt rejects ${label}`, () => {
+  const f = fixture(['/pos', '/pos/terminal']);
+  for (const navigation of f.shards[0].tests[0].attachments[0].navigations) {
+    navigation.finalUrl = 'https://fixture.test/pos/terminal';
+    navigation.redirected = true;
+  }
+  mutate(f.shards[0].tests[0].attachments[0].navigations[0]);
+  assert.throws(() => validateReceipts(f.shards, f.context, 2), /navigation/i);
+});

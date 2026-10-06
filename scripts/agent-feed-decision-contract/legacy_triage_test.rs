@@ -162,6 +162,16 @@ impl LegacyFixture {
         )
     }
 
+    async fn read_decision(&self, token: &str, id: &str) -> (StatusCode, Value) {
+        let response = self.app().oneshot(Request::builder()
+            .uri(format!("/api/v1/ui/triage/decisions/{id}"))
+            .method("GET").header("authorization", format!("Bearer {token}"))
+            .body(Body::empty()).unwrap()).await.unwrap();
+        let status = response.status();
+        let bytes = to_bytes(response.into_body(), 1024 * 1024).await.unwrap();
+        (status, serde_json::from_slice(&bytes).unwrap_or(Value::Null))
+    }
+
     async fn decide(
         &self,
         token: &str,
@@ -734,9 +744,82 @@ async fn postgres_product_id_booking_alias_rejects_foreign_reference() {
     product_booking_alias(true, true).await;
 }
 
+async fn receipt_read_reconciles_without_replaying_effects(postgres: bool) {
+    let f = LegacyFixture::new(postgres).await;
+    f.seed_daily("read-only-decision", "tenant-a").await;
+    let (status, empty) = f.read_decision(&f.owner, "read-only-decision").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(empty["decision_recorded"], false);
+    assert_eq!(empty["item"]["id"], "read-only-decision");
+    assert_eq!(empty["item"]["tenant_id"], "tenant-a");
+    assert_eq!(f.count("legacy_triage_decisions").await, 0);
+    let before = f.daily("read-only-decision").await;
+    assert_eq!(before.0, "PENDING");
+    let (status, committed) = f.decide(&f.owner, "read-only-decision", true, Some("saved before lost acknowledgement")).await;
+    assert_eq!(status, StatusCode::OK);
+    let after = f.daily("read-only-decision").await;
+    for _ in 0..2 {
+        let (status, receipt) = f.read_decision(&f.owner, "read-only-decision").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(receipt, committed);
+        assert_eq!(f.daily("read-only-decision").await, after);
+        assert_eq!(f.count("legacy_triage_decisions").await, 1);
+        if let Database::Postgres(fixture) = &f.database {
+            assert_eq!(fixture.jobs().await, 0);
+        }
+    }
+    f.finish().await;
+}
+
+async fn receipt_read_checks_current_owner_and_tenant(postgres: bool) {
+    let f = LegacyFixture::new(postgres).await;
+    f.seed_daily("read-foreign", "tenant-b").await;
+    f.seed_daily("read-owned", "tenant-a").await;
+    let (status, _) = f.read_decision(&f.member, "read-owned").await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+    let (status, _) = f.read_decision(&f.owner, "read-foreign").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = f.read_decision(&f.owner, "read-missing").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(f.count("legacy_triage_decisions").await, 0);
+    f.execute("UPDATE identity_user_roles SET role_name='MEMBER' WHERE user_id='owner-a'").await;
+    assert_eq!(f.read_decision(&f.owner, "read-owned").await.0, StatusCode::FORBIDDEN);
+    assert_eq!(f.read_decision("", "read-owned").await.0, StatusCode::UNAUTHORIZED);
+    f.finish().await;
+}
+
+async fn corrupt_read_receipt_cannot_acknowledge_or_mutate(postgres: bool) {
+    let f = LegacyFixture::new(postgres).await;
+    f.seed_daily("read-corrupt", "tenant-a").await;
+    assert_eq!(f.decide(&f.owner, "read-corrupt", true, Some("saved edit")).await.0, StatusCode::OK);
+    let before = f.daily("read-corrupt").await;
+    f.execute("UPDATE legacy_triage_decisions SET receipt='{}' WHERE action_id='read-corrupt'").await;
+    let (status, body) = f.read_decision(&f.owner, "read-corrupt").await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_ne!(body["decision_recorded"], true);
+    assert_eq!(f.daily("read-corrupt").await, before);
+    assert_eq!(f.count("legacy_triage_decisions").await, 1);
+    if let Database::Postgres(fixture) = &f.database {
+            assert_eq!(fixture.jobs().await, 0);
+        }
+    f.finish().await;
+}
+
 macro_rules! backend_cases {
     ($module:ident, $postgres:expr) => {
         mod $module {
+            #[tokio::test]
+            async fn corrupt_read_receipt_cannot_acknowledge_or_mutate() {
+                super::corrupt_read_receipt_cannot_acknowledge_or_mutate($postgres).await;
+            }
+            #[tokio::test]
+            async fn receipt_read_reconciles_without_replaying_effects() {
+                super::receipt_read_reconciles_without_replaying_effects($postgres).await;
+            }
+            #[tokio::test]
+            async fn receipt_read_checks_current_owner_and_tenant() {
+                super::receipt_read_checks_current_owner_and_tenant($postgres).await;
+            }
             #[tokio::test]
             async fn owner_edit_survives_reload_and_replay() {
                 super::owner_edit_survives_reload_and_replay($postgres).await;

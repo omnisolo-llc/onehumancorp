@@ -127,7 +127,7 @@ fn mutation(id: &str, quantity: i32) -> OfflineMutation {
         payment_method: None,
         payment_intent_id: None,
         currency: Some("USD".into()),
-        mutation_type: None,
+        mutation_type: Some("inventory_sale".into()),
         payload: None,
         client_mutation_id: Some(id.into()),
     }

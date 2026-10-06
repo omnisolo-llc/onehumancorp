@@ -16,11 +16,12 @@ export type ClockEnvelope = {
 
 export async function unlockClockTerminal(page: Page, owner: ClockOwner) {
   await page.goto('/pos/terminal');
-  await expect(page.locator('#pos-keypad')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue with signed-in account', exact: true })).toBeVisible();
   const authenticated = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/pos/auth' && response.request().method() === 'POST');
-  for (const digit of ['1', '2', '3', '4']) await page.locator('#pos-keypad').getByRole('button', { name: digit, exact: true }).click();
+  await page.getByRole('button', { name: 'Continue with signed-in account', exact: true }).click();
   const response = await authenticated;
   expect(response.status()).toBe(200);
+  expect(response.request().postDataJSON()).toEqual({});
   expect(await response.json()).toMatchObject({ success: true, staff: { id: owner.userId, tenant_id: owner.tenantId, role: 'ADMIN' } });
   await expect(page.getByText('Offline queue ready for this session.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Clock In', exact: true })).toBeEnabled();

@@ -1,4 +1,6 @@
 "use client";
+import { parseManualInboxReceipt, manualInboxReceiptStatus, type ManualInboxReceipt } from "@/lib/inboxManualReceipt";
+import { messageDeliveryStatus } from "@/lib/messageDeliveryStatus";
 
 
 import { errorMessage } from '@/lib/errors';
@@ -25,6 +27,8 @@ type Message = {
 };
 
 function badgeTone(status?: string) {
+  const delivery = messageDeliveryStatus(status);
+  if (delivery) return delivery.tone;
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
   if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
@@ -104,7 +108,8 @@ function renderMessageContent(content: string): ReactNode {
 
 function formatStatus(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (normalized === "auto_replied") return "✨ AI Handled";
+  const delivery = messageDeliveryStatus(normalized);
+  if (delivery) return delivery.label;
   return status || "Open";
 }
 
@@ -154,6 +159,10 @@ function CustomerContextCard({ customerId }: { customerId: string }) {
   );
 }
 
+type ManualReplyBody = { message_id: string; approved: boolean; edited_reply: string; request_id: string };
+type ManualReplyRequest = { body: ManualReplyBody; receipt?: ManualInboxReceipt; needsReadback: boolean; mayClearDraft: boolean };
+type ManualOperation = { messageId: string; kind: 'prepare' | 'send' | 'read' | 'dismiss' };
+
 function InboxWorkspace({
   messages,
   sourceLabel,
@@ -171,6 +180,12 @@ function InboxWorkspace({
   const [replyDrafts, setReplyDrafts] = useState(() => new Map<string, string>());
   const activeMessage = useRef<string | null>(null);
   const sessionEpoch = useRef(0);
+  const manualRequests = useRef(new Map<string, ManualReplyRequest>());
+  const unreadReceipts = useRef(new Set<string>());
+  const manualOperation = useRef<ManualOperation | null>(null);
+  const draftVersions = useRef(new Map<string, number>());
+  const [busyOperation, setBusyOperation] = useState<ManualOperation | null>(null);
+  const selectionOwner = useRef({ messageId: null as string | null, requestedId });
 
   useEffect(() => {
     setSelection({ request: requestedId, id: requestedId });
@@ -183,22 +198,38 @@ function InboxWorkspace({
   useEffect(() => {
     setShowOriginal(false); setViewActionStatus('');
   }, [selected?.id, requestedId]);
+  // Retire operation ownership during render, even for a fast away/back navigation.
+  // An old preparation may finish, but cannot continue into a provider send.
+  if (selectionOwner.current.messageId !== (selected?.id ?? null) || selectionOwner.current.requestedId !== requestedId
+    || (['resolved', 'dismissed'].includes(selected?.status ?? '') && ['prepare', 'send'].includes(manualOperation.current?.kind ?? ''))) {
+    manualOperation.current = null;
+    selectionOwner.current = { messageId: selected?.id ?? null, requestedId };
+  }
   activeMessage.current = selected?.id ?? null;
   const renderedEpoch = sessionEpoch.current;
   const draftId = selected?.id ?? null;
   const manualReply = draftId ? replyDrafts.get(draftId) ?? '' : '';
   const setManualReply = (value: string | ((previous: string) => string)) => {
     if (!draftId || renderedEpoch !== sessionEpoch.current) return;
+    draftVersions.current.set(draftId, (draftVersions.current.get(draftId) ?? 0) + 1);
+    if (manualOperation.current?.kind === 'prepare' && manualOperation.current.messageId === draftId) {
+      manualOperation.current = null;
+      setBusyOperation(null);
+    }
     setReplyDrafts(previous => new Map(previous).set(draftId, typeof value === 'function' ? value(previous.get(draftId) ?? '') : value));
   };
   const setActionStatus = (value: string) => {
     if (renderedEpoch === sessionEpoch.current && activeMessage.current === draftId) setViewActionStatus(value);
   };
   useEffect(() => {
-    const clear = () => { sessionEpoch.current += 1; setReplyDrafts(new Map()); setViewActionStatus(''); };
+    const clear = () => {
+      sessionEpoch.current += 1; manualOperation.current = null; manualRequests.current.clear(); unreadReceipts.current.clear(); draftVersions.current.clear();
+      setReplyDrafts(new Map()); setViewActionStatus(''); setBusyOperation(null);
+    };
+    const retire = () => { manualOperation.current = null; setBusyOperation(null); };
     const storage = (event: StorageEvent) => { if (event.key === null || event.key === QUEUE_IDENTITY_EPOCH_KEY) clear(); };
-    window.addEventListener('omnisolo_auth_changed', clear); window.addEventListener('storage', storage);
-    return () => { sessionEpoch.current += 1; activeMessage.current = null; window.removeEventListener('omnisolo_auth_changed', clear); window.removeEventListener('storage', storage); };
+    window.addEventListener('omnisolo_auth_changed', clear); window.addEventListener('storage', storage); window.addEventListener('pagehide', retire);
+    return () => { sessionEpoch.current += 1; activeMessage.current = null; manualOperation.current = null; window.removeEventListener('omnisolo_auth_changed', clear); window.removeEventListener('storage', storage); window.removeEventListener('pagehide', retire); };
   }, []);
 
   const [pendingApprovals, setPendingApprovals] = useState<{ id: string; payload?: { inbox_message_id?: string; drafted_response?: string; draft_reply?: string } | string }[]>([]);
@@ -259,30 +290,135 @@ function InboxWorkspace({
   }
 
 
-  async function handleSendManualReply(inboxMessageId: string) {
-    if (!manualReply.trim()) return;
-    const submittedReply = manualReply;
-    try {
-      setActionStatus("Sending reply...");
-      const res = await fetch(`/api/v1/ui/omni_inbox/action`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message_id: inboxMessageId,
-          approved: true,
-          edited_reply: submittedReply
-        })
-      });
-      if (res.ok) {
-        setActionStatus("Manual reply sent.");
-        if (renderedEpoch === sessionEpoch.current) setReplyDrafts(previous => previous.get(inboxMessageId) === submittedReply
-          ? new Map(previous).set(inboxMessageId, '') : previous);
-      } else {
-        setActionStatus("Failed to send manual reply.");
+  const receiptBlocked = (request?: ManualReplyRequest) => !!request && (request.needsReadback
+    || ['unknown', 'accepted', 'dismissed', 'resolved'].includes(request.receipt?.state ?? ''));
+  const isManualBusy = !!busyOperation && busyOperation === manualOperation.current;
+  const currentManualRequest = draftId ? manualRequests.current.get(draftId) : undefined;
+  const previousSend = currentManualRequest?.receipt?.prior_send;
+
+  function ownsOperation(operation: ManualOperation) {
+    return manualOperation.current === operation && renderedEpoch === sessionEpoch.current
+      && activeMessage.current === operation.messageId;
+  }
+
+  function applyManualReceipt(receipt: ManualInboxReceipt, request: ManualReplyRequest, restoreDraft = false, version?: number) {
+    request.receipt = receipt; request.needsReadback = false;
+    manualRequests.current.set(receipt.message_id, request);
+    setActionStatus(manualInboxReceiptStatus(receipt));
+    setReplyDrafts(previous => {
+      const draft = previous.get(receipt.message_id);
+      if (request.mayClearDraft && receipt.state === 'accepted' && draft === request.body.edited_reply) {
+        return new Map(previous).set(receipt.message_id, '');
       }
-    } catch (e) {
-      console.error(e);
-      setActionStatus("Error sending manual reply.");
+      if (restoreDraft && !['accepted', 'dismissed', 'resolved'].includes(receipt.state)
+        && !draft && version === (draftVersions.current.get(receipt.message_id) ?? 0)) {
+        return new Map(previous).set(receipt.message_id, receipt.draft_reply);
+      }
+      return previous;
+    });
+  }
+
+  async function handleSendManualReply(inboxMessageId: string) {
+    if (!manualReply.trim() || manualReply.length > 16_000 || manualOperation.current || renderedEpoch !== sessionEpoch.current) return;
+    const existing = manualRequests.current.get(inboxMessageId);
+    if (receiptBlocked(existing) || unreadReceipts.current.has(inboxMessageId)) {
+      setActionStatus('Check saved reply status before attempting another send. Your draft is preserved.');
+      return;
+    }
+    const operation: ManualOperation = { messageId: inboxMessageId, kind: 'prepare' };
+    manualOperation.current = operation; setBusyOperation(operation);
+    try {
+      const request: ManualReplyRequest = existing?.receipt?.state === 'pending' && existing.body.edited_reply === manualReply
+        ? existing : { body: { message_id: inboxMessageId, approved: true, edited_reply: manualReply, request_id: crypto.randomUUID() }, needsReadback: true, mayClearDraft: true };
+      // Keep request identity and draft in memory. Reload recovery reads actor-scoped server state.
+      manualRequests.current.set(inboxMessageId, request);
+      request.needsReadback = true; request.mayClearDraft = true;
+      setActionStatus('Preparing reply...');
+      const preparedResponse = await fetch('/api/v1/ui/omni_inbox/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store',
+        body: JSON.stringify({ ...request.body, prepare_only: true }),
+      });
+      if (!ownsOperation(operation)) return;
+      if (!preparedResponse.ok) throw new Error('Preparation unconfirmed');
+      const prepared = parseManualInboxReceipt(await preparedResponse.json(), inboxMessageId, request.body);
+      if (!ownsOperation(operation)) return;
+      if (prepared.state !== 'pending') { applyManualReceipt(prepared, request); return; }
+      operation.kind = 'send';
+      setActionStatus('Requesting provider acceptance...');
+      const response = await fetch('/api/v1/ui/omni_inbox/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(request.body),
+      });
+      if (!ownsOperation(operation)) return;
+      if (!response.ok) throw new Error('Provider acknowledgement unconfirmed');
+      const receipt = parseManualInboxReceipt(await response.json(), inboxMessageId, request.body);
+      if (ownsOperation(operation)) applyManualReceipt(receipt, request);
+    } catch {
+      if (ownsOperation(operation)) setActionStatus('Check saved reply status before attempting another send. Your draft is preserved.');
+    } finally {
+      if (ownsOperation(operation)) { manualOperation.current = null; setBusyOperation(null); }
+    }
+  }
+
+  async function handleReadManualReceipt(inboxMessageId: string) {
+    if (manualOperation.current || renderedEpoch !== sessionEpoch.current) return;
+    const operation: ManualOperation = { messageId: inboxMessageId, kind: 'read' };
+    unreadReceipts.current.add(inboxMessageId);
+    manualOperation.current = operation; setBusyOperation(operation);
+    let known = manualRequests.current.get(inboxMessageId);
+    const version = draftVersions.current.get(inboxMessageId) ?? 0;
+    try {
+      setActionStatus('Checking saved reply status...');
+      const query = new URLSearchParams({ message_id: inboxMessageId, ...(known ? { request_id: known.body.request_id } : {}) });
+      let response = await fetch(`/api/v1/ui/omni_inbox/action?${query}`, { cache: 'no-store' });
+      if (!ownsOperation(operation)) return;
+      if (response.status === 404 && known) {
+        // A conflicting preparation need not have been recorded. Recover the
+        // actor's existing request instead of treating an unused UUID as no send.
+        query.delete('request_id');
+        known = undefined;
+        response = await fetch(`/api/v1/ui/omni_inbox/action?${query}`, { cache: 'no-store' });
+        if (!ownsOperation(operation)) return;
+      }
+      if (response.status === 404) {
+        unreadReceipts.current.delete(inboxMessageId);
+        manualRequests.current.delete(inboxMessageId);
+        setActionStatus('No saved reply request was found for this message and account. Your draft is preserved.');
+        return;
+      }
+      if (!response.ok) throw new Error('Receipt read unavailable');
+      const receipt = parseManualInboxReceipt(await response.json(), inboxMessageId, known?.body);
+      if (!ownsOperation(operation)) return;
+      unreadReceipts.current.delete(inboxMessageId);
+      const request = known ?? { body: { message_id: inboxMessageId, approved: true, edited_reply: receipt.draft_reply, request_id: receipt.request_id }, needsReadback: false, mayClearDraft: false };
+      applyManualReceipt(receipt, request, true, version);
+    } catch {
+      if (ownsOperation(operation)) setActionStatus('Saved reply status is unavailable. Your draft is preserved; check again before sending.');
+    } finally {
+      if (ownsOperation(operation)) { manualOperation.current = null; setBusyOperation(null); }
+    }
+  }
+
+  async function handleDismissMessage(inboxMessageId: string) {
+    if (renderedEpoch !== sessionEpoch.current || manualOperation.current?.kind === 'send') return;
+    // Dismissal supersedes preparation immediately, before its network response can arrive.
+    const operation: ManualOperation = { messageId: inboxMessageId, kind: 'dismiss' };
+    manualOperation.current = operation; setBusyOperation(operation);
+    try {
+      const request: ManualReplyRequest = { body: { message_id: inboxMessageId, approved: false, edited_reply: manualReply, request_id: crypto.randomUUID() }, needsReadback: true, mayClearDraft: false };
+      manualRequests.current.set(inboxMessageId, request);
+      setActionStatus('Dismissing message...');
+      const response = await fetch('/api/v1/ui/omni_inbox/action', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, cache: 'no-store', body: JSON.stringify(request.body),
+      });
+      if (!ownsOperation(operation)) return;
+      if (!response.ok) throw new Error('Dismissal unconfirmed');
+      const receipt = parseManualInboxReceipt(await response.json(), inboxMessageId, request.body);
+      if (receipt.state !== 'dismissed') throw new Error('Dismissal unconfirmed');
+      if (ownsOperation(operation)) applyManualReceipt(receipt, request);
+    } catch {
+      if (ownsOperation(operation)) setActionStatus('Dismissal is unconfirmed. Check saved reply status before taking another action. Your draft is preserved.');
+    } finally {
+      if (ownsOperation(operation)) { manualOperation.current = null; setBusyOperation(null); }
     }
   }
 
@@ -332,15 +468,17 @@ function InboxWorkspace({
       });
 
       if (approveRes.ok) {
-        // Optimistic UI updates are handled by PowerSync once backend completes sync,
-        // but we show the status to the user.
-        setActionStatus("Draft approved and sent.");
+        const receipt: unknown = await approveRes.json();
+        if (!receipt || typeof receipt !== "object" || !("success" in receipt) || receipt.success !== true) {
+          throw new Error("Approval acknowledgement is unconfirmed");
+        }
+        setActionStatus("Approval recorded. Check the message status for provider acceptance; delivery is unconfirmed.");
       } else {
-        setActionStatus("Failed to approve and send message.");
+        setActionStatus("Approval or provider acceptance is unconfirmed. Check the saved message status before retrying.");
       }
     } catch (e) {
       console.error(e);
-      setActionStatus("Error approving message.");
+      setActionStatus("Approval outcome is unknown. Check the saved status before retrying.");
     }
   }
 
@@ -357,7 +495,7 @@ function InboxWorkspace({
       <div className="mb-2 text-xs text-gray-500">
         Conversations for the current workspace.
       </div>
-      {actionStatus && <div className="mb-4 app-badge good" role="status">{actionStatus}</div>}
+      {actionStatus && <div className="mb-4 app-badge" role="status">{actionStatus}</div>}
       <div className="w-full max-w-[375px] mx-auto md:max-w-none" data-testid="inbox-settled">
         <div className="app-grid two gap-4">
           <section className="app-panel glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] overflow-hidden">
@@ -410,10 +548,15 @@ function InboxWorkspace({
                       <button
                         onClick={() => handleSendManualReply(selected.id)}
                         className="app-btn-primary min-h-[44px] min-w-[44px] rounded-[8px]"
-                        disabled={!manualReply.trim()}
+                        disabled={!manualReply.trim() || manualReply.length > 16_000 || isManualBusy || receiptBlocked(currentManualRequest) || unreadReceipts.current.has(selected.id)}
                       >
                         Send Reply
                       </button>
+                      <button
+                        onClick={() => handleDismissMessage(selected.id)}
+                        disabled={manualOperation.current?.kind === 'send' || manualOperation.current?.kind === 'dismiss' || ['dismissed', 'resolved'].includes(currentManualRequest?.receipt?.state ?? '')}
+                        className="app-btn-secondary min-h-[44px] min-w-[44px] rounded-[8px]"
+                      >Dismiss message</button>
                       <button
                         onClick={handleAttachPhoto}
                         className="app-btn-secondary flex items-center gap-2 min-h-[44px] min-w-[44px] rounded-[8px]"
@@ -499,6 +642,18 @@ function InboxWorkspace({
                     <div className="mt-2 text-sm font-semibold text-gray-900">{selected.created_at || "Unknown"}</div>
                   </div>
                 </div>
+                <button
+                  onClick={() => handleReadManualReceipt(selected.id)}
+                  disabled={isManualBusy}
+                  className="app-btn-secondary mt-4 min-h-[44px] min-w-[44px] rounded-[8px]"
+                >Check saved reply status</button>
+                {previousSend && (
+                  <section aria-label="Previous reply attempt" className="mt-4 rounded-md border p-3">
+                    <div className="app-metric-label">Previous reply attempt</div>
+                    <p>{manualInboxReceiptStatus({ ...previousSend, message_id: selected.id })}</p>
+                    <div className="whitespace-pre-wrap">{previousSend.draft_reply}</div>
+                  </section>
+                )}
                 {badgeTone(selected.status) === "warn" && (
                   <div className="mt-6">
                     {(() => {

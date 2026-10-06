@@ -1,20 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useTeamApprovals } from './useTeamApprovals';
+import type { Approval } from './approvalContract';
 import DepartmentCard from './components/DepartmentCard';
 import ApprovalInbox from './components/ApprovalInbox';
 import GrowthReferralWidget from '../components/GrowthReferralWidget';
 
-export type ApprovalRequest = {
-  id: string;
-  tenant_id: string;
-  department: string;
-  description: string;
-  status: string;
-  action_risk: string;
-  created_at?: string;
-  payload?: import('@/lib/agent-feed-types').ActionPayload;
-};
+export type ApprovalRequest = Omit<Approval, 'status' | 'department' | 'action_risk'> & { status: string; department: string; action_risk: string };
 
 const DEPARTMENTS = [
   { id: 'operations', name: 'The Manager' },
@@ -24,86 +17,37 @@ const DEPARTMENTS = [
   { id: 'finance', name: 'The Accountant' },
   { id: 'legal', name: 'The Protector' },
   { id: 'business_advisory', name: 'The Advisor' },
-  { id: 'discovery', name: 'The Scout' },
 ];
 
 export default function TeamPage() {
-  const [approvals, setApprovals] = useState<ApprovalRequest[]>([]);
+  const team = useTeamApprovals();
+  const { items: approvals, loading } = team;
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchApprovals = async () => {
-    try {
-      const response = await fetch('/api/v1/agents/approvals');
-      if (response.ok) {
-        const data = await response.json();
-        setApprovals(data.pending_approvals || []);
-      }
-    } catch (error) {
-      if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) return;
-      console.error("Failed to fetch approvals", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchApprovals();
-  }, []);
-
-  const handleApprove = async (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => {
-    try {
-      setApprovals(prev => prev.filter(a => a.id !== id));
-
-      const payload: { approved: boolean; edited_payload?: import('@/lib/agent-feed-types').ActionPayload } = { approved: true };
-      if (editedPayload) {
-        payload.edited_payload = editedPayload;
-      }
-
-      const response = await fetch(`/api/v1/agents/approvals/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) fetchApprovals();
-    } catch (error) {
-      console.error("Failed to approve", error);
-      fetchApprovals();
-    }
-  };
-
-  const handleReject = async (id: string) => {
-     try {
-      setApprovals(prev => prev.filter(a => a.id !== id));
-      const response = await fetch(`/api/v1/agents/approvals/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ approved: false })
-      });
-      if (!response.ok) fetchApprovals();
-    } catch (error) {
-      console.error("Failed to reject", error);
-      fetchApprovals();
-    }
-  };
+  useEffect(() => { setSelectedDepartment(null); }, [team.revision]);
+  const status = <div className="p-4 space-y-2">
+    {team.error && <p role="alert">{team.error}</p>}
+    {[...team.notices].map(([id, notice]) => <p key={id} role="status">{notice.message}</p>)}
+    <button type="button" disabled={team.busy} onClick={() => void team.refresh()} className="min-h-[44px] text-blue-700 underline">Refresh recorded decisions</button>
+  </div>;
+  const handleApprove = (id: string, editedPayload?: import('@/lib/agent-feed-types').ActionPayload) => team.decide(id, 'APPROVED', editedPayload);
+  const handleReject = (id: string) => team.decide(id, 'DISMISSED');
 
   if (selectedDepartment) {
     const deptInfo = DEPARTMENTS.find(d => d.id === selectedDepartment);
     const deptApprovals = approvals.filter(a => a.department === selectedDepartment);
 
     return (
-      <ApprovalInbox
+      <div hidden={!team.ready}><ApprovalInbox
         departmentId={selectedDepartment}
         departmentName={deptInfo?.name || selectedDepartment}
         approvals={deptApprovals}
         onBack={() => setSelectedDepartment(null)}
         onApprove={handleApprove}
         onReject={handleReject}
-      />
+        blocked={team.blocked}
+        status={status}
+        readState={team.loading ? 'loading' : team.error || !team.ready ? 'unavailable' : 'ready'}
+      /></div>
     );
   }
 
@@ -126,6 +70,7 @@ export default function TeamPage() {
           </button>
         </div>
 
+        {status}
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-6 pb-24 lg:px-8 lg:pb-8 hide-scrollbar">
 
@@ -139,7 +84,7 @@ export default function TeamPage() {
              <div className="flex justify-center py-10">
                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
              </div>
-          ) : (
+          ) : team.error || !team.ready ? null : (
             <div className="grid grid-cols-1 gap-x-4 lg:grid-cols-2">
               {DEPARTMENTS.map(dept => {
                 const pendingCount = approvals.filter(a => a.department === dept.id).length;

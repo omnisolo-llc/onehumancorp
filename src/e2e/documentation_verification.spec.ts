@@ -48,9 +48,9 @@ test.describe('Documentation UI Verification', () => {
     await expect(walkthroughBubble).toContainText('Business Analytics');
 
     // Close the walkthrough
-    const closeBtn = page.locator('.omnisolo-walkthrough-close').first();
+    const closeBtn = walkthroughBubble.getByRole('button', { name: 'Close walkthrough', exact: true });
     await expect(closeBtn).toBeVisible();
     await closeBtn.click();
-    await expect(walkthroughBubble).not.toBeVisible();
+    await expect(walkthroughBubble).toBeHidden();
   });
 });

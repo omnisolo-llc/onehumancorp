@@ -141,7 +141,7 @@ test.describe('Inventory and POS entry screens', () => {
 
   test('verify POS terminal offline UI renders', async ({ page }) => {
     await page.goto('/pos/terminal');
-    await expect(page.locator('#pos-keypad')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue with signed-in account', exact: true })).toBeVisible();
   });
 
   test('verify KDS terminal renders', async ({ page }) => {

@@ -11,6 +11,9 @@ use sqlx::{
 use std::{future::Future, pin::Pin, str::FromStr, sync::Arc, time::Duration};
 use uuid::Uuid;
 
+#[path = "assistant_test.rs"]
+mod assistant_tests;
+
 #[path = "dynamic_queue_test.rs"]
 mod dynamic_queue_tests;
 #[path = "dynamic_workflow_test.rs"]
@@ -118,6 +121,8 @@ impl Fixture {
         .execute(&admin)
         .await
         .unwrap();
+        sqlx::raw_sql(include_str!("../../src/server/migrations/1042_assistant_execution.sql"))
+            .execute(&admin).await.unwrap();
         use server_auth::user_repository::UserRepository;
         let repository =
             server_auth::seaorm_store::SeaOrmAuthRepository::new(database.connection().clone());
