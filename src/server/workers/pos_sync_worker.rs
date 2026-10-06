@@ -466,11 +466,13 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                         "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
                     }).to_string();
 
+                    let conflict_id = format!("sync_conflict_{}_{}", transaction_id, product_id);
                     let _ = sqlx::query(
-                        "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                         VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
+                        "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                         VALUES ($1, $2, 'terminal', 'operations', 'inventory.sync.conflict', 'Pending', 0.99, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                         ON CONFLICT DO NOTHING"
                     )
-                    .bind(&notification_id)
+                    .bind(&conflict_id)
                     .bind(&job.tenant_id)
                     .bind(&notification_payload)
                     .execute(&mut *tx)
@@ -822,11 +824,14 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                     "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_id)
                                 }).to_string();
 
+                            let conflict_id =
+                                format!("sync_conflict_{}_{}", transaction_id, product_id);
                             let _ = sqlx::query(
-                                    "INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status)
-                                     VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')"
+                                    "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                                     VALUES ($1, $2, 'terminal', 'operations', 'inventory.sync.conflict', 'Pending', 0.99, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                                     ON CONFLICT DO NOTHING"
                                 )
-                                .bind(&notification_id)
+                                .bind(&conflict_id)
                                 .bind(&job.tenant_id)
                                 .bind(&notification_payload)
                                 .execute(&mut *tx)

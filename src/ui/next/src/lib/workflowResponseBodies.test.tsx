@@ -14,7 +14,7 @@ afterEach(() => { cleanup(); notifyQueueIdentityChange(); vi.unstubAllGlobals();
 
 const item = { id: 'feed-owned', tenant_id: 'owner-tenant', event_source: 'Operations', context_payload: { summary: 'Review the real pending action' }, proposed_action: { action_type: 'proposal', summary: 'Real pending proposal' }, lifecycle_state: 'PENDING_APPROVAL', created_at: '2026-10-03T12:00:00Z' };
 for (const [name, Component, label, body] of [
-  ['unified feed', UnifiedFeed, 'Reject', { items: [item] }],
+  ['unified feed', UnifiedFeed, 'Dismiss', { items: [item] }],
   ['daily feed', FeedPage, 'Dismiss', { items: [item] }],
   ['action center', ActionCenter, 'Dismiss', { pending_approvals: [{ id: 'approval-owned', department: 'operations', description: 'Review the real pending action', status: 'pending' }] }],
 ] as const) {
