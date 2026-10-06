@@ -4942,19 +4942,38 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
         axum::extract::Json(payload): axum::extract::Json<OmniInboxActionPayload>,
     ) -> axum::response::Response {
+        use crate::orchestration::departments::message_delivery::{Error, Store, manual_inbox};
         use axum::response::IntoResponse;
-        use crate::orchestration::departments::message_delivery::{manual_inbox, Error, Store};
         let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
             return axum::http::StatusCode::UNAUTHORIZED.into_response();
         };
-        let result = manual_inbox::apply(&Store::from_db(db.as_ref()), &tenant_id, &claims.sub, &payload).await;
+        let result = manual_inbox::apply(
+            &Store::from_db(db.as_ref()),
+            &tenant_id,
+            &claims.sub,
+            &payload,
+        )
+        .await;
         // A lost response/finalization may still have a durable unknown claim.
         invalidate_ui_omni_inbox_cache(&tenant_id).await;
         match result {
-            Ok(receipt) => (axum::http::StatusCode::OK, [("cache-control", "private, no-store")], axum::Json(receipt)).into_response(),
+            Ok(receipt) => (
+                axum::http::StatusCode::OK,
+                [("cache-control", "private, no-store")],
+                axum::Json(receipt),
+            )
+                .into_response(),
             Err(error) => {
-                let status = match &error { Error::Storage => axum::http::StatusCode::SERVICE_UNAVAILABLE, Error::Invalid(_) => axum::http::StatusCode::CONFLICT };
-                (status, [("cache-control", "private, no-store")], axum::Json(serde_json::json!({"error":error.to_string()}))).into_response()
+                let status = match &error {
+                    Error::Storage => axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                    Error::Invalid(_) => axum::http::StatusCode::CONFLICT,
+                };
+                (
+                    status,
+                    [("cache-control", "private, no-store")],
+                    axum::Json(serde_json::json!({"error":error.to_string()})),
+                )
+                    .into_response()
             }
         }
     }
@@ -4970,8 +4989,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         axum::extract::Extension(claims): axum::extract::Extension<::server_common::Claims>,
         axum::extract::Query(query): axum::extract::Query<ManualInboxReadQuery>,
     ) -> axum::response::Response {
+        use crate::orchestration::departments::message_delivery::{Store, manual_inbox};
         use axum::response::IntoResponse;
-        use crate::orchestration::departments::message_delivery::{manual_inbox, Store};
         let Some(tenant_id) = strict_ui_claim_tenant(&claims) else {
             return axum::http::StatusCode::UNAUTHORIZED.into_response();
         };
@@ -9124,8 +9143,16 @@ mod tests {
         ] {
             sqlx::query(statement).execute(&pool).await.unwrap();
         }
-        sqlx::raw_sql(include_str!("migrations/1044_department_message_delivery_receipts.sql")).execute(&pool).await.unwrap();
-        sqlx::raw_sql(include_str!("migrations/1045_manual_inbox_requests.sql")).execute(&pool).await.unwrap();
+        sqlx::raw_sql(include_str!(
+            "migrations/1044_department_message_delivery_receipts.sql"
+        ))
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::raw_sql(include_str!("migrations/1045_manual_inbox_requests.sql"))
+            .execute(&pool)
+            .await
+            .unwrap();
         for table in [
             "omni_inbox_messages",
             "inbox_messages",
@@ -9191,7 +9218,8 @@ mod tests {
             message_id: "message-b".to_string(),
             approved: true,
             edited_reply: Some("tamper".to_string()),
-            request_id: Some("foreign-request".into()), prepare_only: true,
+            request_id: Some("foreign-request".into()),
+            prepare_only: true,
         };
         assert!(
             crate::orchestration::departments::message_delivery::manual_inbox::apply(
@@ -9207,11 +9235,17 @@ mod tests {
             message_id: "message-a".to_string(),
             approved: true,
             edited_reply: Some("approved reply".to_string()),
-            request_id: Some("owned-request".into()), prepare_only: true,
+            request_id: Some("owned-request".into()),
+            prepare_only: true,
         };
-        let dispatch = crate::orchestration::departments::message_delivery::manual_inbox::apply(&crate::orchestration::departments::message_delivery::Store::from_db(&db), "tenant-a", "owner-a", &owned)
-            .await
-            .unwrap();
+        let dispatch = crate::orchestration::departments::message_delivery::manual_inbox::apply(
+            &crate::orchestration::departments::message_delivery::Store::from_db(&db),
+            "tenant-a",
+            "owner-a",
+            &owned,
+        )
+        .await
+        .unwrap();
         assert_eq!(dispatch.state, "pending");
 
         let mut tenant_a_tx = pool.begin().await.unwrap();
@@ -9224,11 +9258,12 @@ mod tests {
         .fetch_one(&mut *tenant_a_tx)
         .await
         .unwrap();
-        let reply: String =
-            sqlx::query_scalar("SELECT body FROM manual_inbox_requests WHERE tenant_id = 'tenant-a'")
-                .fetch_one(&mut *tenant_a_tx)
-                .await
-                .unwrap();
+        let reply: String = sqlx::query_scalar(
+            "SELECT body FROM manual_inbox_requests WHERE tenant_id = 'tenant-a'",
+        )
+        .fetch_one(&mut *tenant_a_tx)
+        .await
+        .unwrap();
         tenant_a_tx.commit().await.unwrap();
         assert_eq!(status, "unread");
         assert_eq!(reply, "approved reply");

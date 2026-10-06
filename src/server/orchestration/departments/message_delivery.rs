@@ -239,8 +239,13 @@ async fn manual_intent_revision(
     id: &str,
 ) -> Result<i64, Error> {
     let revision: Option<(i64,)> = database!(tx, c, {
-        sqlx::query_as("SELECT revision FROM manual_inbox_intents WHERE tenant_id=$1 AND inbox_message_id=$2")
-            .bind(tenant).bind(id).fetch_optional(c).await?
+        sqlx::query_as(
+            "SELECT revision FROM manual_inbox_intents WHERE tenant_id=$1 AND inbox_message_id=$2",
+        )
+        .bind(tenant)
+        .bind(id)
+        .fetch_optional(c)
+        .await?
     });
     Ok(revision.map(|row| row.0).unwrap_or(0))
 }
