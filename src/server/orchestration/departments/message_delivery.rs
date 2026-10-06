@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
+type DepartmentDecisionRow = (String, String, Option<String>, Option<sqlx::types::Json<Value>>);
+
 #[derive(Clone)]
 pub enum Store {
     Postgres(sqlx::PgPool),
@@ -481,7 +483,7 @@ async fn dispatch_inner(
     )
     .map_err(|_| Error::Invalid("Approved payload is invalid"))?;
     if let Transaction::Postgres(pg) = &mut tx {
-        let decision:Option<(String,String,Option<String>,Option<sqlx::types::Json<Value>>)> = sqlx::query_as(
+        let decision: Option<DepartmentDecisionRow> = sqlx::query_as(
             "SELECT decision_state,dispatch_status,job_id,dispatch_payload FROM agent_feed_decisions WHERE tenant_id=$1 AND action_id=$2 FOR UPDATE")
             .bind(tenant).bind(action).fetch_optional(&mut **pg).await?;
         match (decision, admitted) {

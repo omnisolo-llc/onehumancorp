@@ -353,21 +353,18 @@ async fn resume(
         if changed!=1 {return Err(Error::Conflict);}
         ReceiptStore::recheck_before_commit(&tx,&authority).await?;tx.commit().await?;Ok::<_,Error>(())
     }.await;
-    if matches!(&result, Err(Error::Conflict)) {
-        if let Ok((task, prior)) = task_for_attempt(execution, &authority, &target).await
-            && task == link.id
-            && prior.as_deref() == Some(source)
-        {
-            return Ok(true);
-        }
-        // An unmatched loser remains held until canonical queued expiry. Never
-        // cancel a receipt here: association and a winning dispatch may race.
+    if matches!(&result, Err(Error::Conflict))
+        && let Ok((task, prior)) = task_for_attempt(execution, &authority, &target).await
+        && task == link.id
+        && prior.as_deref() == Some(source)
+    {
+        return Ok(true);
     }
-    if let Err(error) = result {
-        // A commit error is ambiguous. Never cancel an attempt whose association
-        // may have committed, and never retry it with a new request identity.
-        return Err(error);
-    }
+    // An unmatched loser remains held until canonical queued expiry. Never
+    // cancel a receipt here: association and a winning dispatch may race.
+    // A commit error is ambiguous. Never cancel an attempt whose association
+    // may have committed, and never retry it with a new request identity.
+    result?;
     execution.dispatch(reservation, None).await?;
     Ok(true)
 }
