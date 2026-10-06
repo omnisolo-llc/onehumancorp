@@ -1,14 +1,9 @@
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use crate::hub::Hub;
 use ::server_common::Claims;
 use axum::extract::Extension;
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConnectWhatsAppRequest {
@@ -33,7 +28,8 @@ pub async fn connect_whatsapp_cloud_api(
     let integration_code = serde_json::json!({
         "api_token": api_token,
         "from_phone": from_phone,
-    }).to_string();
+    })
+    .to_string();
 
     let id = format!("{}_whatsapp_cloud_api", tenant_id);
 
@@ -41,7 +37,7 @@ pub async fn connect_whatsapp_cloud_api(
     let res = sqlx::query(
         "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
          VALUES ($1, $2, 'whatsapp_cloud_api', 'connected', $3)
-         ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3"
+         ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3",
     )
     .bind(&id)
     .bind(&tenant_id)
@@ -72,7 +68,11 @@ pub async fn connect_whatsapp_cloud_api(
         return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
     }
 
-    (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    (
+        StatusCode::OK,
+        axum::Json(serde_json::json!({"success": true})),
+    )
+        .into_response()
 }
 
 pub async fn connect_whatsapp_twilio(
@@ -93,7 +93,8 @@ pub async fn connect_whatsapp_twilio(
         "bot_token": bot_token,
         "api_token": api_token,
         "from_phone": from_phone,
-    }).to_string();
+    })
+    .to_string();
 
     let id = format!("{}_whatsapp", tenant_id);
 
@@ -101,7 +102,7 @@ pub async fn connect_whatsapp_twilio(
     let res = sqlx::query(
         "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
          VALUES ($1, $2, 'whatsapp', 'connected', $3)
-         ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3"
+         ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3",
     )
     .bind(&id)
     .bind(&tenant_id)
@@ -133,5 +134,9 @@ pub async fn connect_whatsapp_twilio(
         return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
     }
 
-    (StatusCode::OK, axum::Json(serde_json::json!({"success": true}))).into_response()
+    (
+        StatusCode::OK,
+        axum::Json(serde_json::json!({"success": true})),
+    )
+        .into_response()
 }

@@ -1,16 +1,18 @@
+use axum::extract::Extension;
 use axum::{
+    Router,
     body::Body,
     http::{Request, StatusCode},
     routing::post,
-    Router,
 };
 use serde_json::json;
 use std::sync::Arc;
 use tower::ServiceExt;
-use axum::extract::Extension;
 
+use crate::api::settings::integrations::whatsapp::{
+    connect_whatsapp_cloud_api, connect_whatsapp_twilio,
+};
 use crate::hub::Hub;
-use crate::api::settings::integrations::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
 use ::server_common::Claims;
 
 async fn create_dummy_pg_pool() -> Result<sqlx::PgPool, sqlx::Error> {
@@ -63,7 +65,10 @@ async fn test_connect_whatsapp_cloud_api() {
     };
 
     let app = Router::new()
-        .route("/api/v1/settings/integrations/whatsapp_cloud_api", post(connect_whatsapp_cloud_api))
+        .route(
+            "/api/v1/settings/integrations/whatsapp_cloud_api",
+            post(connect_whatsapp_cloud_api),
+        )
         .layer(Extension(test_claims()))
         .with_state(hub.clone());
 
@@ -82,7 +87,9 @@ async fn test_connect_whatsapp_cloud_api() {
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
-    let bytes: axum::body::Bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let bytes: axum::body::Bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(value["success"], true);
 
@@ -98,7 +105,10 @@ async fn test_connect_whatsapp_twilio() {
     };
 
     let app = Router::new()
-        .route("/api/v1/settings/integrations/whatsapp", post(connect_whatsapp_twilio))
+        .route(
+            "/api/v1/settings/integrations/whatsapp",
+            post(connect_whatsapp_twilio),
+        )
         .layer(Extension(test_claims()))
         .with_state(hub.clone());
 
@@ -118,7 +128,9 @@ async fn test_connect_whatsapp_twilio() {
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::OK);
 
-    let bytes: axum::body::Bytes = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let bytes: axum::body::Bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
     assert_eq!(value["success"], true);
 }
