@@ -18,11 +18,12 @@ pub struct ConnectIntegrationRes {
     pub usable: bool,
 }
 
-fn verification_unavailable() -> impl IntoResponse {
+pub(crate) fn verification_unavailable() -> impl IntoResponse {
     // Registry construction is configuration, not provider verification. This
     // route has no verified-connection receipt or durable credential flow yet.
     (
         StatusCode::NOT_IMPLEMENTED,
+        [(axum::http::header::CACHE_CONTROL, "no-store")],
         Json(ConnectIntegrationRes {
             success: false,
             message: "Secure provider verification is unavailable. No connection was established."

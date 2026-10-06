@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { integrationStorage } from './support/integration_storage';
 
 // Preserve the finite501 body stall on its first failure, with CI retries off.
 test.use({ trace: 'retain-on-failure' });
@@ -53,7 +54,8 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp' })).toBeHidden();
   });
 
-  test('keeps Twilio for WhatsApp unconnected when verification is unavailable', async ({ page }) => {
+  test('keeps Twilio for WhatsApp unconnected when verification is unavailable', async ({ page, adminUser }) => {
+    const before = await integrationStorage(adminUser.organizationId, ['whatsapp']);
     await integrationCard(page, 'Twilio for WhatsApp').getByRole('button', { name: 'Connect' }).click();
 
     const sidInput = page.getByLabel('Account SID');
@@ -72,6 +74,7 @@ test.describe('WhatsApp Integration UI', () => {
     const response = await pending;
     expect(response.status()).toBe(501);
     expect(await response.json()).toMatchObject({ success: false, status: 'pending_verification', usable: false });
+    expect(await integrationStorage(adminUser.organizationId, ['whatsapp'])).toEqual(before);
     await expect(page.getByText('Failed to connect Twilio for WhatsApp.', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp API', exact: true })).toBeVisible();
     await expect(page.getByText('Twilio for WhatsApp connected.', { exact: true })).toHaveCount(0);

@@ -17,6 +17,6 @@ test.describe('API Documentation', () => {
 
     // Check for the Swagger UI container and some basic swagger elements
     // We expect the swagger-ui container to eventually be attached when data finishes fetching
-    await expect(page.locator('.swagger-ui')).toBeAttached({ timeout: 15000 });
+    await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui')).toBeAttached({ timeout: 15000 });
   });
 });

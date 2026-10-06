@@ -130,7 +130,8 @@ export default function AgentsPage() {
   const [enabledSkills, setEnabledSkills] = useState<string[]>([]);
   const [enabledConnectors, setEnabledConnectors] = useState<string[]>([]);
   const [selectedResultTab, setSelectedResultTab] = useState('Artifacts');
-  const { hasPro, currentPlan, claimTrial, claimError } = useProPlan();
+  const { hasPro, currentPlan, planError, claimTrial, claimError } = useProPlan();
+  const proPlanStatusId = useId();
   const [showPaywall, setShowPaywall] = useState(false);
   const [contextReferences, setContextReferences] = useState('');
   const [attachments, setAttachments] = useState('');
@@ -246,7 +247,9 @@ export default function AgentsPage() {
                 <button
                   type="button"
                   aria-label="Toggle Pro Mode"
-                  aria-pressed={hasPro}
+                  aria-pressed={currentPlan === null ? 'mixed' : hasPro}
+                  aria-busy={currentPlan === null && !planError}
+                  aria-describedby={proPlanStatusId}
                   disabled={currentPlan === null}
                   onClick={() => {
                     if (currentPlan !== null && !hasPro) setShowPaywall(true);
@@ -256,6 +259,9 @@ export default function AgentsPage() {
                   <span className={`block h-4 w-4 rounded-full bg-white transition-transform ${hasPro ? 'translate-x-4' : ''}`} />
                 </button>
               </div>
+              <p id={proPlanStatusId} role="status" aria-label="Pro Mode readiness" className="text-right text-xs text-zinc-500 dark:text-zinc-400">
+                {currentPlan === null ? planError ?? 'Checking current plan…' : `Current plan: ${currentPlan}`}
+              </p>
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/80 bg-white/60 dark:bg-zinc-900/60 backdrop-blur px-3 py-2">
                   <div className="text-lg font-bold text-zinc-900 dark:text-white">{allCatalog.length}</div>

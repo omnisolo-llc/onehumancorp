@@ -119,7 +119,7 @@ test.describe('API Documentation', () => {
     await expect(page.getByText('Advanced:')).toBeVisible();
 
     // Check for swagger-ui wrapper
-    const swaggerUI = page.locator('.swagger-ui');
+    const swaggerUI = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui');
     await expect(swaggerUI).toBeVisible({ timeout: 15000 });
   });
 });

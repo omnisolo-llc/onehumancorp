@@ -44,7 +44,14 @@ function observeApiDocumentation(page: Page, origin: string) {
         // The shell can appear before Swagger parses its spec. Bind readiness
         // to every source operation, including operations shown under each tag.
         const rendered = await page.waitForFunction(expected => {
-          const actual = Array.from(document.querySelectorAll('.swagger-ui .opblock-summary-control')).map(element => JSON.stringify([
+          const frame = document.querySelector<HTMLIFrameElement>('iframe[data-ohc-api-docs-viewer]');
+          let owner = document;
+          if (frame) {
+            const source = new URL(frame.src, location.href);
+            if (source.origin !== location.origin || source.pathname !== '/api-docs/viewer' || !frame.contentDocument || frame.contentDocument.location.pathname !== '/api-docs/viewer') return false;
+            owner = frame.contentDocument;
+          }
+          const actual = Array.from(owner.querySelectorAll('.swagger-ui .opblock-summary-control')).map(element => JSON.stringify([
             element.closest('.opblock-tag-section')?.querySelector('.opblock-tag')?.getAttribute('data-tag'),
             element.querySelector('.opblock-summary-method')?.textContent?.trim(),
             element.querySelector('[data-path]')?.getAttribute('data-path'),
@@ -123,7 +130,7 @@ export function createAuditNavigation(baseURL: string, authenticate: (page: Page
           const bounds = element.getBoundingClientRect();
           return !element.closest('[hidden], [aria-hidden="true"]') && style.visibility !== 'hidden'
             && style.display !== 'none' && bounds.width > 0 && bounds.height > 0;
-        }), undefined, { timeout: 5000 });
+        }), undefined, { timeout: destination.pathname === '/api-docs' ? 15_000 : 5000 });
         await ready.dispose();
         await documentation?.ready();
         const final = new URL(page.url());
