@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { observeClickEffects } from './support/ui_click_audit';
 
 test.describe('API Documentation', () => {
   test('should display interactive Swagger UI layout', async ({ page, loginAs, unlimitedAdminUser }) => {
@@ -50,6 +51,22 @@ test.describe('API Documentation', () => {
     const frameOverflow = await page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('html').evaluate(element => element.scrollWidth > element.clientWidth);
     expect(frameOverflow).toBe(false);
   });
+  test('pointer audit opens the first frame operation after non-scrolling focus preparation', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/api-docs');
+    const operation = page.frameLocator('iframe[data-ohc-api-docs-viewer]')
+      .locator('.opblock-summary-control').filter({ hasText: '/api/v1/agents/status' });
+    await expect(operation).toHaveCount(1);
+    await expect(operation).toHaveAttribute('aria-expanded', 'false');
+    const target = await operation.elementHandle();
+    expect(target).not.toBeNull();
+    try {
+      const effect = await observeClickEffects(page, target!);
+      expect(effect.changed).toBe(true);
+      await expect(operation).toHaveAttribute('aria-expanded', 'true');
+    } finally { await target?.dispose(); }
+  });
+
   test('keyboard operations and the real renderer survive client navigation and back', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/api-docs');
