@@ -19,7 +19,7 @@ test "$before" = "$(sha256sum scripts/department-delivery-contract/source-manife
 python3 - <<'PY'
 from pathlib import Path
 log=Path('scripts/department-delivery-contract/run.log').read_text()
-for name in ['pg_modern_cancellation_and_snapshot_drift_cannot_be_bypassed','pg_receipt_and_tenant_rls','pg_approval_revocation_wins_before_claim','pg_concurrent_and_restarted_attempts_are_fenced','pg_credential_revocation_wins_before_claim','actual_meta_http_adapter_requires_a_correlated_whatsapp_id','actual_meta_http_adapter_separates_rejection_from_ambiguous_server_outcomes']:
+for name in ['manual_one_mirror_feed_dismissal_survives_late_provider_acceptance','pg_department_one_mirror_feed_dismissal_preserves_projection_and_acceptance','pg_manual_concurrent_legacy_retry_cross_tab_and_rls','pg_manual_stale_prepare_and_dismissal_cannot_send','pg_manual_rejection_retires_old_department_approval_but_new_review_recovers','pg_manual_department_concurrent_attempts_share_one_effect_fence','pg_department_inflight_manual_dismiss_preserves_visibility_and_receipt','manual_owned_http_validated_acceptance_and_malformed_rejection_unknown','manual_intent_revision_advances_only_for_new_admitted_identity','pg_modern_cancellation_and_snapshot_drift_cannot_be_bypassed','pg_receipt_and_tenant_rls','pg_approval_revocation_wins_before_claim','pg_concurrent_and_restarted_attempts_are_fenced','pg_credential_revocation_wins_before_claim','actual_meta_http_adapter_requires_a_correlated_whatsapp_id','actual_meta_http_adapter_separates_rejection_from_ambiguous_server_outcomes']:
     if not any(name+' ... ok' in line for line in log.splitlines()): raise SystemExit('Required test did not pass: '+name)
 PY
 exit "$status"

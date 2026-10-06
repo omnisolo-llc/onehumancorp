@@ -271,10 +271,13 @@ mod tests {
 }
 
 #[cfg(test)]
-mod receipt_tests {
+pub(crate) mod receipt_tests {
     use super::*;
     use std::io::{Read, Write};
-    fn fixture(status: u16, body: &str) -> (RealMetaClient, std::thread::JoinHandle<String>) {
+    pub(crate) fn fixture(
+        status: u16,
+        body: &str,
+    ) -> (RealMetaClient, std::thread::JoinHandle<String>) {
         let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let body = body.to_owned();

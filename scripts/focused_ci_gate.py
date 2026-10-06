@@ -11,7 +11,7 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
-    'department-delivery-contract': (33, 'OHC_DEPARTMENT_TEST_DATABASE_URL'),
+    'department-delivery-contract': (61, 'OHC_DEPARTMENT_TEST_DATABASE_URL'),
     'redis-reconnect': (20, None),
     'cash-receipts': (45, 'OHC_CASH_TEST_DATABASE_URL'),
     'terminal-payment-integrity': (23, 'OHC_TERMINAL_TEST_DATABASE_URL'),

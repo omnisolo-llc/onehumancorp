@@ -237,6 +237,9 @@ where
         connection
             .execute_unprepared(include_str!("department_message_delivery_sqlite.sql"))
             .await?;
+        connection
+            .execute_unprepared(include_str!("manual_inbox_requests_sqlite.sql"))
+            .await?;
     }
     configure_agent_definition_authority(connection).await?;
 

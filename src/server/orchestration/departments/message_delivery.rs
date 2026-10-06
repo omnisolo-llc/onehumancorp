@@ -139,11 +139,18 @@ impl Credential {
     }
 }
 #[derive(sqlx::FromRow)]
+struct InboxRow {
+    kind: String,
+    source: Option<String>,
+    sender_id: Option<String>,
+    status: Option<String>,
+}
 struct Inbox {
     kind: String,
     source: Option<String>,
     sender_id: Option<String>,
     status: Option<String>,
+    terminal: bool,
 }
 async fn inbox(mut tx: &mut Transaction, tenant: &str, id: &str) -> Result<Inbox, Error> {
     for table in ["inbox_messages", "omni_inbox_messages"] {
@@ -153,7 +160,7 @@ async fn inbox(mut tx: &mut Transaction, tenant: &str, id: &str) -> Result<Inbox
         });
     }
     let rows = database!(tx, c, {
-        sqlx::query_as::<_,Inbox>("SELECT 'inbox' AS kind,source,sender_id,status FROM inbox_messages WHERE tenant_id=$1 AND id=$2 UNION ALL SELECT 'omni' AS kind,source,sender_id,status FROM omni_inbox_messages WHERE tenant_id=$1 AND id=$2")
+        sqlx::query_as::<_,InboxRow>("SELECT 'inbox' AS kind,source,sender_id,status FROM inbox_messages WHERE tenant_id=$1 AND id=$2 UNION ALL SELECT 'omni' AS kind,source,sender_id,status FROM omni_inbox_messages WHERE tenant_id=$1 AND id=$2")
             .bind(tenant).bind(id).fetch_all(c).await?
     });
     let first = rows
@@ -167,6 +174,9 @@ async fn inbox(mut tx: &mut Transaction, tenant: &str, id: &str) -> Result<Inbox
             "Inbox mirrors disagree; reconcile before dispatch",
         ));
     }
+    let terminal = rows
+        .iter()
+        .any(|row| row.status.as_deref().is_some_and(terminal_state));
     let historical = rows
         .iter()
         .find_map(|row| {
@@ -190,7 +200,13 @@ async fn inbox(mut tx: &mut Transaction, tenant: &str, id: &str) -> Result<Inbox
     if historical.is_some() {
         first.status = historical;
     }
-    Ok(first)
+    Ok(Inbox {
+        kind: first.kind,
+        source: first.source,
+        sender_id: first.sender_id,
+        status: first.status,
+        terminal,
+    })
 }
 async fn credential(
     mut tx: &mut Transaction,
@@ -215,12 +231,25 @@ fn text<'a>(payload: &'a Value, key: &str) -> Result<&'a str, Error> {
             "Canonical reply identity or content is missing",
         ))
 }
+async fn manual_intent_revision(
+    mut tx: &mut Transaction,
+    tenant: &str,
+    id: &str,
+) -> Result<i64, Error> {
+    let revision: Option<(i64,)> = database!(tx, c, {
+        sqlx::query_as("SELECT revision FROM manual_inbox_intents WHERE tenant_id=$1 AND inbox_message_id=$2")
+            .bind(tenant).bind(id).fetch_optional(c).await?
+    });
+    Ok(revision.map(|row| row.0).unwrap_or(0))
+}
 /// Freeze server-owned routing information before it is offered for review.
 /// Only content is caller-authored; recipient and account are read from this tenant.
 pub async fn prepare(store: &Store, tenant: &str, mut payload: Value) -> Result<Value, Error> {
     let id = text(&payload, "inbox_message_id")?;
     let mut tx = store.begin(tenant).await?;
     let row = inbox(&mut tx, tenant, id).await?;
+    let revision = manual_intent_revision(&mut tx, tenant, id).await?;
+    payload["manual_intent_revision"] = Value::from(revision);
     let source = row.source.unwrap_or_default();
     let target = row.sender_id.unwrap_or_default();
     let binding = credential(&mut tx, tenant, &source, None)
@@ -318,7 +347,13 @@ impl DeliveryProvider for LiveProvider {
                 );
                 provider.send_whatsapp(&to, &from, body).await
             } else {
-                provider.send_sms(recipient, &binding.from, body).await
+                provider
+                    .send_sms(
+                        recipient.strip_prefix("sms:").unwrap_or(recipient),
+                        &binding.from,
+                        body,
+                    )
+                    .await
             };
             result
                 .map(|receipt| receipt.sid)
@@ -349,6 +384,11 @@ fn historical_state(state: &str) -> bool {
     )
 }
 fn valid_recipient(source: &str, recipient: &str) -> bool {
+    let recipient = if source == "sms" {
+        recipient.strip_prefix("sms:").unwrap_or(recipient)
+    } else {
+        recipient
+    };
     let number = recipient
         .strip_prefix("whatsapp:")
         .unwrap_or(recipient)
@@ -531,9 +571,12 @@ async fn dispatch_inner(
     } else {
         None
     };
+    let superseded = payload["manual_intent_revision"].as_i64().unwrap_or(0)
+        != manual_intent_revision(&mut tx, tenant, id).await?;
     let historical = row.status.as_deref().is_some_and(historical_state);
-    let terminal = row.status.as_deref().is_some_and(terminal_state);
-    let ready = !historical
+    let terminal = row.terminal;
+    let ready = !superseded
+        && !historical
         && !terminal
         && match (&binding, &creds) {
             (Some(binding), Some(creds)) => {
@@ -553,7 +596,9 @@ async fn dispatch_inner(
     } else {
         "blocked"
     };
-    let detail = if terminal {
+    let detail = if superseded {
+        "A later manual inbox action retired this approval; obtain a fresh review"
+    } else if terminal {
         "Inbox was closed, dismissed or paused; no send attempted"
     } else if historical {
         "Prior send outcome is unverified; reconcile before another attempt"
@@ -572,7 +617,7 @@ async fn dispatch_inner(
             "This inbox already has a fenced reply; reconcile before another send",
         ));
     }
-    if !terminal {
+    if !terminal && !superseded {
         set_inbox_state(
             &mut tx,
             tenant,
@@ -631,6 +676,7 @@ async fn dispatch_inner(
         ),
     };
     let mut tx = store.begin(tenant).await?;
+    let current = inbox(&mut tx, tenant, id).await?;
     let changed = database!(tx, c, {
         sqlx::query("UPDATE department_message_dispatches SET state=$1,provider_message_id=$2,detail=$3,updated_at=$4 WHERE tenant_id=$5 AND action_id=$6 AND state='unknown' AND payload_hash=$7")
             .bind(state).bind(&provider_message_id).bind(detail).bind(chrono::Utc::now().timestamp()).bind(tenant).bind(action).bind(hash).execute(c).await?.rows_affected()
@@ -640,7 +686,9 @@ async fn dispatch_inner(
             "Provider result could not be correlated to its durable claim",
         ));
     }
-    set_inbox_state(&mut tx, tenant, id, inbox_state, body).await?;
+    if !current.terminal {
+        set_inbox_state(&mut tx, tenant, id, inbox_state, body).await?;
+    }
     tx.commit().await?;
     Ok(DeliveryReceipt {
         state: state.into(),
@@ -648,3 +696,6 @@ async fn dispatch_inner(
         detail: detail.into(),
     })
 }
+
+#[path = "manual_inbox.rs"]
+pub mod manual_inbox;

@@ -3,16 +3,16 @@ use super::*;
 use serde_json::json;
 use std::sync::{Arc,atomic::{AtomicUsize,Ordering}};
 use std::time::Duration;
-struct Provider { calls:AtomicUsize, entered:tokio::sync::Notify, release:tokio::sync::Notify, paused:bool }
+pub(super) struct Provider { calls:AtomicUsize, entered:tokio::sync::Notify, release:tokio::sync::Notify, paused:bool }
 #[async_trait::async_trait]
 impl DeliveryProvider for Provider {
     async fn send(&self,_:&Binding,_:&str,body:&str,_:&Credential)->Result<String,SendFailure> {
         assert_eq!(body,"Exact approved reply");self.calls.fetch_add(1,Ordering::SeqCst);self.entered.notify_one();if self.paused {self.release.notified().await;}Ok("wamid.fixture".into())
     }
 }
-struct Fixture { admin:sqlx::PgPool,pool:sqlx::PgPool,store:Store,schema:String,role:String,application:String }
+pub(super) struct Fixture { pub(super) admin:sqlx::PgPool,pub(super) pool:sqlx::PgPool,pub(super) store:Store,schema:String,role:String,application:String }
 impl Fixture {
-    async fn new()->Self {
+    pub(super) async fn new()->Self {
         let raw=std::env::var("OHC_DEPARTMENT_TEST_DATABASE_URL").expect("Owned PostgreSQL fixture is required; no successful skip");
         let url=url::Url::parse(&raw).unwrap();assert!(matches!(url.scheme(),"postgres"|"postgresql")&&matches!(url.host_str(),Some("127.0.0.1"|"localhost"|"::1"|"[::1]"))&&url.path()=="/ohc_department_test"&&url.query().is_none()&&url.fragment().is_none());
         let suffix=uuid::Uuid::new_v4().simple().to_string();let schema=format!("department_{suffix}");let role=format!("department_role_{suffix}");let application=format!("department_app_{suffix}");let password=uuid::Uuid::new_v4().to_string();
@@ -21,6 +21,7 @@ impl Fixture {
         sqlx::query(&format!("CREATE SCHEMA {schema}")).execute(&admin).await.unwrap();
         sqlx::raw_sql("CREATE TABLE agent_feed_decisions(tenant_id TEXT,action_id TEXT,decision_state TEXT,dispatch_status TEXT,job_id TEXT,dispatch_payload JSONB);CREATE TABLE agent_feed_items(id TEXT PRIMARY KEY,tenant_id TEXT,event_source TEXT,proposed_action JSONB,lifecycle_state TEXT);CREATE TABLE agent_action_requests(id TEXT,tenant_id TEXT,action_type TEXT,status TEXT,department_type TEXT,description TEXT);CREATE TABLE inbox_messages(id TEXT,tenant_id TEXT,source TEXT,sender_id TEXT,status TEXT,draft_reply TEXT);CREATE TABLE omni_inbox_messages(id TEXT,tenant_id TEXT,source TEXT,sender_id TEXT,status TEXT,draft_reply TEXT);CREATE TABLE integration_credentials(id TEXT,tenant_id TEXT,integration_id TEXT,bot_token TEXT,api_token TEXT,from_phone TEXT);").execute(&admin).await.unwrap();
         sqlx::raw_sql(include_str!("../../src/server/migrations/1044_department_message_delivery_receipts.sql")).execute(&admin).await.unwrap();
+        sqlx::raw_sql(include_str!("../../src/server/migrations/1045_manual_inbox_requests.sql")).execute(&admin).await.unwrap();
         for table in ["agent_feed_items","agent_action_requests","inbox_messages","omni_inbox_messages","integration_credentials"] {
             sqlx::raw_sql(&format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;ALTER TABLE {table} FORCE ROW LEVEL SECURITY;CREATE POLICY tenant_scope ON {table} USING(tenant_id=current_setting('app.current_tenant',true)) WITH CHECK(tenant_id=current_setting('app.current_tenant',true));")).execute(&admin).await.unwrap();
         }
@@ -34,13 +35,13 @@ impl Fixture {
         record_pending_review(&store,"tenant-a","action-a").await.unwrap();
         Self{admin,pool,store,schema,role,application}
     }
-    fn provider(paused:bool)->Arc<Provider> {Arc::new(Provider{calls:AtomicUsize::new(0),entered:tokio::sync::Notify::new(),release:tokio::sync::Notify::new(),paused})}
+    pub(super) fn provider(paused:bool)->Arc<Provider> {Arc::new(Provider{calls:AtomicUsize::new(0),entered:tokio::sync::Notify::new(),release:tokio::sync::Notify::new(),paused})}
     async fn wait_for_claim_lock(&self) {
         tokio::time::timeout(Duration::from_secs(3),async {
             loop {let waiting:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE application_name=$1 AND wait_event_type='Lock')").bind(&self.application).fetch_one(&self.admin).await.unwrap();if waiting {break;}tokio::time::sleep(Duration::from_millis(10)).await;}
         }).await.expect("dispatch must reach PostgreSQL row lock");
     }
-    async fn finish(self) {self.pool.close().await;sqlx::query(&format!("DROP SCHEMA {} CASCADE",self.schema)).execute(&self.admin).await.unwrap();sqlx::query(&format!("DROP ROLE {}",self.role)).execute(&self.admin).await.unwrap();self.admin.close().await;}
+    pub(super) async fn finish(self) {self.pool.close().await;sqlx::query(&format!("DROP SCHEMA {} CASCADE",self.schema)).execute(&self.admin).await.unwrap();sqlx::query(&format!("DROP ROLE {}",self.role)).execute(&self.admin).await.unwrap();self.admin.close().await;}
 }
 #[tokio::test]
 async fn pg_receipt_and_tenant_rls() {

@@ -17,6 +17,7 @@ async fn fixture()->(Store,sqlx::SqlitePool,serde_json::Value) {
     let pool=sqlx::sqlite::SqlitePoolOptions::new().max_connections(1).connect("sqlite::memory:").await.unwrap();
     sqlx::raw_sql("CREATE TABLE agent_feed_items(id TEXT PRIMARY KEY,tenant_id TEXT,event_source TEXT,proposed_action TEXT,lifecycle_state TEXT);CREATE TABLE agent_action_requests(id TEXT,tenant_id TEXT,action_type TEXT);CREATE TABLE inbox_messages(id TEXT,tenant_id TEXT,source TEXT,sender_id TEXT,status TEXT,draft_reply TEXT);CREATE TABLE omni_inbox_messages(id TEXT,tenant_id TEXT,source TEXT,sender_id TEXT,status TEXT,draft_reply TEXT);CREATE TABLE integration_credentials(id TEXT,tenant_id TEXT,integration_id TEXT,bot_token TEXT,api_token TEXT,from_phone TEXT);").execute(&pool).await.unwrap();
     sqlx::raw_sql(include_str!("../../src/server/persistence/department_message_delivery_sqlite.sql")).execute(&pool).await.unwrap();
+    sqlx::raw_sql(include_str!("../../src/server/persistence/manual_inbox_requests_sqlite.sql")).execute(&pool).await.unwrap();
     sqlx::query("INSERT INTO inbox_messages VALUES('inbox-a','tenant-a','whatsapp','14155550123','pending_approval',NULL)").execute(&pool).await.unwrap();
     sqlx::query("INSERT INTO integration_credentials VALUES('credential-a','tenant-a','whatsapp_cloud_api','','fixture-token','14155550000')").execute(&pool).await.unwrap();
     let store=Store::Sqlite(pool.clone());

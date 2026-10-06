@@ -1230,7 +1230,7 @@ jobs:
           bash scripts/sms-verification-contract/fetch.sh
           python3 scripts/focused_ci_gate.py sms-verification-contract
 
-      - name: Verify department message acceptance and durable replay fences
+      - name: Verify department and manual inbox acceptance and durable replay fences
         if: ${{ !cancelled() }}
         env:
           OHC_DEPARTMENT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_department_test
