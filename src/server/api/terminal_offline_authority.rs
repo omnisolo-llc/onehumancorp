@@ -3,6 +3,8 @@
 use serde_json::Value;
 use sqlx::PgPool;
 
+type SavedOfflineTransaction = (Option<Value>, Option<String>, Value, i64, String, String);
+
 fn decoded(value: &Value) -> Option<Value> {
     match value {
         Value::String(text) => serde_json::from_str(text).ok(),
@@ -23,10 +25,10 @@ fn consistent_evidence(value: &Value, kind: &str, depth: usize) -> bool {
             .all(|v| consistent_evidence(v, kind, depth + 1)),
         Value::Object(fields) => {
             for key in ["mutation_type", "type"] {
-                if let Some(value) = fields.get(key).filter(|v| !v.is_null()) {
-                    if value.as_str() != Some(kind) {
-                        return false;
-                    }
+                if let Some(value) = fields.get(key).filter(|v| !v.is_null())
+                    && value.as_str() != Some(kind)
+                {
+                    return false;
                 }
             }
             if fields
@@ -35,10 +37,10 @@ fn consistent_evidence(value: &Value, kind: &str, depth: usize) -> bool {
             {
                 return false;
             }
-            if let Some(method) = fields.get("payment_method").filter(|v| !v.is_null()) {
-                if kind != "cash_sale" || !matches!(method.as_str(), Some("cash" | "cash_sale")) {
-                    return false;
-                }
+            if let Some(method) = fields.get("payment_method").filter(|v| !v.is_null())
+                && (kind != "cash_sale" || !matches!(method.as_str(), Some("cash" | "cash_sale")))
+            {
+                return false;
             }
             for (key, value) in fields {
                 if value.is_null() {
@@ -115,52 +117,50 @@ pub async fn complete_committed_operation(
     if let Some(receipt_id) = payload.get("receipt_id").and_then(Value::as_str) {
         let saved: Option<(Value,String,String,String)> = sqlx::query_as("SELECT request_identity,receipt_status,action_type,receipt_route FROM sync_events WHERE id=$1 AND tenant_id=$2 AND request_identity IS NOT NULL AND receipt_status IS NOT NULL AND receipt_route IS NOT NULL FOR UPDATE")
             .bind(receipt_id).bind(tenant).fetch_optional(&mut *tx).await.map_err(|_| "Offline receipt storage unavailable")?;
-        if let Some((identity, status, action, route)) = saved {
-            if matches!(status.as_str(), "acknowledged" | "reconciliation")
-                && route == "/api/v1/sync/offline"
-                && identity.get("transaction_id").and_then(Value::as_str) == Some(id)
-                && explicit_kind(&identity) == Some(action.as_str())
-                && payload.get("mutation") == Some(&identity)
-                && payload.get("mutation_type").and_then(Value::as_str) == Some(action.as_str())
-                && consistent_evidence(payload, &action, 0)
-            {
-                tx.commit()
-                    .await
-                    .map_err(|_| "Offline receipt completion is unconfirmed")?;
-                return Ok(());
-            }
+        if let Some((identity, status, action, route)) = saved
+            && matches!(status.as_str(), "acknowledged" | "reconciliation")
+            && route == "/api/v1/sync/offline"
+            && identity.get("transaction_id").and_then(Value::as_str) == Some(id)
+            && explicit_kind(&identity) == Some(action.as_str())
+            && payload.get("mutation") == Some(&identity)
+            && payload.get("mutation_type").and_then(Value::as_str) == Some(action.as_str())
+            && consistent_evidence(payload, &action, 0)
+        {
+            tx.commit()
+                .await
+                .map_err(|_| "Offline receipt completion is unconfirmed")?;
+            return Ok(());
         }
         // A missing POS row is normal for the durable inventory producer. The
         // original queue job remains the reconciliation record in this case.
     } else {
-        let saved: Option<(Option<Value>,Option<String>,Value,i64,String,String)> = sqlx::query_as("SELECT request_identity,request_status,payload,amount_cents,currency,client_id FROM pos_offline_transactions WHERE id=$1 AND tenant_id=$2 FOR UPDATE")
+        let saved: Option<SavedOfflineTransaction> = sqlx::query_as("SELECT request_identity,request_status,payload,amount_cents,currency,client_id FROM pos_offline_transactions WHERE id=$1 AND tenant_id=$2 FOR UPDATE")
             .bind(id).bind(tenant).fetch_optional(&mut *tx).await.map_err(|_| "Offline transaction storage unavailable")?;
-        if let Some((Some(identity), Some(status), original, amount, currency, client)) = saved {
-            if matches!(status.as_str(), "acknowledged" | "reconciliation")
-                && explicit_kind(&identity) == Some("cash_sale")
-                && identity.get("tenant_id").and_then(Value::as_str) == Some(tenant)
-                && identity.get("id").and_then(Value::as_str) == Some(id)
-                && identity.get("client_id").and_then(Value::as_str) == Some(client.as_str())
-                && identity.get("amount_cents").and_then(Value::as_i64) == Some(amount)
-                && identity.get("currency").and_then(Value::as_str) == Some(currency.as_str())
-                && identity.get("payload") == Some(&original)
-                && payload.get("client_id").and_then(Value::as_str) == Some(client.as_str())
-                && payload.get("amount_cents").and_then(Value::as_i64) == Some(amount)
-                && payload.get("currency").and_then(Value::as_str) == Some(currency.as_str())
-                && payload.get("payload").and_then(decoded).as_ref() == Some(&original)
-                && payload.get("mutation_type").and_then(Value::as_str) == Some("cash_sale")
-                && consistent_evidence(payload, "cash_sale", 0)
-            {
-                let changed = sqlx::query("UPDATE pos_offline_transactions SET status='RESOLVED',_sync_status='synced',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND tenant_id=$2")
-                    .bind(id).bind(tenant).execute(&mut *tx).await.map_err(|_| "Offline cash receipt update failed")?;
-                if changed.rows_affected() != 1 {
-                    return Err("Offline cash receipt disappeared; retain the original job".into());
-                }
-                tx.commit()
-                    .await
-                    .map_err(|_| "Offline cash completion is unconfirmed")?;
-                return Ok(());
+        if let Some((Some(identity), Some(status), original, amount, currency, client)) = saved
+            && matches!(status.as_str(), "acknowledged" | "reconciliation")
+            && explicit_kind(&identity) == Some("cash_sale")
+            && identity.get("tenant_id").and_then(Value::as_str) == Some(tenant)
+            && identity.get("id").and_then(Value::as_str) == Some(id)
+            && identity.get("client_id").and_then(Value::as_str) == Some(client.as_str())
+            && identity.get("amount_cents").and_then(Value::as_i64) == Some(amount)
+            && identity.get("currency").and_then(Value::as_str) == Some(currency.as_str())
+            && identity.get("payload") == Some(&original)
+            && payload.get("client_id").and_then(Value::as_str) == Some(client.as_str())
+            && payload.get("amount_cents").and_then(Value::as_i64) == Some(amount)
+            && payload.get("currency").and_then(Value::as_str) == Some(currency.as_str())
+            && payload.get("payload").and_then(decoded).as_ref() == Some(&original)
+            && payload.get("mutation_type").and_then(Value::as_str) == Some("cash_sale")
+            && consistent_evidence(payload, "cash_sale", 0)
+        {
+            let changed = sqlx::query("UPDATE pos_offline_transactions SET status='RESOLVED',_sync_status='synced',updated_at=CURRENT_TIMESTAMP WHERE id=$1 AND tenant_id=$2")
+                .bind(id).bind(tenant).execute(&mut *tx).await.map_err(|_| "Offline cash receipt update failed")?;
+            if changed.rows_affected() != 1 {
+                return Err("Offline cash receipt disappeared; retain the original job".into());
             }
+            tx.commit()
+                .await
+                .map_err(|_| "Offline cash completion is unconfirmed")?;
+            return Ok(());
         }
     }
     // Zero rows is intentional for missing/foreign IDs: preserve the queue job,

@@ -15,6 +15,7 @@ pub mod hub { pub struct Hub { pub pool:sqlx::PgPool } }
 
 #[path="../../src/server/api/terminal_offline_authority.rs"]
 pub mod offline_card;
+pub mod api { pub use crate::offline_card as terminal_offline_authority; }
 
 // The complete production worker is exercised, with its real queue Job/handler
 // types extracted below; DB's pool is the only worker-accessed dependency.

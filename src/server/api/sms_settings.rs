@@ -99,10 +99,10 @@ impl SmsService {
         ] {
             let values = headers.get_all(header);
             let mut values = values.iter();
-            if let Some(value) = values.next() {
-                if value.to_str().ok() != expected || values.next().is_some() {
-                    return Err(Failure::Forbidden);
-                }
+            if let Some(value) = values.next()
+                && (value.to_str().ok() != expected || values.next().is_some())
+            {
+                return Err(Failure::Forbidden);
             }
         }
         // Verify even when storage binding is unavailable; never accept forged Claims.

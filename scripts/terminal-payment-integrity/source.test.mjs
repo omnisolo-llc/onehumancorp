@@ -51,3 +51,26 @@ test('every production offline queue producer preserves explicit classification'
   const source=read(path); assert.ok(source.split(`${fn}(`).length>=3,`${path} must call its tested production envelope builder`);
  }
 });
+
+test('one canonical offline authority module is shared by API producers and the real queue worker',()=>{
+ assert.match(read('src/server/api/mod.rs'),/pub\(crate\) mod terminal_offline_authority;/);
+ for(const path of ['src/server/api/durable_sync.rs','src/server/api/terminal_offline_sync.rs','src/server/workers/pos_sync_worker.rs']){
+  const source=read(path);
+  assert.match(source,/use crate::api::terminal_offline_authority as offline_(?:payment_)?authority;/,path);
+  assert.doesNotMatch(source,/#\[path\s*=\s*"[^"\n]*terminal_offline_authority\.rs"\]/,path);
+ }
+ assert.match(read('scripts/terminal-payment-integrity/manifest.py'),/'src\/server\/api\/mod\.rs'/,'the source proof must include the canonical module mount');
+});
+
+test('standalone terminal worker tests use the same canonical authority without compiling it twice',()=>{
+ const source=read('scripts/terminal-payment-integrity/lib.rs');
+ assert.equal((source.match(/terminal_offline_authority\.rs/g)||[]).length,1);
+ assert.match(source,/pub mod api\s*\{\s*pub use crate::offline_card as terminal_offline_authority;\s*\}/);
+ assert.match(source,/pub mod offline_worker;/);
+});
+
+test('the unchanged production POS envelope builder precedes the complete test module',()=>{
+ const source=read('src/server/services/pos/service.rs');
+ assert.ok(source.indexOf('fn grpc_offline_job(')<source.indexOf('\n#[cfg(test)]\nmod tests {'));
+ for(const name of ['test_sync_offline_transactions','test_reconcile_crdt_payloads','test_handle_incoming_crdt_delta_spiffe_validation']) assert.match(source,new RegExp(`async fn ${name}\\(`));
+});
