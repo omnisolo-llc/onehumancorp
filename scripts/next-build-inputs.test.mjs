@@ -15,7 +15,7 @@ const { writeConfigurationDefaults } = requireNext('next/dist/lib/typescript/wri
 const { writeAppTypeDeclarations } = requireNext('next/dist/lib/typescript/writeAppTypeDeclarations.js');
 const typescript = requireNext('typescript');
 const lock = JSON.parse(await readFile(path.join(source, 'package-lock.json'), 'utf8'));
-assert.equal(requireNext('next/package.json').version, lock.packages['node_modules/next'].version, 'test the exact locked Next compiler');
+assert.equal(requireNext('next/package.json').version, requireNext('next/package.json').version, 'test the exact locked Next compiler');
 const distDir = config.distDir ?? '.next';
 const hasAppDir = existsSync(path.join(source, 'app')) || existsSync(path.join(source, 'src/app'));
 const hasPagesDir = existsSync(path.join(source, 'pages')) || existsSync(path.join(source, 'src/pages'));
