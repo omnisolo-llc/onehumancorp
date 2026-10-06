@@ -439,6 +439,16 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     .execute(&mut *tx)
                     .await;
 
+                    let _ = sqlx::query(
+                        "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                         VALUES ($1, $2, 'pos_sync_worker', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                    )
+                    .bind(uuid::Uuid::new_v4().to_string())
+                    .bind(&job.tenant_id)
+                    .bind(&notification_payload)
+                    .execute(&mut *tx)
+                    .await;
+
                     let ai_payload = serde_json::json!({
                         "transaction_id": transaction_id,
                         "product_id": product_id,
@@ -475,6 +485,16 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     .bind(&notification_payload)
                     .execute(&mut *tx)
                     .await;
+
+                            let _ = sqlx::query(
+                                "INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at)
+                                 VALUES ($1, $2, 'pos_sync_worker', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                            )
+                            .bind(uuid::Uuid::new_v4().to_string())
+                            .bind(&job.tenant_id)
+                            .bind(&notification_payload)
+                            .execute(&mut *tx)
+                            .await;
 
                     let conflict_payload = serde_json::json!([{
                         "transaction_id": transaction_id,

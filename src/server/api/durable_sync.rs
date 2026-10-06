@@ -771,6 +771,14 @@ async fn apply_mutation(
                 c.clone(),
             )
             .await?;
+
+            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at) VALUES ($1, $2, 'durable_sync', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, clock_timestamp(), clock_timestamp())")
+                .bind(uuid::Uuid::new_v4().to_string())
+                .bind(tenant)
+                .bind(c.to_string())
+                .execute(tx.connection())
+                .await?;
+
             conflict = Some(c);
         }
         sqlx::query(if has_counters {
