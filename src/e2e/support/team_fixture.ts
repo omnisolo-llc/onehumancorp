@@ -4,6 +4,7 @@ import { test as base, expect } from '../fixtures';
 import { createGrowthOwner } from '../growth_owner';
 import { e2eDbQuery, e2eDbTransaction } from '../db_utils';
 import { requireLoopbackUrl } from './recorded_invitation';
+import { applicationAlertTexts } from './application_alerts';
 
 export type TeamOwner = Awaited<ReturnType<typeof createTeamOwner>>;
 export type TeamRequest = {
@@ -62,7 +63,7 @@ export async function readTeamPage(page: Page, owner: TeamOwner, requests: TeamR
   expect(response.headers()['cache-control']).toContain('no-store');
   expect(await response.json()).toEqual({ pending_approvals: [...requests].sort((a, b) => a.id.localeCompare(b.id)), next_cursor: null });
   await expect(page.getByRole('button', { name: 'Refresh recorded decisions', exact: true })).toBeEnabled();
-  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect.poll(() => page.getByRole('alert').evaluateAll(applicationAlertTexts)).toEqual([]);
   await expect(page.getByText(`Private foreign request ${owner.foreignId}`, { exact: true })).toHaveCount(0);
 }
 
