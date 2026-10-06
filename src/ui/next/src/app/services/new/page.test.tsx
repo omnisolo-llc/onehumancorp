@@ -76,7 +76,8 @@ describe("NewServicePage", () => {
   });
 
   it("calls the save API and redirects", async () => {
-      const user = userEvent.setup();
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       await renderNewServicePage();
       const titleInput = screen.getByPlaceholderText("e.g. Weekly Music Tutoring");
       await user.type(titleInput, "Test Service");
@@ -85,11 +86,33 @@ describe("NewServicePage", () => {
 
       expect(global.fetch).toHaveBeenCalledWith("/api/v1/onboarding/state", expect.objectContaining({
           method: "POST",
+          body: JSON.stringify({ services: [{ title: "Test Service", description: "", price: "", isRecurring: false, frequency: undefined }] })
       }));
 
-      await waitFor(() => {
-          expect(mockRouterPush).toHaveBeenCalledWith("/dashboard");
+      expect(await screen.findByText("Service Saved!")).toBeInTheDocument();
+
+      await act(async () => {
+         vi.advanceTimersByTime(1500);
       });
-      expect(screen.getByText("Service Saved!")).toBeInTheDocument();
+
+      expect(mockRouterPush).toHaveBeenCalledWith("/dashboard");
+      vi.useRealTimers();
+  });
+  it("shows error when save fails", async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500
+      });
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      await renderNewServicePage();
+      const titleInput = screen.getByPlaceholderText("e.g. Weekly Music Tutoring");
+      await user.type(titleInput, "Test Service");
+      const saveBtn = screen.getByText("Save Service");
+      await user.click(saveBtn);
+
+      expect(await screen.findByText("Failed to save service. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByText("Service Saved!")).not.toBeInTheDocument();
+      vi.useRealTimers();
   });
 });

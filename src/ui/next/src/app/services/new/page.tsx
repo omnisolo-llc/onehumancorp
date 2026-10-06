@@ -18,15 +18,25 @@ export default function NewServicePage() {
       setStatusMessage('Enter a service title before saving.');
       return;
     }
-    setSaved(true);
     try {
-      await fetch('/api/v1/onboarding/state', {
+      const response = await fetch('/api/v1/onboarding/state', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ services: [{ title, description, price }] })
+         body: JSON.stringify({ services: [{ title, description, price, isRecurring, frequency: isRecurring ? frequency : undefined }] })
       });
-    } catch (e) { console.error(e); }
-    router.push('/dashboard');
+      if (!response.ok) {
+        setStatusMessage('Failed to save service. Please try again.');
+        return;
+      }
+      setSaved(true);
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 1000);
+    } catch (e) {
+      console.error(e);
+      setStatusMessage('Failed to save service. Please try again.');
+      return;
+    }
   };
 
   const generateDescription = () => {
