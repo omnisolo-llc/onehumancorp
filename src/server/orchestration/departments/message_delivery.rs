@@ -6,7 +6,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-type DepartmentDecisionRow = (String, String, Option<String>, Option<sqlx::types::Json<Value>>);
+type DepartmentDecisionRow = (
+    String,
+    String,
+    Option<String>,
+    Option<sqlx::types::Json<Value>>,
+);
 
 #[derive(Clone)]
 pub enum Store {
