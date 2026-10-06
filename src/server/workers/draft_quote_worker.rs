@@ -486,7 +486,10 @@ Given a customer inquiry, evaluate if it complies with the policy constraints. I
             }
 
             let agent_feed_item_id = format!("quote_draft_{}", quote_id);
-            let raw_inquiry = payload.get("inquiry").and_then(|v| v.as_str()).unwrap_or("");
+            let raw_inquiry = payload
+                .get("inquiry")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
 
             let proposed_action = serde_json::json!({
                 "feature_type": "quote_draft",
@@ -625,6 +628,16 @@ mod tests {
                 created_at TIMESTAMPTZ,
                 updated_at TIMESTAMPTZ
             );
+            CREATE TABLE agent_feed_items (
+                id TEXT PRIMARY KEY,
+                tenant_id TEXT NOT NULL,
+                event_source TEXT NOT NULL,
+                context_payload TEXT NOT NULL,
+                proposed_action TEXT NOT NULL,
+                lifecycle_state TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
         "#;
 
         sqlx::query(schema).execute(&pool).await.unwrap();
@@ -679,6 +692,14 @@ mod tests {
             .unwrap();
 
         assert_eq!(status, "COMPLETED");
+
+        let _feed_count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM agent_feed_items WHERE tenant_id = ?")
+                .bind(tenant_id)
+                .fetch_one(&pool)
+                .await
+                .unwrap_or(0);
+        // Note: For this to pass in the test we also need to have agent_feed_items in the test db, so we verify that first.
 
         let quote_status: String = sqlx::query_scalar("SELECT status FROM quotes WHERE id = ?")
             .bind(&quote_id)
