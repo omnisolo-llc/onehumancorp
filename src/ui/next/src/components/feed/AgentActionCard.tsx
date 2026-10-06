@@ -8,7 +8,7 @@ import React from "react";
 import type { AgentFeedItem } from '@/lib/agent-feed-types';
 
 const specializedFeatureTypes = new Set([
-  "ambassador_reply", "autonomous_booking_quote", "booking_draft",
+  "ambassador_reply", "autonomous_booking_quote", "booking_draft", "booking_approval",
   "booking_reengagement", "create_product", "incident_resolution",
   "instagram_dm", "invoice", "invoice_draft", "invoice_followup",
   "newsletter_draft", "onboarding_welcome", "order", "proactive_ops",
@@ -238,6 +238,8 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             ?.feature_type === "incident_resolution" ||
           actionPayload
             ?.feature_type === "booking_draft" ||
+          actionPayload
+            ?.feature_type === "booking_approval" ||
           actionPayload
             ?.feature_type === "booking_reengagement" ||
           actionPayload
@@ -1732,7 +1734,7 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
             </>
           )
         ) : actionPayload
-            ?.feature_type === "booking_draft" ? (
+            ?.feature_type === "booking_draft" || actionPayload?.feature_type === "booking_approval" ? (
           editingId === approval.id ? (
             <div className="flex flex-col gap-3 w-full">
               <textarea
