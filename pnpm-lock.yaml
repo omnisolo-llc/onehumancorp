@@ -40,6 +40,9 @@ importers:
       '@bufbuild/protoplugin':
         specifier: ^2.11.0
         version: 2.12.0
+      '@journeyapps/wa-sqlite':
+        specifier: ^1.7.0
+        version: 1.7.0
       '@modelcontextprotocol/server-github':
         specifier: ^0.6.2
         version: 0.6.2(zod@3.25.76)
@@ -107,15 +110,9 @@ importers:
       '@eslint/js':
         specifier: 10.0.1
         version: 10.0.1(eslint@10.11.0(jiti@2.7.0))
-      '@journeyapps/wa-sqlite':
-        specifier: ^1.7.0
-        version: 1.7.0
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
-      '@scarf/scarf':
-        specifier: ^1.4.0
-        version: 1.4.0
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -161,17 +158,11 @@ importers:
       canonicalize:
         specifier: 5.1.0
         version: 5.1.0
-      core-js:
-        specifier: ^3.50.0
-        version: 3.50.0
-      core-js-pure:
-        specifier: ^3.50.0
-        version: 3.50.0
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
       esbuild:
-        specifier: ^0.28.2
+        specifier: 0.28.2
         version: 0.28.2
       eslint:
         specifier: 10.11.0
@@ -218,15 +209,6 @@ importers:
       tailwindcss:
         specifier: ^4.3.0
         version: 4.3.0
-      tree-sitter:
-        specifier: ^0.25.1
-        version: 0.25.1
-      tree-sitter-json:
-        specifier: ^0.24.8
-        version: 0.24.8(tree-sitter@0.25.1)
-      tree-sitter-yaml:
-        specifier: ^0.5.0
-        version: 0.5.0
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@25.9.1)(typescript@5.9.3)
@@ -2584,11 +2566,8 @@ packages:
   copy-to-clipboard@3.3.3:
     resolution: {integrity: sha512-2KV8NhB5JqC3ky0r9PMCAZKbUHSwtEo4CwCs0KXgruG43gX5PMqDEBbVU4OUzw2MuAWUfsuFmWvEKG5QRfSnJA==}
 
-  core-js-pure@3.50.0:
-    resolution: {integrity: sha512-6GP3Pxz4IKyWjAfa747vIu/jilB5z29JWROLqH/b+pXVcpgh6tM06ZIBwSuglgVqzDYURhOK6oEzTrG0bCHitA==}
-
-  core-js@3.50.0:
-    resolution: {integrity: sha512-BRWgOLKkFeCgRudR6zrs8p9XJZcE14grzKMMssoYrk6krtuEZ7MTKPIY5RzOnqsEKIR9kst7wNzphttraT+Yqw==}
+  core-js-pure@3.49.0:
+    resolution: {integrity: sha512-XM4RFka59xATyJv/cS3O3Kml72hQXUeGRuuTmMYFxwzc9/7C8OYTaIR/Ji+Yt8DXzsFLNhat15cE/JP15HrCgw==}
 
   cors@2.8.6:
     resolution: {integrity: sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==}
@@ -3523,9 +3502,6 @@ packages:
   mz@2.7.0:
     resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
 
-  nan@2.29.0:
-    resolution: {integrity: sha512-GlGk3HIvitbvs+LT3g6XUP1kpirKNvmDFwF/bmo6XNWSb/eYEs/O4bfgIEIXCZ+lIOTS5xNwDvSGMw6FJdAhtA==}
-
   nanoid@3.3.18:
     resolution: {integrity: sha512-DTg4MJbGMWkfi6VZFdNt2/caMbQy4Ou+Op/hJQvGEWcnVfoA1QA+xzRKAzw9jD6+GVOOeYr/mIcuDSdug6F6+w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -4335,17 +4311,11 @@ packages:
       tree-sitter:
         optional: true
 
-  tree-sitter-yaml@0.5.0:
-    resolution: {integrity: sha512-POJ4ZNXXSWIG/W4Rjuyg36MkUD4d769YRUGKRqN+sVaj/VCo6Dh6Pkssn1Rtewd5kybx+jT1BWMyWN0CijXnMA==}
-
   tree-sitter@0.21.1:
     resolution: {integrity: sha512-7dxoA6kYvtgWw80265MyqJlkRl4yawIjO7S5MigytjELkX43fV2WsAXzsNfO7sBpPPCF5Gp0+XzHk0DwLCq3xQ==}
 
   tree-sitter@0.22.4:
     resolution: {integrity: sha512-usbHZP9/oxNsUY65MQUsduGRqDHQOou1cagUSwjhoSYAmSahjQDAVsh9s+SlZkn8X8+O1FULRGwHu7AFP3kjzg==}
-
-  tree-sitter@0.25.1:
-    resolution: {integrity: sha512-mrcEdkYtHfrK1A6fs3O6FxkBo0Qig5XUXqHhxUOQu0bmPo00QF4XaSx4edpazdHwxnSCjlGKGgIqWdaN4dvTLA==}
 
   ts-api-utils@2.5.0:
     resolution: {integrity: sha512-OJ/ibxhPlqrMM0UiNHJ/0CKQkoKF243/AEmplt3qpRgkW8VG7IfOS41h7V8TjITqdByHzrjcS/2si+y4lIh8NA==}
@@ -4891,7 +4861,7 @@ snapshots:
 
   '@babel/runtime-corejs3@7.29.7':
     dependencies:
-      core-js-pure: 3.50.0
+      core-js-pure: 3.49.0
 
   '@babel/runtime@7.29.7': {}
 
@@ -6901,9 +6871,7 @@ snapshots:
     dependencies:
       toggle-selection: 1.0.6
 
-  core-js-pure@3.50.0: {}
-
-  core-js@3.50.0: {}
+  core-js-pure@3.49.0: {}
 
   cors@2.8.6:
     dependencies:
@@ -7910,8 +7878,6 @@ snapshots:
       object-assign: 4.1.1
       thenify-all: 1.6.0
 
-  nan@2.29.0: {}
-
   nanoid@3.3.18: {}
 
   natural-compare@1.4.0: {}
@@ -7979,7 +7945,8 @@ snapshots:
 
   node-abort-controller@3.1.1: {}
 
-  node-addon-api@8.8.0: {}
+  node-addon-api@8.8.0:
+    optional: true
 
   node-domexception@1.0.0: {}
 
@@ -7989,7 +7956,8 @@ snapshots:
       fetch-blob: 3.2.0
       formdata-polyfill: 4.0.10
 
-  node-gyp-build@4.8.4: {}
+  node-gyp-build@4.8.4:
+    optional: true
 
   node-releases@2.0.54: {}
 
@@ -8960,17 +8928,6 @@ snapshots:
       tree-sitter: 0.21.1
     optional: true
 
-  tree-sitter-json@0.24.8(tree-sitter@0.25.1):
-    dependencies:
-      node-addon-api: 8.8.0
-      node-gyp-build: 4.8.4
-    optionalDependencies:
-      tree-sitter: 0.25.1
-
-  tree-sitter-yaml@0.5.0:
-    dependencies:
-      nan: 2.29.0
-
   tree-sitter@0.21.1:
     dependencies:
       node-addon-api: 8.8.0
@@ -8982,11 +8939,6 @@ snapshots:
       node-addon-api: 8.8.0
       node-gyp-build: 4.8.4
     optional: true
-
-  tree-sitter@0.25.1:
-    dependencies:
-      node-addon-api: 8.8.0
-      node-gyp-build: 4.8.4
 
   ts-api-utils@2.5.0(typescript@5.9.3):
     dependencies:
