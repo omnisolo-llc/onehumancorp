@@ -30,6 +30,7 @@ function documentPage(overrides: Record<string, unknown> = {}): Page {
   return {
     url: () => 'https://fixture.test/original',
     viewportSize: () => ({ width: 1280, height: 720 }),
+    isClosed: () => false,
     evaluateHandle: vi.fn(async (read: () => unknown) => valueHandle(read())),
     evaluate: vi.fn(async (read: (argument: unknown) => unknown, argument?: unknown) => read(argument)),
     ...overrides,
@@ -45,7 +46,11 @@ describe('audit document retirement', () => {
     for (let index = 0; index < 3; index += 1) {
       expect(await replaceAuditDocument(page)).toBe(page);
     }
-    expect(goto.mock.calls).toEqual(Array.from({ length: 3 }, () => ['about:blank', { waitUntil: 'load' }]));
+    expect(goto.mock.calls).toEqual(Array.from({ length: 3 }, () => ['about:blank', { waitUntil: 'commit', timeout: expect.any(Number) }]));
+    for (const [, options] of goto.mock.calls) {
+      expect(options.timeout).toBeGreaterThan(0);
+      expect(options.timeout).toBeLessThanOrEqual(10_000);
+    }
     expect(close).not.toHaveBeenCalled();
     expect(newPage).not.toHaveBeenCalled();
   });
