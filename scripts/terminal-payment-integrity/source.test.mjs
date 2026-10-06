@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'../..');
 const read=p=>readFileSync(resolve(root,p),'utf8');
@@ -50,4 +51,39 @@ test('every production offline queue producer preserves explicit classification'
  for(const [path,fn] of [['src/server/api/durable_sync.rs','offline_mutation_job'],['src/server/api/terminal_offline_sync.rs','terminal_offline_job'],['src/server/services/pos/service.rs','grpc_offline_job'],['src/server/orchestration/hybrid_sync/daemon.rs','hybrid_offline_job']]){
   const source=read(path); assert.ok(source.split(`${fn}(`).length>=3,`${path} must call its tested production envelope builder`);
  }
+});
+
+test('one canonical offline authority module is shared by API producers and the real queue worker',()=>{
+ assert.match(read('src/server/api/mod.rs'),/pub\(crate\) mod terminal_offline_authority;/);
+ for(const path of ['src/server/api/durable_sync.rs','src/server/api/terminal_offline_sync.rs','src/server/workers/pos_sync_worker.rs']){
+  const source=read(path);
+  assert.match(source,/use crate::api::terminal_offline_authority as offline_(?:payment_)?authority;/,path);
+  assert.doesNotMatch(source,/#\[path\s*=\s*"[^"\n]*terminal_offline_authority\.rs"\]/,path);
+ }
+ assert.match(read('scripts/terminal-payment-integrity/manifest.py'),/'src\/server\/api\/mod\.rs'/,'the source proof must include the canonical module mount');
+});
+
+test('standalone terminal worker tests use the same canonical authority without compiling it twice',()=>{
+ const source=read('scripts/terminal-payment-integrity/lib.rs');
+ assert.equal((source.match(/terminal_offline_authority\.rs/g)||[]).length,1);
+ assert.match(source,/pub mod api\s*\{\s*pub use crate::offline_card as terminal_offline_authority;\s*\}/);
+ assert.match(source,/pub mod offline_worker;/);
+});
+
+test('the unchanged production POS envelope builder precedes the complete test module',()=>{
+ const source=read('src/server/services/pos/service.rs');
+ assert.ok(source.indexOf('fn grpc_offline_job(')<source.indexOf('\n#[cfg(test)]\nmod tests {'));
+ for(const name of ['test_sync_offline_transactions','test_reconcile_crdt_payloads','test_handle_incoming_crdt_delta_spiffe_validation']) assert.match(source,new RegExp(`async fn ${name}\\(`));
+});
+
+
+test('the mounted field harness preserves the transitive offline authority import',()=>{
+ const result=spawnSync('python3',['scripts/field-boundary-contract/prepare.py'],{cwd:root,encoding:'utf8'});
+ assert.equal(result.status,0,`${result.stdout}\n${result.stderr}`);
+ const generated=read('scripts/field-boundary-contract/generated.rs');
+ assert.equal((generated.match(/terminal_offline_authority\.rs/g)||[]).length,1);
+ assert.match(generated,/pub mod terminal_offline_authority;/);
+ assert.match(generated,/pub mod api \{ pub use crate::\{field_ops,field_service_routing,offline_sync,terminal_offline_authority\}; \}/);
+ const manifest=JSON.parse(read('scripts/field-boundary-contract/source-manifest.json'));
+ assert.ok(manifest['src/server/api/terminal_offline_authority.rs']);
 });

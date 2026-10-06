@@ -7,8 +7,7 @@ use sqlx::{PgPool, Postgres, Transaction};
 
 use super::super::sync_transaction::SyncError;
 
-#[path = "terminal_offline_authority.rs"]
-mod offline_authority;
+use crate::api::terminal_offline_authority as offline_authority;
 
 const ROUTE: &str = "/api/v1/payments/terminal/sync_offline";
 #[derive(serde::Serialize)]

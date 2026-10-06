@@ -467,11 +467,23 @@ impl DepartmentOrchestrator {
     ) -> Result<ApprovalRequest, String> {
         // A process-local numeric limit is not standing messaging authority.
         // Bind routing before review, and persist the exact owner-reviewed text.
-        let (risk, _action_payload) = if _action_payload.get("feature_type").and_then(|v| v.as_str()) == Some("ambassador_reply") {
-            (ActionRisk::DraftForReview, super::message_delivery::prepare(
-                &super::message_delivery::Store::from_db(&self.db), &tenant_id, _action_payload,
-            ).await.map_err(|error| error.to_string())?)
-        } else { (risk, _action_payload) };
+        let (risk, _action_payload) =
+            if _action_payload.get("feature_type").and_then(|v| v.as_str())
+                == Some("ambassador_reply")
+            {
+                (
+                    ActionRisk::DraftForReview,
+                    super::message_delivery::prepare(
+                        &super::message_delivery::Store::from_db(&self.db),
+                        &tenant_id,
+                        _action_payload,
+                    )
+                    .await
+                    .map_err(|error| error.to_string())?,
+                )
+            } else {
+                (risk, _action_payload)
+            };
         let cost = 1;
         let within_budget = self
             .check_ai_budget(&tenant_id, cost)
@@ -1882,9 +1894,13 @@ impl DepartmentOrchestrator {
                         // Generic event dispatch can dead-letter a failed handler and
                         // return Ok. Delivery needs its own durable provider receipt.
                         let outcome = super::message_delivery::dispatch(
-                            &super::message_delivery::Store::from_db(&self.db), tenant_id, request_id,
-                        ).await.map_err(|error| error.to_string())
-                            .and_then(|receipt| receipt.require_acceptance());
+                            &super::message_delivery::Store::from_db(&self.db),
+                            tenant_id,
+                            request_id,
+                        )
+                        .await
+                        .map_err(|error| error.to_string())
+                        .and_then(|receipt| receipt.require_acceptance());
                         if let Err(error) = outcome {
                             let _ = self.mesh.release_lock(&lock_key, "orchestrator").await;
                             return Err(error);

@@ -653,20 +653,31 @@ Output JSON format:
                 }
             }
 
-            let message_reply_payload = if action_type == "Draft Reply" || event_source == "instagram_dm" {
+            let message_reply_payload = if action_type == "Draft Reply"
+                || event_source == "instagram_dm"
+            {
                 use crate::orchestration::departments::message_delivery;
                 let store = message_delivery::Store::from_db(&self.db);
-                let reply = message_delivery::prepare(&store, &tenant_id, serde_json::json!({
-                    "feature_type": "ambassador_reply",
-                    "inbox_message_id": message_id,
-                    "generated_response": action_payload,
-                    "original_message": customer_message,
-                    "customer_id": customer_id_val,
-                })).await.map_err(|error| error.to_string())?;
+                let reply = message_delivery::prepare(
+                    &store,
+                    &tenant_id,
+                    serde_json::json!({
+                        "feature_type": "ambassador_reply",
+                        "inbox_message_id": message_id,
+                        "generated_response": action_payload,
+                        "original_message": customer_message,
+                        "customer_id": customer_id_val,
+                    }),
+                )
+                .await
+                .map_err(|error| error.to_string())?;
                 message_delivery::record_pending_review(&store, &tenant_id, &agent_feed_item_id)
-                    .await.map_err(|error| error.to_string())?;
+                    .await
+                    .map_err(|error| error.to_string())?;
                 Some(reply)
-            } else { None };
+            } else {
+                None
+            };
 
             match &self.db.store {
                 crate::db::DbStore::Postgres => {

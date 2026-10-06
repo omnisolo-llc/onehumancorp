@@ -223,7 +223,10 @@ where
                 "PRAGMA table_info(sms_notification_events)".to_string(),
             ))
             .await?;
-        if !columns.iter().any(|row| row.try_get::<String>("", "name").is_ok_and(|name| name == "next_attempt_at")) {
+        if !columns.iter().any(|row| {
+            row.try_get::<String>("", "name")
+                .is_ok_and(|name| name == "next_attempt_at")
+        }) {
             connection.execute_unprepared("ALTER TABLE sms_notification_events ADD COLUMN next_attempt_at BIGINT NOT NULL DEFAULT 0").await?;
         }
         connection

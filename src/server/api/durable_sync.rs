@@ -8,8 +8,7 @@ use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 
 #[path = "durable_appointment_sync.rs"]
 mod appointments;
-#[path = "terminal_offline_authority.rs"]
-mod offline_authority;
+use crate::api::terminal_offline_authority as offline_authority;
 
 use super::super::sync_transaction::{SyncError, commit_owner};
 use crate::api::field_ops::records::FieldAccess;

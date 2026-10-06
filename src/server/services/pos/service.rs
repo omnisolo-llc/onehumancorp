@@ -514,6 +514,22 @@ impl PosService for MyPosService {
     }
 }
 
+fn grpc_offline_job(
+    id: &str,
+    client: &str,
+    amount: i64,
+    currency: &str,
+    payload: &str,
+) -> serde_json::Value {
+    let parsed: Option<serde_json::Value> = serde_json::from_str(payload).ok();
+    let kind = parsed
+        .as_ref()
+        .and_then(|v| v.get("mutation_type"))
+        .and_then(serde_json::Value::as_str);
+    serde_json::json!({"pos_transaction_id":id,"client_id":client,"amount_cents":amount,
+        "currency":currency,"payload":payload,"mutation_type":kind})
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -657,20 +673,4 @@ mod tests {
         // This will succeed parsing, then fail on protobuf decode since payload is empty, but that proves it passes the auth check
         assert!(result_valid.is_ok() || result_valid.is_err());
     }
-}
-
-fn grpc_offline_job(
-    id: &str,
-    client: &str,
-    amount: i64,
-    currency: &str,
-    payload: &str,
-) -> serde_json::Value {
-    let parsed: Option<serde_json::Value> = serde_json::from_str(payload).ok();
-    let kind = parsed
-        .as_ref()
-        .and_then(|v| v.get("mutation_type"))
-        .and_then(serde_json::Value::as_str);
-    serde_json::json!({"pos_transaction_id":id,"client_id":client,"amount_cents":amount,
-        "currency":currency,"payload":payload,"mutation_type":kind})
 }

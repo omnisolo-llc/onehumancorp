@@ -271,12 +271,17 @@ impl Department for CustomerSuccessAgent {
 
             // The event is only a trigger. Read identity, approved content,
             // recipient and provider account from the canonical tenant database.
-            let action_id = payload.get("approval_id").and_then(|value| value.as_str())
+            let action_id = payload
+                .get("approval_id")
+                .and_then(|value| value.as_str())
                 .ok_or_else(|| "Canonical approval identity is required".to_string())?;
             let receipt = super::message_delivery::dispatch(
                 &super::message_delivery::Store::from_db(&self.orchestrator.db()),
-                &event.tenant_id, action_id,
-            ).await.map_err(|error| error.to_string())?;
+                &event.tenant_id,
+                action_id,
+            )
+            .await
+            .map_err(|error| error.to_string())?;
             return receipt.require_acceptance();
         }
 
@@ -745,7 +750,6 @@ impl Department for CustomerSuccessAgent {
                     .orchestrator
                     .update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response)
                     .await;
-
             }
 
             let action_payload = serde_json::json!({
@@ -774,7 +778,6 @@ impl Department for CustomerSuccessAgent {
                 .await
                 .map_err(|e| e.to_string())?;
 
-
             return Ok(());
         }
 
@@ -793,7 +796,6 @@ impl Department for CustomerSuccessAgent {
                 )
                 .await
                 .map_err(|e| e.to_string())?;
-
 
             return Ok(());
         }

@@ -84,8 +84,10 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
 }
 
 async fn order_sms_metadata(tenant_id: &str, order_id: Option<&str>) -> serde_json::Value {
-    if let Some(order_id)=order_id {
-        if let Ok(receipt)=crate::api::sms_settings::order_notification_status(tenant_id,order_id).await {
+    if let Some(order_id) = order_id {
+        if let Ok(receipt) =
+            crate::api::sms_settings::order_notification_status(tenant_id, order_id).await
+        {
             return serde_json::json!(receipt);
         }
     }

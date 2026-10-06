@@ -57,7 +57,7 @@ pub mod db {
 pub struct Hub;
 pub mod offline_sync {\n'''+offline+'\n}\npub mod terminal_api {\nuse crate::Hub;\nuse axum::{Json,extract::State,response::IntoResponse};\nuse std::sync::Arc;\nuse tracing::info;\n'+types+'\n'+f'#[path = {json.dumps(str(API/"terminal_offline_sync.rs"))}]\nmod offline_sync;\n'+handler+'\n}\n'
 source+=f'\n#[path={json.dumps(str(API / "sync_transaction.rs"))}]\nmod sync_transaction;\n'
-source+=f'\npub mod api {{pub mod field_ops {{#[path={json.dumps(str(API/"field_ops/records.rs"))}] pub mod records;}}}}\n'
+source+=f'\npub mod api {{#[path={json.dumps(str(API/"terminal_offline_authority.rs"))}] pub mod terminal_offline_authority; pub mod field_ops {{#[path={json.dumps(str(API/"field_ops/records.rs"))}] pub mod records;}}}}\n'
 pos=(API/'pos.rs').read_text()
 def pos_function(name):
     match=re.search(r'(?:pub )?(?:async )?fn '+name+r'\(',pos)

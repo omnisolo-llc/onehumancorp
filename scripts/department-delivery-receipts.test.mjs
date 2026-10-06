@@ -4,6 +4,17 @@ import { readFileSync, existsSync } from 'node:fs';
 const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const agent = read('src/server/orchestration/departments/customer_success_agent.rs');
 const orchestrator = read('src/server/orchestration/departments/orchestrator.rs');
+const assertCommitBeforeProvider = (source) => {
+  const start = source.indexOf('async fn dispatch_inner(');
+  assert.ok(start >= 0, 'the canonical dispatch implementation must be present');
+  const dispatch = source.slice(start);
+  const claim = dispatch.indexOf('INSERT INTO department_message_dispatches');
+  assert.ok(claim >= 0, 'dispatch must persist its replay fence');
+  const commit = /tx\s*\.commit\(\)\s*\.await\?;/.exec(dispatch.slice(claim));
+  const provider = /provider\s*\.send\(/.exec(dispatch);
+  assert.ok(commit && provider, 'dispatch must commit its fence and invoke the provider');
+  assert.ok(claim + commit.index < provider.index, 'the durable replay fence must commit before provider I/O');
+};
 test('approved Ambassador path awaits a canonical durable receipt and never preclaims sent', () => {
   const approved = agent.slice(agent.indexOf('if event.event_type == "agent:customer_success:approved"'), agent.indexOf('if event.event_type == "tenant.subscription.churn_risk"'));
   assert.match(approved, /message_delivery::dispatch/);
@@ -24,7 +35,22 @@ test('canonical dispatch commits its unknown replay fence before provider invoca
   assert.match(source,/ON CONFLICT.*DO NOTHING/);
   assert.match(source,/provider_accepted/);
   assert.match(source,/delivery_unknown/);
-  assert.ok(source.indexOf('tx.commit().await?; // Durable replay fence') < source.indexOf('provider.send('));
+  assertCommitBeforeProvider(source);
+});
+test('dispatch source guard requires the real committed fence across harmless formatting', () => {
+  const source = read('src/server/orchestration/departments/message_delivery.rs');
+  const start = source.indexOf('async fn dispatch_inner(');
+  const claim = source.indexOf('INSERT INTO department_message_dispatches', start);
+  const commit = /tx\s*\.commit\(\)\s*\.await\?;/.exec(source.slice(claim));
+  assert.ok(commit);
+  const at = claim + commit.index;
+  const without = source.slice(0, at) + source.slice(at + commit[0].length);
+  assertCommitBeforeProvider(source);
+  assertCommitBeforeProvider(source.slice(0, at) + 'tx\n    .commit()\n    .await?;' + source.slice(at + commit[0].length));
+  assert.throws(() => assertCommitBeforeProvider(without));
+  assert.throws(() => assertCommitBeforeProvider('tx.commit().await?;\n' + without));
+  assert.throws(() => assertCommitBeforeProvider(source.replace('INSERT INTO department_message_dispatches', 'MISSING_REPLAY_FENCE')));
+  assert.throws(() => assertCommitBeforeProvider(source.replace(/provider\s*\.send\(/, 'provider.missing(')));
 });
 test('modern inbox adapter does not bypass canonical receipt authority', () => {
   const source=read('src/server/domain/inbox.rs');

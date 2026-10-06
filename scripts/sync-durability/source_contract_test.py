@@ -9,6 +9,12 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 class MountedSyncContract(unittest.TestCase):
+    def test_generated_handlers_share_one_canonical_offline_authority(self):
+        subprocess.run([sys.executable, str(ROOT/'scripts/sync-durability/prepare.py')], check=True)
+        generated=(ROOT/'scripts/sync-durability/generated.rs').read_text()
+        module=f'#[path={json.dumps(str(ROOT/"src/server/api/terminal_offline_authority.rs"))}] pub mod terminal_offline_authority;'
+        self.assertEqual(generated.count(module), 1, 'retain one real authority at crate::api::terminal_offline_authority')
+
     def test_generated_pos_reader_keeps_exact_inventory_dependencies(self):
         subprocess.run([sys.executable, str(ROOT/'scripts/sync-durability/prepare.py')], check=True)
         generated=(ROOT/'scripts/sync-durability/generated.rs').read_text()

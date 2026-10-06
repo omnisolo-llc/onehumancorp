@@ -1,8 +1,7 @@
 use crate::db::DB;
 use std::sync::Arc;
 
-#[path = "../api/terminal_offline_authority.rs"]
-mod offline_payment_authority;
+use crate::api::terminal_offline_authority as offline_payment_authority;
 
 pub struct PosSyncWorker {
     db: Arc<DB>,

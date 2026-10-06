@@ -106,10 +106,10 @@ impl SmsService {
         ] {
             let values = headers.get_all(header);
             let mut values = values.iter();
-            if let Some(value) = values.next() {
-                if value.to_str().ok() != expected || values.next().is_some() {
-                    return Err(Failure::Forbidden);
-                }
+            if let Some(value) = values.next()
+                && (value.to_str().ok() != expected || values.next().is_some())
+            {
+                return Err(Failure::Forbidden);
             }
         }
         // Verify even when storage binding is unavailable; never accept forged Claims.
@@ -731,8 +731,20 @@ async fn lock_committed_order(
     // identity are rechecked under RLS; a current order lock fences deletion or
     // reassignment through the durable send claim, alongside preference locks.
     let found: Option<String> = match tx {
-        BackgroundTransaction::Postgres(tx) => sqlx::query_scalar("SELECT id FROM orders WHERE tenant_id=$1 AND id=$2 FOR SHARE").bind(tenant).bind(event_id).fetch_optional(&mut **tx).await?,
-        BackgroundTransaction::Sqlite(tx) => sqlx::query_scalar("SELECT id FROM orders WHERE tenant_id=$1 AND id=$2").bind(tenant).bind(event_id).fetch_optional(&mut **tx).await?,
+        BackgroundTransaction::Postgres(tx) => {
+            sqlx::query_scalar("SELECT id FROM orders WHERE tenant_id=$1 AND id=$2 FOR SHARE")
+                .bind(tenant)
+                .bind(event_id)
+                .fetch_optional(&mut **tx)
+                .await?
+        }
+        BackgroundTransaction::Sqlite(tx) => {
+            sqlx::query_scalar("SELECT id FROM orders WHERE tenant_id=$1 AND id=$2")
+                .bind(tenant)
+                .bind(event_id)
+                .fetch_optional(&mut **tx)
+                .await?
+        }
     };
     Ok(found.is_some())
 }
@@ -788,7 +800,10 @@ impl SmsService {
             .filter(|(state, _)| state == "accepted")
             .map(|(_, sid)| sid.clone().ok_or(Failure::Unconfirmed))
             .collect::<Result<Vec<_>, _>>()?;
-        let skipped = states.iter().filter(|(state, _)| state == "cancelled").count();
+        let skipped = states
+            .iter()
+            .filter(|(state, _)| state == "cancelled")
+            .count();
         let has = |wanted: &str| states.iter().any(|(state, _)| state == wanted);
         let status = if event.status == "no_recipients" && states.is_empty() {
             "no_recipients"
@@ -819,11 +834,17 @@ impl SmsService {
         let mut tx = match connection.get_database_backend() {
             sea_orm::DatabaseBackend::Postgres => {
                 let mut tx = connection.get_postgres_connection_pool().begin().await?;
-                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
-                sqlx::query("SET LOCAL statement_timeout='3000ms'").execute(&mut *tx).await?;
+                sqlx::query("SET LOCAL ROLE ohc_bypassrls")
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL statement_timeout='3000ms'")
+                    .execute(&mut *tx)
+                    .await?;
                 BackgroundTransaction::Postgres(tx)
             }
-            sea_orm::DatabaseBackend::Sqlite => BackgroundTransaction::Sqlite(connection.get_sqlite_connection_pool().begin().await?),
+            sea_orm::DatabaseBackend::Sqlite => BackgroundTransaction::Sqlite(
+                connection.get_sqlite_connection_pool().begin().await?,
+            ),
             _ => return Err(Failure::Unavailable),
         };
         let pending = background!(tx, connection, {
@@ -832,7 +853,11 @@ impl SmsService {
         tx.commit().await?;
         Ok(pending)
     }
-    async fn reserve_order_notification(&self, tenant: &str, event_id: &str) -> Result<bool, Failure> {
+    async fn reserve_order_notification(
+        &self,
+        tenant: &str,
+        event_id: &str,
+    ) -> Result<bool, Failure> {
         let mut tx = self.background_transaction(tenant).await?;
         let now = chrono::Utc::now().timestamp();
         let claimed = background!(tx, connection, {
@@ -873,9 +898,13 @@ impl SmsService {
                 Ok(Ok(_)) => {}
                 Ok(Err(Failure::Unavailable)) | Err(_) => {
                     unavailable = true;
-                    tracing::warn!("Order SMS storage/provider claim is unavailable; retry is scheduled");
+                    tracing::warn!(
+                        "Order SMS storage/provider claim is unavailable; retry is scheduled"
+                    );
                 }
-                Ok(Err(_)) => tracing::warn!("Order SMS remains pending or requires provider reconciliation"),
+                Ok(Err(_)) => {
+                    tracing::warn!("Order SMS remains pending or requires provider reconciliation")
+                }
             }
         }
         // If an entire leading page cannot even reserve its retry schedule,
@@ -883,7 +912,8 @@ impl SmsService {
         // and send claims stay in SQL; this cursor carries no send authority.
         if reservation_failed && page_len == 32 {
             let offset = self.order_discovery_offset.load(Ordering::SeqCst);
-            self.order_discovery_offset.store(offset.saturating_add(32), Ordering::SeqCst);
+            self.order_discovery_offset
+                .store(offset.saturating_add(32), Ordering::SeqCst);
         } else {
             self.order_discovery_offset.store(0, Ordering::SeqCst);
         }
@@ -901,10 +931,14 @@ impl SmsService {
             loop {
                 interval.tick().await;
                 match service.drain_order_notifications().await {
-                    Ok(_) => service.order_worker_healthy_at.store(chrono::Utc::now().timestamp(), Ordering::SeqCst),
+                    Ok(_) => service
+                        .order_worker_healthy_at
+                        .store(chrono::Utc::now().timestamp(), Ordering::SeqCst),
                     Err(_) => {
                         service.order_worker_healthy_at.store(0, Ordering::SeqCst);
-                        tracing::warn!("Durable order SMS worker cannot access its configured outbox");
+                        tracing::warn!(
+                            "Durable order SMS worker cannot access its configured outbox"
+                        );
                     }
                 }
             }

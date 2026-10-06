@@ -625,7 +625,10 @@ async fn list_tasks(
     Extension(execution): Extension<Arc<crate::workflow_execution::WorkflowExecution>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    execution.authorize(&claims, &headers).await.map_err(|error| (error.status(), error.message().to_owned()))?;
+    execution
+        .authorize(&claims, &headers)
+        .await
+        .map_err(|error| (error.status(), error.message().to_owned()))?;
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| "default".to_string());
@@ -767,13 +770,19 @@ async fn mutate_task(
     headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    execution.authorize(&claims, &headers).await.map_err(|error| (error.status(), error.message().to_owned()))?;
+    execution
+        .authorize(&claims, &headers)
+        .await
+        .map_err(|error| (error.status(), error.message().to_owned()))?;
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| "default".to_string());
     let action = payload.get("action").and_then(|a| a.as_str()).unwrap_or("");
     if matches!(action, "stop" | "resume") {
-        return Err((StatusCode::CONFLICT, "Legacy tasks have no admitted execution; create a new text task".into()));
+        return Err((
+            StatusCode::CONFLICT,
+            "Legacy tasks have no admitted execution; create a new text task".into(),
+        ));
     }
 
     match &db.store {
@@ -1044,7 +1053,10 @@ async fn get_task(
     Extension(execution): Extension<Arc<crate::workflow_execution::WorkflowExecution>>,
     headers: axum::http::HeaderMap,
 ) -> Result<Json<Task>, (StatusCode, String)> {
-    execution.authorize(&claims, &headers).await.map_err(|error| (error.status(), error.message().to_owned()))?;
+    execution
+        .authorize(&claims, &headers)
+        .await
+        .map_err(|error| (error.status(), error.message().to_owned()))?;
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| "default".to_string());

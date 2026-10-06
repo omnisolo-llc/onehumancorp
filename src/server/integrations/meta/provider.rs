@@ -52,9 +52,14 @@ impl MetaProvider {
     }
 
     pub async fn send_message_receipt(
-        &self, platform: &str, to: &str, body: &str,
+        &self,
+        platform: &str,
+        to: &str,
+        body: &str,
     ) -> Result<super::client::MetaMessageReceipt, super::client::MetaSendError> {
-        self.client.send_message_receipt(platform, self.phone_number_id.as_deref(), to, body).await
+        self.client
+            .send_message_receipt(platform, self.phone_number_id.as_deref(), to, body)
+            .await
     }
 
     pub async fn send_message(&self, platform: &str, to: &str, body: &str) -> Result<(), String> {
