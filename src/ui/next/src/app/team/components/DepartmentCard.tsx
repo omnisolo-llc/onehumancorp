@@ -38,7 +38,7 @@ export default function DepartmentCard({ name, pendingCount, onClick }: Props) {
               {pendingCount} item{pendingCount > 1 ? 's' : ''} awaiting approval
             </p>
           ) : (
-            <p className="text-sm text-gray-500 mt-0.5">Active and running</p>
+            <p className="text-sm text-gray-500 mt-0.5">No pending approvals</p>
           )}
         </div>
       </div>
