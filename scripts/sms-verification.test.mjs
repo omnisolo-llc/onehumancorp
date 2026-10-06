@@ -12,7 +12,16 @@ test('SMS mutations bind to selected canonical identity authority, never global 
   for (const required of ['CanonicalPgAuthority::bind', 'CanonicalSqliteAuthority::bind', 'verify_owner', 'sms_notification_preferences', 'sms_notification_dispatches', 'sms_verification_challenges', 'verify_slice', 'checked_acceptance']) assert.ok(source.includes(required), required);
   assert.ok(!source.includes('settings::Store::global'));
   assert.ok(!source.includes('get_pool()'));
-  assert.ok(source.indexOf('tx.commit().await?;\n    // The durable sending claim') < source.indexOf('service.provider.send_sms'));
+  const sendStart = source.indexOf('async fn send(');
+  const sendEnd = source.indexOf('\nasync fn ', sendStart + 1);
+  assert.ok(sendStart >= 0 && sendEnd > sendStart, 'the production SMS send handler must be present');
+  const send = source.slice(sendStart, sendEnd);
+  const claim = send.indexOf('INSERT INTO sms_verification_challenges');
+  assert.ok(claim >= 0, 'the send handler must persist its verification challenge');
+  const commit = /tx\s*\.commit\(\)\s*\.await\?;/.exec(send.slice(claim));
+  const provider = /service\s*\.provider\s*\.send_sms\(/.exec(send);
+  assert.ok(commit && provider, 'the send handler must commit its claim and call the provider');
+  assert.ok(claim + commit.index < provider.index, 'the durable sending claim must commit before provider I/O');
   const portable = await readFile(new URL('../src/server/persistence/migration.rs', import.meta.url), 'utf8');
   assert.ok(portable.includes('include_str!("sms_verification_sqlite.sql")'));
 });

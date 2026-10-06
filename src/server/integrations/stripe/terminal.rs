@@ -8,11 +8,10 @@ pub struct TerminalIntentReceipt {
     pub amount_capturable: i64,
     pub currency: String,
     pub status: String,
-    pub metadata: std::collections::HashMap<String,String>,
+    pub metadata: std::collections::HashMap<String, String>,
     #[serde(default, skip_serializing)]
     pub client_secret: Option<String>,
 }
-
 
 /// Authenticated tenant, amount and replay identity for one terminal operation.
 #[derive(Clone, Copy)]
@@ -152,7 +151,8 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        res.json::<TerminalIntentReceipt>().await
+        res.json::<TerminalIntentReceipt>()
+            .await
             .map_err(|_| "Invalid Stripe terminal intent receipt".to_string())
     }
 
@@ -165,34 +165,77 @@ impl StripeClient {
         Ok((receipt.id, secret))
     }
 
-    async fn terminal_intent_receipt_request(&self, id: &str, capture_amount: Option<i64>) -> Result<TerminalIntentReceipt, String> {
-        if !id.starts_with("pi_") || id.len() <= 3 || id.len() > 128
-            || !id.bytes().all(|byte| byte.is_ascii_alphanumeric() || byte == b'_') {
+    async fn terminal_intent_receipt_request(
+        &self,
+        id: &str,
+        capture_amount: Option<i64>,
+    ) -> Result<TerminalIntentReceipt, String> {
+        if !id.starts_with("pi_")
+            || id.len() <= 3
+            || id.len() > 128
+            || !id
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+        {
             return Err("Invalid payment intent ID".into());
         }
         if capture_amount.is_some_and(|amount| !(1..=99_999_999).contains(&amount)) {
             return Err("A positive bounded capture amount is required".into());
         }
         let key = self.require_api_key()?;
-        let http = reqwest::Client::builder().timeout(std::time::Duration::from_secs(20))
-            .redirect(reqwest::redirect::Policy::none()).build().map_err(|_| "Provider transport unavailable")?;
-        let url = format!("{}/v1/payment_intents/{}{}", Self::api_base(), id, if capture_amount.is_some() {"/capture"} else {""});
+        let http = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(20))
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|_| "Provider transport unavailable")?;
+        let url = format!(
+            "{}/v1/payment_intents/{}{}",
+            Self::api_base(),
+            id,
+            if capture_amount.is_some() {
+                "/capture"
+            } else {
+                ""
+            }
+        );
         let request = if let Some(amount) = capture_amount {
             http.post(url)
-                .header("Idempotency-Key", format!("ohc_terminal_capture:{id}:{amount}"))
+                .header(
+                    "Idempotency-Key",
+                    format!("ohc_terminal_capture:{id}:{amount}"),
+                )
                 .form(&[("amount_to_capture", amount.to_string())])
-        } else { http.get(url) };
-        let response = request.basic_auth(key, Some("")).send().await.map_err(|_| "Terminal provider outcome is unconfirmed")?;
-        if !response.status().is_success() { return Err("Terminal provider did not confirm the requested operation".into()); }
-        response.json().await.map_err(|_| "Invalid terminal provider receipt".into())
+        } else {
+            http.get(url)
+        };
+        let response = request
+            .basic_auth(key, Some(""))
+            .send()
+            .await
+            .map_err(|_| "Terminal provider outcome is unconfirmed")?;
+        if !response.status().is_success() {
+            return Err("Terminal provider did not confirm the requested operation".into());
+        }
+        response
+            .json()
+            .await
+            .map_err(|_| "Invalid terminal provider receipt".into())
     }
 
-    pub async fn retrieve_terminal_payment_intent(&self, id: &str) -> Result<TerminalIntentReceipt, String> {
+    pub async fn retrieve_terminal_payment_intent(
+        &self,
+        id: &str,
+    ) -> Result<TerminalIntentReceipt, String> {
         self.terminal_intent_receipt_request(id, None).await
     }
 
-    pub async fn capture_terminal_payment_intent_receipt(&self, id: &str, amount_cents: i64) -> Result<TerminalIntentReceipt, String> {
-        self.terminal_intent_receipt_request(id, Some(amount_cents)).await
+    pub async fn capture_terminal_payment_intent_receipt(
+        &self,
+        id: &str,
+        amount_cents: i64,
+    ) -> Result<TerminalIntentReceipt, String> {
+        self.terminal_intent_receipt_request(id, Some(amount_cents))
+            .await
     }
 
     /// Compatibility entry point: no caller may capture by ID without a saved
@@ -202,9 +245,11 @@ impl StripeClient {
         _payment_intent_id: &str,
     ) -> Result<String, String> {
         self.require_api_key()?;
-        Err("A persisted authorized capture amount is required; reconcile the original operation.".into())
+        Err(
+            "A persisted authorized capture amount is required; reconcile the original operation."
+                .into(),
+        )
     }
-
 }
 
 #[cfg(test)]

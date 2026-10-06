@@ -677,33 +677,91 @@ pub async fn create_payment_intent_handler(
     axum::extract::Json(input): axum::extract::Json<PaymentIntentRequest>,
 ) -> axum::response::Response {
     let tenant = match auth_info {
-        Some(info) if !info.org_id.trim().is_empty() && !info.org_id.trim().eq_ignore_ascii_case("system") => info.org_id.clone(),
-        _ => return terminal_payment_identity::Error(axum::http::StatusCode::UNAUTHORIZED,"rejected","Authentication required.").into_response(),
+        Some(info)
+            if !info.org_id.trim().is_empty()
+                && !info.org_id.trim().eq_ignore_ascii_case("system") =>
+        {
+            info.org_id.clone()
+        }
+        _ => {
+            return terminal_payment_identity::Error(
+                axum::http::StatusCode::UNAUTHORIZED,
+                "rejected",
+                "Authentication required.",
+            )
+            .into_response();
+        }
     };
     // Never treat a caller's aggregate cart price as one catalog product. The
     // existing reservation path cannot bind every line durably, so fail closed.
-    if input.product_id.is_some() || input.quantity.is_some() || input.order_id.is_some() || input.total.is_some() {
+    if input.product_id.is_some()
+        || input.quantity.is_some()
+        || input.order_id.is_some()
+        || input.total.is_some()
+    {
         return terminal_payment_identity::Error(axum::http::StatusCode::CONFLICT,"rejected","Catalog/cart card payment requires a persisted reservation contract. No card payment was started.").into_response();
     }
-    let (Some(operation_id),Some(amount_cents))=(input.idempotency_key,input.amount_cents) else {
-        return terminal_payment_identity::Error(axum::http::StatusCode::UNPROCESSABLE_ENTITY,"rejected","A stable idempotency_key and amount_cents are required.").into_response();
+    let (Some(operation_id), Some(amount_cents)) = (input.idempotency_key, input.amount_cents)
+    else {
+        return terminal_payment_identity::Error(
+            axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+            "rejected",
+            "A stable idempotency_key and amount_cents are required.",
+        )
+        .into_response();
     };
-    let client=match terminal_payment_client(&hub.pool,&tenant).await {Ok(client)=>client,Err(error)=>return error.into_response()};
-    let fingerprint=match terminal_payment_identity::connection_fingerprint(&client){Ok(value)=>value,Err(error)=>return error.into_response()};
-    match terminal_payment_identity::create(&hub.pool,&tenant,terminal_payment_identity::IntentInput {operation_id,amount_cents,currency:input.currency},&fingerprint,&client).await {
-        Ok(receipt)=>terminal_json_response(receipt),Err(error)=>error.into_response(),
+    let client = match terminal_payment_client(&hub.pool, &tenant).await {
+        Ok(client) => client,
+        Err(error) => return error.into_response(),
+    };
+    let fingerprint = match terminal_payment_identity::connection_fingerprint(&client) {
+        Ok(value) => value,
+        Err(error) => return error.into_response(),
+    };
+    match terminal_payment_identity::create(
+        &hub.pool,
+        &tenant,
+        terminal_payment_identity::IntentInput {
+            operation_id,
+            amount_cents,
+            currency: input.currency,
+        },
+        &fingerprint,
+        &client,
+    )
+    .await
+    {
+        Ok(receipt) => terminal_json_response(receipt),
+        Err(error) => error.into_response(),
     }
 }
 
 fn terminal_json_response(value: impl serde::Serialize) -> axum::response::Response {
     let mut response = Json(value).into_response();
-    response.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("private, no-store"));
+    response.headers_mut().insert(
+        axum::http::header::CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("private, no-store"),
+    );
     response
 }
 
-async fn terminal_payment_client(pool:&sqlx::PgPool,tenant:&str)->Result<crate::integrations::stripe::client::StripeClient,terminal_payment_identity::Error>{
-    let db=crate::db::DB {pool:pool.clone(),store:crate::db::DbStore::Postgres};
-    let key=crate::api::tool_integrations::stripe_key_for_tenant(&db,tenant).await.map_err(|_|terminal_payment_identity::Error(axum::http::StatusCode::SERVICE_UNAVAILABLE,"rejected","A verified tenant payment connection is required."))?;
+async fn terminal_payment_client(
+    pool: &sqlx::PgPool,
+    tenant: &str,
+) -> Result<crate::integrations::stripe::client::StripeClient, terminal_payment_identity::Error> {
+    let db = crate::db::DB {
+        pool: pool.clone(),
+        store: crate::db::DbStore::Postgres,
+    };
+    let key = crate::api::tool_integrations::stripe_key_for_tenant(&db, tenant)
+        .await
+        .map_err(|_| {
+            terminal_payment_identity::Error(
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                "rejected",
+                "A verified tenant payment connection is required.",
+            )
+        })?;
     Ok(crate::integrations::stripe::client::StripeClient::new(key))
 }
 
@@ -838,8 +896,16 @@ fn extract_tenant_id_or_error(
     // Transport headers are untrusted data. Only the verified middleware
     // extension may select a tenant's payment connection.
     match auth_info {
-        Some(auth) if !auth.org_id.trim().is_empty() && !auth.org_id.trim().eq_ignore_ascii_case("system") => Ok(auth.org_id.clone()),
-        _ => Err((axum::http::StatusCode::UNAUTHORIZED, Json(serde_json::json!({"error":"Authentication required."})))),
+        Some(auth)
+            if !auth.org_id.trim().is_empty()
+                && !auth.org_id.trim().eq_ignore_ascii_case("system") =>
+        {
+            Ok(auth.org_id.clone())
+        }
+        _ => Err((
+            axum::http::StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({"error":"Authentication required."})),
+        )),
     }
 }
 
@@ -859,7 +925,11 @@ pub async fn get_terminal_connection_token_handler(
     };
     match client.create_terminal_connection_token(&tenant_id).await {
         Ok(secret) => terminal_json_response(serde_json::json!({"secret":secret})),
-        Err(_) => (axum::http::StatusCode::BAD_GATEWAY, Json(serde_json::json!({"error":"Terminal connection is unavailable."}))).into_response(),
+        Err(_) => (
+            axum::http::StatusCode::BAD_GATEWAY,
+            Json(serde_json::json!({"error":"Terminal connection is unavailable."})),
+        )
+            .into_response(),
     }
 }
 
@@ -868,18 +938,63 @@ pub async fn capture_payment_intent_handler(
     auth_info: Option<axum::extract::Extension<::server_auth::orchestration::AuthInfo>>,
     axum::extract::Json(input): axum::extract::Json<CapturePaymentIntentRequest>,
 ) -> axum::response::Response {
-    let tenant=match auth_info {
-        Some(info) if !info.org_id.trim().is_empty() && !info.org_id.trim().eq_ignore_ascii_case("system")=>info.org_id.clone(),
-        _=>return terminal_payment_identity::Error(axum::http::StatusCode::UNAUTHORIZED,"rejected","Authentication required.").into_response(),
+    let tenant = match auth_info {
+        Some(info)
+            if !info.org_id.trim().is_empty()
+                && !info.org_id.trim().eq_ignore_ascii_case("system") =>
+        {
+            info.org_id.clone()
+        }
+        _ => {
+            return terminal_payment_identity::Error(
+                axum::http::StatusCode::UNAUTHORIZED,
+                "rejected",
+                "Authentication required.",
+            )
+            .into_response();
+        }
     };
-    if input.product_id.is_some() || input.quantity.is_some() || input.lock_id.as_deref().is_some_and(|value|!value.is_empty()) {
-        return terminal_payment_identity::Error(axum::http::StatusCode::CONFLICT,"rejected","Catalog/cart capture has no persisted reservation binding and is unavailable.").into_response();
+    if input.product_id.is_some()
+        || input.quantity.is_some()
+        || input
+            .lock_id
+            .as_deref()
+            .is_some_and(|value| !value.is_empty())
+    {
+        return terminal_payment_identity::Error(
+            axum::http::StatusCode::CONFLICT,
+            "rejected",
+            "Catalog/cart capture has no persisted reservation binding and is unavailable.",
+        )
+        .into_response();
     }
-    if let Err(error)=terminal_payment_identity::require_owned(&hub.pool,&tenant,&input.payment_intent_id).await{return error.into_response();}
-    let client=match terminal_payment_client(&hub.pool,&tenant).await {Ok(client)=>client,Err(error)=>return error.into_response()};
-    let fingerprint=match terminal_payment_identity::connection_fingerprint(&client){Ok(value)=>value,Err(error)=>return error.into_response()};
-    match terminal_payment_identity::capture(&hub.pool,&tenant,terminal_payment_identity::CaptureInput {payment_intent_id:input.payment_intent_id,amount_cents:input.amount_cents},&fingerprint,&client).await {
-        Ok(receipt)=>terminal_json_response(receipt),Err(error)=>error.into_response(),
+    if let Err(error) =
+        terminal_payment_identity::require_owned(&hub.pool, &tenant, &input.payment_intent_id).await
+    {
+        return error.into_response();
+    }
+    let client = match terminal_payment_client(&hub.pool, &tenant).await {
+        Ok(client) => client,
+        Err(error) => return error.into_response(),
+    };
+    let fingerprint = match terminal_payment_identity::connection_fingerprint(&client) {
+        Ok(value) => value,
+        Err(error) => return error.into_response(),
+    };
+    match terminal_payment_identity::capture(
+        &hub.pool,
+        &tenant,
+        terminal_payment_identity::CaptureInput {
+            payment_intent_id: input.payment_intent_id,
+            amount_cents: input.amount_cents,
+        },
+        &fingerprint,
+        &client,
+    )
+    .await
+    {
+        Ok(receipt) => terminal_json_response(receipt),
+        Err(error) => error.into_response(),
     }
 }
 

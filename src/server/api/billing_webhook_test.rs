@@ -118,10 +118,11 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
             subscriber_id: &str,
             message: &str,
         ) -> Result<(), String> {
-            self.sent
-                .lock()
-                .unwrap()
-                .push((tenant_id.to_string(), subscriber_id.to_string(), message.to_string()));
+            self.sent.lock().unwrap().push((
+                tenant_id.to_string(),
+                subscriber_id.to_string(),
+                message.to_string(),
+            ));
             Ok(())
         }
     }
@@ -140,12 +141,20 @@ async fn payment_failure_marks_subscriber_past_due_and_sends_dunning() {
     // This business-persistence regression needs neither a running Redis service
     // nor a configured external database. Any fixture failure must fail the test.
     let client = redis::Client::open("redis://127.0.0.1:1/").expect("synthetic client URL");
-    let sqlite = sqlx::sqlite::SqlitePoolOptions::new().max_connections(1)
-        .connect("sqlite::memory:").await.expect("isolated billing SQLite fixture");
+    let sqlite = sqlx::sqlite::SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect("sqlite::memory:")
+        .await
+        .expect("isolated billing SQLite fixture");
     sqlx::raw_sql("CREATE TABLE subscribers(id TEXT PRIMARY KEY,tenant_id TEXT NOT NULL,customer_id TEXT NOT NULL,subscription_plan_id TEXT,status TEXT NOT NULL,stripe_subscription_id TEXT); INSERT INTO subscribers VALUES('subscriber_failed_payment','tenant_1','cus_failed','plan_1','ACTIVE','sub_failed');")
         .execute(&sqlite).await.expect("billing fixture schema and row");
-    let unused_pg = sqlx::postgres::PgPoolOptions::new().connect_lazy("postgres://fixture@127.0.0.1:1/unused").expect("unused compatibility pool");
-    let db = DB { pool: unused_pg, store: crate::db::DbStore::Sqlite(sqlite.clone()) };
+    let unused_pg = sqlx::postgres::PgPoolOptions::new()
+        .connect_lazy("postgres://fixture@127.0.0.1:1/unused")
+        .expect("unused compatibility pool");
+    let db = DB {
+        pool: unused_pg,
+        store: crate::db::DbStore::Sqlite(sqlite.clone()),
+    };
 
     let db_arc = std::sync::Arc::new(db);
     let transport = Arc::new(InProcessTransport::new());

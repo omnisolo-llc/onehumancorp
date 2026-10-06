@@ -201,11 +201,17 @@ pub async fn post_inventory_handler(
                         .await;
                 }
                 let cache = crate::builder::edge::get_edge_cache();
-                cache.invalidate_by_tag(&format!("entity:product:{}", receipt.item_id)).await;
-                cache.invalidate_by_tag(&format!("tenant-id:{}", tenant)).await;
+                cache
+                    .invalidate_by_tag(&format!("entity:product:{}", receipt.item_id))
+                    .await;
+                cache
+                    .invalidate_by_tag(&format!("tenant-id:{}", tenant))
+                    .await;
                 let cdn = crate::utils::edge_caching_middleware::get_cdn_cache();
-                cdn.invalidate_by_tag(&format!("entity:product:{}", receipt.item_id)).await;
-                cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant)).await;
+                cdn.invalidate_by_tag(&format!("entity:product:{}", receipt.item_id))
+                    .await;
+                cdn.invalidate_by_tag(&format!("tenant-id:{}", tenant))
+                    .await;
                 outcomes.push(json!(receipt));
             }
             Err(error) => {
@@ -287,13 +293,20 @@ pub async fn get_inventory_handler(
         };
         let mut response = match receipt {
             Ok(Some(receipt)) => Json(json!({"success":true,"outcomes":[receipt]})).into_response(),
-            Ok(None) => (axum::http::StatusCode::NOT_FOUND, Json(json!({"success":false,"receipt_status":"not_found","id":id}))).into_response(),
+            Ok(None) => (
+                axum::http::StatusCode::NOT_FOUND,
+                Json(json!({"success":false,"receipt_status":"not_found","id":id})),
+            )
+                .into_response(),
             Err(error) => {
-                tracing::warn!(?error,"Inventory receipt lookup is unconfirmed");
+                tracing::warn!(?error, "Inventory receipt lookup is unconfirmed");
                 (axum::http::StatusCode::SERVICE_UNAVAILABLE, Json(json!({"success":false,"error":"The saved adjustment could not be checked"}))).into_response()
             }
         };
-        response.headers_mut().insert(axum::http::header::CACHE_CONTROL, axum::http::HeaderValue::from_static("no-store"));
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("no-store"),
+        );
         return response;
     }
     let result = if let Some(pool) = crate::db::get_mysql_pool_if_exists() {
@@ -304,8 +317,12 @@ pub async fn get_inventory_handler(
     match result {
         Ok(inventory) => Json(json!({"inventory":inventory})).into_response(),
         Err(error) => {
-            tracing::warn!(?error,"Inventory snapshot unavailable");
-            (axum::http::StatusCode::SERVICE_UNAVAILABLE, Json(json!({"success":false,"error":"Inventory is unavailable"}))).into_response()
+            tracing::warn!(?error, "Inventory snapshot unavailable");
+            (
+                axum::http::StatusCode::SERVICE_UNAVAILABLE,
+                Json(json!({"success":false,"error":"Inventory is unavailable"})),
+            )
+                .into_response()
         }
     }
 }
@@ -377,7 +394,10 @@ mod tests {
         let source = include_str!("pos_inventory.rs");
         assert!(source.contains("SELECT to_jsonb(p) FROM products p WHERE tenant_id=$1"));
         for field in ["price_cents", "currency", "inventory_count"] {
-            assert!(source.contains(field), "missing inventory projection field {field}");
+            assert!(
+                source.contains(field),
+                "missing inventory projection field {field}"
+            );
         }
     }
 

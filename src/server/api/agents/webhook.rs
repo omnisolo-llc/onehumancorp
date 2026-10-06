@@ -146,8 +146,10 @@ async fn handle_webhook(
                 payload: serde_json::json!({"source": payload.source, "message": payload.message}),
             };
             match orchestrator.dispatch_event(event).await {
-                Ok(()) => {},
-                Err(error) => tracing::warn!(%error, "Order handling did not confirm an SMS-eligible event"),
+                Ok(()) => {}
+                Err(error) => {
+                    tracing::warn!(%error, "Order handling did not confirm an SMS-eligible event")
+                }
             }
         }
         return (

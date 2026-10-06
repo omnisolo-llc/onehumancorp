@@ -727,8 +727,9 @@ impl HybridSyncDaemon {
             }
 
             let job_id = Uuid::new_v4().to_string();
-            let job_payload = hybrid_offline_job(&id, &client_id, amount_cents, &currency, &payload_str)
-            .to_string();
+            let job_payload =
+                hybrid_offline_job(&id, &client_id, amount_cents, &currency, &payload_str)
+                    .to_string();
 
             let job_res = sqlx::query(
                 "INSERT INTO ohc_job_queue (id, tenant_id, job_type, payload)
@@ -788,7 +789,10 @@ impl HybridSyncDaemon {
 
 fn hybrid_offline_job(id: &str, client: &str, amount: i64, currency: &str, payload: &str) -> Value {
     let parsed: Option<Value> = serde_json::from_str(payload).ok();
-    let kind = parsed.as_ref().and_then(|v| v.get("mutation_type")).and_then(Value::as_str);
+    let kind = parsed
+        .as_ref()
+        .and_then(|v| v.get("mutation_type"))
+        .and_then(Value::as_str);
     json!({"pos_transaction_id":id,"client_id":client,"amount_cents":amount,
         "currency":currency,"payload":payload,"mutation_type":kind})
 }

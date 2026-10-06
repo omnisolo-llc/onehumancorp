@@ -21,6 +21,9 @@ server_utils = { path = "../../src/server/utils" }
 server_omnisolo = { path = "../../src/server/omnisolo" }
 async-trait = "0.1"
 tower = { version = "0.5", features = ["util"] }
+[dev-dependencies]
+# The exact inventory fixture validates its owned loopback database with Url.
+reqwest = { version = "0.12", default-features = false }
 [lib]
 path = "generated.rs"
 [profile.dev]

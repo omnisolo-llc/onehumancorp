@@ -701,7 +701,8 @@ async fn apply_mutation(
     }
     let identity = serde_json::to_value(m).expect("OfflineMutation is JSON serializable");
     if matches!(kind, "cash_sale" | "inventory_sale")
-        && offline_authority::explicit_kind(&identity) != Some(kind) {
+        && offline_authority::explicit_kind(&identity) != Some(kind)
+    {
         return Ok(blocked("explicit_consistent_operation_required"));
     }
     let key = match claim(tx.connection(), tenant, OFFLINE_ROUTE, id, kind, &identity).await? {

@@ -548,7 +548,11 @@ async fn record_in_transaction(
 ) -> Result<Value, Error> {
     let id = &payload.triage_item_id;
     if let Some(receipt) = stored_receipt(tx, tenant, id).await? {
-        let state = if payload.approved { "APPROVED" } else { "DISMISSED" };
+        let state = if payload.approved {
+            "APPROVED"
+        } else {
+            "DISMISSED"
+        };
         if receipt["item"]["lifecycle_state"] != state
             || payload
                 .edited_payload

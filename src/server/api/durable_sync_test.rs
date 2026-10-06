@@ -765,21 +765,51 @@ async fn observed_token_advances_even_when_clock_is_behind_previous_value() {
 async fn actual_tap_producer_preserves_receipt_identity_and_never_implies_paid() {
     let (pool, _) = fixture().await;
     sqlx::query("ALTER TABLE pos_offline_transactions ADD COLUMN updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP").execute(&pool).await.unwrap();
-    sqlx::query("INSERT INTO products(id,tenant_id) VALUES ('p','tenant-a')").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO products(id,tenant_id) VALUES ('p','tenant-a')")
+        .execute(&pool)
+        .await
+        .unwrap();
     let mutation = OfflineMutation {
-        transaction_id: "card-original".into(), timestamp: None, product_id: "p".into(), quantity_deducted: 1,
-        amount: Some(2500), payment_method: None, payment_intent_id: None, currency: Some("usd".into()),
-        mutation_type: Some("tap_to_pay".into()), payload: None, client_mutation_id: Some("card-original".into()),
+        transaction_id: "card-original".into(),
+        timestamp: None,
+        product_id: "p".into(),
+        quantity_deducted: 1,
+        amount: Some(2500),
+        payment_method: None,
+        payment_intent_id: None,
+        currency: Some("usd".into()),
+        mutation_type: Some("tap_to_pay".into()),
+        payload: None,
+        client_mutation_id: Some("card-original".into()),
     };
     let response = sync_mutations(&pool, "tenant-a", &[mutation]).await;
     assert_eq!(response.outcomes[0].status, "acknowledged");
     let job: Value = sqlx::query_scalar("SELECT payload FROM ohc_job_queue WHERE tenant_id='tenant-a' AND job_type='offline_pos_sync'").fetch_one(&pool).await.unwrap();
     assert_eq!(job["mutation_type"], "tap_to_pay");
-    let saved: Value = sqlx::query_scalar("SELECT request_identity FROM sync_events WHERE id=$1 AND tenant_id='tenant-a'").bind(job["receipt_id"].as_str().unwrap()).fetch_one(&pool).await.unwrap();
+    let saved: Value = sqlx::query_scalar(
+        "SELECT request_identity FROM sync_events WHERE id=$1 AND tenant_id='tenant-a'",
+    )
+    .bind(job["receipt_id"].as_str().unwrap())
+    .fetch_one(&pool)
+    .await
+    .unwrap();
     assert_eq!(job["mutation"], saved);
-    for _ in 0..2 { assert!(offline_authority::complete_committed_operation(&pool, "tenant-a", &job).await.is_err()); }
-    let orders: i64 = sqlx::query_scalar("SELECT count(*) FROM orders").fetch_one(&pool).await.unwrap();
+    for _ in 0..2 {
+        assert!(
+            offline_authority::complete_committed_operation(&pool, "tenant-a", &job)
+                .await
+                .is_err()
+        );
+    }
+    let orders: i64 = sqlx::query_scalar("SELECT count(*) FROM orders")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(orders, 0);
-    let jobs: i64 = sqlx::query_scalar("SELECT count(*) FROM ohc_job_queue WHERE job_type='offline_pos_sync'").fetch_one(&pool).await.unwrap();
+    let jobs: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM ohc_job_queue WHERE job_type='offline_pos_sync'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(jobs, 1);
 }

@@ -35,7 +35,7 @@ test('MySQL observed versions include a durable revision beyond rounded timestam
   const source = await readFile(new URL('../src/server/api/pos_inventory.rs', import.meta.url), 'utf8');
   assert.match(source, /fn mysql_state\(stock: i32, updated: Option<String>, revision: i64\)/);
   assert.match(source, /COUNT\(\*\) FROM inventory_adjustment_receipts r WHERE r\.tenant_id=p\.tenant_id AND r\.item_id=p\.id/);
-  assert.match(source, /revision\.checked_add\(1\)/);
+  assert.match(source, /revision\s*\.checked_add\(1\)/);
 });
 
 test('durable receipt lookup precedes product existence and never dispatches a mutation', async () => {
@@ -65,6 +65,6 @@ test('post-lock missing products are interpreted only after the final receipt re
 
 test('PN oversell debt cannot be turned into invented available stock', async () => {
   const source = await readFile(new URL('../src/server/api/pos_inventory.rs', import.meta.url), 'utf8');
-  assert.match(source, /if p < n \{ return Err\(Error::Blocked\("inventory_debt_requires_reconciliation"\)\); \}/);
+  assert.match(source, /if p < n\s*\{\s*return Err\(Error::Blocked\("inventory_debt_requires_reconciliation"\)\);\s*\}/);
   assert.doesNotMatch(source, /p\.checked_sub\(n\)\.map\(\|v\| v\.max\(0\)\)/);
 });

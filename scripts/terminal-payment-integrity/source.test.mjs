@@ -36,7 +36,7 @@ test('provider capture sends the saved amount rather than an unbounded ID-only r
  const protocol=read('src/server/api/terminal_payment_identity.rs');
  assert.match(provider,/amount_to_capture/);
  assert.match(protocol,/amount_capturable\s*==\s*operation.amount_cents/);
- assert.match(protocol,/provider\.capture\(&input.payment_intent_id,\s*operation.amount_cents\)/);
+ assert.match(protocol,/provider\s*\.capture\(&input.payment_intent_id,\s*operation.amount_cents\)/);
 });
 test('offline completion requires persisted tenant authority and never executes legacy settlement',()=>{
  const authority=read('src/server/api/terminal_offline_authority.rs');

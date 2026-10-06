@@ -267,7 +267,14 @@ async fn apply(
             "UPDATE products SET inventory_count=GREATEST(0,inventory_count-$1),available_quantity=GREATEST(0,available_quantity-$1),updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3"
         }).bind(quantity).bind(product).bind(tenant).execute(&mut *tx).await?;
     }
-    let job = terminal_offline_job(id, client, item.amount_cents, &item.currency, item.mutation_type.as_deref(), &payload);
+    let job = terminal_offline_job(
+        id,
+        client,
+        item.amount_cents,
+        &item.currency,
+        item.mutation_type.as_deref(),
+        &payload,
+    );
     sqlx::query("INSERT INTO ohc_job_queue (id,tenant_id,job_type,payload) VALUES ($1,$2,'offline_pos_sync',$3)").bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(job).execute(&mut *tx).await?;
     if matches!(kind, "cash_sale" | "tap_to_pay") {
         let order = uuid::Uuid::new_v4().to_string();
@@ -328,7 +335,14 @@ async fn record_session(
 #[path = "terminal_offline_sync_test.rs"]
 mod tests;
 
-fn terminal_offline_job(id: &str, client: &str, amount: i64, currency: &str, kind: Option<&str>, payload: &Value) -> Value {
+fn terminal_offline_job(
+    id: &str,
+    client: &str,
+    amount: i64,
+    currency: &str,
+    kind: Option<&str>,
+    payload: &Value,
+) -> Value {
     json!({"pos_transaction_id":id,"client_id":client,"amount_cents":amount,
         "currency":currency,"payload":payload.to_string(),"mutation_type":kind,
         "inventory_already_deducted":true})

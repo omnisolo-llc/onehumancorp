@@ -278,15 +278,30 @@ async fn existing_pn_counter_inventory_is_updated_once_with_plain_stock() {
 async fn canonical_cash_producer_keeps_one_sale_when_its_receipt_is_completed_twice() {
     let pool = fixture().await;
     sqlx::query("ALTER TABLE pos_offline_transactions ADD COLUMN updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP").execute(&pool).await.unwrap();
-    assert_eq!(apply(&pool, "tenant-a", None, &item()).await.unwrap().status, "acknowledged");
+    assert_eq!(
+        apply(&pool, "tenant-a", None, &item())
+            .await
+            .unwrap()
+            .status,
+        "acknowledged"
+    );
     let job: Value = sqlx::query_scalar("SELECT payload FROM ohc_job_queue WHERE tenant_id='tenant-a' AND job_type='offline_pos_sync'").fetch_one(&pool).await.unwrap();
     for _ in 0..2 {
-        offline_authority::complete_committed_operation(&pool, "tenant-a", &job).await.unwrap();
+        offline_authority::complete_committed_operation(&pool, "tenant-a", &job)
+            .await
+            .unwrap();
     }
     assert_eq!(count(&pool, "orders").await, 1);
-    let stock: i32 = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id='p'").fetch_one(&pool).await.unwrap();
+    let stock: i32 = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id='p'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(stock, 8);
-    let status: (String,String) = sqlx::query_as("SELECT status,_sync_status FROM pos_offline_transactions WHERE id='sale'").fetch_one(&pool).await.unwrap();
+    let status: (String, String) =
+        sqlx::query_as("SELECT status,_sync_status FROM pos_offline_transactions WHERE id='sale'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
     assert_eq!(status, ("RESOLVED".into(), "synced".into()));
 }
 
@@ -299,7 +314,12 @@ async fn canonical_cash_producer_rejects_contradictory_card_evidence_before_sale
     let result = apply(&pool, "tenant-a", None, &request).await.unwrap();
     assert_eq!(result.status, "reconciliation");
     assert_eq!(result.reason, Some("contradictory_cash_payment_evidence"));
-    for table in ["orders", "pos_offline_transactions", "ohc_job_queue"] { assert_eq!(count(&pool, table).await, 0); }
-    let stock: i32 = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id='p'").fetch_one(&pool).await.unwrap();
+    for table in ["orders", "pos_offline_transactions", "ohc_job_queue"] {
+        assert_eq!(count(&pool, table).await, 0);
+    }
+    let stock: i32 = sqlx::query_scalar("SELECT available_quantity FROM products WHERE id='p'")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
     assert_eq!(stock, 10);
 }

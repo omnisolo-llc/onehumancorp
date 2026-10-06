@@ -3955,7 +3955,6 @@ impl HubService for MyHubService {
     }
 }
 
-
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     crate::utils::fs::cleanup_stale_temp_files();
     // Initialize logging

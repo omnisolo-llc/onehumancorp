@@ -44,7 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
+          # Keep the complete source tree without every unrelated branch/tag.
+          fetch-depth: 1
+          filter: blob:none
 
       - name: Validate migration identities before starting expensive builds
         run: bash src/server/migrations/sqlx_migration_contract_test.sh
@@ -56,24 +58,53 @@ jobs:
         id: check
         env:
           CI_PERFORMANCE_PREFIX: ${{ inputs.performance_prefix || '' }}
+          CI_REF_TYPE: ${{ github.ref_type }}
+          CI_EVENT_NAME: ${{ github.event_name }}
+          CI_BASE_REF: ${{ github.base_ref }}
+          CI_BEFORE_SHA: ${{ github.event.before }}
+          CI_TESTED_SHA: ${{ github.sha }}
         run: |
-          if [[ -n "$CI_PERFORMANCE_PREFIX" || "${{ github.ref_type }}" == tag ]]; then
+          full_run() {
             echo "markdown-only=false" >> "$GITHUB_OUTPUT"
+            echo "Full run: $1"
             exit 0
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git fetch origin "${{ github.base_ref }}"
-            changed_files=$(git diff --name-only "origin/${{ github.base_ref }}...HEAD")
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            before="${{ github.event.before }}"
-            if [[ "$before" == 0000000000000000000000000000000000000000 ]] || ! git cat-file -e "$before^{commit}" 2>/dev/null; then
-              echo "markdown-only=false" >> "$GITHUB_OUTPUT"
-              exit 0
+          }
+          if [[ -n "$CI_PERFORMANCE_PREFIX" || "$CI_REF_TYPE" == tag ]]; then
+            full_run 'release or performance run'
+          elif [[ "$CI_EVENT_NAME" != pull_request && "$CI_EVENT_NAME" != push ]]; then
+            full_run 'treating this event as a non-markdown change set'
+          fi
+          if [[ ! "$CI_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$(git rev-parse HEAD)" != "$CI_TESTED_SHA" ]]; then
+            full_run 'tested revision cannot be verified'
+          fi
+          if [[ "$CI_EVENT_NAME" == pull_request ]]; then
+            if [[ -z "$CI_BASE_REF" ]] || ! git check-ref-format "refs/heads/$CI_BASE_REF"; then
+              full_run 'base ref cannot be verified'
             fi
-            changed_files=$(git diff --name-only "$before" "${{ github.sha }}")
+            depth=()
+            if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
+              depth=(--unshallow)
+            fi
+            # Both tips need complete ancestry for the existing three-dot diff.
+            # Blob filtering avoids bulk historical contents; rename detection
+            # can still retrieve the specific old blobs it needs on demand.
+            if ! git -c protocol.version=2 fetch --no-tags --no-recurse-submodules --filter=blob:none "${depth[@]}" origin \
+              "+$CI_TESTED_SHA:refs/remotes/ci/tested" \
+              "+refs/heads/$CI_BASE_REF:refs/remotes/origin/$CI_BASE_REF"; then
+              full_run 'PR comparison history is unavailable'
+            fi
+            changed_files=$(git diff --name-only "refs/remotes/origin/$CI_BASE_REF...$CI_TESTED_SHA") || full_run 'PR comparison failed'
           else
-            echo "markdown-only=false" >> "$GITHUB_OUTPUT"
-            echo "Full run; treating as non-markdown change set"
-            exit 0
+            if [[ ! "$CI_BEFORE_SHA" =~ ^[0-9a-f]{40}$ || "$CI_BEFORE_SHA" == 0000000000000000000000000000000000000000 ]]; then
+              full_run 'push before revision is unavailable'
+            fi
+            # Probing a partial clone must not trigger an unbounded lazy fetch.
+            if ! GIT_NO_LAZY_FETCH=1 git cat-file -e "$CI_BEFORE_SHA^{commit}" 2>/dev/null; then
+              if ! git -c protocol.version=2 fetch --no-tags --no-recurse-submodules --filter=blob:none --depth=1 origin "$CI_BEFORE_SHA"; then
+                full_run 'push before revision cannot be fetched'
+              fi
+            fi
+            changed_files=$(git diff --name-only "$CI_BEFORE_SHA" "$CI_TESTED_SHA") || full_run 'push comparison failed'
           fi
 
           echo "Changed files:"
@@ -101,6 +132,7 @@ jobs:
 
       - name: Check developer bootstrap and required-job contracts
         run: |
+          python3 .github/scripts/check_changes_test.py
           python3 .github/scripts/check_checkout_paths_test.py
           python3 scripts/init_dev_test.py
           python3 .github/scripts/check_native_cache_test.py

@@ -298,11 +298,23 @@ impl BookingService {
         // Notification may only follow the committed booking and uses its stable ID.
         if booking.id.trim().is_empty() {
             tracing::warn!("Booking SMS unavailable: committed booking identity is missing");
-        } else if booking.start_time.signed_duration_since(chrono::Utc::now()).num_hours() < 48 {
+        } else if booking
+            .start_time
+            .signed_duration_since(chrono::Utc::now())
+            .num_hours()
+            < 48
+        {
             let tenant = booking.tenant_id.clone();
             let event_id = format!("booking-created:{}", booking.id);
             tokio::spawn(async move {
-                if let Err(error) = crate::api::sms_settings::dispatch_critical_sms(&tenant, &event_id, "urgent_booking", "You have an urgent booking coming up soon!").await {
+                if let Err(error) = crate::api::sms_settings::dispatch_critical_sms(
+                    &tenant,
+                    &event_id,
+                    "urgent_booking",
+                    "You have an urgent booking coming up soon!",
+                )
+                .await
+                {
                     tracing::warn!(%error, "Booking SMS was not confirmed");
                 }
             });

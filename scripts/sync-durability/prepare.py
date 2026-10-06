@@ -64,6 +64,11 @@ def pos_function(name):
     if not match:raise ValueError('missing POS function '+name)
     return pos[match.start():balanced(pos,match.start())]
 source+='\npub mod pos_read {use crate::Hub;use crate::utils::cache::HybridCache;use axum::{Json,extract::{Extension,State},response::IntoResponse};use serde_json::{Value,json};use sqlx::Row;use std::sync::{Arc,OnceLock};\n'
+query=re.search(r'#\[derive\(serde::Deserialize\)\]\s*pub struct InventoryQuery\s*\{[^}]*\}',pos)
+if not query:raise ValueError('missing POS inventory query type')
+source+=query.group()+'\n'
+# Keep the real read dependency, including its unit and PostgreSQL regressions.
+source+=f'#[path = {json.dumps(str(API/"pos_inventory.rs"))}]\nmod inventory;\n'
 source+=re.search(r'pub static POS_ORDERS_CACHE:[^\n]+',pos)[0]+'\n'
 source+=re.search(r'const POS_ORDERS_SQL:[^\n]+',pos)[0]+'\n'
 for name in ['pos_tenant','fetch_pos_orders','get_orders_handler','get_inventory_handler']:
@@ -73,6 +78,7 @@ source+='#[cfg(test)] #[tokio::test] '+pos_function('pos_orders_keep_customer_id
 source+='\n#[cfg(test)]\n#[path="mounted_test.rs"]\nmod mounted_test;\n'
 (HERE/'generated.rs').write_text(source)
 inputs=[ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',HERE/'README.md',HERE/'source_contract_test.py',API/'pos.rs',ROOT/'src/server/utils/cache.rs',HERE/'prepare.py',HERE/'Cargo.toml',API/'mod.rs',API/'sync_transaction.rs',API/'offline_sync.rs',API/'offline_sync_route_test.rs',HERE/'mounted_test.rs',API/'terminal_api.rs',API/'terminal_offline_authority.rs',*API.glob('durable_sync*'),API/'durable_appointment_sync.rs',API/'field_ops/records.rs',*API.glob('terminal_offline_sync*'),ROOT/'src/server/migrations/236_pos_offline_request_identity.sql',ROOT/'src/server/migrations/234_sync_durable_receipts.sql']
+inputs += [API/'pos_inventory.rs',API/'pos_inventory_test.rs',ROOT/'src/server/migrations/1041_inventory_adjustment_receipts.sql']
 manifest={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in inputs if p.is_file()}
 (HERE/'source-manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
 print(f'Prepared exact-source harness from {len(manifest)} source inputs')

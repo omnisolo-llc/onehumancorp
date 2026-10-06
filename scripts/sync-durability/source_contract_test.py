@@ -1,9 +1,39 @@
 """Source-bound regression guard, supplementary to PostgreSQL execution."""
 from pathlib import Path
+import json
+import re
+import subprocess
+import sys
+import tomllib
 import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 class MountedSyncContract(unittest.TestCase):
+    def test_generated_pos_reader_keeps_exact_inventory_dependencies(self):
+        subprocess.run([sys.executable, str(ROOT/'scripts/sync-durability/prepare.py')], check=True)
+        generated=(ROOT/'scripts/sync-durability/generated.rs').read_text()
+        pos=(ROOT/'src/server/api/pos.rs').read_text()
+        query=re.search(r'#\[derive\(serde::Deserialize\)\]\s*pub struct InventoryQuery\s*\{[^}]*\}', pos)
+        self.assertIsNotNone(query)
+        self.assertIn(query.group(), generated, 'compile the exact production query extractor type')
+        module=f'#[path = {json.dumps(str(ROOT/"src/server/api/pos_inventory.rs"))}]\nmod inventory;'
+        self.assertIn(module, generated, 'include the complete real inventory module and its tests')
+        manifest=json.loads((ROOT/'scripts/sync-durability/source-manifest.json').read_text())
+        for path in ['src/server/api/pos_inventory.rs', 'src/server/api/pos_inventory_test.rs', 'src/server/migrations/1041_inventory_adjustment_receipts.sql', 'src/server/api/durable_sync_test_schema.sql']:
+            self.assertIn(path, manifest, f'fingerprint transitive inventory input {path}')
+
+    def test_inventory_dependency_tests_retain_owned_database_and_discovery(self):
+        runner=(ROOT/'scripts/sync-durability/run.sh').read_text()
+        self.assertIn('export OHC_INVENTORY_TEST_DATABASE_URL="$OHC_SYNC_TEST_DATABASE_URL"', runner)
+        self.assertIn('-- --include-ignored --test-threads=2', runner)
+        manifest=tomllib.loads((ROOT/'scripts/sync-durability/Cargo.toml').read_text())
+        self.assertIn('reqwest', manifest['dev-dependencies'])
+
+    def test_mounted_inventory_fixture_supplies_real_reader_columns(self):
+        fixture=(ROOT/'scripts/sync-durability/mounted_test.rs').read_text()
+        self.assertIn('ALTER TABLE inventory_levels ADD COLUMN id TEXT', fixture)
+        self.assertIn('ADD COLUMN committed_count INTEGER NOT NULL DEFAULT 0', fixture)
+
     def test_mounted_events_use_real_durable_business_handler(self):
         source=(ROOT/'src/server/api/offline_sync.rs').read_text()
         start=source.index('pub async fn sync_events_handler(')
