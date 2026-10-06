@@ -2,6 +2,8 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { beforeEach, expect, test, vi } from 'vitest';
 import { TooltipProvider } from '../../components/TooltipRegistry';
 import AssistantPage from './page';
+import { installOnboardingLocks } from '../onboarding/testLocks';
+import { notifyQueueIdentityChange } from '@/lib/sync/queueIdentity';
 
 vi.mock('next/navigation', () => ({
   usePathname: () => '/assistant',
@@ -22,6 +24,8 @@ const tasksPayload = {
       title: "Create this week's operating brief",
       workspace: 'Personal OS',
       status: 'running',
+      output: null,
+      execution: {id:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',request_id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',phase:'dispatching',output:null},
       currentStep: 'Drafting report',
       mode: 'Plan',
       model: 'Auto',
@@ -43,7 +47,7 @@ const tasksPayload = {
       id: 'task-downloads',
       title: 'Organize Downloads by file type',
       workspace: 'Files',
-      status: 'blocked',
+      status: 'blocked', legacy: true, execution: null,
       currentStep: 'Waiting for folder permission',
       mode: 'Craft',
       model: 'MiniMax M2.5',
@@ -65,7 +69,7 @@ const tasksPayload = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.clearAllMocks(); installOnboardingLocks(); localStorage.clear(); notifyQueueIdentityChange();
   global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
     const urlString = typeof url === 'string' ? url : url.toString();
     if (urlString.includes('/api/v1/assistant/tasks') && init?.method === 'POST') {
@@ -74,23 +78,22 @@ beforeEach(() => {
           id: 'task-new',
           title: 'Build a Q3 planning deck',
           workspace: 'Launch Room',
-          status: 'running',
-          currentStep: 'Planning and preparing tools',
+          status: 'completed', output: 'A Q3 planning outline.',
+          execution: {id:'cccccccc-cccc-4ccc-8ccc-cccccccccccc',request_id:new Headers(init?.headers).get('Idempotency-Key'),root_request_id:new Headers(init?.headers).get('Idempotency-Key'),tenant_id:'assistant-test-tenant',actor_id:'assistant-test-owner',phase:'completed',output:'A Q3 planning outline.'},
+          currentStep: 'Text response completed',
           mode: 'Plan',
           model: 'Auto',
           provider: 'Auto',
           permissionProfile: 'Guarded',
           riskSummary: ['Guarded mode is active'],
-          artifacts: [
-            { id: 'artifact-deck', type: 'presentation', filename: 'assistant-presentation.pptx', preview: 'Slide deck outline.' },
-          ],
+          artifacts: [],
           changes: [],
           messages: [
             { id: 'msg-user', role: 'user', content: 'Build a Q3 planning deck' },
             { id: 'msg-assistant', role: 'assistant', content: 'Agent planned the task.' },
           ],
         },
-      }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+      }), { status: 202, headers: { 'Content-Type': 'application/json' } });
     }
     if (urlString.includes('/api/v1/assistant/share')) {
       return new Response(JSON.stringify({ share: { id: 'share-1', target: 'Share Link' } }), { status: 201, headers: { 'Content-Type': 'application/json' } });
@@ -126,6 +129,12 @@ beforeEach(() => {
 });
 
 function renderAssistantPage() {
+  const original = global.fetch;
+  global.fetch = vi.fn(async (url:RequestInfo | URL,init?:RequestInit) => {
+    if (String(url).endsWith('/session-identity')) return Response.json({userId:'assistant-test-owner',tenantId:'assistant-test-tenant',expiresAt:Date.now()+60_000});
+    if (String(url)==='/api/v1/agents/execution-policy') return Response.json({available:true,mode:'text_analysis',workspace_access:false,tools:[],policy:{provider:'ollama',model:'test-model',max_output_tokens:512}});
+    return original(url,init);
+  });
   return render(
     <TooltipProvider>
       <AssistantPage />
@@ -153,7 +162,7 @@ test('renders Task List as a real section page and keeps resource sections hones
 test('navigates between real sections without leaving fake buttons behind', async () => {
   renderAssistantPage();
 
-  await screen.findByRole('heading', { name: 'Agent Assistant' });
+  await screen.findByText("Create this week's operating brief");
   fireEvent.click(screen.getByRole('button', { name: 'Conversation' }));
   expect(screen.getByRole('heading', { name: "Create this week's operating brief" })).toBeDefined();
   expect(screen.getByText('I am gathering context and drafting the brief.')).toBeDefined();
@@ -187,8 +196,9 @@ test('submits a real task creation request and selects the returned task', async
   fireEvent.click(screen.getByRole('button', { name: 'New Task' }));
   fireEvent.change(screen.getByLabelText('Task prompt'), { target: { value: 'Build a Q3 planning deck' } });
   fireEvent.change(screen.getByLabelText('Workspace'), { target: { value: 'Launch Room' } });
-  fireEvent.change(screen.getByLabelText('Work directory'), { target: { value: '/workspace/launch' } });
-  fireEvent.change(screen.getByLabelText('Output format'), { target: { value: 'Presentation' } });
+  expect(screen.getByLabelText('Work directory')).toBeDisabled();
+  expect(screen.getByLabelText('Output format')).toHaveValue('Text');
+  await waitFor(() => expect(screen.getByRole('button', {name:'Start Task'})).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Start Task' }));
 
   await waitFor(() => {
@@ -201,10 +211,10 @@ test('submits a real task creation request and selects the returned task', async
   expect(JSON.parse(taskCall[1].body)).toMatchObject({
     prompt: 'Build a Q3 planning deck',
     workspace: 'Launch Room',
-    workDirectory: '/workspace/launch',
-    outputFormat: 'Presentation',
+    workDirectory: '',
+    outputFormat: 'Text',
   });
-  expect(await screen.findByText('assistant-presentation.pptx')).toBeDefined();
+  expect(await screen.findByText('A Q3 planning outline.')).toBeDefined();
 });
 
 test('shows no fake result actions when no artifact exists', async () => {
@@ -374,7 +384,7 @@ test('a rejected tour lookup reports loading failure rather than absent configur
   vi.mocked(fetch).mockImplementation(async (url, init) => String(url).includes('/walkthrough/assistant')
     ? Response.json({ error: 'forbidden' }, { status: 403 }) : original(url, init));
   renderAssistantPage();
-  const notice = await screen.findByText('The configured tour could not be loaded.');
+  const notice = await screen.findByText('Your session changed. The prior task view was cleared.');
   expect(notice).toBeVisible();
   expect(screen.getByRole('button', { name: 'Start Tour' })).toBeDisabled();
   expect(screen.queryByText('No tour is configured for this page.')).not.toBeInTheDocument();

@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS sms_notification_events (
     message TEXT NOT NULL,
     message_hash TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('prepared','no_recipients','provider_accepted','no_eligible_recipients')),
+    next_attempt_at BIGINT NOT NULL DEFAULT 0,
     created_at BIGINT NOT NULL,
     PRIMARY KEY (tenant_id, event_id, event_type)
 );

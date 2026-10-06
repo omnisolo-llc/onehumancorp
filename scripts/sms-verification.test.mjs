@@ -43,7 +43,7 @@ test('production mounts canonical SMS routes and consumers never use global fall
 
 test('SMS PostgreSQL claim fences current user, roles and opt-in until commit', async () => {
   const source = await readFile(new URL('../src/server/api/sms_settings.rs', import.meta.url), 'utf8');
-  assert.ok(source.includes('FOR SHARE OF u,r FOR UPDATE OF p'));
+  assert.ok(source.includes('FOR SHARE OF u,r,c FOR UPDATE OF p'));
 });
 test('volatile department acknowledgement cannot authorize an order SMS', async () => {
   const source = await readFile(new URL('../src/server/api/agents/webhook.rs', import.meta.url), 'utf8');
@@ -55,7 +55,7 @@ test('required SMS PostgreSQL gate is wired and cannot silently skip unavailable
   const runner = await readFile(new URL('scripts/sms-verification-contract/run.sh', root), 'utf8');
   const workflow = await readFile(new URL('.github/workflows/ci.yml', root), 'utf8');
   const gates = await readFile(new URL('scripts/focused_ci_gate.py', root), 'utf8');
-  assert.ok(gates.includes("'sms-verification-contract': (29, 'OHC_SMS_TEST_DATABASE_URL')"));
+  assert.ok(gates.includes("'sms-verification-contract': (49, 'OHC_SMS_TEST_DATABASE_URL')"));
   assert.ok(workflow.includes('python3 scripts/focused_ci_gate.py sms-verification-contract'));
   assert.ok(runner.includes('--locked --offline'));
   assert.ok(runner.includes('Required PostgreSQL test did not execute successfully'));
@@ -71,4 +71,22 @@ test('required billing persistence test uses isolated storage instead of silent 
   assert.ok(block.includes('DbStore::Sqlite(sqlite.clone())'));
   assert.ok(!/\breturn\s*;/.test(block));
   assert.ok(!block.includes('get_multiplexed_async_connection'));
+});
+
+test('committed orders atomically admit a frozen durable SMS outbox without historical backfill', () => {
+  const result = spawnSync('python3', ['scripts/sms-verification-contract/order_schema_test.py'], { cwd: new URL('../', import.meta.url), encoding: 'utf8' });
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+});
+test('mounted order worker drains only canonical receipts after ending system routing discovery', async () => {
+  const main = await readFile(new URL('../src/server/lib.rs', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../src/server/api/sms_settings.rs', import.meta.url), 'utf8');
+  assert.ok(main.includes('let _order_sms_worker = sms_service.start_order_notifications();'));
+  assert.ok(source.includes('transactional_order_admission_required'));
+  assert.match(source, /lock_committed_order\(\s*&mut\s+tx,\s*tenant,\s*event_id\s*\)/);
+  const discovery = source.split('async fn discover_order_notifications')[1].split('async fn drain_order_notifications')[0];
+  assert.ok(discovery.includes('SELECT e.tenant_id,e.event_id'));
+  assert.ok(discovery.includes('tx.commit().await?;'));
+  assert.ok(!discovery.includes('provider.send_sms'));
+  assert.ok(!discovery.includes('SELECT e.message'));
+  assert.ok(source.includes('order_worker_healthy_at'));
 });

@@ -1,27 +1,17 @@
 import { test, expect } from '../../../../e2e/fixtures';
-
+import { createGrowthOwner } from '../../../../e2e/growth_owner';
+import { assertUnavailableAssistantComposer } from '../../../../e2e/support/assistant_execution';
 
 test.describe('Assistant Page', () => {
-  test('navigates to assistant and verifies authentic state', async ({ page }) => {
+  test('navigates to assistant and verifies authentic unavailable state', async ({ page, baseURL }) => {
+    const owner = await createGrowthOwner(page, baseURL);
     await page.goto('/assistant');
-
-      // Verify the page shell and layout
-      await expect(page.getByTestId('assistant-shell')).toBeVisible();
-      await expect(page.getByTestId('assistant-workstation')).toBeVisible();
-      await expect(page.getByRole('heading', { name: /Assistant/ })).toBeVisible();
-
-      // Ensure mock data does not exist
-      await expect(page.getByText('Create a personal briefing')).not.toBeVisible();
-
-      // Start a task via UI to verify backend connection
-      await page.getByRole('button', { name: 'New Task' }).click();
-      await page.getByLabel('Task prompt').fill('Build a test report');
-      await page.getByRole('button', { name: 'Start Task' }).click();
-
-      // The new task should appear
-      await expect(page.getByText('Build a test report')).toBeVisible();
-
-      // Check results panel logic
-      await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
+    await expect(page.getByTestId('assistant-shell')).toBeVisible();
+    await expect(page.getByTestId('assistant-workstation')).toBeVisible();
+    await expect(page.getByRole('heading', { name: /Assistant/ })).toBeVisible();
+    await expect(page.getByText('Create a personal briefing')).not.toBeVisible();
+    await assertUnavailableAssistantComposer(page, owner, 'Summarize only this supplied test report');
+    await page.getByRole('button', { name: 'Results', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Results', exact: true })).toBeVisible();
   });
 });

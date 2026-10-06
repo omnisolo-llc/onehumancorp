@@ -6,7 +6,7 @@ import { QUEUE_IDENTITY_EPOCH_KEY } from '@/lib/sync/queueIdentity';
 type Owner = { userId: string; tenantId: string; expiresAt: number };
 type Preferences = { urgent_booking: boolean; failed_payment: boolean; new_order: boolean };
 type Challenge = { challenge_id: string; phone: string; state: string; expires_at: number };
-type Snapshot = { status: 'verified' | 'unverified'; phone: string | null; verification_id: string | null; preferences: Preferences; challenge: Challenge | null; provider_configured: boolean };
+type Snapshot = { status: 'verified' | 'unverified'; phone: string | null; verification_id: string | null; preferences: Preferences; challenge: Challenge | null; provider_configured: boolean; order_notifications_available: boolean };
 const emptyPreferences: Preferences = { urgent_booking: false, failed_payment: false, new_order: false };
 const phoneNumber = (value: unknown): value is string => typeof value === 'string' && /^\+[1-9]\d{7,14}$/.test(value);
 const identifier = (value: unknown): value is string => typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
@@ -32,7 +32,7 @@ function parseSnapshot(value: unknown, owner: Owner): Snapshot {
     challenge = item as Challenge;
   }
   return { status: data.status as Snapshot['status'], phone: data.phone as string | null, verification_id: data.verification_id as string | null,
-    preferences: preferences as Preferences, challenge, provider_configured: data.provider_configured };
+    preferences: preferences as Preferences, challenge, provider_configured: data.provider_configured, order_notifications_available: data.order_notifications_available === true };
 }
 
 export function SmsSettingsPanel() {
@@ -105,7 +105,7 @@ export function SmsSettingsPanel() {
     finally { if (active(epoch)) { busy.current = false; setPending(false); } }
   }
   async function save(key: keyof Preferences, checked: boolean) {
-    if (busy.current || !owner.current || snapshot?.status !== 'verified') return;
+    if (busy.current || !owner.current || snapshot?.status !== 'verified' || (key === 'new_order' && checked && !snapshot.order_notifications_available)) return;
     const expected = owner.current, epoch = generation.current, wanted = { ...snapshot.preferences, [key]: checked };
     busy.current = true; setPending(true);
     try {
@@ -134,8 +134,8 @@ export function SmsSettingsPanel() {
       {sendHeld && <p>Another SMS will not be sent while the previous provider outcome is unknown.</p>}
       {canConfirm && <div className="flex gap-3"><input aria-label="Verification code" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, ''))} disabled={pending} className="rounded-xl border px-4 py-3" /><button type="button" disabled={pending || otp.length !== 6} className="app-button min-h-[44px]" onClick={() => void confirm()}>Confirm OTP</button></div>}
       {verified && <p>✓ Number Verified</p>}
-      <div className="grid gap-4 sm:grid-cols-2">{([['urgent_booking', 'Urgent Bookings'], ['failed_payment', 'Failed Payments'], ['new_order', 'New Orders']] as const).map(([key, label]) => <label key={key} className="flex gap-3"><input type="checkbox" aria-label={label} aria-describedby={key === 'new_order' ? 'sms-new-order-availability' : undefined} checked={snapshot?.preferences[key] ?? false} disabled={!verified || pending} onChange={e => void save(key, e.target.checked)} />{label}</label>)}</div>
-      <p id="sms-new-order-availability" className="text-sm">You can save this preference. Automatic new-order SMS is currently unavailable until orders have a confirmed, saved receipt.</p>
+      <div className="grid gap-4 sm:grid-cols-2">{([['urgent_booking', 'Urgent Bookings'], ['failed_payment', 'Failed Payments'], ['new_order', 'New Orders']] as const).map(([key, label]) => <label key={key} className="flex gap-3"><input type="checkbox" aria-label={label} aria-describedby={key === 'new_order' ? 'sms-new-order-availability' : undefined} checked={snapshot?.preferences[key] ?? false} disabled={!verified || pending || (key === 'new_order' && !snapshot?.order_notifications_available && !snapshot?.preferences.new_order)} onChange={e => void save(key, e.target.checked)} />{label}</label>)}</div>
+      <p id="sms-new-order-availability" className="text-sm">{snapshot?.order_notifications_available ? 'Only newly saved orders notify the verified owners who opted in when the order was saved. Provider acceptance does not confirm delivery.' : 'Automatic new-order SMS is unavailable until the provider and durable order worker are ready. Existing preferences are kept; you can still opt out.'}</p>
       <button type="button" className="app-button min-h-[44px]" disabled={pending || !owner.current} onClick={() => {
         if (!owner.current || busy.current) return;
         const expected = owner.current, epoch = generation.current; busy.current = true; setPending(true);

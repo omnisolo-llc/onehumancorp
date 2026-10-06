@@ -9,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
 server = (ROOT / 'src/server/lib.rs').read_bytes().decode('utf-8')
 hire = (ROOT / 'src/server/api/agents/hire.rs').read_bytes().decode('utf-8')
+assistant_routes = (ROOT / 'src/server/api/assistant.rs').read_text()
+assert '.merge(crate::workflow_execution::assistant::router())' in assistant_routes
+assert 'api::assistant::router(db.clone()).layer(axum::Extension(workflow_execution.clone()))' in server
+
 hub_source = (ROOT / 'src/server/hub.rs').read_bytes().decode('utf-8')
 
 
@@ -108,13 +112,14 @@ parts.append('pub mod llm_wire_contract {\n'+'\n'.join(wire)+'\n}')
 parts += ['#[cfg(test)]#[path="test.rs"]mod tests;']
 (HERE/'generated.rs').write_text('\n\n'.join(parts)+'\n')
 inputs = list(rust_source_inputs()) + [ROOT/'.github/workflows/ci.yml',ROOT/'scripts/focused_ci_gate.py',ROOT/'scripts/test_focused_ci_gate.py',ROOT/'Cargo.toml',ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'src/server/api/agents/hire.rs',ROOT/'src/server/workflow_execution.rs',ROOT/'src/server/hub.rs']
-inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in','test_receipt_schema.py','proxy-readback-proof.cjs','package.json','package-lock.json','verify_node_lock.py','test_usage_schema.py']]
+inputs += [p for p in HERE.iterdir() if p.name in ['Cargo.toml','prepare.py','test.rs','run.sh','README.md','verify_lock.py','rpc_boundary.rs.in','test_receipt_schema.py','proxy-readback-proof.cjs','package.json','package-lock.json','verify_node_lock.py','test_usage_schema.py','assistant_test.rs','test_assistant_schema.py']]
 inputs += [p for p in (ROOT/'src/ui/next/src/lib/auth').glob('*') if p.is_file() and p.suffix in ('.ts','.json')]
 inputs += [ROOT/'src/ui/next/package.json',ROOT/'src/ui/next/package-lock.json',ROOT/'package-lock.json']
 inputs += [p for p in (ROOT/'src/proto').rglob('*.proto')]
 inputs += [p for p in (ROOT/'src/server/workflow_execution').rglob('*.rs')]
 inputs += [p for p in (ROOT/'src/server/persistence').rglob('*') if p.suffix in ['.rs','.sql']]
 inputs += [p for p in (ROOT/'src/server/migrations').glob('1020_*.sql')]
+inputs += [ROOT/'src/server/migrations/1042_assistant_execution.sql',ROOT/'src/server/api/assistant.rs']
 for name in ['auth','common','config','harness','oidc','omnisolo','telemetry','pricing','utils']:
     inputs += [p for p in (ROOT/'src/server'/name).rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]
 inputs += [p for p in (ROOT/'src/agents/builtin').rglob('*') if p.is_file() and (p.suffix=='.rs' or p.name=='Cargo.toml')]

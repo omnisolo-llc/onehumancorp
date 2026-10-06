@@ -9,7 +9,7 @@ const identity = { userId: 'owner-a', tenantId: 'tenant-a', expiresAt: 4_102_444
 const binding = { user_id: identity.userId, organization_id: identity.tenantId };
 const preferences = { urgent_booking: false, failed_payment: false, new_order: false };
 const challenge = { challenge_id: '00000000-0000-4000-8000-000000000001', phone: '+14155550123', state: 'accepted', expires_at: 4_102_444_800 };
-const snapshot = (verified = false) => ({ success: true, ...binding, status: verified ? 'verified' : 'unverified', phone: verified ? challenge.phone : null, verification_id: verified ? challenge.challenge_id : null, preferences, challenge: null, provider_configured: true });
+const snapshot = (verified = false) => ({ success: true, ...binding, status: verified ? 'verified' : 'unverified', phone: verified ? challenge.phone : null, verification_id: verified ? challenge.challenge_id : null, preferences, challenge: null, provider_configured: true, order_notifications_available: true });
 let readSms: () => Response | Promise<Response>;
 let sendSms: () => Response | Promise<Response>;
 let confirmSms: () => Response | Promise<Response>;
@@ -116,20 +116,38 @@ it('requires a current matching saved verification receipt in preference writes'
   expect(JSON.parse(String(call?.[1]?.body))).toEqual({ phone: challenge.phone, verification_id: challenge.challenge_id, ...preferences, new_order: true });
   expect(call?.[1]?.headers).toEqual(expect.objectContaining({ 'x-ohc-expected-user': identity.userId, 'x-ohc-expected-tenant': identity.tenantId }));
 });
-it('explains that saving New Orders does not enable automatic order SMS', async () => {
+it('enables New Orders only for a healthy mounted durable worker and preserves that preference', async () => {
   readSms = () => Response.json(snapshot(true));
   saveSms = () => Response.json({ ...snapshot(true), preferences: { ...preferences, new_order: true } });
   const view = render(<SettingsPage />);
   const toggle = await screen.findByRole('checkbox', { name: 'New Orders' });
   await waitFor(() => expect(toggle).not.toBeDisabled());
-  expect(toggle).toHaveAccessibleDescription('You can save this preference. Automatic new-order SMS is currently unavailable until orders have a confirmed, saved receipt.');
+  expect(toggle).toHaveAccessibleDescription(/Only newly saved orders notify the verified owners who opted in/);
   fireEvent.click(toggle);
   await screen.findByText('SMS preferences saved.');
   expect(toggle).toBeChecked();
-  expect(screen.getByText(/Automatic new-order SMS is currently unavailable/)).toBeVisible();
+  expect(screen.getByText(/Provider acceptance does not confirm delivery/)).toBeVisible();
   view.unmount();
   readSms = () => Response.json({ ...snapshot(true), preferences: { ...preferences, new_order: true } });
   render(<SettingsPage />);
   await waitFor(() => expect(screen.getByRole('checkbox', { name: 'New Orders' })).toBeChecked());
-  expect(screen.getByRole('checkbox', { name: 'New Orders' })).toHaveAccessibleDescription(/Automatic new-order SMS is currently unavailable/);
+});
+it.each([false, undefined])('disables new New Orders subscriptions without explicit worker availability (%s)', async available => {
+  readSms = () => Response.json({ ...snapshot(true), order_notifications_available: available });
+  render(<SettingsPage />);
+  await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Urgent Bookings' })).not.toBeDisabled());
+  const toggle = screen.getByRole('checkbox', { name: 'New Orders' });
+  expect(toggle).toBeDisabled();
+  expect(toggle).toHaveAccessibleDescription(/Automatic new-order SMS is unavailable/);
+});
+it('allows opting out during a worker outage without discarding the saved preference', async () => {
+  readSms = () => Response.json({ ...snapshot(true), order_notifications_available: false, preferences: { ...preferences, new_order: true } });
+  saveSms = () => Response.json({ ...snapshot(true), order_notifications_available: false });
+  render(<SettingsPage />);
+  const toggle = await screen.findByRole('checkbox', { name: 'New Orders' });
+  await waitFor(() => expect(toggle).toBeChecked());
+  expect(toggle).not.toBeDisabled();
+  fireEvent.click(toggle);
+  await screen.findByText('SMS preferences saved.');
+  expect(toggle).not.toBeChecked();expect(toggle).toBeDisabled();
 });

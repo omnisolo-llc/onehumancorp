@@ -34,8 +34,9 @@ impl Fixture {
         for ddl in [Schema::new(backend).create_table_from_entity(server_auth::seaorm_store::entities::identity_user_role::Entity),Schema::new(backend).create_table_from_entity(server_auth::seaorm_store::entities::revoked_token::Entity)] { orm.execute(backend.build(&ddl)).await.unwrap(); }
         // Apply the actual new migration, not a separately invented SMS schema.
         sqlx::raw_sql(include_str!("../../src/server/migrations/1039_sms_verification_receipts.sql")).execute(&admin).await.unwrap();
+        sqlx::raw_sql(include_str!("../../src/server/migrations/1043_durable_order_sms.sql")).execute(&admin).await.unwrap();
         sqlx::raw_sql(include_str!("../../src/server/persistence/token_revocation_fence_postgres.sql")).execute(&admin).await.unwrap();
-        for table in ["users","identity_user_roles","auth_revoked_tokens"] { sqlx::raw_sql(&format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;ALTER TABLE {table} FORCE ROW LEVEL SECURITY;CREATE POLICY tenant_scope ON {table} USING(tenant_id=current_setting('app.current_tenant',true)) WITH CHECK(tenant_id=current_setting('app.current_tenant',true));")).execute(&admin).await.unwrap(); }
+        for table in ["users","identity_user_roles","auth_revoked_tokens","orders"] { sqlx::raw_sql(&format!("ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;ALTER TABLE {table} FORCE ROW LEVEL SECURITY;CREATE POLICY tenant_scope ON {table} USING(tenant_id=current_setting('app.current_tenant',true)) WITH CHECK(tenant_id=current_setting('app.current_tenant',true));")).execute(&admin).await.unwrap(); }
         sqlx::raw_sql(&format!("CREATE ROLE {role} LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE PASSWORD '{password}';GRANT USAGE ON SCHEMA {schema} TO {role};GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA {schema} TO {role};")).execute(&admin).await.unwrap();
         let pool=PgPoolOptions::new().max_connections(6).connect_with(options.username(&role).password(&password).application_name(&application)).await.unwrap();
         let privileges:(bool,bool)=sqlx::query_as("SELECT rolsuper,rolbypassrls FROM pg_roles WHERE rolname=current_user").fetch_one(&pool).await.unwrap();assert_eq!(privileges,(false,false));
@@ -64,6 +65,11 @@ impl Fixture {
         assert_eq!(self.request(0,"sms-confirm",Method::POST,json!({"challenge_id":id,"phone":"+14155550123","otp":code})).await.0,StatusCode::OK);
         assert_eq!(self.request(0,"sms-preferences",Method::POST,json!({"verification_id":id,"phone":"+14155550123","urgent_booking":true,"failed_payment":false,"new_order":true})).await.0,StatusCode::OK);id
     }
+    async fn order(&self,id:&str) {
+        let mut tx=self.pool.begin().await.unwrap();
+        sqlx::query("SELECT set_config('app.current_tenant','tenant-a',true)").execute(&mut *tx).await.unwrap();
+        sqlx::query("INSERT INTO orders(id,tenant_id,status) VALUES($1,'tenant-a','paid')").bind(id).execute(&mut *tx).await.unwrap();tx.commit().await.unwrap();
+    }
     async fn wait_for_app_lock(&self) {
         tokio::time::timeout(Duration::from_secs(2),async {
             loop {
@@ -78,7 +84,7 @@ impl Fixture {
         sqlx::query(&format!("DROP ROLE {}",self.role)).execute(&self.admin).await.unwrap();self.admin.close().await;
     }
 }
-const CHANGES:[&str;3]=["UPDATE identity_user_roles SET role_name='MEMBER' WHERE user_id='owner-a'", "UPDATE users SET active=FALSE WHERE id='owner-a'", "UPDATE sms_notification_preferences SET new_order=FALSE WHERE actor_id='owner-a'"];
+const CHANGES:[&str;6]=["UPDATE identity_user_roles SET role_name='MEMBER' WHERE user_id='owner-a'", "UPDATE users SET active=FALSE WHERE id='owner-a'", "UPDATE sms_notification_preferences SET new_order=FALSE WHERE actor_id='owner-a'", "UPDATE sms_verification_challenges SET state='superseded' WHERE actor_id='owner-a'", "UPDATE sms_notification_preferences SET phone='+14155550999' WHERE actor_id='owner-a'", "UPDATE sms_notification_preferences SET verification_id='replacement' WHERE actor_id='owner-a'"];
 
 #[tokio::test]
 async fn pg_migration_installs_forced_tenant_rls() {
@@ -105,7 +111,7 @@ async fn pg_claim_locks_fence_optout_demotion_and_deactivation() {
 #[tokio::test]
 async fn pg_revocation_winning_before_claim_produces_no_send() {
     for change in CHANGES {
-        let f=Fixture::new().await;f.subscribe().await;
+        let f=Fixture::new().await;f.subscribe().await;f.order("race-event").await;
         let mut writer=f.admin.begin().await.unwrap();sqlx::query(change).execute(&mut *writer).await.unwrap();
         let (result,())=tokio::join!(f.service.dispatch("tenant-a","race-event","new_order","Frozen order notice"),async{f.wait_for_app_lock().await;writer.commit().await.unwrap();});
         let receipt=result.unwrap();assert_eq!(receipt.status,"no_eligible_recipients");assert!(receipt.provider_message_ids.is_empty());assert_eq!(f.provider.calls.load(Ordering::SeqCst),1);f.finish().await;
@@ -123,11 +129,11 @@ async fn pg_rate_and_cooldown_are_durable() {
 #[tokio::test]
 async fn pg_empty_event_and_changed_generator_replay_are_terminal() {
     let f=Fixture::new().await;
-    assert_eq!(f.service.dispatch("tenant-a","empty","new_order","first text").await.unwrap().status,"no_recipients");
+    assert_eq!(f.service.dispatch("tenant-a","empty","urgent_booking","first text").await.unwrap().status,"no_recipients");
     f.subscribe().await;let calls=f.provider.calls.load(Ordering::SeqCst);
-    assert_eq!(f.service.dispatch("tenant-a","empty","new_order","new LLM text").await.unwrap().status,"no_recipients");assert_eq!(f.provider.calls.load(Ordering::SeqCst),calls);
-    let first=f.service.dispatch("tenant-a","accepted","new_order","original generated message").await.unwrap();
-    let replay=f.service.dispatch("tenant-a","accepted","new_order","different generated message after lost acknowledgement").await.unwrap();
+    assert_eq!(f.service.dispatch("tenant-a","empty","urgent_booking","new LLM text").await.unwrap().status,"no_recipients");assert_eq!(f.provider.calls.load(Ordering::SeqCst),calls);
+    let first=f.service.dispatch("tenant-a","accepted","urgent_booking","original generated message").await.unwrap();
+    let replay=f.service.dispatch("tenant-a","accepted","urgent_booking","different generated message after lost acknowledgement").await.unwrap();
     assert_eq!(first.provider_message_ids,replay.provider_message_ids);assert_eq!(f.provider.calls.load(Ordering::SeqCst),calls+1);
     let message:String=sqlx::query_scalar("SELECT message FROM sms_notification_events WHERE event_id='accepted'").fetch_one(&f.admin).await.unwrap();assert_eq!(message,"original generated message");f.finish().await;
 }
@@ -140,4 +146,77 @@ async fn pg_wrong_expired_replayed_and_cross_tenant_proofs_are_rejected() {
     sqlx::query("UPDATE sms_verification_challenges SET created_at=0,expires_at=1").execute(&f.admin).await.unwrap();assert_eq!(f.request(0,"sms-confirm",Method::POST,payload(&code)).await.0,StatusCode::BAD_REQUEST);
     sqlx::query("UPDATE sms_verification_challenges SET expires_at=$1").bind(chrono::Utc::now().timestamp()+300).execute(&f.admin).await.unwrap();assert_eq!(f.request(0,"sms-confirm",Method::POST,payload(&code)).await.0,StatusCode::OK);
     assert_eq!(f.request(0,"sms-confirm",Method::POST,payload(&code)).await.0,StatusCode::BAD_REQUEST);f.finish().await;
+}
+
+#[tokio::test]
+async fn pg_order_admission_commit_rollback_and_tenant_receipt() {
+    let f=Fixture::new().await;f.subscribe().await;
+    let mut tx=f.pool.begin().await.unwrap();sqlx::query("SELECT set_config('app.current_tenant','tenant-a',true)").execute(&mut *tx).await.unwrap();
+    sqlx::query("INSERT INTO orders(id,tenant_id,status) VALUES('rollback','tenant-a','paid')").execute(&mut *tx).await.unwrap();
+    let private:i64=sqlx::query_scalar("SELECT COUNT(*) FROM sms_notification_events").fetch_one(&mut *tx).await.unwrap();assert_eq!(private,1);
+    let visible:i64=sqlx::query_scalar("SELECT COUNT(*) FROM sms_notification_events").fetch_one(&f.admin).await.unwrap();assert_eq!(visible,0);
+    tx.rollback().await.unwrap();assert_eq!(f.provider.calls.load(Ordering::SeqCst),1);
+    f.order("committed").await;
+    assert!(f.service.dispatch("tenant-b","committed","new_order","forged").await.is_err());
+    let receipt=f.service.dispatch("tenant-a","committed","new_order","caller cannot replace content").await.unwrap();assert_eq!(receipt.status,"provider_accepted");
+    let original:String=sqlx::query_scalar("SELECT message FROM sms_notification_events").fetch_one(&f.admin).await.unwrap();assert_eq!(original,"A new order has been saved. Open OmniSolo to review it.");
+    assert_eq!(f.provider.calls.load(Ordering::SeqCst),2);f.finish().await;
+}
+#[tokio::test]
+async fn pg_order_admission_fences_optout_role_and_activity_to_commit() {
+    for change in CHANGES {
+        let f=Fixture::new().await;f.subscribe().await;
+        let mut tx=f.pool.begin().await.unwrap();sqlx::query("SELECT set_config('app.current_tenant','tenant-a',true)").execute(&mut *tx).await.unwrap();
+        sqlx::query("INSERT INTO orders(id,tenant_id,status) VALUES('locked','tenant-a','paid')").execute(&mut *tx).await.unwrap();
+        let mut writer=f.admin.begin().await.unwrap();sqlx::query("SET LOCAL lock_timeout='100ms'").execute(&mut *writer).await.unwrap();
+        let error=sqlx::query(change).execute(&mut *writer).await.expect_err("admitted audience authority must stay locked until order commit");
+        assert_eq!(error.as_database_error().and_then(|e|e.code()).as_deref(),Some("55P03"));writer.rollback().await.unwrap();
+        tx.commit().await.unwrap();sqlx::query(change).execute(&f.admin).await.unwrap();
+        assert_eq!(f.service.dispatch("tenant-a","locked","new_order","").await.unwrap().status,"no_eligible_recipients");
+        assert_eq!(f.provider.calls.load(Ordering::SeqCst),1);f.finish().await;
+    }
+}
+#[tokio::test]
+async fn pg_order_revocation_winning_admission_freezes_empty_audience() {
+    for change in CHANGES {
+        let f=Fixture::new().await;f.subscribe().await;
+        let mut writer=f.admin.begin().await.unwrap();sqlx::query(change).execute(&mut *writer).await.unwrap();
+        let ((),())=tokio::join!(f.order("race"),async{f.wait_for_app_lock().await;writer.commit().await.unwrap();});
+        let status:String=sqlx::query_scalar("SELECT status FROM sms_notification_events WHERE event_id='race'").fetch_one(&f.admin).await.unwrap();assert_eq!(status,"no_recipients");
+        assert_eq!(f.provider.calls.load(Ordering::SeqCst),1);f.finish().await;
+    }
+}
+#[tokio::test]
+async fn pg_order_claim_fences_deletion_and_missing_proof_cannot_send() {
+    let f=Fixture::new().await;f.subscribe().await;f.order("locked-source").await;
+    let mut tx=f.service.background_transaction("tenant-a").await.unwrap();assert!(lock_committed_order(&mut tx,"tenant-a","locked-source").await.unwrap());
+    let mut writer=f.admin.begin().await.unwrap();sqlx::query("SET LOCAL lock_timeout='100ms'").execute(&mut *writer).await.unwrap();
+    let error=sqlx::query("DELETE FROM orders WHERE id='locked-source'").execute(&mut *writer).await.expect_err("order proof must survive until claim commit");
+    assert_eq!(error.as_database_error().and_then(|e|e.code()).as_deref(),Some("55P03"));writer.rollback().await.unwrap();tx.commit().await.unwrap();
+    sqlx::query("DELETE FROM orders WHERE id='locked-source'").execute(&f.admin).await.unwrap();
+    assert!(f.service.dispatch("tenant-a","locked-source","new_order","").await.is_err());assert!(f.service.dispatch("tenant-a","absent","new_order","").await.is_err());
+    assert_eq!(f.provider.calls.load(Ordering::SeqCst),1);f.finish().await;
+}
+#[tokio::test]
+async fn pg_order_discovery_does_not_escalate_an_ungranted_application_role() {
+    let f=Fixture::new().await;f.subscribe().await;f.order("pending").await;
+    assert!(f.service.discover_order_notifications().await.is_err(),"SMS must not grant the existing system discovery role to an unprivileged identity pool");
+    let privileged:bool=sqlx::query_scalar("SELECT rolsuper OR rolbypassrls FROM pg_roles WHERE rolname=current_user").fetch_one(&f.pool).await.unwrap();assert!(!privileged);
+    assert_eq!(f.provider.calls.load(Ordering::SeqCst),1);f.finish().await;
+}
+#[tokio::test]
+async fn pg_order_existing_discovery_role_returns_to_tenant_authority_before_dispatch() {
+    let f=Fixture::new().await;f.subscribe().await;f.order("routed").await;
+    let exists:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='ohc_bypassrls')").fetch_one(&f.admin).await.unwrap();
+    assert!(exists,"required CI bootstrap must supply its existing background discovery role; the SMS code never creates one");
+    // Permissions are limited to this disposable schema and fixture login; all
+    // disappear when finish drops them. Production grants remain untouched.
+    sqlx::raw_sql(&format!("GRANT USAGE ON SCHEMA {} TO ohc_bypassrls;GRANT SELECT ON orders,sms_notification_events,sms_notification_dispatches TO ohc_bypassrls;GRANT ohc_bypassrls TO {};",f.schema,f.role)).execute(&f.admin).await.unwrap();
+    assert_eq!(f.service.discover_order_notifications().await.unwrap(),vec![("tenant-a".into(),"routed".into())]);
+    let current:String=sqlx::query_scalar("SELECT current_user::text").fetch_one(&f.pool).await.unwrap();assert_eq!(current,f.role);
+    let mut tx=f.service.background_transaction("tenant-b").await.unwrap();
+    assert!(!lock_committed_order(&mut tx,"tenant-a","routed").await.unwrap(),"discovery cannot leave bypass active on the next tenant content transaction");tx.commit().await.unwrap();
+    assert_eq!(f.service.drain_order_notifications().await.unwrap(),1);
+    assert_eq!(f.provider.calls.load(Ordering::SeqCst),2);
+    assert_eq!(f.service.drain_order_notifications().await.unwrap(),0);f.finish().await;
 }

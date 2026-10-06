@@ -58,3 +58,12 @@ timestamp/ID cursor traversal, and complete maximum-size escaped task/output.
 A pinned Node 22/TypeScript witness executes the production sealed-session proxy
 against chunked loopback HTTP bytes and its real 2 MiB response limit. The witness
 uses only the already-locked TypeScript package, installed in the existing CI lane.
+
+Assistant execution contracts use the exact production assistant router, the same
+canonical receipt database, real owner/token authorization and the tracked worker.
+Twelve additional HTTP cases cover persisted task-derived text, output readback,
+replay, denied capabilities, request/tenant isolation, archive preservation,
+association failure, safe new attempts, restart, and the real configured adapter
+against the owned loopback provider. The separate SQLite association schema
+checks are mandatory in run.sh. Native full-server routing remains a separate
+gate, including preserved legacy-history routes.

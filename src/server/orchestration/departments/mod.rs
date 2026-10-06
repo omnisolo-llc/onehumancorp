@@ -1,4 +1,5 @@
 pub mod handoff_protocol;
+pub mod message_delivery;
 pub mod orchestrator;
 pub mod types;
 

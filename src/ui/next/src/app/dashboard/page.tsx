@@ -1,4 +1,5 @@
 "use client";
+import { messageDeliveryStatus } from "@/lib/messageDeliveryStatus";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import type { AgentFeedData, AgentFeedItem, ActivityItem, TriageItem } from '@/lib/agent-feed-types';
@@ -96,6 +97,8 @@ function money(value: number | undefined) {
 }
 
 function statusTone(status?: string) {
+  const delivery = messageDeliveryStatus(status);
+  if (delivery) return delivery.tone;
   const normalized = (status || "").toLowerCase();
   if (["paid", "completed", "shipped", "delivered", "auto_replied"].includes(normalized)) return "good";
   if (["pending", "unfulfilled", "open"].includes(normalized)) return "warn";
@@ -105,7 +108,8 @@ function statusTone(status?: string) {
 
 function formatStatus(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (normalized === "auto_replied") return "✨ AI Handled";
+  const delivery = messageDeliveryStatus(normalized);
+  if (delivery) return delivery.label;
   return status || "Open";
 }
 
