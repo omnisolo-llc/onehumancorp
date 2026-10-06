@@ -3,6 +3,7 @@
 import { useState,useEffect,useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { SmsSettingsPanel } from "./SmsSettingsPanel";
 import { QUEUE_IDENTITY_EPOCH_KEY } from "../../lib/sync/queueIdentity";
 import { AppShell } from "../components/AppShell";
 import { WithTooltip } from "../../components/TooltipRegistry";
@@ -41,11 +42,6 @@ function telemetryRestriction(state: TelemetryState): string {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-  const [smsStatus, setSmsStatus] = useState("");
   const [preferences, setPreferences] = useState({
     email_notifications: false,
     push_notifications: false,
@@ -351,58 +347,8 @@ export default function SettingsPage() {
     } finally { telemetrySaving.current = false; }
   };
 
-  const handleVerify = async () => {
-    setIsVerifying(true);
-    try {
-      const res = await fetch("/api/v1/settings/sms-verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-      if (!res.ok) {
-        setSmsStatus("Failed to send verification SMS.");
-        setIsVerifying(false);
-      } else {
-        setSmsStatus("Verification code sent.");
-      }
-    } catch {
-      setSmsStatus("Network error while sending verification SMS.");
-      setIsVerifying(false);
-    }
-  };
-
-  const handleConfirm = async () => {
-    try {
-      const res = await fetch("/api/v1/settings/sms-confirm", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp }),
-      });
-      if (res.ok) {
-        setIsVerified(true);
-        setSmsStatus("Phone number verified.");
-      } else {
-        setSmsStatus("Invalid OTP.");
-      }
-    } catch {
-      setSmsStatus("Network error while confirming OTP.");
-    }
-  };
-
-  const handlePreferenceChange = async (key: string, checked: boolean) => {
-    const newPrefs = { ...preferences, [key]: checked };
-    setPreferences(newPrefs);
-    if (isVerified) {
-      try {
-        await fetch("/api/v1/settings/sms-preferences", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone, ...newPrefs }),
-        });
-      } catch (e) {
-        console.error("Failed to save preferences", e);
-      }
-    }
+  const handlePreferenceChange = (key: string, checked: boolean) => {
+    setPreferences(current => ({ ...current, [key]: checked }));
   };
 
   const handleVoiceSettingChange = async (key: string, value: string | boolean) => {
@@ -539,79 +485,9 @@ export default function SettingsPage() {
         </section>
 
 
-        {/* SMS Notifications Card */}
-        <section className="app-panel glassmorphism border border-white/40 dark:border-white/10 hover:shadow-md transition-all duration-300 overflow-hidden">
-          <div className="app-panel-header border-b border-gray-100/50 bg-white/30 px-6 py-4">
-            <div>
-              <h3 className="app-panel-title text-base font-bold font-outfit text-gray-900 dark:text-white">Critical SMS Alerts</h3>
-              <div className="text-xs text-[#0f766e] dark:text-[#6ac5bd] mt-1">Get texts for critical events. Verify your phone number to enable.</div>
-            </div>
-          </div>
-          <div className="app-panel-body p-6 space-y-6">
-            <div className="space-y-4">
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500">Mobile Number</label>
-              <div className="flex gap-3 max-w-md">
-                <input
-                  aria-label="Mobile Number"
-                  type="tel"
-                  placeholder="Mobile Phone Number (e.g. +1234567890)"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  disabled={isVerified}
-                  className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none disabled:bg-gray-50 disabled:text-gray-400"
-                />
-                {!isVerifying && !isVerified && (
-                  <WithTooltip id="settings-verify-tooltip" defaultText="Verify your number to receive critical notifications.">
-                    <button onClick={handleVerify} className="px-5 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs whitespace-nowrap" type="button">
-                      Verify Number
-                    </button>
-                  </WithTooltip>
-                )}
-              </div>
+        <SmsSettingsPanel />
 
-              {smsStatus && <p className="text-sm font-semibold text-[#0f766e] dark:text-[#6ac5bd]" role="status">⚡ {smsStatus}</p>}
-
-              {isVerifying && !isVerified && (
-                <div className="rounded-xl border border-teal-100 bg-teal-50/30 p-4 max-w-md animate-fade-in">
-                  <p className="mb-3 text-xs font-semibold text-teal-800 dark:text-teal-200">A 6-digit code has been sent. Enter it below:</p>
-                  <div className="flex gap-3">
-                    <input
-                      aria-label="Verification code"
-                      type="text"
-                      placeholder="123456"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value)}
-                      className="w-28 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-mono text-gray-800 focus:border-[#0f766e] focus:ring-2 focus:ring-teal-100 transition-all outline-none"
-                    />
-                    <WithTooltip id="settings-otp-tooltip" defaultText="Click to confirm the code sent to your phone.">
-                      <button onClick={handleConfirm} className="px-5 py-3 bg-[#0f766e] hover:bg-[#0d645d] text-white font-bold rounded-xl shadow-md transition-all active:scale-95 text-xs" type="button">
-                        Confirm OTP
-                      </button>
-                    </WithTooltip>
-                  </div>
-                </div>
-              )}
-
-              {isVerified && <span className="inline-flex items-center px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold border border-green-200">✓ Number Verified</span>}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-6">
-                {[
-                  ["urgent_booking", "Urgent Bookings"],
-                  ["failed_payment", "Failed Payments"],
-                  ["new_order", "New Orders"],
-                ].map(([key, label]) => (
-                  <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${isVerified ? 'border-gray-100 hover:border-teal-200 bg-gray-50/30' : 'border-gray-100 opacity-60 cursor-not-allowed'}`}>
-                    <input
-                      aria-label={label}
-                      type="checkbox"
-                      disabled={!isVerified}
-                      checked={preferences[key as keyof typeof preferences]}
-                      onChange={(e) => handlePreferenceChange(key, e.target.checked)}
-                      className="rounded border-gray-300 text-[#0f766e] focus:ring-[#0f766e] w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
-                    />
-                    <span className={`text-sm font-medium ${isVerified ? "text-gray-800" : "text-gray-400"}`}>{label}</span>
-                  </label>
-                ))}
+        <section className="app-panel p-6 grid gap-4 sm:grid-cols-2" aria-label="Other notification preferences">
                 <label className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 bg-gray-50/30 cursor-pointer">
                   <input
                     aria-label="Enable Email Notifications"
@@ -632,9 +508,6 @@ export default function SettingsPage() {
                   />
                   <span className="text-sm font-medium text-gray-800">Enable Push Notifications</span>
                 </label>
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* Local Delivery and Voice Receptionist side-by-side */}

@@ -1752,10 +1752,6 @@ use tokio::sync::mpsc;
 use tokio_stream::Stream;
 use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status, transport::Server};
-// OTP Cache for verification
-pub static OTP_STORE: std::sync::LazyLock<
-    std::sync::Mutex<std::collections::HashMap<String, (String, std::time::Instant)>>,
-> = std::sync::LazyLock::new(|| std::sync::Mutex::new(std::collections::HashMap::new()));
 
 use hub::Hub;
 
@@ -3959,64 +3955,6 @@ impl HubService for MyHubService {
     }
 }
 
-pub async fn dispatch_critical_sms(event_type: &str, message: &str) -> Result<(), String> {
-    let store = crate::settings::Store::global();
-    let settings = store.get();
-
-    let should_send = match event_type {
-        "failed_payment" => settings.sms_alert_failed_payment,
-        "new_order" => settings.sms_alert_new_order,
-        "urgent_booking" => settings.sms_alert_urgent_booking,
-        "draft_approval" => true, // Ensure approval notifications are sent
-        _ => false,
-    };
-
-    if !should_send {
-        return Ok(());
-    }
-
-    if let Some(phone) = settings.sms_critical_phone {
-        let account_sid = match std::env::var("TWILIO_ACCOUNT_SID") {
-            Ok(value) if !value.trim().is_empty() => value,
-            _ => {
-                tracing::warn!(
-                    "Skipping critical SMS because TWILIO_ACCOUNT_SID is not configured."
-                );
-                return Ok(());
-            }
-        };
-        let auth_token = match std::env::var("TWILIO_AUTH_TOKEN") {
-            Ok(value) if !value.trim().is_empty() => value,
-            _ => {
-                tracing::warn!(
-                    "Skipping critical SMS because TWILIO_AUTH_TOKEN is not configured."
-                ); // pii-safe
-                return Ok(());
-            }
-        };
-        let from_number = match std::env::var("TWILIO_FROM_NUMBER") {
-            Ok(value) if !value.trim().is_empty() => value,
-            _ => {
-                tracing::warn!(
-                    "Skipping critical SMS because TWILIO_FROM_NUMBER is not configured."
-                );
-                return Ok(());
-            }
-        };
-
-        let provider =
-            crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
-
-        provider
-            .send_sms(&phone, &from_number, message)
-            .await
-            .map_err(|error| {
-                tracing::warn!(%error, "Critical SMS was not confirmed");
-                error.to_string()
-            })?;
-    }
-    Ok(())
-}
 
 pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     crate::utils::fs::cleanup_stale_temp_files();
@@ -4853,6 +4791,8 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         .await
         .map_err(std::io::Error::other)?;
     let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
+    let sms_service = api::sms_settings::SmsService::configured(http_auth_store.clone());
+    api::sms_settings::install_global(sms_service.clone())?;
     if legacy_sqlx_background_enabled {
         let agent_action_worker = std::sync::Arc::new(
             crate::workers::agent_action_worker::AgentActionWorker::new(
@@ -7775,107 +7715,9 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let app = axum::Router::new()
         .nest("/api/v1/field-ops", crate::api::field_ops::configured_router(db.pool.clone(), field_ops_pool.clone(), mesh_transport.clone(), http_auth_store.clone()))
 
-        .route("/api/v1/settings/sms-verify", axum::routing::post(|axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-            use axum::response::IntoResponse;
-            let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-
-            // Generate OTP securely
-            let otp = format!("{:06}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().subsec_nanos() % 900000 + 100000);
-
-            {
-                let mut store = crate::OTP_STORE.lock().unwrap();
-                if store.len() > 1000 {
-                    store.retain(|_, (_, time)| time.elapsed().as_secs() < 300); // 5 mins expiry
-                }
-                store.insert(phone.clone(), (otp.clone(), std::time::Instant::now()));
-            }
-
-            let account_sid = match std::env::var("TWILIO_ACCOUNT_SID") {
-                Ok(value) if !value.trim().is_empty() => value,
-                _ => {
-                    return (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
-                        "success": false,
-                        "message": "Twilio is not configured"
-                    }))).into_response();
-                }
-            };
-            let auth_token = match std::env::var("TWILIO_AUTH_TOKEN") {
-                Ok(value) if !value.trim().is_empty() => value,
-                _ => {
-                    return (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
-                        "success": false,
-                        "message": "Twilio is not configured"
-                    }))).into_response();
-                }
-            };
-            let from_number = match std::env::var("TWILIO_FROM_NUMBER") {
-                Ok(value) if !value.trim().is_empty() => value,
-                _ => {
-                    return (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(serde_json::json!({
-                        "success": false,
-                        "message": "Twilio is not configured"
-                    }))).into_response();
-                }
-            };
-
-            let provider = crate::integrations::twilio::provider::TwilioProvider::new(account_sid, auth_token);
-
-            let body = format!("Your OmniSolo verification code is {}", otp);
-            let phone_clone = phone.clone();
-
-            // Fire and forget gracefully
-            tokio::spawn(async move {
-                let res = provider.send_sms(&phone_clone, &from_number, &body).await;
-                if let Err(_e) = res {
-                    tracing::warn!("Failed to send SMS. This is expected if Twilio is not configured.");
-                }
-            });
-
-            axum::response::Json(serde_json::json!({ "success": true, "message": "OTP sent" })).into_response()
-        }))
-        .route("/api/v1/settings/sms-confirm", axum::routing::post({
-            let _settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let otp = req.get("otp").and_then(|v| v.as_str()).unwrap_or("");
-
-                let valid = {
-                    let mut store = crate::OTP_STORE.lock().unwrap();
-                    if let Some((stored_otp, time)) = store.get(&phone) {
-                        if stored_otp == otp && time.elapsed().as_secs() < 300 {
-                            store.remove(&phone);
-                            true
-                        } else {
-                            false
-                        }
-                    } else {
-                        false
-                    }
-                };
-
-                if valid {
-                    axum::response::Json(serde_json::json!({ "success": true }))
-                } else {
-                    axum::response::Json(serde_json::json!({ "success": false, "message": "Invalid or expired OTP" }))
-                }
-            }
-        }))
-        .route("/api/v1/settings/sms-preferences", axum::routing::post({
-            let settings_store = settings_store.clone();
-            move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>, axum::Json(req): axum::Json<serde_json::Value>| async move {
-                let phone = req.get("phone").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                let urgent_booking = req.get("urgent_booking").and_then(|v| v.as_bool()).unwrap_or(false);
-                let failed_payment = req.get("failed_payment").and_then(|v| v.as_bool()).unwrap_or(false);
-                let new_order = req.get("new_order").and_then(|v| v.as_bool()).unwrap_or(false);
-
-                if let Err(e) = settings_store.set_sms_preferences(phone, urgent_booking, failed_payment, new_order) {
-                    ::server_telemetry::record_error_signal("[bug] Failed to save SMS preferences");
-                    tracing::error!("Failed to save SMS preferences: {}", e);
-                    return axum::response::Json(serde_json::json!({ "success": false }));
-                }
-                axum::response::Json(serde_json::json!({ "success": true }))
-            }
-        }))
+        .merge(api::sms_settings::router(sms_service).route_layer(axum::middleware::from_fn_with_state(
+            http_auth_store.clone(), ::server_auth::strict_bearer_auth_middleware,
+        )))
         .route("/api/v1/settings/delivery", axum::routing::get({
             let settings_store = settings_store.clone();
             move |axum::extract::Extension(_user): axum::extract::Extension<::server_common::Claims>| async move {
@@ -7991,6 +7833,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 .route("/api/v1/ui/omni_inbox/action", axum::routing::post(update_ui_omni_inbox_action_handler).with_state(db.clone()))
                 .route("/api/v1/ui/triage", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
                 .route("/api/v1/triage/pending", axum::routing::get(list_ui_triage_handler).with_state(db.clone()))
+                .route("/api/v1/ui/triage/decisions/{id}", axum::routing::get(crate::api::legacy_triage::read_decision).with_state(db.clone()).layer(axum::extract::Extension(http_auth_store.clone())))
                 .route("/api/v1/ui/triage/action", axum::routing::post(crate::api::legacy_triage::action).with_state(db.clone()).layer(axum::extract::Extension(http_auth_store.clone())))
                 .route("/api/v1/triage/action", axum::routing::post(crate::api::legacy_triage::action).with_state(db.clone()).layer(axum::extract::Extension(http_auth_store.clone())))
                 .route("/api/v1/ui/triage/create", axum::routing::post(create_ui_triage_item_handler).with_state(db.clone()))

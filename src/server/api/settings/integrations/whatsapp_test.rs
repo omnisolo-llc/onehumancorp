@@ -1,136 +1,100 @@
-use axum::extract::Extension;
+use super::whatsapp::{connect_whatsapp_cloud_api, connect_whatsapp_twilio};
+use ::server_common::Claims;
 use axum::{
     Router,
-    body::Body,
+    body::{Body, to_bytes},
+    extract::Extension,
     http::{Request, StatusCode},
     routing::post,
 };
-use serde_json::json;
-use std::sync::Arc;
 use tower::ServiceExt;
 
-use crate::api::settings::integrations::whatsapp::{
-    connect_whatsapp_cloud_api, connect_whatsapp_twilio,
-};
-use crate::hub::Hub;
-use ::server_common::Claims;
-
-async fn create_dummy_pg_pool() -> Result<sqlx::PgPool, sqlx::Error> {
-    let database_url = std::env::var("OMNISOLO_DATABASE_URL")
-        .or_else(|_| std::env::var("DATABASE_URL"))
-        .unwrap_or_else(|_| "postgres://ohc:ohc@localhost:5432/ohc".to_string());
-    sqlx::postgres::PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&database_url)
-        .await
-}
-async fn test_hub() -> Option<Arc<Hub>> {
-    let pg_pool = match create_dummy_pg_pool().await {
-        Ok(pool) => pool,
-        Err(_) => return None,
-    };
-    let schema_ready: bool = sqlx::query_scalar(
-        "SELECT to_regclass('public.tool_integrations') IS NOT NULL
-                AND to_regclass('public.integration_credentials') IS NOT NULL",
-    )
-    .fetch_one(&pg_pool)
-    .await
-    .unwrap_or(false);
-    if !schema_ready {
-        return None;
-    }
-
-    let (event_tx, _) = tokio::sync::mpsc::channel(1);
-    Some(Arc::new(Hub::new(event_tx, pg_pool)))
-}
-
-fn test_claims() -> Claims {
+fn claims(tenant: Option<&str>, roles: &[&str]) -> Claims {
     Claims {
-        sub: "user-1".to_string(),
+        sub: "fixture-owner".into(),
         exp: 0,
         iat: 0,
-        organization_id: Some("tenant-real".to_string()),
-        username: "tester".to_string(),
-        email: "tester@example.com".to_string(),
-        roles: vec![],
+        organization_id: tenant.map(str::to_string),
+        username: "fixture-owner".into(),
+        email: "fixture@example.test".into(),
+        roles: roles.iter().map(|role| (*role).to_string()).collect(),
         session_id: None,
-        jti: "jti-1".to_string(),
+        jti: "fixture-jti".into(),
+    }
+}
+
+// These are the production adapters mounted by the main router. Deliberately
+// supply no database or provider state: an unsupported connection must not use it.
+fn routes(user: Claims) -> Router {
+    Router::new()
+        .route("/cloud", post(connect_whatsapp_cloud_api))
+        .route("/twilio", post(connect_whatsapp_twilio))
+        .layer(Extension(user))
+}
+
+#[tokio::test]
+async fn both_providers_reject_repeated_unverified_inputs_without_storage_or_network() {
+    for route in ["/cloud", "/twilio"] {
+        for role in ["OWNER", "ADMIN"] {
+            for payload in [
+                "{}",
+                r#"{"bot_token":"fixture-sid","api_token":"fixture-secret","from_phone":"+15555550123"}"#,
+            ] {
+                for _ in 0..2 {
+                    let response = routes(claims(Some("fixture-tenant"), &[role]))
+                        .oneshot(
+                            Request::builder()
+                                .method("POST")
+                                .uri(route)
+                                .header("content-type", "application/json")
+                                .body(Body::from(payload))
+                                .unwrap(),
+                        )
+                        .await
+                        .unwrap();
+                    assert_eq!(response.status(), StatusCode::NOT_IMPLEMENTED);
+                    assert_eq!(response.headers()["cache-control"], "no-store");
+                    let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+                    let text = std::str::from_utf8(&bytes).unwrap();
+                    assert!(!text.contains("fixture-secret"));
+                    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+                    assert_eq!(value["success"], false);
+                    assert_eq!(value["usable"], false);
+                    assert_eq!(value["status"], "pending_verification");
+                    assert!(value.get("receipt").is_none());
+                }
+            }
+        }
     }
 }
 
 #[tokio::test]
-async fn test_connect_whatsapp_cloud_api() {
-    let Some(hub) = test_hub().await else {
-        return;
-    };
-
-    let app = Router::new()
-        .route(
-            "/api/v1/settings/integrations/whatsapp_cloud_api",
-            post(connect_whatsapp_cloud_api),
-        )
-        .layer(Extension(test_claims()))
-        .with_state(hub.clone());
-
-    let payload = json!({
-        "api_token": "test-cloud-api-token",
-        "from_phone": "+1234567890"
-    });
-
-    let request = Request::builder()
-        .method("POST")
-        .uri("/api/v1/settings/integrations/whatsapp_cloud_api")
-        .header("content-type", "application/json")
-        .body(Body::from(payload.to_string()))
-        .unwrap();
-
-    let response = app.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let bytes: axum::body::Bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(value["success"], true);
-
-    // Verify it was written to the database (in the sqlite mock store)
-    // Actually our handler uses `hub.pool` which is PgPool. Let's make sure it doesn't crash above.
-    // In our mock, hub.pool points to local postgres. If it works, it passes.
-}
-
-#[tokio::test]
-async fn test_connect_whatsapp_twilio() {
-    let Some(hub) = test_hub().await else {
-        return;
-    };
-
-    let app = Router::new()
-        .route(
-            "/api/v1/settings/integrations/whatsapp",
-            post(connect_whatsapp_twilio),
-        )
-        .layer(Extension(test_claims()))
-        .with_state(hub.clone());
-
-    let payload = json!({
-        "bot_token": "test-sid",
-        "api_token": "test-auth-token",
-        "from_phone": "+0987654321"
-    });
-
-    let request = Request::builder()
-        .method("POST")
-        .uri("/api/v1/settings/integrations/whatsapp")
-        .header("content-type", "application/json")
-        .body(Body::from(payload.to_string()))
-        .unwrap();
-
-    let response = app.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
-
-    let bytes: axum::body::Bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
-        .await
-        .unwrap();
-    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
-    assert_eq!(value["success"], true);
+async fn missing_tenant_and_non_owner_requests_do_not_reach_connection_handling() {
+    for route in ["/cloud", "/twilio"] {
+        for (user, status) in [
+            (claims(None, &["ADMIN"]), StatusCode::UNAUTHORIZED),
+            (claims(Some("  "), &["ADMIN"]), StatusCode::UNAUTHORIZED),
+            (
+                claims(Some("fixture-tenant"), &["MEMBER"]),
+                StatusCode::FORBIDDEN,
+            ),
+        ] {
+            let response = routes(user)
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri(route)
+                        .header("content-type", "application/json")
+                        .body(Body::from("{}"))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), status);
+            let bytes = to_bytes(response.into_body(), 4096).await.unwrap();
+            let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            assert_eq!(value["success"], false);
+            assert_eq!(value["usable"], false);
+        }
+    }
 }

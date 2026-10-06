@@ -7,6 +7,9 @@ use sqlx::{PgPool, Postgres, Transaction};
 
 use super::super::sync_transaction::SyncError;
 
+#[path = "terminal_offline_authority.rs"]
+mod offline_authority;
+
 const ROUTE: &str = "/api/v1/payments/terminal/sync_offline";
 #[derive(serde::Serialize)]
 pub struct TerminalOutcome {
@@ -193,6 +196,9 @@ async fn apply(
         }
     }
     let identity = json!({"tenant_id":tenant,"id":id,"client_id":client,"amount_cents":item.amount_cents,"currency":item.currency,"payload":payload,"timestamp":item.timestamp,"mutation_type":item.mutation_type,"terminal_id":item.terminal_id});
+    if kind == "cash_sale" && offline_authority::explicit_kind(&identity) != Some("cash_sale") {
+        return Ok(reconciliation(id, "contradictory_cash_payment_evidence"));
+    }
     let mut tx = pool.begin().await?;
     ::server_common::auth_utils::set_org_context(&mut *tx, tenant).await?;
     let inserted:Option<String>=sqlx::query_scalar("INSERT INTO pos_offline_transactions (id,tenant_id,client_id,amount_cents,currency,payload,status,_sync_status,device_signature,terminal_id,request_identity,request_status) VALUES ($1,$2,$3,$4,$5,$6,'PENDING','pending',$7,$8,$9,'pending') ON CONFLICT (id) DO NOTHING RETURNING id")
@@ -261,7 +267,7 @@ async fn apply(
             "UPDATE products SET inventory_count=GREATEST(0,inventory_count-$1),available_quantity=GREATEST(0,available_quantity-$1),updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3"
         }).bind(quantity).bind(product).bind(tenant).execute(&mut *tx).await?;
     }
-    let job = json!({"pos_transaction_id":id,"client_id":client,"amount_cents":item.amount_cents,"currency":item.currency,"payload":payload.to_string(),"mutation_type":item.mutation_type,"inventory_already_deducted":true});
+    let job = terminal_offline_job(id, client, item.amount_cents, &item.currency, item.mutation_type.as_deref(), &payload);
     sqlx::query("INSERT INTO ohc_job_queue (id,tenant_id,job_type,payload) VALUES ($1,$2,'offline_pos_sync',$3)").bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(job).execute(&mut *tx).await?;
     if matches!(kind, "cash_sale" | "tap_to_pay") {
         let order = uuid::Uuid::new_v4().to_string();
@@ -321,3 +327,9 @@ async fn record_session(
 #[cfg(test)]
 #[path = "terminal_offline_sync_test.rs"]
 mod tests;
+
+fn terminal_offline_job(id: &str, client: &str, amount: i64, currency: &str, kind: Option<&str>, payload: &Value) -> Value {
+    json!({"pos_transaction_id":id,"client_id":client,"amount_cents":amount,
+        "currency":currency,"payload":payload.to_string(),"mutation_type":kind,
+        "inventory_already_deducted":true})
+}

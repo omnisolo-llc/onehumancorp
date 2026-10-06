@@ -13,7 +13,7 @@ test.describe('API Documentation', () => {
       const spec = await response.json();
       expect(spec).toMatchObject({ openapi: '3.0.0', info: { title: 'API Documentation (for Advanced Users)' } });
       expect(spec.paths['/api/v1/help'].get.summary).toBe('Get Help Articles');
-      const swagger = page.locator('.swagger-ui');
+      const swagger = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui');
       await expect(swagger).toBeVisible();
       await expect(swagger.locator('.info .title')).toContainText(spec.info.title);
       await expect(swagger.locator('.info .description')).toContainText(spec.info.description);

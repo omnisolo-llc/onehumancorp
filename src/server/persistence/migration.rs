@@ -209,6 +209,9 @@ where
             .execute_unprepared(include_str!("token_revocation_fence_postgres.sql"))
             .await?;
     }
+    if backend == sea_orm::DatabaseBackend::Sqlite {
+        connection.execute_unprepared(include_str!("sms_verification_sqlite.sql")).await?;
+    }
     configure_agent_definition_authority(connection).await?;
 
     insert_default_or_ignore(

@@ -14,6 +14,7 @@ collective_http_source="$source_root/api/collective.rs"
 docs_source="$source_root/api/docs.rs"
 payment_source="$source_root/api/payment_ledger.rs"
 pos_source="$source_root/api/pos.rs"
+inventory_source="$source_root/api/pos_inventory.rs"
 local_seo_source="$source_root/api/local_seo.rs"
 
 [[ -f "$server_source" ]] || { echo "server source is unavailable: $server_source" >&2; exit 1; }
@@ -24,9 +25,10 @@ local_seo_source="$source_root/api/local_seo.rs"
 [[ -f "$docs_source" ]] || { echo "docs source is unavailable: $docs_source" >&2; exit 1; }
 [[ -f "$payment_source" ]] || { echo "payment source is unavailable: $payment_source" >&2; exit 1; }
 [[ -f "$pos_source" ]] || { echo "POS source is unavailable: $pos_source" >&2; exit 1; }
+[[ -f "$inventory_source" ]] || { echo "inventory persistence source is unavailable: $inventory_source" >&2; exit 1; }
 [[ -f "$local_seo_source" ]] || { echo "local SEO source is unavailable: $local_seo_source" >&2; exit 1; }
 
-python3 - "$server_source" "$db_source" "$catalog_source" "$collective_source" "$collective_http_source" "$docs_source" "$payment_source" "$pos_source" "$local_seo_source" <<'PY'
+python3 - "$server_source" "$db_source" "$catalog_source" "$collective_source" "$collective_http_source" "$docs_source" "$payment_source" "$pos_source" "$local_seo_source" "$inventory_source" <<'PY'
 import pathlib
 import re
 import sys
@@ -40,6 +42,7 @@ docs = pathlib.Path(sys.argv[6]).read_text()
 payment = pathlib.Path(sys.argv[7]).read_text()
 pos = pathlib.Path(sys.argv[8]).read_text()
 local_seo = pathlib.Path(sys.argv[9]).read_text()
+inventory = pathlib.Path(sys.argv[10]).read_text()
 
 if "legacy_db_compatibility_layer" not in server:
     raise SystemExit("legacy database routes do not use a shared compatibility layer")
@@ -66,8 +69,18 @@ if "INSERT IGNORE INTO ohc_collective_member" not in collective_http:
     raise SystemExit("collective HTTP handlers do not declare a real MySQL persistence path")
 if "get_mysql_pool_if_exists" not in payment or "WHERE tenant_id = ?" not in payment:
     raise SystemExit("payment ledger read handlers do not declare a real MySQL persistence path")
-if "/api/v1/ui/inventory" not in server or "Failed to read MySQL inventory" not in pos:
-    raise SystemExit("inventory UI route does not declare a real HeatWave read path")
+if not re.search(r'"/api/v1/ui/inventory",\s*axum::routing::get\(api::pos::get_inventory_handler\)', server):
+    raise SystemExit("inventory UI route is not mounted to its real read handler")
+inventory_handler = pos.split("pub async fn get_inventory_handler(", 1)[-1].split("#[cfg(test)]", 1)[0]
+if not re.search(r'let Some\(tenant\) = pos_tenant\(claims\.as_ref\(\)\)', inventory_handler) or not re.search(
+    r'if let Some\(pool\) = crate::db::get_mysql_pool_if_exists\(\)\s*\{\s*inventory::read_mysql\(&pool,\s*&tenant\)\.await', inventory_handler
+):
+    raise SystemExit("inventory UI handler does not dispatch its signed tenant to the real HeatWave reader")
+mysql_inventory_reader = inventory.split("pub async fn read_mysql(", 1)[-1].split("pub async fn apply_mysql(", 1)[0]
+if not re.search(
+    r'sqlx::query\("SELECT [^"]* FROM products p WHERE p\.tenant_id=\? ORDER BY p\.id"\)\s*\.bind\(tenant\)\s*\.fetch_all\(pool\)\.await\?', mysql_inventory_reader
+):
+    raise SystemExit("inventory HeatWave reader does not execute its parameterized tenant-owned product query")
 if "/api/v1/ledger/accounts" not in server or "pub async fn get_accounts" not in payment:
     raise SystemExit("dashboard ledger account alias is not wired to the real ledger handler")
 if "/api/v1/ledger/entries" not in server or "pub async fn get_entries" not in payment:

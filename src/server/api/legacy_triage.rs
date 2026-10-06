@@ -2,10 +2,10 @@
 //! The durable receipt is also the replay fence; this route never calls providers.
 use axum::{
     Json, Router,
-    extract::{Extension, State},
+    extract::{Extension, Path, State},
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::post,
+    routing::{get, post},
 };
 use serde_json::{Value, json};
 use server_auth::commit_authority::{
@@ -25,6 +25,7 @@ pub struct TriageActionPayload {
 
 pub fn router() -> Router<Arc<crate::db::DB>> {
     Router::new()
+        .route("/api/v1/ui/triage/decisions/{id}", get(read_decision))
         .route("/api/v1/ui/triage/action", post(action))
         .route("/api/v1/triage/action", post(action))
 }
@@ -68,7 +69,7 @@ fn failure(error: Error) -> Response {
             }
             (
                 StatusCode::SERVICE_UNAVAILABLE,
-                "Decision outcome is unconfirmed. Retry the identical decision to read its durable receipt; do not resubmit changed content.",
+                "Decision outcome is unconfirmed. Read the recorded decision before retrying; keep the original request held and do not resubmit changed content.",
             )
         }
     };
@@ -158,13 +159,12 @@ pub async fn action(
         Err(error) => failure(error),
     }
 }
-async fn record(
+async fn begin_owner_transaction(
     db: &crate::db::DB,
     store: Option<Arc<server_auth::Store>>,
     claims: &Claims,
     headers: &HeaderMap,
-    payload: TriageActionPayload,
-) -> Result<Value, Error> {
+) -> Result<(String, String, OwnerTransaction), Error> {
     let store = store.ok_or(AuthorityError::Unavailable)?;
     let expected_user = headers
         .get_all("x-ohc-expected-user")
@@ -182,16 +182,7 @@ async fn record(
     {
         return Err(AuthorityError::Forbidden.into());
     }
-    if payload.triage_item_id.trim().is_empty()
-        || payload.triage_item_id.len() > 255
-        || payload
-            .edited_payload
-            .as_ref()
-            .is_some_and(|v| v.len() > 256 * 1024)
-    {
-        return Err(Error::Invalid("Invalid triage identity or edited content"));
-    }
-    let (tenant, actor, mut tx) = match &db.store {
+    let transaction = match &db.store {
         crate::db::DbStore::Postgres => {
             let repository = store.portable_repo().ok_or(AuthorityError::Unavailable)?;
             let pool = canonical_pg_data_pool(
@@ -240,6 +231,73 @@ async fn record(
             )
         }
     };
+    Ok(transaction)
+}
+
+/// Read the already-committed receipt without replaying a decision or local effect.
+/// A missing receipt is information only, never permission to retry a mutation.
+pub async fn read_decision(
+    State(db): State<Arc<crate::db::DB>>,
+    store: Option<Extension<Arc<server_auth::Store>>>,
+    Extension(claims): Extension<Claims>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Response {
+    async fn read(
+        db: &crate::db::DB,
+        store: Option<Arc<server_auth::Store>>,
+        claims: &Claims,
+        headers: &HeaderMap,
+        id: &str,
+    ) -> Result<Value, Error> {
+        if id.trim().is_empty() || id.len() > 255 {
+            return Err(Error::Invalid("Invalid triage identity"));
+        }
+        let (tenant, _, mut tx) = begin_owner_transaction(db, store, claims, headers).await?;
+        if let OwnerTransaction::Pg(pg) = &mut tx {
+            sqlx::query("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.jsonb_build_array('ohc-legacy-triage-v1',$1::text,$2::text)::text,0))")
+                .bind(&tenant).bind(id).execute(pg.connection()).await?;
+        }
+        let result = match stored_receipt(&mut tx, &tenant, id).await? {
+            Some(receipt) => receipt,
+            None => {
+                // Do not disclose foreign/nonexistent identities or fabricate a terminal state.
+                load_item(&mut tx, &tenant, id).await?;
+                json!({"success":true,"decision_recorded":false,"item":{"id":id,"tenant_id":tenant},
+                    "message":"No committed receipt was found. Keep the original request held; no mutation was retried."})
+            }
+        };
+        tx.commit().await?;
+        Ok(result)
+    }
+    match read(&db, store.map(|value| value.0), &claims, &headers, &id).await {
+        Ok(receipt) => (
+            StatusCode::OK,
+            [("cache-control", "no-store")],
+            Json(receipt),
+        )
+            .into_response(),
+        Err(error) => failure(error),
+    }
+}
+
+async fn record(
+    db: &crate::db::DB,
+    store: Option<Arc<server_auth::Store>>,
+    claims: &Claims,
+    headers: &HeaderMap,
+    payload: TriageActionPayload,
+) -> Result<Value, Error> {
+    if payload.triage_item_id.trim().is_empty()
+        || payload.triage_item_id.len() > 255
+        || payload
+            .edited_payload
+            .as_ref()
+            .is_some_and(|v| v.len() > 256 * 1024)
+    {
+        return Err(Error::Invalid("Invalid triage identity or edited content"));
+    }
+    let (tenant, actor, mut tx) = begin_owner_transaction(db, store, claims, headers).await?;
     if let OwnerTransaction::Pg(pg) = &mut tx {
         sqlx::query("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.jsonb_build_array('ohc-legacy-triage-v1',$1::text,$2::text)::text,0))")
             .bind(&tenant).bind(&payload.triage_item_id).execute(pg.connection()).await?;
@@ -452,13 +510,11 @@ async fn load_item(tx: &mut OwnerTransaction, tenant: &str, id: &str) -> Result<
     Err(Error::NotFound)
 }
 
-async fn record_in_transaction(
+async fn stored_receipt(
     tx: &mut OwnerTransaction,
     tenant: &str,
-    actor: &str,
-    payload: &TriageActionPayload,
-) -> Result<Value, Error> {
-    let id = &payload.triage_item_id;
+    id: &str,
+) -> Result<Option<Value>, Error> {
     if let Some((approved, edited, receipt)) = fetch!(
         tx,
         (bool, Option<String>, String),
@@ -466,27 +522,41 @@ async fn record_in_transaction(
         tenant,
         id
     ) {
-        if approved != payload.approved
-            || payload
-                .edited_payload
-                .as_ref()
-                .is_some_and(|text| Some(text) != edited.as_ref())
-        {
-            return Err(Error::Conflict(
-                "A recorded decision cannot be replaced by a different decision or edit",
-            ));
-        }
         let receipt: Value = serde_json::from_str(&receipt)
             .map_err(|_| Error::Conflict("Recorded receipt requires reconciliation"))?;
         if receipt["success"] != true
             || receipt["decision_recorded"] != true
-            || receipt["item"]["id"] != *id
+            || receipt["item"]["id"] != id
             || receipt["item"]["tenant_id"] != tenant
             || receipt["item"]["lifecycle_state"] != if approved { "APPROVED" } else { "DISMISSED" }
             || receipt["item"]["edited_payload"] != json!(edited)
         {
             return Err(Error::Conflict(
                 "Recorded receipt does not match its decision identity",
+            ));
+        }
+        return Ok(Some(receipt));
+    }
+    Ok(None)
+}
+
+async fn record_in_transaction(
+    tx: &mut OwnerTransaction,
+    tenant: &str,
+    actor: &str,
+    payload: &TriageActionPayload,
+) -> Result<Value, Error> {
+    let id = &payload.triage_item_id;
+    if let Some(receipt) = stored_receipt(tx, tenant, id).await? {
+        let state = if payload.approved { "APPROVED" } else { "DISMISSED" };
+        if receipt["item"]["lifecycle_state"] != state
+            || payload
+                .edited_payload
+                .as_ref()
+                .is_some_and(|text| receipt["item"]["edited_payload"] != json!(text))
+        {
+            return Err(Error::Conflict(
+                "A recorded decision cannot be replaced by a different decision or edit",
             ));
         }
         return Ok(receipt);

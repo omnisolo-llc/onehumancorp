@@ -12,6 +12,12 @@ const compiled = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true },
 }).outputText;
 
+const documentsFile = path.resolve('src/e2e/support/ui_audit_documents.ts');
+const documents = {};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync(documentsFile, 'utf8'), {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText, { exports: documents, URL }, { filename: documentsFile });
+
 // Execute the maintained audit callback. Only the browser boundary is supplied
 // explicitly; no DOM fixtures, HTTP requests or browser transport are started.
 async function auditPages(pages, capture = {}) {
@@ -48,6 +54,7 @@ async function auditPages(pages, capture = {}) {
     './fixtures': { test: register, expect },
     '../../scripts/ui-click-audit.cjs': { discoverAppRoutes: () => pages.map(page => page.route) },
     './support/ui_click_audit': {},
+    './support/ui_audit_documents': documents,
     './authenticate': {},
     './identities': {},
     './support/ui_audit_navigation': { createAuditNavigation: () => async (page, route) => {
@@ -93,12 +100,14 @@ async function auditPages(pages, capture = {}) {
         if (row.requestError) throw row.requestError;
         return { status: () => row.status ?? 200 };
       } },
-      locator: () => ({ innerText: async () => {
+      evaluateHandle: async predicate => {
         const row = state.current;
         await capture.onRender?.({ route: row.route, lane });
         rendered.push({ route: row.route, lane });
-        return row.text;
-      } }),
+        const document = { body: { innerText: row.text }, querySelectorAll: () => [] };
+        const result = vm.runInNewContext(`(${predicate.toString()})()`, { document });
+        return { evaluate: async (evaluate, argument) => evaluate(result, argument), dispose: async () => {} };
+      },
     };
     laneStates.set(page, state);
     return page;

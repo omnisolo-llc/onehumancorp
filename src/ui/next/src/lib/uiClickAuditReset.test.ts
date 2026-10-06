@@ -3,12 +3,35 @@ import { EventEmitter } from 'node:events';
 import type { Page } from '@playwright/test';
 import { replaceAuditDocument, resolveAuditTarget, auditDocumentSignature, hasFragmentTarget, installClickFocusProbe, installClickPopupProbe } from '../../../../e2e/support/ui_click_audit';
 
-function documentPage(overrides: Record<string, unknown>): Page {
+type FixtureHandle<T> = {
+  _value: T;
+  evaluate: <Result, Argument>(read: (value: T, argument: Argument) => Result, argument?: Argument | FixtureHandle<Argument>) => Promise<Result>;
+  evaluateHandle: <Result, Argument>(read: (value: T, argument: Argument) => Result, argument?: Argument | FixtureHandle<Argument>) => Promise<FixtureHandle<Result>>;
+  dispose: ReturnType<typeof vi.fn>;
+};
+
+function unwrap<Argument>(argument: Argument | FixtureHandle<Argument>): Argument {
+  return argument && typeof argument === 'object' && '_value' in argument
+    ? argument._value : argument as Argument;
+}
+
+// Each acquisition owns a fresh handle over its captured value. Execute the
+// real adapter callbacks, including cross-handle document identity comparisons.
+function valueHandle<T>(value: T): FixtureHandle<T> {
+  return {
+    _value: value,
+    evaluate: async (read, argument) => read(value, unwrap(argument)),
+    evaluateHandle: async (read, argument) => valueHandle(read(value, unwrap(argument))),
+    dispose: vi.fn(),
+  };
+}
+
+function documentPage(overrides: Record<string, unknown> = {}): Page {
   return {
     url: () => 'https://fixture.test/original',
     viewportSize: () => ({ width: 1280, height: 720 }),
-    evaluateHandle: vi.fn().mockResolvedValue({ dispose: vi.fn() }),
-    evaluate: vi.fn().mockResolvedValue(true),
+    evaluateHandle: vi.fn(async (read: () => unknown) => valueHandle(read())),
+    evaluate: vi.fn(async (read: (argument: unknown) => unknown, argument?: unknown) => read(argument)),
     ...overrides,
   } as unknown as Page;
 }
@@ -62,15 +85,52 @@ describe('audit target reacquisition before any action', () => {
   });
 
   it('rejects a replacement document even when its URL and control key are unchanged', async () => {
-    const original = { dispose: vi.fn() };
-    let sameDocument = true;
+    let documents = [document];
+    const original = valueHandle(documents);
+    const replacement = document.implementation.createHTMLDocument('replacement');
     const target = { waitForElementState: vi.fn(), evaluate: vi.fn().mockResolvedValue(true), getAttribute: vi.fn().mockResolvedValue('same-control'), dispose: vi.fn(), click: vi.fn() };
-    const page = documentPage({ url: () => 'https://fixture.test/same', evaluateHandle: async () => original,
-      evaluate: async () => sameDocument, locator: () => ({ elementHandles: async () => [target] }), waitForTimeout: vi.fn() });
-    const retag = async () => { sameDocument = false; return [{ key: 'same-control', index: 1, label: 'Action' }]; };
+    const page = documentPage({ url: () => 'https://fixture.test/same',
+      evaluateHandle: vi.fn(async () => valueHandle(documents)).mockResolvedValueOnce(original),
+      locator: () => ({ elementHandles: async () => [target] }), waitForTimeout: vi.fn() });
+    const retag = async () => { documents = [replacement]; return [{ key: 'same-control', index: 1, label: 'Action' }]; };
     await expect(resolveAuditTarget(page, 'same-control', retag, 1000)).rejects.toThrow('document changed');
     expect(original.dispose).toHaveBeenCalledTimes(1);
     expect(target.click).not.toHaveBeenCalled();
+  });
+
+  it('resolves an embedded control through its owning frame without clicking it', async () => {
+    const child = document.implementation.createHTMLDocument('embedded');
+    const target = { waitForElementState: vi.fn(), evaluate: vi.fn().mockResolvedValue(true), getAttribute: vi.fn().mockResolvedValue('embedded-control'), dispose: vi.fn(), click: vi.fn() };
+    const handles: FixtureHandle<Document[]>[] = [];
+    const embeddedLocator = vi.fn(() => ({ elementHandles: async () => [target] }));
+    const frameLocator = vi.fn(() => ({ locator: embeddedLocator }));
+    const page = documentPage({ evaluateHandle: async () => {
+      const handle = valueHandle([document, child]); handles.push(handle); return handle;
+    }, locator: () => ({ elementHandles: async () => [] }), frameLocator });
+    expect(await resolveAuditTarget(page, 'embedded-control', async () => [{ key: 'embedded-control', index: 4, label: 'Action' }], 1000)).toBe(target);
+    expect(frameLocator).toHaveBeenCalledWith('iframe[data-ohc-api-docs-viewer]');
+    expect(embeddedLocator).toHaveBeenCalledWith('[data-ui-audit-click-index="4"]');
+    expect(target.dispose).not.toHaveBeenCalled();
+    expect(target.click).not.toHaveBeenCalled();
+    expect(handles.length).toBeGreaterThan(1);
+    for (const handle of handles) expect(handle.dispose).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a replaced embedded document while its parent, URL and control key stay unchanged', async () => {
+    let child = document.implementation.createHTMLDocument('original embedded');
+    const replacement = document.implementation.createHTMLDocument('replacement embedded');
+    const handles: FixtureHandle<Document[]>[] = [];
+    const target = { waitForElementState: vi.fn(), evaluate: vi.fn().mockResolvedValue(true), getAttribute: vi.fn().mockResolvedValue('same-control'), dispose: vi.fn(), click: vi.fn() };
+    const page = documentPage({ url: () => 'https://fixture.test/same', evaluateHandle: async () => {
+      const handle = valueHandle([document, child]); handles.push(handle); return handle;
+    }, locator: () => ({ elementHandles: async () => [] }),
+    frameLocator: () => ({ locator: () => ({ elementHandles: async () => [target] }) }), waitForTimeout: vi.fn() });
+    const retag = async () => { child = replacement; return [{ key: 'same-control', index: 1, label: 'Action' }]; };
+    await expect(resolveAuditTarget(page, 'same-control', retag, 1000)).rejects.toThrow('document changed');
+    expect(target.dispose).toHaveBeenCalledTimes(1);
+    expect(target.click).not.toHaveBeenCalled();
+    expect(handles.length).toBeGreaterThan(1);
+    for (const handle of handles) expect(handle.dispose).toHaveBeenCalledTimes(1);
   });
 
   it('rejects a different replacement identity without clicking it', async () => {
@@ -84,7 +144,9 @@ describe('audit target reacquisition before any action', () => {
 
   it('keeps the lookup budget when a retag operation never settles', async () => {
     const page = documentPage({ url: () => 'https://fixture.test' });
-    await expect(resolveAuditTarget(page, 'hung-control', () => new Promise(() => undefined), 30)).rejects.toThrow('hung-control');
+    const retag = vi.fn<() => Promise<never>>(() => new Promise(() => undefined));
+    await expect(resolveAuditTarget(page, 'hung-control', retag, 30)).rejects.toThrow('hung-control');
+    expect(retag).toHaveBeenCalledTimes(1);
   });
 
   it('disposes a handle that arrives after timeout without preparing or clicking it', async () => {
@@ -95,9 +157,7 @@ describe('audit target reacquisition before any action', () => {
     const lookup = resolveAuditTarget(page, 'late-control', async () => [{ key: 'late-control', index: 1, label: 'Action' }], 30);
     await expect(lookup).rejects.toThrow('late-control');
     release([target]);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(target.dispose).toHaveBeenCalledTimes(1);
+    await vi.waitFor(() => expect(target.dispose).toHaveBeenCalledTimes(1));
     expect(target.waitForElementState).not.toHaveBeenCalled();
     expect(target.click).not.toHaveBeenCalled();
   });
@@ -170,9 +230,9 @@ it('does not let delayed field-edit effects certify an inert submit click', asyn
       return { evaluate: async <U,>(read: (value: T) => U) => read(probe), dispose: disposeHandle };
     },
     hover: vi.fn(), focus: vi.fn(), click: async () => button.click() };
-  const page = { url: () => window.location.href, evaluate: async (callback: (argument?: unknown) => unknown, argument?: unknown) => callback(argument),
+  const page = documentPage({ url: () => window.location.href, evaluate: async (callback: (argument?: unknown) => unknown, argument?: unknown) => callback(argument),
     waitForTimeout: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    context: () => context, on: pageEvents.on.bind(pageEvents), off: pageEvents.off.bind(pageEvents) };
+    context: () => context, on: pageEvents.on.bind(pageEvents), off: pageEvents.off.bind(pageEvents) });
   try {
     const effect = await observeClickEffects(page as unknown as Page, target as never);
     expect(hasMeaningfulClickEffect(effect)).toBe(false);
@@ -194,27 +254,33 @@ it('keeps distinct owned record controls identifiable when their DOM order chang
   const { tagClickTargets } = await import('../../../../e2e/support/ui_click_audit');
   const original = document.body.innerHTML;
   const fixture = (namespace: string, records: string[]) => records.map(id => `<section data-testid="triage-card-${namespace}-${id}"><button>Dismiss</button></section>`).join('');
-  const page = { locator: () => ({ evaluateAll: async (read: (elements: Element[], namespace?: string) => unknown, namespace?: string) => read(Array.from(document.querySelectorAll('button')), namespace) }) } as unknown as Page;
+  const page = documentPage();
+  const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 100, height: 40 } as DOMRect);
   try {
     document.body.innerHTML = fixture('audit-case-one', ['first', 'second']);
     const initial = await tagClickTargets(page, 'audit-case-one');
     document.body.innerHTML = fixture('audit-case-two', ['second', 'first']);
     const restored = await tagClickTargets(page, 'audit-case-two');
+    expect(initial).toHaveLength(2);
+    expect(restored).toHaveLength(2);
     expect(restored[0].key).toBe(initial[1].key);
     expect(restored[1].key).toBe(initial[0].key);
     expect(new Set(restored.map(target => target.key)).size).toBe(2);
-  } finally { document.body.innerHTML = original; }
+  } finally { bounds.mockRestore(); document.body.innerHTML = original; }
 });
 
 it('maps case-specific UUID ancestry back to the same canonical record identity', async () => {
   const { tagClickTargets } = await import('../../../../e2e/support/ui_click_audit');
   const original = document.body.innerHTML;
-  const page = { locator: () => ({ evaluateAll: async (read: (elements: Element[], identity: unknown) => unknown, identity: unknown) => read(Array.from(document.querySelectorAll('button')), identity) }) } as unknown as Page;
+  const page = documentPage();
+  const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({ width: 100, height: 40 } as DOMRect);
   try {
     document.body.innerHTML = '<section data-testid="quote-first-generated-uuid"><button>Approve</button></section>';
     const first = await tagClickTargets(page, 'audit-case-one', { 'first-generated-uuid': 'canonical-quote-uuid' });
     document.body.innerHTML = '<section data-testid="quote-second-generated-uuid"><button>Approve</button></section>';
     const second = await tagClickTargets(page, 'audit-case-two', { 'second-generated-uuid': 'canonical-quote-uuid' });
+    expect(first).toHaveLength(1);
+    expect(second).toHaveLength(1);
     expect(second[0].key).toBe(first[0].key);
-  } finally { document.body.innerHTML = original; }
+  } finally { bounds.mockRestore(); document.body.innerHTML = original; }
 });

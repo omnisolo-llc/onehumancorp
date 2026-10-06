@@ -139,6 +139,9 @@ jobs:
         working-directory: src/ui/next
         run: npm audit --omit=dev
 
+      - name: Audit the source-bound Swagger runtime inventory
+        run: node scripts/audit-swagger-bundle.mjs
+
   native-build:
     name: Native backend binaries
     needs: [check-changes]
@@ -194,7 +197,7 @@ jobs:
     needs: [check-changes]
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       ignored_postgres:
         image: postgres:17
@@ -282,6 +285,25 @@ jobs:
           OHC_CLOCK_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_clock_timecard_test
           OHC_AFFILIATE_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_affiliate_test
         run: make test-backend
+
+      - name: Verify inventory adjustments against restricted PostgreSQL roles
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        env:
+          PGPASSWORD: ignored_fixture
+          OHC_INVENTORY_TEST_DATABASE_URL: postgres://postgres:ignored_fixture@127.0.0.1:${{ job.services.ignored_postgres.ports[5432] }}/ohc_inventory_test
+        run: |
+          createdb --host=127.0.0.1 --port=${{ job.services.ignored_postgres.ports[5432] }} --username=postgres ohc_inventory_test
+          bash scripts/run-inventory-postgres.sh
+      - name: Retain inventory PostgreSQL execution evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: inventory-postgres-contract-results-${{ github.run_attempt }}
+          path: |
+            target/ci-logs/inventory-postgres.log
+            target/ci-logs/inventory-source-*.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify task-scoped checkpoint restore safety
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
@@ -817,7 +839,7 @@ jobs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -903,6 +925,12 @@ jobs:
           FROM pg_roles
           WHERE rolname = current_user;
           SQL
+
+      # Focused locks are checked against Cargo.lock. Warm the entire workspace
+      # graph, including non-host crates needed by offline cargo metadata, before
+      # any focused gate. No gate may rely on a prior gate's incidental downloads.
+      - name: Prefetch complete locked graph for offline PostgreSQL gates
+        run: cargo fetch --locked
 
       - name: Verify durable sync receipts and mounted handlers in PostgreSQL
         env:
@@ -1098,6 +1126,19 @@ jobs:
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_cash_receipts_test
           python3 scripts/focused_ci_gate.py cash-receipts
 
+      - name: Fetch locked terminal payment identity dependencies
+        if: ${{ !cancelled() }}
+        run: bash scripts/terminal-payment-integrity/fetch.sh
+
+      - name: Verify tenant-owned terminal capture and non-replay
+        if: ${{ !cancelled() }}
+        env:
+          OHC_TERMINAL_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_terminal_payment_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_terminal_payment_test
+          python3 scripts/focused_ci_gate.py terminal-payment-integrity
+
       - name: Verify authenticated shipping and persisted fulfillment
         if: ${{ !cancelled() }}
         env:
@@ -1146,6 +1187,16 @@ jobs:
         run: |
           createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_field_test
           python3 scripts/focused_ci_gate.py field-boundary-contract
+
+      - name: Verify durable SMS proof, PostgreSQL authority and notification replay
+        if: ${{ !cancelled() }}
+        env:
+          OHC_SMS_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_sms_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_sms_test
+          bash scripts/sms-verification-contract/fetch.sh
+          python3 scripts/focused_ci_gate.py sms-verification-contract
 
       - name: Verify recorded-order milestone isolation
         if: ${{ !cancelled() }}

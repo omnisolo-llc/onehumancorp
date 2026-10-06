@@ -62,7 +62,7 @@ for (const route of ['/unified-feed', '/dashboard/unified-feed', '/feed', '/acti
       const mutation = first.page.waitForResponse(response =>
         ['PUT', 'POST'].includes(response.request().method())
         && /^\/api\/v1\/(?:agent-feed|agents\/approvals)\//.test(new URL(response.url()).pathname));
-      await first.page.getByRole('button', { name: route.includes('unified-feed') ? 'Reject' : 'Dismiss', exact: true }).first().click();
+      await first.page.getByRole('button', { name: 'Dismiss', exact: true }).first().click();
       const response = await mutation;
       expect(response.status()).toBe(200);
       await response.finished();

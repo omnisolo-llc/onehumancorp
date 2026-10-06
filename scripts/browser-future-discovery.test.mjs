@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { runNativeCommand } from './native-process.mjs';
 import { testEnvironment } from './native-e2e.mjs';
 import shards from './browser-shards.cjs';
+import protocol from './ui-click-audit.cjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const require = createRequire(import.meta.url);
@@ -17,7 +18,14 @@ test('fresh Playwright discovery includes appended tests and nested new files ex
   const fixture = path.join(directory, 'specs');
   const groupsBefore = structuredClone(shards.GROUPS);
   const source = { commit: 'a'.repeat(40), sourceDigest: 'b'.repeat(64) };
-  const addedTitles = ['appended test', 'new nested file'];
+  const routeTitles = route => [protocol.CLICK_TITLE + route, protocol.PURPOSE_TITLE + route];
+  const addedTitles = ['appended test', 'new nested file', ...routeTitles('/future')];
+  const appRoot = path.join(directory, 'app-fixture');
+  const addPage = async relative => {
+    const file = path.join(appRoot, 'src/ui/next/src/app', relative, 'page.tsx');
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, 'export default function Page() { return null; }');
+  };
   const environment = { ...testEnvironment(), PLAYWRIGHT_TEST_DIR: fixture };
   const cli = require.resolve('@playwright/test/cli');
   const testImport = `import { test } from ${JSON.stringify(require.resolve('@playwright/test'))};\n`;
@@ -39,6 +47,11 @@ test('fresh Playwright discovery includes appended tests and nested new files ex
   };
   try {
     await mkdir(fixture);
+    await addPage('help/[articleId]');
+    await writeFile(path.join(fixture, 'routes.spec.ts'), testImport
+      + `import protocol from ${JSON.stringify(require.resolve('./ui-click-audit.cjs'))};\n`
+      + `for (const route of protocol.discoverAppRoutes(${JSON.stringify(appRoot)})) {\n`
+      + `for (const title of [protocol.CLICK_TITLE + route, protocol.PURPOSE_TITLE + route]) test(title, () => { throw new Error('Discovery fixture must never execute'); });\n}\n`);
     const existing = path.join(fixture, 'existing.spec.ts');
     // Keep every logical slice nonempty without depending on the product's test count.
     await writeFile(existing, testImport + Array.from({ length: shards.GROUPS.flat().length * 2 }, (_, i) => declaration(`existing ${i}`)).join(''));
@@ -46,8 +59,12 @@ test('fresh Playwright discovery includes appended tests and nested new files ex
     const baselineIds = new Set(baseline.map(item => item.id));
 
     await appendFile(existing, declaration(addedTitles[0]));
-    await mkdir(path.join(fixture, 'nested'));
-    await writeFile(path.join(fixture, 'nested', 'new.spec.ts'), testImport + declaration(addedTitles[1]));
+    await mkdir(path.join(fixture, '(future)', 'nested'), { recursive: true });
+    await writeFile(path.join(fixture, '(future)', 'nested', 'new.spec.ts'), testImport + declaration(addedTitles[1]));
+    await addPage('(main)/(nested)/future');
+    // A static route sharing the dynamic sample must not duplicate contracts.
+    await addPage('(docs)/help/getting-started-1');
+    assert.deepEqual(protocol.discoverAppRoutes(appRoot), ['/future', '/help/getting-started-1']);
 
     // This production entry point freshly lists the full suite and all twelve
     // logical slices, then round-trips group 1 through Playwright's --test-list.
@@ -103,7 +120,16 @@ test('fresh Playwright discovery includes appended tests and nested new files ex
       duplicated.find(receipt => receipt.tests.some(test => test.id === item.id)).tests.push(item);
       assert.throws(() => shards.validateGroupedReceipts(duplicated, source, true), /duplicate test identity/);
     }
-    t.diagnostic(`${discoveries} real Playwright discoveries: ${baseline.length} -> ${full.length} identities; both additions occur once across 12 logical shards and 3 physical groups`);
+    for (const title of routeTitles('/help/getting-started-1')) assert.equal(full.filter(item => item.title === title).length, 1);
+    // A future reachable page without a navigation/record fixture must fail
+    // actual Playwright collection, not quietly reduce its required inventory.
+    for (const relative of ['(pending)/new/[id]', '(pending)/@modal/(.)photo']) {
+      await addPage(relative);
+      assert.throws(() => protocol.discoverAppRoutes(appRoot), /requires an explicit audit fixture/);
+      await assert.rejects(list([]), /node failed \(1\)/);
+      await rm(path.join(appRoot, 'src/ui/next/src/app', relative), { recursive: true });
+    }
+    t.diagnostic(`${discoveries} real Playwright discoveries: ${baseline.length} -> ${full.length} identities; appended test, nested file and grouped route contracts occur once across 12 logical shards and 3 physical groups; static alias adds no duplicates; unclassified future pages fail collection`);
   } finally {
     if (prepared) await rm(prepared.directory, { recursive: true, force: true });
     await rm(directory, { recursive: true, force: true });

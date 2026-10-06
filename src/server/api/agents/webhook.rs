@@ -98,12 +98,6 @@ async fn handle_webhook(
     }
     // For incoming Stripe webhooks for new orders, route to Operations to process the order
     if payload.source == "stripe" && payload.message == "order_placed" {
-        // Trigger SMS notification for new orders
-        tokio::spawn(async move {
-            let _ =
-                crate::dispatch_critical_sms("new_order", "You have received a new order!").await;
-        });
-
         let event = crate::orchestration::departments::types::DepartmentEvent {
             id: uuid::Uuid::new_v4().to_string(),
             tenant_id: payload.tenant_id.clone(),
@@ -115,10 +109,7 @@ async fn handle_webhook(
             Ok(_) => {
                 return (
                     StatusCode::OK,
-                    Json(WebhookResponse {
-                        success: true,
-                        request_id: None,
-                    }),
+                    Json(serde_json::json!({"success":true,"request_id":null,"sms_notification":{"status":"unavailable","reason":"persistent_order_receipt_required"}})),
                 )
                     .into_response();
             }
@@ -148,25 +139,20 @@ async fn handle_webhook(
 
     if payload.source == "mercadopago" {
         if payload.message == "approved" {
-            tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms("new_order", "You have received a new order!")
-                    .await;
-            });
-
             let event = crate::orchestration::departments::types::DepartmentEvent {
                 id: uuid::Uuid::new_v4().to_string(),
                 tenant_id: payload.tenant_id.clone(),
                 event_type: "tenant.order.created".to_string(),
                 payload: serde_json::json!({"source": payload.source, "message": payload.message}),
             };
-            let _ = orchestrator.dispatch_event(event).await;
+            match orchestrator.dispatch_event(event).await {
+                Ok(()) => {},
+                Err(error) => tracing::warn!(%error, "Order handling did not confirm an SMS-eligible event"),
+            }
         }
         return (
             StatusCode::OK,
-            Json(WebhookResponse {
-                success: true,
-                request_id: None,
-            }),
+            Json(serde_json::json!({"success":true,"request_id":null,"sms_notification":{"status":"unavailable","reason":"persistent_order_receipt_required"}})),
         )
             .into_response();
     }

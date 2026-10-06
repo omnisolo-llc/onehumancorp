@@ -382,6 +382,10 @@ export default function Dashboard() {
         <UnifiedAgentFeed initialData={feedInitialData} />
       </div>
 
+      <nav aria-label="Additional dashboard tools" className="mb-6 flex flex-wrap gap-3">
+        <a className="app-button" href="/agent-card.html">Create Agent Card</a>
+        <a className="app-button" href="/viral-certificate-generator.html">Certificate Generator</a>
+      </nav>
       <AIUsageLimitWidget />
       <div className="my-6">
         <ViralUpgradePaywallWidget tenantId={tenantId()} />

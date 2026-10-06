@@ -8,6 +8,8 @@ use sqlx::{PgConnection, PgPool, Postgres, Transaction};
 
 #[path = "durable_appointment_sync.rs"]
 mod appointments;
+#[path = "terminal_offline_authority.rs"]
+mod offline_authority;
 
 use super::super::sync_transaction::{SyncError, commit_owner};
 use crate::api::field_ops::records::FieldAccess;
@@ -698,6 +700,10 @@ async fn apply_mutation(
         return Ok(blocked("payload_required"));
     }
     let identity = serde_json::to_value(m).expect("OfflineMutation is JSON serializable");
+    if matches!(kind, "cash_sale" | "inventory_sale")
+        && offline_authority::explicit_kind(&identity) != Some(kind) {
+        return Ok(blocked("explicit_consistent_operation_required"));
+    }
     let key = match claim(tx.connection(), tenant, OFFLINE_ROUTE, id, kind, &identity).await? {
         Claim::New(k) => k,
         Claim::Replay(o) => {
@@ -792,7 +798,7 @@ async fn apply_mutation(
             sqlx::query("UPDATE inventory_levels SET available_count=GREATEST(0,available_count-$1) WHERE variant_id=$2 AND tenant_id=$3").bind(m.quantity_deducted).bind(&m.product_id).bind(tenant).execute(tx.connection()).await?;
         }
         sqlx::query("INSERT INTO ohc_job_queue (id,tenant_id,job_type,payload) VALUES ($1,$2,'offline_pos_sync',$3)")
-            .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(json!({"transaction_id":m.transaction_id,"product_id":m.product_id,"quantity_deducted":m.quantity_deducted,"amount":m.amount,"payment_method":m.payment_method,"payment_intent_id":m.payment_intent_id,"currency":m.currency,"inventory_already_deducted":true})).execute(tx.connection()).await?;
+            .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(offline_mutation_job(&key, &identity)).execute(tx.connection()).await?;
     }
     let status = if conflict.is_some() {
         "reconciliation"
@@ -816,3 +822,10 @@ async fn apply_mutation(
 #[cfg(test)]
 #[path = "durable_sync_test.rs"]
 mod tests;
+
+// Keep the exact canonical receipt identity across the producer/worker boundary.
+fn offline_mutation_job(receipt_id: &str, identity: &Value) -> Value {
+    json!({"transaction_id":identity["transaction_id"],"receipt_id":receipt_id,
+        "mutation_type":identity["mutation_type"],"mutation":identity,
+        "inventory_already_deducted":true})
+}

@@ -1,0 +1,9 @@
+from pathlib import Path
+import hashlib
+import json
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parents[1]
+inputs = [ROOT / name for name in ['Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml', 'src/server/api/terminal_api.rs', 'src/server/api/terminal_payment_identity.rs', 'src/server/api/terminal_offline_authority.rs', 'src/server/workers/pos_sync_worker.rs', 'src/server/queue.rs', 'src/server/api/durable_sync.rs', 'src/server/api/durable_sync_test.rs', 'src/server/api/terminal_offline_sync.rs', 'src/server/api/terminal_offline_sync_test.rs', 'src/server/api/offline_sync_route_test.rs', 'src/server/services/pos/service.rs', 'src/server/orchestration/hybrid_sync/daemon.rs', 'src/server/migrations/130_mutation_queue_and_sync_events.sql', 'src/server/migrations/234_sync_durable_receipts.sql', 'src/server/migrations/236_pos_offline_request_identity.sql', 'src/server/migrations/060_job_queue_and_ledger.sql', 'src/server/migrations/076_pos_offline_transactions.sql', 'src/server/migrations/142_omni_payment_ledger.sql', 'src/server/migrations/1040_terminal_payment_identity.sql', '.github/workflows/ci.yml', 'scripts/focused_ci_gate.py', 'scripts/rust_source.py', 'scripts/rust-source-extract/Cargo.toml']]
+for name in ['src/server/common', 'src/server/config', 'src/server/integrations/stripe', 'src/server/integrations/core', 'src/server/integrations/mercadopago', 'src/server/integrations/razorpay', 'scripts/terminal-payment-integrity', 'scripts/rust-source-extract/src']:
+    inputs += [path for path in (ROOT / name).rglob('*') if path.is_file() and path.name not in ['source-manifest.json','Cargo.lock'] and 'target' not in path.parts and '__pycache__' not in path.parts]
+(HERE / 'source-manifest.json').write_text(json.dumps({str(path.relative_to(ROOT)):hashlib.sha256(path.read_bytes()).hexdigest() for path in sorted(set(inputs))}, indent=2)+'\n')

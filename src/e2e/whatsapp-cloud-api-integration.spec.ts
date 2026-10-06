@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { integrationStorage } from './support/integration_storage';
 
 test.describe('WhatsApp Cloud API availability', () => {
   test('unconfigured Meta sign-in makes no connection request or connected claim', async ({ page, loginAs, adminUser }) => {
@@ -27,6 +28,7 @@ test.describe('WhatsApp Cloud API availability', () => {
 
     // The actual authenticated route also refuses to manufacture a verified
     // connection. An empty request carries no provider credential.
+    const before = await integrationStorage(adminUser.organizationId, ['whatsapp_cloud_api']);
     const response = await page.evaluate(async () => {
       const reply = await fetch('/api/v1/integrations/whatsapp_cloud_api/connect', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}',
@@ -35,5 +37,6 @@ test.describe('WhatsApp Cloud API availability', () => {
     });
     expect(response.status).toBe(501);
     expect(response.body).toMatchObject({ success: false, status: 'pending_verification', usable: false });
+    expect(await integrationStorage(adminUser.organizationId, ['whatsapp_cloud_api'])).toEqual(before);
   });
 });

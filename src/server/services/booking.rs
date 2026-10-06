@@ -262,17 +262,6 @@ impl BookingService {
             .await
             .map_err(|e| e.to_string())?;
 
-        let now = chrono::Utc::now();
-        if booking.start_time.signed_duration_since(now).num_hours() < 48 {
-            tokio::spawn(async move {
-                let _ = crate::dispatch_critical_sms(
-                    "urgent_booking",
-                    "You have an urgent booking coming up soon!",
-                )
-                .await;
-            });
-        }
-
         sqlx::query(
             "INSERT INTO bookings (id, tenant_id, customer_id, service_id, quote_id, start_time, end_time, status) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)"
@@ -306,6 +295,19 @@ impl BookingService {
         .await;
 
         tx.commit().await.map_err(|e| e.to_string())?;
+        // Notification may only follow the committed booking and uses its stable ID.
+        if booking.id.trim().is_empty() {
+            tracing::warn!("Booking SMS unavailable: committed booking identity is missing");
+        } else if booking.start_time.signed_duration_since(chrono::Utc::now()).num_hours() < 48 {
+            let tenant = booking.tenant_id.clone();
+            let event_id = format!("booking-created:{}", booking.id);
+            tokio::spawn(async move {
+                if let Err(error) = crate::api::sms_settings::dispatch_critical_sms(&tenant, &event_id, "urgent_booking", "You have an urgent booking coming up soon!").await {
+                    tracing::warn!(%error, "Booking SMS was not confirmed");
+                }
+            });
+        }
+
         Ok(())
     }
 }
