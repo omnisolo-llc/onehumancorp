@@ -2165,6 +2165,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         start_time TIMESTAMP NOT NULL,
                         end_time TIMESTAMP NOT NULL,
                         is_available BOOLEAN NOT NULL DEFAULT TRUE,
+                        resource_id TEXT,
+                        is_recurring BOOLEAN DEFAULT FALSE,
+                        recurrence_rule TEXT,
                         created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
                     );
@@ -3481,6 +3484,9 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         start_time TIMESTAMP NOT NULL,
                         end_time TIMESTAMP NOT NULL,
                         is_available BOOLEAN DEFAULT TRUE,
+                        resource_id TEXT,
+                        is_recurring BOOLEAN DEFAULT FALSE,
+                        recurrence_rule TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
 
