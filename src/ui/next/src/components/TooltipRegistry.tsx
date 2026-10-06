@@ -91,16 +91,11 @@ export function TooltipProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let scrollTimeoutId: NodeJS.Timeout;
-    const handleScroll = () => {
-      clearTimeout(scrollTimeoutId);
-      scrollTimeoutId = setTimeout(() => setActiveTooltip(null), 150);
-    };
+    // Dismiss the tooltip for this scroll event immediately. A delayed dismissal
+    // can otherwise close a new tooltip opened after scrolling its target into view.
+    const handleScroll = () => setActiveTooltip(null);
     window.addEventListener('scroll', handleScroll, true);
-    return () => {
-      clearTimeout(scrollTimeoutId);
-      window.removeEventListener('scroll', handleScroll, true);
-    };
+    return () => window.removeEventListener('scroll', handleScroll, true);
   }, []);
 
   return (

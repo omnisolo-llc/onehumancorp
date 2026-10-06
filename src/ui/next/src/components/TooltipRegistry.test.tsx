@@ -226,13 +226,19 @@ describe('TooltipRegistry window resize', () => {
     } finally { window.innerWidth = originalWidth; }
   });
 
-  it('cancels pending scroll work when the provider unmounts', async () => {
+  it('removes the scroll listener on unmount without leaving deferred dismissals', async () => {
+    const addListener = vi.spyOn(window, 'addEventListener');
+    const removeListener = vi.spyOn(window, 'removeEventListener');
     let view: ReturnType<typeof render>;
     await act(async () => { view = render(<TooltipProvider><div>Test</div></TooltipProvider>); });
+    const scrollListener = addListener.mock.calls.find(([type]) => type === 'scroll')![1];
     fireEvent.scroll(window);
-    expect(vi.getTimerCount()).toBe(1);
-    view!.unmount();
     expect(vi.getTimerCount()).toBe(0);
+    view!.unmount();
+    expect(removeListener).toHaveBeenCalledWith('scroll', scrollListener, true);
+    expect(vi.getTimerCount()).toBe(0);
+    addListener.mockRestore();
+    removeListener.mockRestore();
   });
 });
 
@@ -242,6 +248,27 @@ describe('TooltipRegistry scroll and contextmenu', () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each(['window', 'container'])('keeps a tooltip opened after %s scrolling visible', async (scroller) => {
+    await act(async () => {
+      render(<TooltipProvider><div data-testid="scroll-container">
+        <WithTooltip id="total-sales-tooltip"><span>Total Sales</span></WithTooltip>
+      </div></TooltipProvider>);
+    });
+    const target = screen.getByText('Total Sales').parentElement!;
+
+    // Scrolling a below-the-fold target into view must not queue a dismissal
+    // that closes the tooltip opened by the subsequent pointer entry.
+    fireEvent.scroll(scroller === 'window' ? window : screen.getByTestId('scroll-container'));
+    fireEvent.mouseEnter(target);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Total gross revenue generated.');
+    act(() => { vi.advanceTimersByTime(200); });
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Total gross revenue generated.');
+    expect(target).toHaveAttribute('aria-describedby', 'total-sales-tooltip-description');
+
+    fireEvent.mouseLeave(target);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
   it('hides tooltip on scroll', async () => {
@@ -272,7 +299,6 @@ describe('TooltipRegistry scroll and contextmenu', () => {
 
     await act(async () => {
         fireEvent.scroll(window);
-        vi.advanceTimersByTime(200);
     });
 
     expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
