@@ -530,7 +530,7 @@ impl ReceiptStore {
         field(&value, "now")
     }
 
-    async fn recheck_before_commit(
+    pub(super) async fn recheck_before_commit(
         tx: &DatabaseTransaction,
         authority: &Authority,
     ) -> Result<(), Error> {
@@ -592,7 +592,7 @@ impl ReceiptStore {
         Ok(())
     }
 
-    async fn transaction(
+    pub(super) async fn transaction(
         &self,
         authority: &Authority,
         write: bool,

@@ -11,6 +11,7 @@ import sys
 # Minimum existing executed inventory. Raising coverage must never hide removal
 # of an existing test; these are floors, not filters passed to the Rust harness.
 GATES = {
+    'department-delivery-contract': (33, 'OHC_DEPARTMENT_TEST_DATABASE_URL'),
     'redis-reconnect': (20, None),
     'cash-receipts': (45, 'OHC_CASH_TEST_DATABASE_URL'),
     'terminal-payment-integrity': (23, 'OHC_TERMINAL_TEST_DATABASE_URL'),
@@ -22,7 +23,7 @@ GATES = {
     'approvals-read-contract': (12, 'OHC_APPROVAL_TEST_DATABASE_URL'),
     'shipping-integrity-contract': (92, 'OHC_SHIPPING_TEST_DATABASE_URL'),
     'field-boundary-contract': (89, 'OHC_FIELD_TEST_DATABASE_URL'),
-    'sms-verification-contract': (29, 'OHC_SMS_TEST_DATABASE_URL'),
+    'sms-verification-contract': (49, 'OHC_SMS_TEST_DATABASE_URL'),
     'checkpoint-restore-contract': (37, 'OHC_CHECKPOINT_TEST_DATABASE_URL'),
     'staff-read-contract': (8, 'OHC_STAFF_TEST_DATABASE_URL'),
     'staff-timecard-contract': (96, 'OHC_CLOCK_TEST_DATABASE_URL'),
@@ -40,8 +41,8 @@ GATES = {
     'onboarding-durability': (70, 'OHC_SYNC_TEST_DATABASE_URL'),
     'quote-acceptance': (36, 'OHC_QUOTE_TEST_DATABASE_URL'),
     'onboarding-draft-merge': (6, 'OHC_DRAFT_TEST_DATABASE_URL'),
-    'agent-workflow-contract': (108, None),
-    'agent-receipt-postgres-contract': (97, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
+    'agent-workflow-contract': (120, None),
+    'agent-receipt-postgres-contract': (102, 'OHC_AGENT_RECEIPT_TEST_DATABASE_URL'),
     'stripe-webhook-security': (22, None),
     'builder-publication': (5, 'OHC_BUILDER_TEST_DATABASE_URL'),
     'site-publication': (93, 'OHC_PUBLICATION_TEST_DATABASE_URL'),

@@ -101,6 +101,11 @@ impl AgentActionWorker {
                     .get("feature_type")
                     .and_then(Value::as_str)
                     .ok_or_else(|| "Missing dispatch feature".to_string())?;
+                if matches!(feature, "ambassador_reply" | "instagram_dm") {
+                    return crate::domain::inbox::handle_approved_inbox_action(
+                        &attempt.tenant_id, &attempt.action_id, &attempt.job_id, &attempt.payload, &self.pool,
+                    ).await;
+                }
                 crate::domain::action_router::dispatch_action(
                     feature,
                     &attempt.tenant_id,

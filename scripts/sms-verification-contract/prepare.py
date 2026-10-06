@@ -30,9 +30,10 @@ parent=read('src/server/lib.rs')
 assert 'SmsService::configured(http_auth_store.clone())' in parent
 assert '.merge(api::sms_settings::router(sms_service).route_layer' in parent
 assert 'OTP_STORE' not in parent
+assert 'let _order_sms_worker = sms_service.start_order_notifications();' in parent
 initial=read('src/server/migrations/001_initial.sql')
-(HERE/'core_pg.sql').write_text('\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\);',initial,re.S).group() for name in ['tenants','users']))
-paths += [ROOT/p for p in ['src/server/api/sms_settings_test.rs','src/server/migrations/1039_sms_verification_receipts.sql','src/server/api/billing_webhook.rs','src/server/api/billing_webhook_test.rs','src/server/api/agents/webhook.rs','src/server/services/booking.rs','src/server/services/subscription/service.rs','src/server/api/mod.rs','src/server/db.rs','Cargo.lock','Cargo.toml','.github/workflows/ci.yml','scripts/focused_ci_gate.py']]
+(HERE/'core_pg.sql').write_text('\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\);',initial,re.S).group() for name in ['tenants','users','customers','orders']))
+paths += [ROOT/p for p in ['src/server/api/sms_settings_test.rs','src/server/api/order_notifications_test.rs','src/server/migrations/1043_durable_order_sms.sql','src/server/migrations/1039_sms_verification_receipts.sql','src/server/api/billing_webhook.rs','src/server/api/billing_webhook_test.rs','src/server/api/agents/webhook.rs','src/server/services/booking.rs','src/server/services/subscription/service.rs','src/server/api/mod.rs','src/server/db.rs','Cargo.lock','Cargo.toml','.github/workflows/ci.yml','scripts/focused_ci_gate.py']]
 paths += list((ROOT/'src/server/persistence').glob('*.sql'))
 paths += list((ROOT/'src/proto').rglob('*.proto'))
 paths += [ROOT/'.cargo/config.toml',ROOT/'src/ui/next/src/lib/auth/authLimits.json']

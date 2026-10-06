@@ -1,4 +1,5 @@
 "use client";
+import { messageDeliveryStatus } from "@/lib/messageDeliveryStatus";
 
 
 import { errorMessage } from '@/lib/errors';
@@ -25,6 +26,8 @@ type Message = {
 };
 
 function badgeTone(status?: string) {
+  const delivery = messageDeliveryStatus(status);
+  if (delivery) return delivery.tone;
   const normalized = (status || "").toLowerCase();
   if (["closed", "sent", "resolved", "auto_replied"].includes(normalized)) return "good";
   if (["open", "pending", "pending_approval", ""].includes(normalized)) return "warn";
@@ -104,7 +107,8 @@ function renderMessageContent(content: string): ReactNode {
 
 function formatStatus(status?: string) {
   const normalized = (status || "").toLowerCase();
-  if (normalized === "auto_replied") return "✨ AI Handled";
+  const delivery = messageDeliveryStatus(normalized);
+  if (delivery) return delivery.label;
   return status || "Open";
 }
 
@@ -332,15 +336,17 @@ function InboxWorkspace({
       });
 
       if (approveRes.ok) {
-        // Optimistic UI updates are handled by PowerSync once backend completes sync,
-        // but we show the status to the user.
-        setActionStatus("Draft approved and sent.");
+        const receipt: unknown = await approveRes.json();
+        if (!receipt || typeof receipt !== "object" || !("success" in receipt) || receipt.success !== true) {
+          throw new Error("Approval acknowledgement is unconfirmed");
+        }
+        setActionStatus("Approval recorded. Check the message status for provider acceptance; delivery is unconfirmed.");
       } else {
-        setActionStatus("Failed to approve and send message.");
+        setActionStatus("Approval or provider acceptance is unconfirmed. Check the saved message status before retrying.");
       }
     } catch (e) {
       console.error(e);
-      setActionStatus("Error approving message.");
+      setActionStatus("Approval outcome is unknown. Check the saved status before retrying.");
     }
   }
 

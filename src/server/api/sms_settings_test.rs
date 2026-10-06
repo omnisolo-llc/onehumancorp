@@ -413,14 +413,16 @@ async fn saved_preferences_reload_and_only_confirmed_tenant_recipients_receive_e
         .await;
     assert_eq!(body["preferences"]["urgent_booking"], true);
     assert_eq!(body["status"], "verified");
-    assert_eq!(
+    assert!(
         f.service
             .dispatch("tenant-b", "event-1", "new_order", "New order")
             .await
-            .unwrap()
-            .status,
-        "no_recipients"
+            .is_err()
     );
+    sqlx::query("INSERT INTO orders(id,tenant_id,status) VALUES('event-1','tenant-a','paid')")
+        .execute(&f.pool)
+        .await
+        .unwrap();
     assert_eq!(
         f.service
             .dispatch("tenant-a", "event-1", "failed_payment", "Payment failure")
@@ -544,6 +546,7 @@ async fn notification_replay_keeps_its_original_audience_after_new_opt_in() {
             .0,
         StatusCode::OK
     );
+    sqlx::query("INSERT INTO orders(id,tenant_id,status) VALUES('event-old','tenant-a','paid') ON CONFLICT(id) DO NOTHING").execute(&f.pool).await.unwrap();
     f.service
         .dispatch("tenant-a", "event-old", "new_order", "New order")
         .await
@@ -556,6 +559,7 @@ async fn notification_replay_keeps_its_original_audience_after_new_opt_in() {
         StatusCode::OK
     );
     let calls = f.provider.calls.load(Ordering::SeqCst);
+    sqlx::query("INSERT INTO orders(id,tenant_id,status) VALUES('event-old','tenant-a','paid') ON CONFLICT(id) DO NOTHING").execute(&f.pool).await.unwrap();
     f.service
         .dispatch("tenant-a", "event-old", "new_order", "New order")
         .await
@@ -599,7 +603,7 @@ async fn empty_event_stays_empty_after_opt_in_and_different_generated_wording() 
         .dispatch(
             "tenant-a",
             "no-audience",
-            "new_order",
+            "urgent_booking",
             "first generated message",
         )
         .await
@@ -607,14 +611,14 @@ async fn empty_event_stays_empty_after_opt_in_and_different_generated_wording() 
     assert_eq!(empty.status, "no_recipients");
     assert_eq!(f.provider.calls.load(Ordering::SeqCst), 0);
     let proof = f.verify(0).await;
-    assert_eq!(f.request(0,"sms-preferences",Method::POST,json!({"phone":"+14155550123","verification_id":proof,"urgent_booking":false,"failed_payment":false,"new_order":true})).await.0,StatusCode::OK);
+    assert_eq!(f.request(0,"sms-preferences",Method::POST,json!({"phone":"+14155550123","verification_id":proof,"urgent_booking":true,"failed_payment":false,"new_order":true})).await.0,StatusCode::OK);
     let calls = f.provider.calls.load(Ordering::SeqCst);
     let replay = f
         .service
         .dispatch(
             "tenant-a",
             "no-audience",
-            "new_order",
+            "urgent_booking",
             "different generated message",
         )
         .await
@@ -717,3 +721,6 @@ async fn cooldown_and_hourly_rate_limits_survive_service_recreation() {
     );
     assert_eq!(f.provider.calls.load(Ordering::SeqCst), 1);
 }
+
+#[path = "order_notifications_test.rs"]
+mod order_notifications;

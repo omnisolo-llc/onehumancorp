@@ -2409,3 +2409,6 @@ async fn usage_portable_sqlite_migration_installs_schema_without_granting_or_res
         700
     );
 }
+
+#[path = "assistant_test.rs"]
+mod assistant;

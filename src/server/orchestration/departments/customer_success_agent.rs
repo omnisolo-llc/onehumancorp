@@ -269,224 +269,15 @@ impl Department for CustomerSuccessAgent {
                 }
             }
 
-            let message = if let Some(orig) = original {
-                orig.get("generated_response")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown response")
-            } else {
-                "Unknown response"
-            };
-            tracing::info!("EXECUTING APPROVED DRAFT: Sending message: {}", message);
-
-            let content = format!("Sent response to customer: {}", message);
-
-            let source = original
-                .and_then(|orig| orig.get("source").and_then(|v| v.as_str()))
-                .unwrap_or("")
-                .to_string();
-            let sender_id = original
-                .and_then(|orig| orig.get("sender_id").and_then(|v| v.as_str()))
-                .unwrap_or("")
-                .to_string();
-
-            let target_language = original
-                .and_then(|orig| {
-                    orig.get("translated_from_language")
-                        .and_then(|v| v.as_str())
-                })
-                .unwrap_or("")
-                .to_string();
-            let text = if !target_language.is_empty()
-                && target_language.to_lowercase() != "en"
-                && target_language.to_lowercase() != "english"
-                && target_language.to_lowercase() != "unknown"
-            {
-                match crate::api::agents::translation::translate_inbox_message_with_llm(
-                    &event.tenant_id,
-                    &source,
-                    message,
-                    &target_language,
-                )
-                .await
-                {
-                    Ok(t) => t.translated_content,
-                    Err(e) => {
-                        tracing::error!(
-                            "Failed to translate outgoing message back to {}: {}",
-                            target_language,
-                            e
-                        );
-                        message.to_string()
-                    }
-                }
-            } else {
-                message.to_string()
-            };
-
-            let _hub_clone = self.hub.clone();
-            let tenant_id_for_meta = event.tenant_id.clone();
-
-            tokio::spawn(async move {
-                if source == "whatsapp" && !sender_id.is_empty() {
-                    let pool = crate::db::get_pool();
-                    let integration_row: Result<(String, String, String, String), sqlx::Error> = sqlx::query_as("SELECT integration_id, bot_token, api_token, from_phone FROM integration_credentials WHERE integration_id IN ('whatsapp_cloud_api', 'whatsapp', 'twilio') AND tenant_id = $1 ORDER BY CASE WHEN integration_id = 'whatsapp_cloud_api' THEN 1 WHEN integration_id = 'whatsapp' THEN 2 ELSE 3 END LIMIT 1")
-                        .bind(&tenant_id_for_meta)
-                        .fetch_one(&pool)
-                        .await;
-
-                    if let Ok((integration_id, account_sid, auth_token, from_phone)) =
-                        integration_row
-                    {
-                        if integration_id == "whatsapp_cloud_api" {
-                            use crate::integrations::meta::provider::MetaProvider;
-                            let provider = MetaProvider::new(auth_token, Some(from_phone));
-                            let to = if sender_id.starts_with("whatsapp:") {
-                                sender_id.replace("whatsapp:", "")
-                            } else {
-                                sender_id.clone()
-                            };
-                            if let Err(e) = provider.send_message("whatsapp", &to, &text).await {
-                                tracing::error!(
-                                    "Failed to send whatsapp message via Meta integration: {}",
-                                    e
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Successfully sent whatsapp message via Meta integration"
-                                );
-                            }
-                            return;
-                        } else if !account_sid.is_empty() && !auth_token.is_empty() {
-                            use crate::integrations::twilio::provider::TwilioProvider;
-                            let provider = TwilioProvider::new(account_sid, auth_token);
-
-                            if from_phone.is_empty() {
-                                tracing::error!(
-                                    "Failed to send whatsapp message via Twilio integration: from_phone is empty in credentials"
-                                );
-                                return;
-                            }
-                            let twilio_from = from_phone;
-                            let twilio_to = if sender_id.starts_with("whatsapp:") {
-                                sender_id.clone()
-                            } else {
-                                format!("whatsapp:{}", sender_id)
-                            };
-                            if let Err(e) = provider
-                                .send_whatsapp(&twilio_to, &twilio_from, &text)
-                                .await
-                            {
-                                tracing::error!(
-                                    "Failed to send whatsapp message via Twilio integration: {}",
-                                    e
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Successfully sent whatsapp message via Twilio integration"
-                                );
-                            }
-                            return;
-                        }
-                    }
-                }
-
-                if source == "instagram" && !sender_id.is_empty() {
-                    let pool = crate::db::get_pool();
-                    let query = "SELECT id, integration_code FROM tool_integrations WHERE id = 'meta' AND tenant_id = $1 LIMIT 1";
-                    let row: Result<(String, String), sqlx::Error> = sqlx::query_as(query)
-                        .bind(&tenant_id_for_meta)
-                        .fetch_one(&pool)
-                        .await;
-
-                    match row {
-                        Ok((_found_id, api_token)) => {
-                            let registry =
-                                crate::integrations::registry::IntegrationsRegistry::new();
-                            let integration_id = "meta";
-
-                            let meta_creds =
-                                ::server_omnisolo::orchestration::ConnectIntegrationRequest {
-                                    bot_token: api_token.clone(),
-                                    chat_id: "".to_string(),
-                                    webhook_url: "".to_string(),
-                                    api_token: api_token.clone(),
-                                    from_phone: "".to_string(),
-                                    ..Default::default()
-                                };
-                            if let Err(e) = registry.connect(
-                                integration_id,
-                                &tenant_id_for_meta,
-                                meta_creds.clone(),
-                            ) {
-                                tracing::warn!(
-                                    "Failed to connect {} integration: {}",
-                                    integration_id,
-                                    e
-                                );
-                            }
-
-                            let res = registry
-                                .send_message(integration_id, &source, &sender_id, &text)
-                                .await;
-                            if let Err(e) = res {
-                                tracing::error!(
-                                    "Failed to send {} message via Meta integration: {}",
-                                    source,
-                                    e
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Successfully sent {} message via Meta integration",
-                                    source
-                                );
-                            }
-                        }
-                        Err(e) => {
-                            tracing::error!(
-                                "Failed to fetch Meta integration credentials from DB: {}",
-                                e
-                            ); // pii-safe
-                        }
-                    }
-                }
-            });
-
-            if let Some(inbox_id) =
-                original.and_then(|orig| orig.get("inbox_message_id").and_then(|v| v.as_str()))
-            {
-                let orchestrator_clone = self.orchestrator.clone();
-                let id_clone = inbox_id.to_string();
-                let tenant_id_clone = event.tenant_id.clone();
-                tokio::spawn(async move {
-                    let _ = orchestrator_clone
-                        .update_inbox_message_status(&id_clone, &tenant_id_clone, "sent")
-                        .await;
-                });
-            }
-
-            // Log the action in the agent's memory, handling errors and using proper defaults
-            // Assuming we don't have an embedding service here, we use a zero vector
-            // but properly await and map the error.
-            let record = omnisolo_builtin_agent::memory_store::EmbeddingRecord {
-                id: uuid::Uuid::new_v4().to_string(),
-                tenant_id: event.tenant_id.clone(),
-                agent_id: "customer_success_agent".to_string(),
-                content,
-                embedding: vec![0.0; 1536], // Simple dummy embedding since we don't have an embedder
-                source_type: "AGENT_ACTION".to_string(),
-                created_at: chrono::Utc::now(),
-                last_referenced_at: chrono::Utc::now(),
-                reference_count: 0,
-                reliability_score: 100,
-                owner_override: false,
-                metadata: None,
-            };
-            self.orchestrator
-                .write_long_term_memory(record)
-                .await
-                .map_err(|e| e.to_string())?;
-
-            return Ok(());
+            // The event is only a trigger. Read identity, approved content,
+            // recipient and provider account from the canonical tenant database.
+            let action_id = payload.get("approval_id").and_then(|value| value.as_str())
+                .ok_or_else(|| "Canonical approval identity is required".to_string())?;
+            let receipt = super::message_delivery::dispatch(
+                &super::message_delivery::Store::from_db(&self.orchestrator.db()),
+                &event.tenant_id, action_id,
+            ).await.map_err(|error| error.to_string())?;
+            return receipt.require_acceptance();
         }
 
         if event.event_type == "tenant.subscription.churn_risk" {
@@ -942,15 +733,7 @@ impl Department for CustomerSuccessAgent {
                     }),
             };
 
-            let description = if risk == ActionRisk::AutoExecute {
-                format!(
-                    "Auto-replied to message: '{}' with '{}'",
-                    message, generated_response
-                )
-            } else {
-                "The Ambassador drafted a response for your review.".to_string()
-            };
-
+            let description = "The Ambassador drafted a response for your review.".to_string();
             let inbox_id = event
                 .payload
                 .get("inbox_message_id")
@@ -962,12 +745,7 @@ impl Department for CustomerSuccessAgent {
                     .orchestrator
                     .update_inbox_message_draft(inbox_id, &event.tenant_id, &generated_response)
                     .await;
-                if risk == ActionRisk::AutoExecute {
-                    let _ = self
-                        .orchestrator
-                        .update_inbox_message_status(inbox_id, &event.tenant_id, "auto_replied")
-                        .await;
-                }
+
             }
 
             let action_payload = serde_json::json!({
@@ -984,7 +762,7 @@ impl Department for CustomerSuccessAgent {
                 "profile_summary": profile_summary_text,
             });
 
-            let approval_req = self
+            let _approval_req = self
                 .orchestrator
                 .execute_action(
                     DepartmentType::CustomerSuccess,
@@ -996,18 +774,6 @@ impl Department for CustomerSuccessAgent {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            if risk == ActionRisk::AutoExecute {
-                let approved_event = DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: event.tenant_id.clone(),
-                    event_type: "agent:customer_success:approved".to_string(),
-                    payload: serde_json::json!({
-                        "original_payload": action_payload,
-                        "approval_id": approval_req.id
-                    }),
-                };
-                let _ = self.orchestrator.dispatch_event(approved_event).await;
-            }
 
             return Ok(());
         }
@@ -1016,7 +782,7 @@ impl Department for CustomerSuccessAgent {
             let description = "The Ambassador drafted a response for your review.".to_string();
             let action_payload = event.payload.clone();
 
-            let approval_req = self
+            let _approval_req = self
                 .orchestrator
                 .execute_action(
                     DepartmentType::CustomerSuccess,
@@ -1028,18 +794,6 @@ impl Department for CustomerSuccessAgent {
                 .await
                 .map_err(|e| e.to_string())?;
 
-            if risk == ActionRisk::AutoExecute {
-                let approved_event = DepartmentEvent {
-                    id: uuid::Uuid::new_v4().to_string(),
-                    tenant_id: event.tenant_id.clone(),
-                    event_type: "agent:customer_success:approved".to_string(),
-                    payload: serde_json::json!({
-                        "original_payload": action_payload,
-                        "approval_id": approval_req.id
-                    }),
-                };
-                let _ = self.orchestrator.dispatch_event(approved_event).await;
-            }
 
             return Ok(());
         }

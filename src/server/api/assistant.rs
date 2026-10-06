@@ -24,8 +24,9 @@ where
     Router::new()
         .route("/workspaces", get(list_workspaces).post(create_workspace))
         .route("/workspaces/{id}", get(get_workspace))
-        .route("/tasks", get(list_tasks).post(create_task))
-        .route("/tasks/{id}", get(get_task).patch(mutate_task))
+        .merge(crate::workflow_execution::assistant::router())
+        .route("/legacy-tasks", get(list_tasks))
+        .route("/legacy-tasks/{id}", get(get_task).patch(mutate_task))
         .route(
             "/tasks/{id}/messages",
             get(list_messages).post(create_message),
@@ -621,7 +622,10 @@ async fn list_tasks(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Query(query): Query<AssistantQuery>,
+    Extension(execution): Extension<Arc<crate::workflow_execution::WorkflowExecution>>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    execution.authorize(&claims, &headers).await.map_err(|error| (error.status(), error.message().to_owned()))?;
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| "default".to_string());
@@ -755,143 +759,30 @@ async fn list_tasks(
     Ok(Json(serde_json::Value::Array(tasks)))
 }
 
-async fn create_task(
-    Extension(db): Extension<Arc<DB>>,
-    Extension(claims): Extension<Claims>,
-    Json(payload): Json<Task>,
-) -> Result<Json<Task>, (StatusCode, String)> {
-    let tenant_id = claims
-        .organization_id
-        .unwrap_or_else(|| "default".to_string());
-    let mut task = payload;
-    task.id = if task.id.is_empty() {
-        Uuid::new_v4().to_string()
-    } else {
-        task.id
-    };
-    task.created_at_unix = Utc::now().timestamp();
-    task.updated_at_unix = Utc::now().timestamp();
-
-    // Verify workspace exists or create a default one
-    match &db.store {
-        DbStore::Sqlite(pool) => {
-            let ws_exists: (i64,) =
-                sqlx::query_as("SELECT count(*) FROM assistant_workspaces WHERE id = ?")
-                    .bind(&task.workspace_id)
-                    .fetch_one(pool)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            if ws_exists.0 == 0 {
-                sqlx::query(
-                    "INSERT INTO assistant_workspaces (id, tenant_id, name) VALUES (?, ?, ?)",
-                )
-                .bind(&task.workspace_id)
-                .bind(&tenant_id)
-                .bind("Default Workspace")
-                .execute(pool)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            }
-
-            sqlx::query(
-                "INSERT INTO assistant_tasks (id, tenant_id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-            )
-            .bind(&task.id)
-            .bind(&tenant_id)
-            .bind(&task.workspace_id)
-            .bind(&task.title)
-            .bind(&task.prompt)
-            .bind(&task.status)
-            .bind(&task.mode)
-            .bind(&task.permission_profile)
-            .bind(task.model_config_json.as_ref().map(|v| serde_json::to_string(v).unwrap_or_default()))
-            .bind(&task.current_step)
-            .bind(task.archived as i32)
-            .execute(pool)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-        }
-        DbStore::Postgres => {
-            let mut tx = db
-                .pool
-                .begin()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            let ws_exists: (i64,) =
-                sqlx::query_as("SELECT count(*) FROM assistant_workspaces WHERE id = $1")
-                    .bind(&task.workspace_id)
-                    .fetch_one(&mut *tx)
-                    .await
-                    .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            if ws_exists.0 == 0 {
-                sqlx::query(
-                    "INSERT INTO assistant_workspaces (id, tenant_id, name) VALUES ($1, $2, $3)",
-                )
-                .bind(&task.workspace_id)
-                .bind(&tenant_id)
-                .bind("Default Workspace")
-                .execute(&mut *tx)
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            }
-
-            sqlx::query(
-                "INSERT INTO assistant_tasks (id, tenant_id, workspace_id, title, prompt, status, mode, permission_profile, model_config, current_step, archived) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)"
-            )
-            .bind(&task.id)
-            .bind(&tenant_id)
-            .bind(&task.workspace_id)
-            .bind(&task.title)
-            .bind(&task.prompt)
-            .bind(&task.status)
-            .bind(&task.mode)
-            .bind(&task.permission_profile)
-            .bind(&task.model_config_json)
-            .bind(&task.current_step)
-            .bind(task.archived)
-            .execute(&mut *tx)
-            .await
-            .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-
-            tx.commit()
-                .await
-                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-        }
-    }
-
-    Ok(Json(task))
-}
-
 async fn mutate_task(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
+    Extension(execution): Extension<Arc<crate::workflow_execution::WorkflowExecution>>,
+    headers: axum::http::HeaderMap,
     Json(payload): Json<serde_json::Value>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    execution.authorize(&claims, &headers).await.map_err(|error| (error.status(), error.message().to_owned()))?;
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| "default".to_string());
     let action = payload.get("action").and_then(|a| a.as_str()).unwrap_or("");
+    if matches!(action, "stop" | "resume") {
+        return Err((StatusCode::CONFLICT, "Legacy tasks have no admitted execution; create a new text task".into()));
+    }
 
     match &db.store {
         DbStore::Sqlite(pool) => {
-            if action == "stop" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'blocked', current_step = 'Stopped by user', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
-                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            } else if action == "resume" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'running', current_step = 'Resumed and preparing next step', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
-                    .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            } else if action == "archive" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'archived', current_step = 'Archived', archived = 1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+            if action == "archive" {
+                sqlx::query("UPDATE assistant_tasks SET archived = 1, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                     .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "unarchive" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'completed', current_step = 'Restored to active task list', archived = 0, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
+                sqlx::query("UPDATE assistant_tasks SET archived = 0, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = ? AND id = ?")
                     .bind(&tenant_id).bind(&id).execute(pool).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "rename" || action == "rename_archived" {
                 let title = payload.get("title").and_then(|t| t.as_str()).unwrap_or("");
@@ -972,17 +863,11 @@ async fn mutate_task(
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-            if action == "stop" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'blocked', current_step = 'Stopped by user', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
-                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            } else if action == "resume" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'running', current_step = 'Resumed and preparing next step', updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
-                    .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
-            } else if action == "archive" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'archived', current_step = 'Archived', archived = true, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
+            if action == "archive" {
+                sqlx::query("UPDATE assistant_tasks SET archived = true, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
                     .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "unarchive" {
-                sqlx::query("UPDATE assistant_tasks SET status = 'completed', current_step = 'Restored to active task list', archived = false, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
+                sqlx::query("UPDATE assistant_tasks SET archived = false, updated_at = CURRENT_TIMESTAMP WHERE tenant_id = $1 AND id = $2")
                     .bind(&tenant_id).bind(&id).execute(&mut *tx).await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
             } else if action == "rename" || action == "rename_archived" {
                 let title = payload.get("title").and_then(|t| t.as_str()).unwrap_or("");
@@ -1156,7 +1041,10 @@ async fn get_task(
     Extension(db): Extension<Arc<DB>>,
     Extension(claims): Extension<Claims>,
     Path(id): Path<String>,
+    Extension(execution): Extension<Arc<crate::workflow_execution::WorkflowExecution>>,
+    headers: axum::http::HeaderMap,
 ) -> Result<Json<Task>, (StatusCode, String)> {
+    execution.authorize(&claims, &headers).await.map_err(|error| (error.status(), error.message().to_owned()))?;
     let tenant_id = claims
         .organization_id
         .unwrap_or_else(|| "default".to_string());

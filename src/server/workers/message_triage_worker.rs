@@ -653,6 +653,21 @@ Output JSON format:
                 }
             }
 
+            let message_reply_payload = if action_type == "Draft Reply" || event_source == "instagram_dm" {
+                use crate::orchestration::departments::message_delivery;
+                let store = message_delivery::Store::from_db(&self.db);
+                let reply = message_delivery::prepare(&store, &tenant_id, serde_json::json!({
+                    "feature_type": "ambassador_reply",
+                    "inbox_message_id": message_id,
+                    "generated_response": action_payload,
+                    "original_message": customer_message,
+                    "customer_id": customer_id_val,
+                })).await.map_err(|error| error.to_string())?;
+                message_delivery::record_pending_review(&store, &tenant_id, &agent_feed_item_id)
+                    .await.map_err(|error| error.to_string())?;
+                Some(reply)
+            } else { None };
+
             match &self.db.store {
                 crate::db::DbStore::Postgres => {
                     if let Err(e) = sqlx::query("UPDATE omni_inbox_messages SET draft_reply = $1 WHERE id = $2 AND tenant_id = $3")
@@ -743,7 +758,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "customer_id": customer_id_val
                     }))
-                    .bind(serde_json::json!({
+                    .bind(message_reply_payload.clone().unwrap_or_else(|| serde_json::json!({
                         "action_type": action_type,
                         "draft_reply": action_payload,
                         "inbox_message_id": message_id,
@@ -751,7 +766,7 @@ Output JSON format:
                         "booking_id": booking_id_opt,
                         "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
                         "action_payload": action_payload
-                    }))
+                    })))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent feed item: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
@@ -765,7 +780,7 @@ Output JSON format:
                     .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
                     .bind(serde_json::json!({"description": context_summary}))
-                    .bind(serde_json::json!({
+                    .bind(message_reply_payload.clone().unwrap_or_else(|| serde_json::json!({
                         "feature_type": event_source,
                         "original_message": customer_message,
                         "generated_response": action_payload,
@@ -774,7 +789,7 @@ Output JSON format:
                         "source": source,
                         "sender_id": sender_id,
                         "customer_id": customer_id_val,
-                    }))
+                    })))
                     .execute(&self.db.pool).await {
                         tracing::error!("Failed to insert agent approvals item: {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = NOW() WHERE id = $1")
@@ -881,7 +896,7 @@ Output JSON format:
                         "inbox_message_id": message_id,
                         "customer_id": customer_id_val
                     }).to_string())
-                    .bind(serde_json::json!({
+                    .bind(message_reply_payload.clone().unwrap_or_else(|| serde_json::json!({
                         "action_type": action_type,
                         "draft_reply": action_payload,
                         "inbox_message_id": message_id,
@@ -889,7 +904,7 @@ Output JSON format:
                         "booking_id": booking_id_opt,
                         "feature_type": if action_type == "Draft Booking" { "booking_draft" } else if event_source == "instagram_dm" || action_type == "Draft Reply" { "ambassador_reply" } else { "quote_draft" },
                         "action_payload": action_payload
-                    }).to_string())
+                    })).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent feed item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")
@@ -903,7 +918,7 @@ Output JSON format:
                     .bind(&agent_feed_item_id)
                     .bind(&tenant_id)
                     .bind(serde_json::json!({"description": context_summary}).to_string())
-                    .bind(serde_json::json!({
+                    .bind(message_reply_payload.clone().unwrap_or_else(|| serde_json::json!({
                         "feature_type": event_source,
                         "original_message": customer_message,
                         "generated_response": action_payload,
@@ -912,7 +927,7 @@ Output JSON format:
                         "source": source,
                         "sender_id": sender_id,
                         "customer_id": customer_id_val,
-                    }).to_string())
+                    })).to_string())
                     .execute(sqlite_pool).await {
                         tracing::error!("Failed to insert agent approvals item (SQLite): {}", e);
                         let _ = sqlx::query("UPDATE ohc_job_queue SET status = 'FAILED', updated_at = CURRENT_TIMESTAMP WHERE id = ?")

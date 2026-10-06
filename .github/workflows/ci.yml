@@ -1230,6 +1230,16 @@ jobs:
           bash scripts/sms-verification-contract/fetch.sh
           python3 scripts/focused_ci_gate.py sms-verification-contract
 
+      - name: Verify department message acceptance and durable replay fences
+        if: ${{ !cancelled() }}
+        env:
+          OHC_DEPARTMENT_TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/ohc_department_test
+          CARGO_TARGET_DIR: target
+        run: |
+          createdb --maintenance-db="$OMNISOLO_POSTGRES_ADMIN_URL" ohc_department_test
+          bash scripts/department-delivery-contract/fetch.sh
+          python3 scripts/focused_ci_gate.py department-delivery-contract
+
       - name: Verify recorded-order milestone isolation
         if: ${{ !cancelled() }}
         env:

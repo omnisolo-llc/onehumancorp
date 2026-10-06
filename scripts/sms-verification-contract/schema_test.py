@@ -67,11 +67,11 @@ class SmsSchemaTest(unittest.TestCase):
     def test_no_recipient_event_is_a_durable_terminal_noop_with_frozen_content(self):
         execute(self.db,'INSERT INTO sms_notification_events', ['a','evt-empty','new_order','original message','original hash','no_recipients',100])
         self.seed_verified()
-        row=execute(self.db,'SELECT message,message_hash,status FROM sms_notification_events',['a','evt-empty','new_order']).fetchone()
+        row=execute(self.db,'SELECT message,message_hash,status FROM sms_notification_events WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3',['a','evt-empty','new_order']).fetchone()
         self.assertEqual(row,('original message','original hash','no_recipients'))
         with self.assertRaises(sqlite3.IntegrityError):
             execute(self.db,'INSERT INTO sms_notification_events', ['a','evt-empty','new_order','later wording','later hash','prepared',200])
-        self.assertEqual(execute(self.db,'SELECT message,message_hash,status FROM sms_notification_events',['a','evt-empty','new_order']).fetchone(),row)
+        self.assertEqual(execute(self.db,'SELECT message,message_hash,status FROM sms_notification_events WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3',['a','evt-empty','new_order']).fetchone(),row)
     def test_schema_reapplication_preserves_private_preferences(self):
         self.db.execute("INSERT INTO sms_notification_preferences(tenant_id,actor_id,phone,verification_id,urgent_booking) VALUES('a','owner','+14155550123','proof',1)")
         self.db.executescript((ROOT / 'src/server/persistence/sms_verification_sqlite.sql').read_text())

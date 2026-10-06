@@ -4792,6 +4792,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
     let http_auth_store = std::sync::Arc::new(crate::auth::Store::with_portable_repo(auth_repo));
     let sms_service = api::sms_settings::SmsService::configured(http_auth_store.clone());
     api::sms_settings::install_global(sms_service.clone())?;
+    let _order_sms_worker = sms_service.start_order_notifications();
     if legacy_sqlx_background_enabled {
         let agent_action_worker = std::sync::Arc::new(
             crate::workers::agent_action_worker::AgentActionWorker::new(
@@ -8030,7 +8031,7 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
                 ),
             ),
         )
-        .nest("/api/v1/assistant", api::assistant::router(db.clone()))
+        .nest("/api/v1/assistant", api::assistant::router(db.clone()).layer(axum::Extension(workflow_execution.clone())))
         .nest("/api/v1/subscriptions", api::subscription::router_with_orchestrator(hub.clone(), Some(dept_orchestrator.clone())))
         .nest(
             "/api/v1/fulfillment",

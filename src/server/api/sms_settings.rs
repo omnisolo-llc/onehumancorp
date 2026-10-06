@@ -20,7 +20,10 @@ use server_integrations_twilio::client::{
     MessageReceipt, MessageSendError, RealTwilioClient, TwilioClientWrapper,
 };
 use sha2::{Digest, Sha256};
-use std::sync::{Arc, OnceLock};
+use std::sync::{
+    Arc, OnceLock,
+    atomic::{AtomicI64, Ordering},
+};
 
 #[cfg(test)]
 #[path = "sms_settings_test.rs"]
@@ -40,6 +43,8 @@ pub struct SmsService {
     from_phone: String,
     configured: bool,
     key: [u8; 32],
+    order_worker_healthy_at: Arc<AtomicI64>,
+    order_discovery_offset: Arc<AtomicI64>,
 }
 impl SmsService {
     pub fn configured(store: Arc<server_auth::Store>) -> Self {
@@ -90,6 +95,8 @@ impl SmsService {
             provider,
             from_phone,
             configured,
+            order_worker_healthy_at: Arc::new(AtomicI64::new(0)),
+            order_discovery_offset: Arc::new(AtomicI64::new(0)),
         }
     }
     async fn authorize(&self, claims: &Claims, headers: &HeaderMap) -> Result<Owner, Failure> {
@@ -323,6 +330,7 @@ struct Snapshot {
     preferences: Preferences,
     challenge: Option<PublicChallenge>,
     provider_configured: bool,
+    order_notifications_available: bool,
 }
 async fn preferences(
     tx: &mut Transaction,
@@ -346,7 +354,7 @@ async fn snapshot(
     tx: &mut Transaction,
     tenant: &str,
     actor: &str,
-    configured: bool,
+    service: &SmsService,
 ) -> Result<Snapshot, Failure> {
     let prefs = preferences(tx, tenant, actor).await?;
     let challenge = latest_challenge(tx, tenant, actor)
@@ -369,6 +377,17 @@ async fn snapshot(
         ),
         None => (None, None, Preferences::default()),
     };
+    let now = chrono::Utc::now().timestamp();
+    let checked = service.order_worker_healthy_at.load(Ordering::SeqCst);
+    let worker_ready = service.configured && checked > 0 && now.saturating_sub(checked) < 30;
+    let installed = if worker_ready {
+        match tx {
+            Transaction::Postgres(tx) => sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid=to_regclass('orders') AND tgname='orders_admit_sms' AND tgenabled IN ('O','A') AND NOT tgisinternal)").fetch_one(tx.connection()).await?,
+            Transaction::Sqlite(tx) => sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='orders_admit_sms' AND tbl_name='orders')").fetch_one(tx.connection()).await?,
+        }
+    } else {
+        false
+    };
     Ok(Snapshot {
         success: true,
         organization_id: tenant.into(),
@@ -382,7 +401,8 @@ async fn snapshot(
         verification_id,
         preferences,
         challenge,
-        provider_configured: configured,
+        provider_configured: service.configured,
+        order_notifications_available: installed,
     })
 }
 async fn lock_preferences(tx: &mut Transaction, tenant: &str, actor: &str) -> Result<(), Failure> {
@@ -437,7 +457,7 @@ async fn read(
     let owner = service.authorize(&claims, &headers).await?;
     let (tenant, actor) = owner.binding();
     let mut tx = owner.begin().await?;
-    let result = snapshot(&mut tx, &tenant, &actor, service.configured).await?;
+    let result = snapshot(&mut tx, &tenant, &actor, &service).await?;
     tx.commit().await?;
     Ok(response(result))
 }
@@ -602,7 +622,7 @@ async fn confirm(
     if verified != 1 {
         return Err(Failure::Unconfirmed);
     }
-    let result = snapshot(&mut tx, &tenant, &actor, service.configured).await?;
+    let result = snapshot(&mut tx, &tenant, &actor, &service).await?;
     tx.commit().await?;
     Ok(response(result))
 }
@@ -625,7 +645,7 @@ async fn update(
     if changed != 1 {
         return Err(Failure::VerificationRequired);
     }
-    let result = snapshot(&mut tx, &tenant, &actor, service.configured).await?;
+    let result = snapshot(&mut tx, &tenant, &actor, &service).await?;
     tx.commit().await?;
     Ok(response(result))
 }
@@ -693,14 +713,34 @@ async fn lock_notification_authority(
     claim: &Dispatch,
 ) -> Result<bool, Failure> {
     if let BackgroundTransaction::Postgres(transaction) = tx {
-        let current:Option<String>=sqlx::query_scalar("SELECT p.actor_id FROM sms_notification_preferences p JOIN users u ON u.id=p.actor_id AND u.tenant_id=p.tenant_id JOIN identity_user_roles r ON r.user_id=u.id AND r.tenant_id=u.tenant_id WHERE p.tenant_id=$1 AND p.actor_id=$2 AND p.phone=$3 AND p.verification_id=$4 AND u.active=TRUE AND lower(r.role_name) IN ('owner','admin') AND (($5='urgent_booking' AND p.urgent_booking) OR ($5='failed_payment' AND p.failed_payment) OR ($5='new_order' AND p.new_order)) FOR SHARE OF u,r FOR UPDATE OF p")
+        let current:Option<String>=sqlx::query_scalar("SELECT p.actor_id FROM sms_notification_preferences p JOIN users u ON u.id=p.actor_id AND u.tenant_id=p.tenant_id JOIN identity_user_roles r ON r.user_id=u.id AND r.tenant_id=u.tenant_id JOIN sms_verification_challenges c ON c.tenant_id=p.tenant_id AND c.actor_id=p.actor_id AND c.challenge_id=p.verification_id AND c.phone=p.phone WHERE p.tenant_id=$1 AND p.actor_id=$2 AND p.phone=$3 AND p.verification_id=$4 AND u.active=TRUE AND lower(r.role_name) IN ('owner','admin') AND c.state='verified' AND (($5='urgent_booking' AND p.urgent_booking) OR ($5='failed_payment' AND p.failed_payment) OR ($5='new_order' AND p.new_order)) FOR SHARE OF u,r,c FOR UPDATE OF p")
             .bind(tenant).bind(&claim.actor_id).bind(&claim.phone).bind(&claim.verification_id).bind(event_type).fetch_optional(&mut **transaction).await?;
         return Ok(current.is_some());
     }
     Ok(background!(*tx, connection, {
-        sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM sms_notification_preferences p JOIN users u ON u.id=p.actor_id AND u.tenant_id=p.tenant_id JOIN identity_user_roles r ON r.user_id=u.id AND r.tenant_id=u.tenant_id WHERE p.tenant_id=$1 AND p.actor_id=$2 AND p.phone=$3 AND p.verification_id=$4 AND u.active=TRUE AND lower(r.role_name) IN ('owner','admin') AND (($5='urgent_booking' AND p.urgent_booking) OR ($5='failed_payment' AND p.failed_payment) OR ($5='new_order' AND p.new_order)))")
+        sqlx::query_scalar::<_,bool>("SELECT EXISTS(SELECT 1 FROM sms_notification_preferences p JOIN users u ON u.id=p.actor_id AND u.tenant_id=p.tenant_id JOIN identity_user_roles r ON r.user_id=u.id AND r.tenant_id=u.tenant_id JOIN sms_verification_challenges c ON c.tenant_id=p.tenant_id AND c.actor_id=p.actor_id AND c.challenge_id=p.verification_id AND c.phone=p.phone WHERE p.tenant_id=$1 AND p.actor_id=$2 AND p.phone=$3 AND p.verification_id=$4 AND u.active=TRUE AND lower(r.role_name) IN ('owner','admin') AND c.state='verified' AND (($5='urgent_booking' AND p.urgent_booking) OR ($5='failed_payment' AND p.failed_payment) OR ($5='new_order' AND p.new_order)))")
             .bind(tenant).bind(&claim.actor_id).bind(&claim.phone).bind(&claim.verification_id).bind(event_type).fetch_one(connection).await?
     }))
+}
+async fn lock_committed_order(
+    tx: &mut BackgroundTransaction,
+    tenant: &str,
+    event_id: &str,
+) -> Result<bool, Failure> {
+    // The worker has already left its routing-discovery role. Tenant and order
+    // identity are rechecked under RLS; a current order lock fences deletion or
+    // reassignment through the durable send claim, alongside preference locks.
+    let found: Option<String> = match tx {
+        BackgroundTransaction::Postgres(tx) => sqlx::query_scalar("SELECT id FROM orders WHERE tenant_id=$1 AND id=$2 FOR SHARE").bind(tenant).bind(event_id).fetch_optional(&mut **tx).await?,
+        BackgroundTransaction::Sqlite(tx) => sqlx::query_scalar("SELECT id FROM orders WHERE tenant_id=$1 AND id=$2").bind(tenant).bind(event_id).fetch_optional(&mut **tx).await?,
+    };
+    Ok(found.is_some())
+}
+struct OrderWorkerHealth(Arc<AtomicI64>);
+impl Drop for OrderWorkerHealth {
+    fn drop(&mut self) {
+        self.0.store(0, Ordering::SeqCst);
+    }
 }
 impl SmsService {
     async fn background_transaction(&self, tenant: &str) -> Result<BackgroundTransaction, Failure> {
@@ -726,6 +766,150 @@ impl SmsService {
             _ => Err(Failure::Unavailable),
         }
     }
+    async fn order_notification_receipt(
+        &self,
+        tenant: &str,
+        event_id: &str,
+    ) -> Result<DispatchReceipt, Failure> {
+        let mut tx = self.background_transaction(tenant).await?;
+        if !lock_committed_order(&mut tx, tenant, event_id).await? {
+            return Err(Failure::Invalid("persistent_order_receipt_required"));
+        }
+        let event = background!(tx, connection, {
+            sqlx::query_as::<_,NotificationEvent>("SELECT message,message_hash,status FROM sms_notification_events WHERE tenant_id=$1 AND event_id=$2 AND event_type='new_order'").bind(tenant).bind(event_id).fetch_optional(connection).await?
+        })
+        .ok_or(Failure::Invalid("transactional_order_admission_required"))?;
+        let states = background!(tx, connection, {
+            sqlx::query_as::<_,(String,Option<String>)>("SELECT state,provider_sid FROM sms_notification_dispatches WHERE tenant_id=$1 AND event_id=$2 AND event_type='new_order'").bind(tenant).bind(event_id).fetch_all(connection).await?
+        });
+        tx.commit().await?;
+        let ids = states
+            .iter()
+            .filter(|(state, _)| state == "accepted")
+            .map(|(_, sid)| sid.clone().ok_or(Failure::Unconfirmed))
+            .collect::<Result<Vec<_>, _>>()?;
+        let skipped = states.iter().filter(|(state, _)| state == "cancelled").count();
+        let has = |wanted: &str| states.iter().any(|(state, _)| state == wanted);
+        let status = if event.status == "no_recipients" && states.is_empty() {
+            "no_recipients"
+        } else if has("sending") || has("unknown") {
+            "requires_reconciliation"
+        } else if has("rejected") {
+            "provider_rejected"
+        } else if has("prepared") {
+            "queued"
+        } else if !ids.is_empty() {
+            "provider_accepted"
+        } else if skipped > 0 {
+            "no_eligible_recipients"
+        } else {
+            return Err(Failure::Unconfirmed);
+        };
+        Ok(DispatchReceipt {
+            status,
+            provider_message_ids: ids,
+            skipped_recipients: skipped,
+        })
+    }
+    // Discovery returns routing identities only, using the existing background
+    // role. No message, phone, preference or provider effect is read under it.
+    async fn discover_order_notifications(&self) -> Result<Vec<(String, String)>, Failure> {
+        let repository = self.store.portable_repo().ok_or(Failure::Unavailable)?;
+        let connection = repository.connection();
+        let mut tx = match connection.get_database_backend() {
+            sea_orm::DatabaseBackend::Postgres => {
+                let mut tx = connection.get_postgres_connection_pool().begin().await?;
+                sqlx::query("SET LOCAL ROLE ohc_bypassrls").execute(&mut *tx).await?;
+                sqlx::query("SET LOCAL statement_timeout='3000ms'").execute(&mut *tx).await?;
+                BackgroundTransaction::Postgres(tx)
+            }
+            sea_orm::DatabaseBackend::Sqlite => BackgroundTransaction::Sqlite(connection.get_sqlite_connection_pool().begin().await?),
+            _ => return Err(Failure::Unavailable),
+        };
+        let pending = background!(tx, connection, {
+            sqlx::query_as::<_,(String,String)>("SELECT e.tenant_id,e.event_id FROM sms_notification_events e JOIN orders o ON o.tenant_id=e.tenant_id AND o.id=e.event_id WHERE e.event_type='new_order' AND e.status='prepared' AND e.next_attempt_at<=$1 AND EXISTS(SELECT 1 FROM sms_notification_dispatches d WHERE d.tenant_id=e.tenant_id AND d.event_id=e.event_id AND d.event_type=e.event_type AND d.state='prepared') ORDER BY e.next_attempt_at,e.created_at,e.tenant_id,e.event_id LIMIT 32 OFFSET $2").bind(chrono::Utc::now().timestamp()).bind(self.order_discovery_offset.load(Ordering::SeqCst)).fetch_all(connection).await?
+        });
+        tx.commit().await?;
+        Ok(pending)
+    }
+    async fn reserve_order_notification(&self, tenant: &str, event_id: &str) -> Result<bool, Failure> {
+        let mut tx = self.background_transaction(tenant).await?;
+        let now = chrono::Utc::now().timestamp();
+        let claimed = background!(tx, connection, {
+            sqlx::query("UPDATE sms_notification_events SET next_attempt_at=$3 WHERE tenant_id=$1 AND event_id=$2 AND event_type='new_order' AND status='prepared' AND next_attempt_at<=$4").bind(tenant).bind(event_id).bind(now+30).bind(now).execute(connection).await?.rows_affected()
+        });
+        tx.commit().await?;
+        Ok(claimed == 1)
+    }
+    async fn drain_order_notifications(&self) -> Result<usize, Failure> {
+        if !self.configured {
+            return Ok(0);
+        }
+        let pending = self.discover_order_notifications().await?;
+        let page_len = pending.len();
+        let mut reservation_failed = false;
+        let mut count = 0;
+        let mut unavailable = false;
+        for (tenant, event_id) in pending {
+            // Reserve the retry interval before processing. A failed reservation
+            // is isolated to its event; it never aborts other tenants' work.
+            match self.reserve_order_notification(&tenant, &event_id).await {
+                Ok(true) => count += 1,
+                Ok(false) => continue,
+                Err(_) => {
+                    reservation_failed = true;
+                    unavailable = true;
+                    continue;
+                }
+            }
+            // A timeout after provider I/O leaves the durable sending claim in
+            // place. It is held for reconciliation, never turned into a retry.
+            match tokio::time::timeout(
+                std::time::Duration::from_secs(20),
+                self.dispatch(&tenant, &event_id, "new_order", ""),
+            )
+            .await
+            {
+                Ok(Ok(_)) => {}
+                Ok(Err(Failure::Unavailable)) | Err(_) => {
+                    unavailable = true;
+                    tracing::warn!("Order SMS storage/provider claim is unavailable; retry is scheduled");
+                }
+                Ok(Err(_)) => tracing::warn!("Order SMS remains pending or requires provider reconciliation"),
+            }
+        }
+        // If an entire leading page cannot even reserve its retry schedule,
+        // rotate the bounded routing scan on the next poll. Durable identities
+        // and send claims stay in SQL; this cursor carries no send authority.
+        if reservation_failed && page_len == 32 {
+            let offset = self.order_discovery_offset.load(Ordering::SeqCst);
+            self.order_discovery_offset.store(offset.saturating_add(32), Ordering::SeqCst);
+        } else {
+            self.order_discovery_offset.store(0, Ordering::SeqCst);
+        }
+        if unavailable {
+            return Err(Failure::Unavailable);
+        }
+        Ok(count)
+    }
+    pub fn start_order_notifications(&self) -> tokio::task::JoinHandle<()> {
+        let service = self.clone();
+        tokio::spawn(async move {
+            let _health = OrderWorkerHealth(service.order_worker_healthy_at.clone());
+            let mut interval = tokio::time::interval(std::time::Duration::from_secs(5));
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+            loop {
+                interval.tick().await;
+                match service.drain_order_notifications().await {
+                    Ok(_) => service.order_worker_healthy_at.store(chrono::Utc::now().timestamp(), Ordering::SeqCst),
+                    Err(_) => {
+                        service.order_worker_healthy_at.store(0, Ordering::SeqCst);
+                        tracing::warn!("Durable order SMS worker cannot access its configured outbox");
+                    }
+                }
+            }
+        })
+    }
     async fn dispatch(
         &self,
         tenant: &str,
@@ -750,6 +934,9 @@ impl SmsService {
             sqlx::query("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.jsonb_build_array('ohc-sms-event-v1',$1::text,$2::text,$3::text)::text,0))")
                 .bind(tenant).bind(event_id).bind(event_type).execute(&mut **transaction).await?;
         }
+        if event_type == "new_order" && !lock_committed_order(&mut tx, tenant, event_id).await? {
+            return Err(Failure::Invalid("persistent_order_receipt_required"));
+        }
         let event = background!(tx, connection, {
             sqlx::query_as::<_,NotificationEvent>("SELECT message,message_hash,status FROM sms_notification_events WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3")
                 .bind(tenant).bind(event_id).bind(event_type).fetch_optional(connection).await?
@@ -757,6 +944,11 @@ impl SmsService {
         let event = if let Some(event) = event {
             event
         } else {
+            // Only admission in the order INSERT transaction can create these.
+            // A volatile event or a historical order cannot manufacture an SMS.
+            if event_type == "new_order" {
+                return Err(Failure::Invalid("transactional_order_admission_required"));
+            }
             if message.trim().is_empty() || message.len() > 1600 {
                 return Err(Failure::Invalid("invalid_sms_message"));
             }
@@ -803,11 +995,10 @@ impl SmsService {
             return Err(Failure::Unavailable);
         }
         let claims = background!(tx, connection, {
-            sqlx::query_as::<_,Dispatch>("SELECT actor_id,phone,verification_id,message_hash,state,provider_sid FROM sms_notification_dispatches WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3 ORDER BY actor_id LIMIT 101")
+            sqlx::query_as::<_,Dispatch>("SELECT actor_id,phone,verification_id,message_hash,state,provider_sid FROM sms_notification_dispatches WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3 ORDER BY CASE WHEN state='prepared' THEN 0 ELSE 1 END,actor_id LIMIT 100")
                 .bind(tenant).bind(event_id).bind(event_type).fetch_all(connection).await?
         });
         if claims.is_empty()
-            || claims.len() > 100
             || claims
                 .iter()
                 .any(|claim| claim.message_hash != event.message_hash)
@@ -817,6 +1008,7 @@ impl SmsService {
         tx.commit().await?;
         let mut ids = Vec::new();
         let mut skipped = 0;
+        let mut failure = None;
         for claim in claims {
             if claim.state == "accepted" {
                 ids.push(claim.provider_sid.ok_or(Failure::Unconfirmed)?);
@@ -827,13 +1019,17 @@ impl SmsService {
                 continue;
             }
             if claim.state != "prepared" {
-                return Err(Failure::Unconfirmed);
+                failure = Some(Failure::Unconfirmed);
+                continue;
             }
             if !self.configured {
                 return Err(Failure::Unavailable);
             }
             let mut tx = self.background_transaction(tenant).await?;
-            let eligible = lock_notification_authority(&mut tx, tenant, event_type, &claim).await?;
+            let order_exists = event_type != "new_order"
+                || lock_committed_order(&mut tx, tenant, event_id).await?;
+            let eligible = order_exists
+                && lock_notification_authority(&mut tx, tenant, event_type, &claim).await?;
             if !eligible {
                 let cancelled = background!(tx, connection, {
                     sqlx::query("UPDATE sms_notification_dispatches SET state='cancelled' WHERE tenant_id=$1 AND actor_id=$2 AND event_id=$3 AND event_type=$4 AND state='prepared'")
@@ -881,17 +1077,37 @@ impl SmsService {
             match sent {
                 Ok(receipt) => ids.push(receipt.sid),
                 Err(MessageSendError::Rejected { .. } | MessageSendError::OptedOut) => {
-                    return Err(Failure::ProviderRejected);
+                    failure = Some(Failure::ProviderRejected)
                 }
-                Err(_) => return Err(Failure::Unconfirmed),
+                Err(_) => failure = Some(Failure::Unconfirmed),
             }
         }
-        let status = if ids.is_empty() {
+        let mut tx = self.background_transaction(tenant).await?;
+        let totals = background!(tx, connection, {
+            sqlx::query_as::<_,(i64,i64,i64,i64)>("SELECT COUNT(CASE WHEN state='prepared' THEN 1 END),COUNT(CASE WHEN state IN ('sending','unknown') THEN 1 END),COUNT(CASE WHEN state='rejected' THEN 1 END),COUNT(CASE WHEN state='accepted' THEN 1 END) FROM sms_notification_dispatches WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3").bind(tenant).bind(event_id).bind(event_type).fetch_one(connection).await?
+        });
+        if totals.0 > 0 {
+            tx.commit().await?;
+            return Ok(DispatchReceipt {
+                status: "queued",
+                provider_message_ids: ids,
+                skipped_recipients: skipped,
+            });
+        }
+        if totals.1 > 0 {
+            return Err(Failure::Unconfirmed);
+        }
+        if totals.2 > 0 {
+            return Err(Failure::ProviderRejected);
+        }
+        if let Some(error) = failure {
+            return Err(error);
+        }
+        let status = if totals.3 == 0 {
             "no_eligible_recipients"
         } else {
             "provider_accepted"
         };
-        let mut tx = self.background_transaction(tenant).await?;
         background!(tx, connection, {
             sqlx::query("UPDATE sms_notification_events SET status=$4 WHERE tenant_id=$1 AND event_id=$2 AND event_type=$3 AND status='prepared'")
                 .bind(tenant).bind(event_id).bind(event_type).bind(status).execute(connection).await?;
@@ -917,4 +1133,19 @@ pub async fn dispatch_critical_sms(
         .dispatch(tenant, event_id, event_type, message)
         .await
         .map_err(|error| format!("SMS was not confirmed: {error:?}"))
+}
+
+/// A read-only receipt for a tenant-owned persisted order. Calling a webhook or
+/// receiving an event-bus acknowledgement never creates notification authority.
+pub async fn order_notification_status(
+    tenant: &str,
+    order_id: &str,
+) -> Result<DispatchReceipt, String> {
+    let service = GLOBAL_SERVICE
+        .get()
+        .ok_or_else(|| "SMS service is unavailable".to_string())?;
+    service
+        .order_notification_receipt(tenant, order_id)
+        .await
+        .map_err(|error| format!("Order SMS receipt is unavailable: {error:?}"))
 }

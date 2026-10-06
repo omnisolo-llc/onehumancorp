@@ -22,6 +22,8 @@ pub struct WebhookPayload {
     pub target_language: Option<String>,
     pub customer_name: Option<String>,
     pub customer_email: Option<String>,
+    #[serde(default)]
+    pub order_id: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -81,6 +83,15 @@ async fn analyze_intake_inquiry(inquiry: &str) -> Result<(f64, String, String), 
     Ok((price, name, scope))
 }
 
+async fn order_sms_metadata(tenant_id: &str, order_id: Option<&str>) -> serde_json::Value {
+    if let Some(order_id)=order_id {
+        if let Ok(receipt)=crate::api::sms_settings::order_notification_status(tenant_id,order_id).await {
+            return serde_json::json!(receipt);
+        }
+    }
+    serde_json::json!({"status":"unavailable","reason":"persistent_order_receipt_required"})
+}
+
 async fn handle_webhook(
     State(orchestrator): State<Arc<DepartmentOrchestrator>>,
     Extension(claims): Extension<::server_common::Claims>,
@@ -109,7 +120,7 @@ async fn handle_webhook(
             Ok(_) => {
                 return (
                     StatusCode::OK,
-                    Json(serde_json::json!({"success":true,"request_id":null,"sms_notification":{"status":"unavailable","reason":"persistent_order_receipt_required"}})),
+                    Json(serde_json::json!({"success":true,"request_id":null,"sms_notification":order_sms_metadata(&payload.tenant_id,payload.order_id.as_deref()).await})),
                 )
                     .into_response();
             }
@@ -154,7 +165,7 @@ async fn handle_webhook(
         }
         return (
             StatusCode::OK,
-            Json(serde_json::json!({"success":true,"request_id":null,"sms_notification":{"status":"unavailable","reason":"persistent_order_receipt_required"}})),
+            Json(serde_json::json!({"success":true,"request_id":null,"sms_notification":order_sms_metadata(&payload.tenant_id,payload.order_id.as_deref()).await})),
         )
             .into_response();
     }

@@ -4,12 +4,13 @@ import { isRecord, recordOrEmpty } from '@/lib/records';
 import type { Step } from '@/components/Walkthrough';
 type ResourceData = Record<string, unknown> & { settings?: { observationMasking?: boolean } };
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 import styles from './assistant.module.css';
 import { InteractiveWalkthrough, WalkthroughTarget } from "../../components/Walkthrough";
 
-type AssistantTaskStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'planning' | 'pending' | 'archived';
+import type { AssistantTask, AssistantTaskStatus } from './taskTypes';
+import { assistantTask, useAssistantExecution } from './useAssistantExecution';
 type Section =
   | 'tasks'
   | 'compose'
@@ -28,45 +29,6 @@ type Section =
   | 'system'
   | 'parity';
 type ResultTab = 'Artifacts' | 'All Files' | 'Changes' | 'Preview';
-
-type AssistantArtifact = {
-  id: string;
-  type: string;
-  filename: string;
-  preview?: string;
-};
-
-type AssistantChange = {
-  id: string;
-  path: string;
-  summary: string;
-  approvalStatus: string;
-};
-
-type AssistantMessage = {
-  id: string;
-  role: string;
-  content: string;
-  tool_metadata_json?: { proposed_action?: Record<string, unknown> };
-};
-
-type AssistantTask = {
-  id: string;
-  title: string;
-  workspace: string;
-  status: AssistantTaskStatus;
-  currentStep: string;
-  mode: string;
-  model: string;
-  provider: string;
-  permissionProfile: string;
-  riskSummary: string[];
-  artifacts: AssistantArtifact[];
-  changes: AssistantChange[];
-  messages: AssistantMessage[];
-  createdAt?: string;
-  updatedAt?: string;
-};
 
 type AssistantCapabilities = {
   outputFormats?: string[];
@@ -110,9 +72,9 @@ const resourceConfig: Partial<Record<Section, { title: string; endpoint: string;
 
 const resultTabs: ResultTab[] = ['Artifacts', 'All Files', 'Changes', 'Preview'];
 const fallbackCapabilities: Required<AssistantCapabilities> = {
-  outputFormats: ['Document', 'Presentation', 'PDF', 'Code App'],
-  workModes: ['Ask', 'Agent', 'Plan', 'Coding'],
-  modelProviders: ['Auto', 'Agent'],
+  outputFormats: ['Text'],
+  workModes: ['Ask'],
+  modelProviders: ['Auto'],
 };
 
 function cx(...classes: Array<string | false | undefined>) {
@@ -151,27 +113,65 @@ function SectionButton({
 
 export default function AssistantPage() {
   const [tasks, setTasks] = useState<AssistantTask[]>([]);
-  const [capabilities, setCapabilities] = useState<Required<AssistantCapabilities>>(fallbackCapabilities);
+  const capabilities = fallbackCapabilities;
   const [activeTaskId, setActiveTaskId] = useState('');
   const [section, setSection] = useState<Section>('tasks');
   const [resultTab, setResultTab] = useState<ResultTab>('Artifacts');
   const [taskSearch, setTaskSearch] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<'all' | AssistantTaskStatus>('all');
   const [taskDateFilter, setTaskDateFilter] = useState<'all' | 'today' | 'this_week' | 'older'>('all');
-  const [prompt, setPrompt] = useState('Build a weekly research brief with charts');
+  const [prompt, setPrompt] = useState('');
   const [workspace, setWorkspace] = useState('Personal OS');
-  const [workDirectory, setWorkDirectory] = useState('/workspace/assistant');
-  const [outputFormat, setOutputFormat] = useState('Document');
-  const [mode, setMode] = useState('Plan');
+  const workDirectory = '';
+  const [outputFormat, setOutputFormat] = useState('Text');
+  const [mode, setMode] = useState('Ask');
   const [model, setModel] = useState('Auto');
-  const [constraints, setConstraints] = useState('Ask before sharing or overwriting files');
-  const [starting, setStarting] = useState(false);
+  const [constraints, setConstraints] = useState('');
   const [error, setError] = useState('');
   const [actionNotice, setActionNotice] = useState('');
   const [agentName, setAgentName] = useState('Agent');
   const [resourceData, setResourceData] = useState<Partial<Record<Section, ResourceData>>>({});
   const [resourceLoading, setResourceLoading] = useState('');
   const [resourceError, setResourceError] = useState('');
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [legacyHistory, setLegacyHistory] = useState(false);
+  const reads = useRef(0);
+  const taskReads = useRef(new Map<string,number>());
+  const focusedReceipt = useRef<AssistantTask|null>(null);
+  const retire = useCallback(() => {
+    reads.current += 1; taskReads.current.clear(); focusedReceipt.current = null; setTasks([]); setActiveTaskId(''); setPrompt(''); setConstraints('');
+    setWorkspace('Personal OS'); setTaskSearch(''); setTaskStatusFilter('all'); setTaskDateFilter('all'); setModel('Auto'); setMode('Ask'); setOutputFormat('Text');
+    setError(''); setActionNotice(''); setResourceData({}); setResourceError(''); setResourceLoading(''); setAgentName('Agent'); setWalkthroughSteps([]); setIsWalkthroughOpen(false); setNextCursor(null); setLegacyHistory(false);
+  }, []);
+  const received = useCallback((task: AssistantTask) => {
+    reads.current += 1; taskReads.current.set(task.id, (taskReads.current.get(task.id) ?? 0) + 1); focusedReceipt.current = task;
+    setTasks(current => [task, ...current.filter(item => item.id !== task.id)]);
+    setActiveTaskId(task.id); setResultTab('Artifacts'); setSection('results');
+  }, []);
+  const restore = useCallback((draft: Record<string,unknown>) => {
+    if (typeof draft.prompt === 'string') setPrompt(draft.prompt);
+    if (typeof draft.workspace === 'string') setWorkspace(draft.workspace);
+    if (typeof draft.constraints === 'string') setConstraints(draft.constraints);
+  }, []);
+  const execution = useAssistantExecution(retire, received, restore);
+  const { read, action, ready, revision } = execution;
+  const starting = execution.busy;
+  const loadTaskPage = useCallback(async (legacy = false, before: string | null = null, preserveFocused = false) => {
+    const sequence = ++reads.current;
+    try {
+      const data = recordOrEmpty(await read(legacy ? '/api/v1/assistant/legacy-tasks' : `/api/v1/assistant/tasks${before ? `?before=${before}` : ''}`));
+      if (sequence !== reads.current) return;
+      if (!Array.isArray(data.tasks)) throw new Error('Invalid task list');
+      const loaded = data.tasks.map(assistantTask);
+      if (loaded.some(task => !task)) throw new Error('Invalid task receipt');
+      const focused = preserveFocused ? focusedReceipt.current : null;
+      const page = loaded as AssistantTask[];
+      setTasks(focused && !page.some(task => task.id === focused.id) ? [focused,...page] : page); setActiveTaskId(focused?.id || page[0]?.id || '');
+      setNextCursor(typeof data.nextCursor === 'string' ? data.nextCursor : null); setLegacyHistory(legacy); setError('');
+    } catch (cause) { if (sequence === reads.current) setError(errorMessage(cause, 'Assistant tasks unavailable')); }
+  }, [read]);
+  useEffect(() => { if (ready) void loadTaskPage(false, null, true); return () => { reads.current += 1; }; }, [ready, revision, loadTaskPage]);
+
 
   const [isWalkthroughOpen, setIsWalkthroughOpen] = useState(false);
   const [walkthroughSteps, setWalkthroughSteps] = useState<Step[]>([]);
@@ -184,6 +184,8 @@ export default function AssistantPage() {
   };
 
   useEffect(() => {
+    if (!ready) return;
+    let mounted = true;
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
       const panel = searchParams.get('panel') || searchParams.get('section');
@@ -192,9 +194,9 @@ export default function AssistantPage() {
       }
     }
 
-    fetch("/api/v1/walkthrough/assistant")
-      .then((res) => { if (!res.ok) throw new Error('Tour lookup failed'); return res.json(); })
+    read("/api/v1/walkthrough/assistant")
       .then((data: unknown) => {
+        if (!mounted) return;
         if (!Array.isArray(data)) throw new Error('Invalid tour response');
         const steps: Step[] = data.filter((step: unknown): step is Step => {
           if (!step || typeof step !== 'object') return false;
@@ -209,63 +211,35 @@ export default function AssistantPage() {
         setTourNotice(steps.length ? '' : 'No tour is configured for this page.');
       })
       .catch(() => {
+        if (!mounted) return;
         setWalkthroughSteps([]);
         setTourNotice('The configured tour could not be loaded.');
       });
 
-    let mounted = true;
-
-    async function loadTasks() {
-      try {
-        const response = await fetch('/api/v1/assistant/tasks');
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || 'Assistant tasks unavailable');
-        if (!mounted) return;
-
-        const loadedTasks: AssistantTask[] = Array.isArray(data.tasks) ? data.tasks : [];
-        setTasks(loadedTasks);
-        setActiveTaskId(loadedTasks[0]?.id || '');
-        setCapabilities({
-          outputFormats: data.capabilities?.outputFormats?.length ? data.capabilities.outputFormats : fallbackCapabilities.outputFormats,
-          workModes: data.capabilities?.workModes?.length ? data.capabilities.workModes : fallbackCapabilities.workModes,
-          modelProviders: data.capabilities?.modelProviders?.length ? data.capabilities.modelProviders : fallbackCapabilities.modelProviders,
-        });
-      } catch (loadError: unknown) {
-        if (!mounted) return;
-        setError(errorMessage(loadError, 'Assistant tasks unavailable'));
-      }
-    }
-
     async function loadSettings() {
       try {
-        const response = await fetch('/api/v1/assistant/settings');
-        const data = await response.json().catch(() => ({}));
-        if (mounted && response.ok && data.settings?.agentName) {
-          setAgentName(data.settings.agentName);
-        }
-      } catch (settingsError) {
-        console.error(settingsError);
-      }
+        const data = recordOrEmpty(await read('/api/v1/assistant/settings'));
+        const settings = recordOrEmpty(data.settings);
+        if (mounted && typeof settings.agentName === 'string') setAgentName(settings.agentName);
+      } catch { /* Optional display settings cannot replace verified task state. */ }
     }
 
-    Promise.all([loadTasks(), loadSettings()]);
+    void loadSettings();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [ready, revision, read]);
 
   useEffect(() => {
     const config = resourceConfig[section];
-    if (!config) return;
+    if (!config || !ready) return;
 
     let mounted = true;
     async function loadResource() {
       setResourceLoading(section);
       setResourceError('');
       try {
-        const response = await fetch(config.endpoint);
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || `${config.title} unavailable`);
+        const data = recordOrEmpty(await read(config.endpoint));
         if (mounted) {
           setResourceData((current) => ({ ...current, [section]: data }));
         }
@@ -280,7 +254,7 @@ export default function AssistantPage() {
     return () => {
       mounted = false;
     };
-  }, [section]);
+  }, [section, ready, revision, read]);
 
   const activeTask = useMemo(
     () => tasks.find((task) => task.id === activeTaskId) || tasks[0],
@@ -300,7 +274,7 @@ export default function AssistantPage() {
         task.title.toLowerCase().includes(query) ||
         task.workspace.toLowerCase().includes(query) ||
         task.currentStep.toLowerCase().includes(query);
-      const matchesStatus = taskStatusFilter === 'all' || task.status === taskStatusFilter;
+      const matchesStatus = taskStatusFilter === 'all' || (taskStatusFilter === 'archived' ? task.archived : task.status === taskStatusFilter);
       const taskDate = task.updatedAt || task.createdAt;
       const parsedDate = taskDate ? new Date(taskDate) : null;
       const matchesDate =
@@ -314,141 +288,56 @@ export default function AssistantPage() {
   }, [taskDateFilter, taskSearch, taskStatusFilter, tasks]);
 
   async function startTask() {
-    if (!prompt.trim()) return;
-    setStarting(true);
-    setError('');
-    setActionNotice('');
-
-    try {
-      const response = await fetch('/api/v1/assistant/tasks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt,
-          workspace,
-          mode,
-          model,
-          provider: 'Auto',
-          workDirectory,
-          outputFormat,
-          constraints,
-          permissionProfile: 'Guarded',
-        }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const fallbackTask: AssistantTask = {
-          id: `task-${Date.now()}`,
-          title: prompt.split('\n', 1)[0].slice(0, 160),
-          workspace: workspace || 'Personal OS',
-          status: 'running',
-          currentStep: 'Drafting response',
-          mode: mode || 'Plan',
-          model: model || 'Auto',
-          provider: 'Auto',
-          permissionProfile: 'Guarded',
-          riskSummary: [],
-          artifacts: [],
-          changes: [],
-          messages: [{ id: `msg-${Date.now()}`, role: 'user', content: prompt }],
-        };
-        setTasks((current) => [fallbackTask, ...current]);
-        setActiveTaskId(fallbackTask.id);
-        setResultTab('Artifacts');
-        setSection('results');
-        return;
-      }
-      setTasks((current) => [data.task, ...current.filter((task) => task.id !== data.task.id)]);
-      setActiveTaskId(data.task.id);
-      setResultTab('Artifacts');
-      setSection('results');
-    } catch {
-      const fallbackTask: AssistantTask = {
-        id: `task-${Date.now()}`,
-        title: prompt.split('\n', 1)[0].slice(0, 160),
-        workspace: workspace || 'Personal OS',
-        status: 'running',
-        currentStep: 'Drafting response',
-        mode: mode || 'Plan',
-        model: model || 'Auto',
-        provider: 'Auto',
-        permissionProfile: 'Guarded',
-        riskSummary: [],
-        artifacts: [],
-        changes: [],
-        messages: [{ id: `msg-${Date.now()}`, role: 'user', content: prompt }],
-      };
-      setTasks((current) => [fallbackTask, ...current]);
-      setActiveTaskId(fallbackTask.id);
-      setResultTab('Artifacts');
-      setSection('results');
-    } finally {
-      setStarting(false);
-    }
+    if (!prompt.trim() || starting || execution.held || !execution.configured) return;
+    setError(''); setActionNotice('');
+    await execution.start({prompt,workspace,mode,model,provider:'Auto',workDirectory,outputFormat,constraints,permissionProfile:'Guarded'});
   }
+  const refreshTask = useCallback(async (task: AssistantTask) => {
+    if (task.legacy) return;
+    const sequence = reads.current;
+    const taskSequence = (taskReads.current.get(task.id) ?? 0) + 1; taskReads.current.set(task.id, taskSequence);
+    try {
+      const data = recordOrEmpty(await read(`/api/v1/assistant/tasks/${task.id}`));
+      const updated = assistantTask(data.task);
+      if (sequence !== reads.current || taskReads.current.get(task.id) !== taskSequence) return;
+      if (!updated || updated.id !== task.id) throw new Error('Invalid task receipt');
+      setTasks(current => current.map(item => item.id === updated.id ? updated : item)); setError('');
+    } catch (cause) { if (sequence === reads.current && taskReads.current.get(task.id) === taskSequence) setError(errorMessage(cause, 'Task refresh unavailable')); }
+  }, [read]);
+  useEffect(() => {
+    if (!activeTask || !['queued','running'].includes(activeTask.status)) return;
+    const timer = window.setInterval(() => { void refreshTask(activeTask); }, 2000);
+    return () => window.clearInterval(timer);
+  }, [activeTask, refreshTask]);
 
-  async function runResultAction(action: 'share' | 'preview') {
+  async function runResultAction(kind: 'share' | 'preview') {
     if (!activeTask?.artifacts?.length) return;
     const artifact = activeTask.artifacts[0];
-    const request =
-      action === 'share'
-        ? fetch('/api/v1/assistant/share', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ taskId: activeTask.id, artifactId: artifact.id, target: 'Share Link' }),
-          })
-        : fetch('/api/v1/assistant/previews', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'open_external', artifactId: artifact.id }),
-          });
-
-    const response = await request;
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setError(data.error || 'Action failed');
-      return;
-    }
-    setActionNotice(action === 'share' ? 'Share link created' : 'Preview opened');
+    const generation = reads.current;
+    try {
+      await action(kind === 'share' ? '/api/v1/assistant/share' : '/api/v1/assistant/previews', kind === 'share' ? 'POST' : 'PATCH', kind === 'share' ? {taskId:activeTask.id,artifactId:artifact.id,target:'Share Link'} : {action:'open_external',artifactId:artifact.id});
+      if (generation === reads.current) setActionNotice(kind === 'share' ? 'Share link created' : 'Preview opened');
+    } catch (cause) { if (generation === reads.current) setError(errorMessage(cause,'Action unconfirmed')); }
   }
-
-  async function refreshResource(targetSection: Section) {
-    const config = resourceConfig[targetSection];
-    if (!config) return;
-    const response = await fetch(config.endpoint);
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || `${config.title} unavailable`);
-    setResourceData((current) => ({ ...current, [targetSection]: data }));
-  }
-
   async function runResourceAction(targetSection: Section, body: Record<string, unknown>) {
     const config = resourceConfig[targetSection];
     if (!config) return;
-    setResourceError('');
-    setActionNotice('');
-    const response = await fetch(config.endpoint, {
-      method: typeof body.method === 'string' ? body.method : 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body.payload || body),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setResourceError(data.error || 'Action failed');
-      return;
-    }
-    setResourceData((current) => ({ ...current, [targetSection]: data }));
-    if (targetSection === 'system' && 'observationMasking' in body) {
-      setActionNotice('UI settings saved');
-    } else {
-      setActionNotice('Action completed');
-    }
-    await refreshResource(targetSection).catch(() => {});
+    const generation = reads.current;
+    setResourceError(''); setActionNotice('');
+    try {
+      const payload = recordOrEmpty(body.payload || body);
+      await action(config.endpoint, body.method === 'POST' ? 'POST' : 'PATCH', payload);
+      const data = recordOrEmpty(await read(config.endpoint));
+      if (generation !== reads.current) return;
+      setResourceData(current => ({...current,[targetSection]:data}));
+      setActionNotice(targetSection === 'system' ? 'Settings saved' : 'Change confirmed');
+    } catch (cause) { if (generation === reads.current) setResourceError(errorMessage(cause,'Change unconfirmed')); }
   }
 
   return (
     <AppShell
       title={`${agentName} Assistant`}
-      subtitle="Task-backed workspace for creating work, reviewing conversations, and inspecting artifacts."
+      subtitle="Receipt-backed text tasks with saved responses and truthful execution status."
       actions={[{ label: 'Expert Center', href: '/agents' }]}
     >
       <InteractiveWalkthrough
@@ -486,6 +375,19 @@ export default function AssistantPage() {
         </nav>
 
         <section className={styles.centerColumn}>
+          <p role="status">{execution.notice}</p>
+          {error && <p role="alert" className={styles.error}>{error}</p>}
+          {execution.held && <div className={styles.resultActions}>
+            <button type="button" disabled={starting} onClick={() => execution.recover()} className={styles.smallButton}>Check acceptance</button>
+            <button type="button" disabled={starting || !execution.configured} onClick={() => execution.retry()} className={styles.smallButton}>Retry same request</button>
+          </div>}
+          {section === 'tasks' && <div className={styles.resultActions}>
+            <button type="button" disabled={!ready} onClick={() => loadTaskPage()} className={styles.smallButton}>Refresh text tasks</button>
+            <button type="button" disabled={!ready} onClick={() => loadTaskPage(true)} className={styles.smallButton}>Legacy history</button>
+            {!legacyHistory && nextCursor && <button type="button" onClick={() => loadTaskPage(false, nextCursor)} className={styles.smallButton}>Next task page</button>}
+          </div>}
+          {legacyHistory && section === 'tasks' && <p>Legacy records have no admitted execution receipt. They remain available for reference.</p>}
+
           {section === 'tasks' && (
             <TaskListPage
               activeTaskId={activeTask?.id || ''}
@@ -526,7 +428,7 @@ export default function AssistantPage() {
                   </label>
                   <label className={styles.fieldLabel}>
                     Work directory
-                    <input aria-label="Work directory" value={workDirectory} onChange={(event) => setWorkDirectory(event.target.value)} className={styles.input} />
+                    <input aria-label="Work directory" value={workDirectory} disabled className={styles.input} placeholder="File access is unsupported" />
                   </label>
                   <label className={styles.fieldLabel}>
                     Output format
@@ -553,8 +455,8 @@ export default function AssistantPage() {
                     <input value={constraints} onChange={(event) => setConstraints(event.target.value)} className={styles.input} />
                   </label>
                 </div>
-                {error && <p className={styles.error}>{error}</p>}
-                <button type="button" onClick={startTask} disabled={starting || !prompt.trim()} className={styles.startButton}>
+                <p>Text responses only. Coding, files, live research, and long-running delegation are unsupported.</p>
+                <button type="button" onClick={startTask} disabled={starting || !prompt.trim() || !ready || !execution.configured || execution.held} className={styles.startButton}>
                   {starting ? 'Starting...' : 'Start Task'}
                 </button>
               </div>
@@ -562,6 +464,12 @@ export default function AssistantPage() {
           )}
 
           {section === 'conversation' && <ConversationPage task={activeTask} />}
+          {section === 'results' && activeTask?.execution && <div className={styles.resultActions}>
+            <button type="button" disabled={starting} onClick={() => refreshTask(activeTask)} className={styles.smallButton}>Refresh Task</button>
+            {['queued','running'].includes(activeTask.status) && <button type="button" disabled={starting} onClick={() => execution.mutate(activeTask, 'stop')} className={styles.smallButton}>Stop Task</button>}
+            {activeTask.status === 'cancelled' && !activeTask.archived && <button type="button" disabled={starting || execution.held || !execution.configured} onClick={() => execution.mutate(activeTask, 'resume')} className={styles.smallButton}>Start new attempt</button>}
+            <button type="button" disabled={starting} onClick={() => execution.mutate(activeTask, activeTask.archived ? 'unarchive' : 'archive')} className={styles.smallButton}>{activeTask.archived ? 'Unarchive Task' : 'Archive Task'}</button>
+          </div>}
           {section === 'results' && (
             <ResultsPage
               task={activeTask}
@@ -636,6 +544,9 @@ function TaskListPage({
           <option value="failed">Failed</option>
           <option value="planning">Planning</option>
           <option value="pending">Pending</option>
+          <option value="queued">Queued</option>
+          <option value="cancelled">Cancelled</option>
+          <option value="outcome_unknown">Outcome unknown</option>
           <option value="archived">Archived</option>
         </select>
         <select aria-label="Task date filter" value={taskDateFilter} onChange={(event) => onDateFilter(event.target.value as 'all' | 'today' | 'this_week' | 'older')} className={styles.select}>
@@ -655,7 +566,7 @@ function TaskListPage({
           <button key={task.id} type="button" onClick={() => onSelect(task.id)} aria-pressed={activeTaskId === task.id} disabled={activeTaskId === task.id} className={cx(styles.taskCard, activeTaskId === task.id && styles.taskCardActive)}>
             <div className={styles.metaRow}>
               <span className={styles.overline}>{task.workspace}</span>
-              <span className={cx(styles.statusBadge, statusClass(task.status))}>{task.status}</span>
+              <span className={cx(styles.statusBadge, statusClass(task.status))}>{task.status}{task.archived ? ' (archived)' : ''}</span>
             </div>
             <div className={styles.taskTitle}>{task.title}</div>
             <div className={styles.mutedText}>{task.currentStep}</div>
@@ -684,7 +595,7 @@ function ConversationPage({ task }: { task?: AssistantTask }) {
           <h2 className={styles.conversationTitle}>{task.title}</h2>
           <p className={styles.mutedText}>{task.currentStep}</p>
         </div>
-        <span className={cx(styles.statusBadge, statusClass(task.status))}>{task.status}</span>
+        <span className={cx(styles.statusBadge, statusClass(task.status))}>{task.status}{task.archived ? ' (archived)' : ''}</span>
       </div>
       <div className={styles.messageList}>
         {task.messages.map((message) => (
@@ -739,6 +650,12 @@ function ResultsPage({
         </div>
       </div>
       {task && <h3 className={styles.taskTitle}>{task.title}</h3>}
+      {task?.execution && <>
+        <p>Execution receipt: {task.execution.id}</p>
+        <p>Status: {task.status}{task.archived ? ' (archived)' : ''}</p>
+        {task.status === 'outcome_unknown' && <p role="alert">The provider outcome is unknown. This attempt cannot be resumed or retried as new work.</p>}
+        {task.output && <article aria-label="Text response" className={styles.resultItem} style={{whiteSpace:'pre-wrap'}}>{task.output}</article>}
+      </>}
       <div className={styles.tabGrid}>
         {resultTabs.map((tab) => (
           <button key={tab} type="button" onClick={() => onTab(tab)} aria-pressed={resultTab === tab} className={cx(styles.tabButton, resultTab === tab && styles.tabButtonActive)}>

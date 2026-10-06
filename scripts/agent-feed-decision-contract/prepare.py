@@ -44,7 +44,7 @@ assert startup.count('AgentActionWorker::new(')==1, 'Do not start an unbound dup
 lines.append('pub async fn configured_worker_start(db: &db::DB, http_auth_store: std::sync::Arc<server_auth::Store>, legacy_sqlx_background_enabled: bool) {'+worker_start+'}')
 for name,path in [('repository','src/server/domain/repository/agent_feed_repo.rs'),('agent_approvals','src/server/domain/agent_approvals.rs'),('omnisolo_job_queue','src/server/orchestration/queue/omnisolo_job_queue.rs'),('redis_lock','src/server/orchestration/queue/redis_lock.rs'),('agent_action_worker','src/server/workers/agent_action_worker.rs'),('agent_catalog_dispatch','src/server/workers/agent_catalog_dispatch.rs'),('catalog','src/server/domain/catalog.rs'),('incidents','src/server/domain/incidents.rs'),('action_router','src/server/domain/action_router.rs')]:
  paths.append(ROOT/path); lines.append(f'#[path={json.dumps(str(ROOT/path))}]pub mod {name};')
-lines.append('macro_rules! provider_boundary {($name:ident,$($function:ident),+) => {pub mod $name {$(pub async fn $function(_tenant:&str,_payload:&serde_json::Value,_pool:&sqlx::PgPool)->Result<(),sqlx::Error>{panic!("Live provider dispatch forbidden in this contract")})+}};} provider_boundary!(quotes,handle_quote_action);provider_boundary!(inbox,handle_inbox_action);provider_boundary!(invoice,handle_invoice_action);provider_boundary!(booking,handle_booking_action,handle_booking_approval,handle_autonomous_quote_action);')
+lines.append('macro_rules! provider_boundary {($name:ident,$($function:ident),+) => {pub mod $name {$(pub async fn $function(_tenant:&str,_payload:&serde_json::Value,_pool:&sqlx::PgPool)->Result<(),sqlx::Error>{panic!("Live provider dispatch forbidden in this contract")})+}};} provider_boundary!(quotes,handle_quote_action);pub mod inbox {pub async fn handle_inbox_action(_tenant:&str,_payload:&serde_json::Value,_pool:&sqlx::PgPool)->Result<(),sqlx::Error>{panic!("Live provider dispatch forbidden in this contract")} pub async fn handle_approved_inbox_action(_tenant:&str,_action:&str,_job:&str,_admitted:&serde_json::Value,_pool:&sqlx::PgPool)->Result<(),String>{panic!("Live provider dispatch forbidden in this contract")}}provider_boundary!(invoice,handle_invoice_action);provider_boundary!(booking,handle_booking_action,handle_booking_approval,handle_autonomous_quote_action);')
 lines += ['pub mod domain {pub use crate::{agent_approvals,catalog,incidents,action_router,quotes,inbox,invoice,booking}; pub mod repository {pub use crate::repository as agent_feed_repo;} }','pub mod orchestration {pub mod queue {pub use crate::omnisolo_job_queue::{self,OmniSoloJobQueue};pub use crate::redis_lock;}}']
 domain=ROOT/'src/server/domain/agent_feed_decisions.rs'
 if domain.exists():
@@ -103,6 +103,7 @@ from prepare_legacy import extend_legacy_contract
 extend_legacy_contract(ROOT, HERE, paths, lines, read)
 (HERE/'generated.rs').write_text('\n'.join(lines)+'\n')
 paths += [ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'.github/workflows/ci.yml',ROOT/'scripts/focused_ci_gate.py']
+paths.append(ROOT/'src/server/domain/inbox.rs')
 for folder in ['src/server/auth','src/server/common']:
  paths += list((ROOT/folder).rglob('*.rs'))
 paths += [p for p in HERE.iterdir() if p.is_file() and p.name not in ['Cargo.lock','source-manifest.json']]

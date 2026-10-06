@@ -153,6 +153,27 @@ export async function fetchForOwnedDefinition(url: string, options: RequestInit,
     if (before !== epoch || !owner || !sameOwner(owner, intended)) throw new Error('Your session changed. This action was not sent.');
   }, 'definition');
 }
+/** Receipt-backed assistant reads/actions reuse the sealed owner/session fence. */
+export async function fetchForOwnedAssistant(url: string, options: RequestInit, expected: DraftOwner | null, onDispatch?: () => void): Promise<Response> {
+  const method = (options.method ?? 'GET').toUpperCase();
+  const root = '/api/v1/assistant/tasks';
+  const uuid = '[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}';
+  const resources = ['automations','memory','skills','connectors','remote','data','cloud','billing','permissions','models','settings','parity','share','previews'];
+  const resource = resources.some(name => url === '/api/v1/assistant/' + name) && ['GET','POST','PATCH'].includes(method);
+  const allowed = resource || (url === '/api/v1/walkthrough/assistant' && method === 'GET') || (url === root && ['GET','POST'].includes(method))
+    || (method === 'GET' && url === '/api/v1/assistant/legacy-tasks')
+    || (method === 'GET' && new RegExp('^' + root + '\\?before=' + uuid + '$').test(url))
+    || (method === 'GET' && new RegExp('^' + root + '/by-request/' + uuid + '$').test(url))
+    || (['GET','PATCH'].includes(method) && new RegExp('^' + root + '/' + uuid + '$').test(url));
+  if (!allowed) throw new Error('Invalid assistant destination');
+  if (!expected || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. Reopen the assistant.');
+  const before = epoch;
+  return authenticatedOnboardingFetch(url, { ...options, method }, expected, before, () => {
+    const marker: unknown = onDispatch?.();
+    if (marker && typeof (marker as PromiseLike<unknown>).then === 'function') throw new Error('Dispatch markers must be saved synchronously');
+    if (before !== epoch || !owner || !sameOwner(owner, expected)) throw new Error('Your session changed. No assistant action was sent.');
+  });
+}
 async function authenticatedOnboardingFetch(url: string, options: RequestInit, expected: DraftOwner, before: number, dispatched?: () => void, permission: false | 'definition' | 'publication' = false): Promise<Response> {
   let verified: DraftOwner;
   try { verified = await readQueueOwner(); }

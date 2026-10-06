@@ -52,3 +52,10 @@ String serialization is retained, using PostgreSQL `::json` write expressions an
 remains writable/readable as stored TEXT, while the existing dequeue role parser
 still rejects it; JSONB retains its escaped-NUL rejection. These cases do not
 claim support for every historical payload or change parser fallback policy.
+
+Five additional mandatory assistant cases apply migration1042 under the same
+restricted runtime role and forced RLS. They test real admission/readback, tenant
+isolation, output/archive integrity, concurrent replay, a rejected deferred
+association commit, and cancelled orphan-attempt reconciliation without dispatch.
+They require the same explicitly owned PostgreSQL destination and never skip
+when it is missing.

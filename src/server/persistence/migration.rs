@@ -203,6 +203,9 @@ where
         connection
             .execute_unprepared(include_str!("tenant_execution_receipts_sqlite.sql"))
             .await?;
+        connection
+            .execute_unprepared(include_str!("assistant_execution_sqlite.sql"))
+            .await?;
     }
     if backend == sea_orm::DatabaseBackend::Postgres {
         connection
@@ -212,6 +215,24 @@ where
     if backend == sea_orm::DatabaseBackend::Sqlite {
         connection
             .execute_unprepared(include_str!("sms_verification_sqlite.sql"))
+            .await?;
+        // Existing portable databases predate the durable polling schedule.
+        let columns = connection
+            .query_all(Statement::from_string(
+                backend,
+                "PRAGMA table_info(sms_notification_events)".to_string(),
+            ))
+            .await?;
+        if !columns.iter().any(|row| row.try_get::<String>("", "name").is_ok_and(|name| name == "next_attempt_at")) {
+            connection.execute_unprepared("ALTER TABLE sms_notification_events ADD COLUMN next_attempt_at BIGINT NOT NULL DEFAULT 0").await?;
+        }
+        connection
+            .execute_unprepared(include_str!("order_notifications_sqlite.sql"))
+            .await?;
+    }
+    if backend == sea_orm::DatabaseBackend::Sqlite {
+        connection
+            .execute_unprepared(include_str!("department_message_delivery_sqlite.sql"))
             .await?;
     }
     configure_agent_definition_authority(connection).await?;
