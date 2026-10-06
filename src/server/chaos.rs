@@ -1516,21 +1516,30 @@ async fn test_ml_resilience_malformed_llm_response() {
 
 #[tokio::test]
 async fn test_ml_resilience_api_error_circuit_breaker() {
+    use crate::minimax::truthful_provider_tests::{http_fixture, isolated};
+
+    let _guard = isolated().await;
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
 
-    // Create a local LLM client which uses circuit breaker
-    // LocalLLMClient uses get_circuit_breaker() inside internal_reason()
-    let client = crate::minimax::LocalLLMClient::new();
-
-    // We will make 3 failing requests to trip the circuit breaker
-    // Since we are not running a real local LLM in tests, this will fail with connection refused
-    for i in 0..4 {
-        // Need 4 because retries might consume some, but wait, internal_reason retries internally 3 times!
-        // Each call does 3 retries, so 1 call will record 1 failure at the circuit breaker.
-        let _ = client.reason(&format!("prompt{}", i)).await;
+    // Own the failure endpoint: neither ambient configuration nor a running local
+    // model may decide whether this test records a failure. Each explicit request
+    // counts once; a provider error must never cause automatic redispatch.
+    let fixture = http_fixture(
+        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+        serde_json::json!({"error": "unknown outcome"}),
+    )
+    .await;
+    let client = fixture.local();
+    for i in 0..3 {
+        assert_eq!(
+            client.reason(&format!("prompt{}", i)).await,
+            Err("Provider returned HTTP 500; no automatic retry was made".to_string()),
+            "Each explicit failed request must reach the provider exactly once"
+        );
+        assert_eq!(fixture.request_count(), i + 1, "Inference was retried");
     }
 
-    // The next request should immediately fail with "circuit breaker open"
+    // The fourth request must be rejected locally before another provider call.
     let result = client.reason("prompt_should_trip_cb").await;
 
     assert_eq!(
@@ -1538,11 +1547,16 @@ async fn test_ml_resilience_api_error_circuit_breaker() {
         Err("circuit breaker open".to_string()),
         "System must engage circuit breaker after repeated API errors"
     );
+    assert_eq!(
+        fixture.request_count(),
+        3,
+        "An open circuit breaker must not dispatch another provider request"
+    );
 }
 
 #[tokio::test]
 async fn test_ml_resilience_api_unavailable_paused_state() {
-    crate::minimax::get_circuit_breaker().reset_for_tests();
+    let _guard = crate::minimax::truthful_provider_tests::isolated().await;
     let _tracker = crate::telemetry::ChaosRecoveryTracker::new("Cloud");
     use sqlx::sqlite::SqlitePoolOptions;
 

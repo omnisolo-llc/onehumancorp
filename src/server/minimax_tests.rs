@@ -5,16 +5,16 @@ use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio_stream::StreamExt;
 
-// The legacy production circuit breaker is process-wide. Keep failure contracts
-// serialized and reset it so a deliberately unavailable fixture cannot hide a
-// later contract's actual network request.
+// The legacy production circuit breaker is process-wide. Provider and chaos
+// contracts must share this guard before resetting or exercising it so a sibling
+// fixture cannot reset failures or hide the current contract's actual request.
 static LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
-async fn isolated() -> tokio::sync::MutexGuard<'static, ()> {
+pub(crate) async fn isolated() -> tokio::sync::MutexGuard<'static, ()> {
     let guard = LOCK.lock().await;
     get_circuit_breaker().reset_for_tests();
     guard
 }
-struct HttpFixture {
+pub(crate) struct HttpFixture {
     base: String,
     observed: Arc<Mutex<Vec<Value>>>,
     server: tokio::task::JoinHandle<()>,
@@ -31,15 +31,19 @@ impl HttpFixture {
         client.embed_url = format!("{}/v1/embeddings", self.base);
         client
     }
-    fn local(&self) -> LocalLLMClient {
+    pub(crate) fn local(&self) -> LocalLLMClient {
         let mut client = LocalLLMClient::new();
         client.endpoint = format!("{}/api/generate", self.base);
         client.embed_endpoint = format!("{}/api/embeddings", self.base);
         client.model = "fixture-model".into();
         client
     }
+
+    pub(crate) fn request_count(&self) -> usize {
+        self.observed.lock().unwrap().len()
+    }
 }
-async fn http_fixture(status: StatusCode, body: Value) -> HttpFixture {
+pub(crate) async fn http_fixture(status: StatusCode, body: Value) -> HttpFixture {
     response_fixture(status, vec![serde_json::to_vec(&body).unwrap()]).await
 }
 async fn response_fixture(status: StatusCode, chunks: Vec<Vec<u8>>) -> HttpFixture {

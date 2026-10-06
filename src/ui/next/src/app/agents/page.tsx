@@ -130,7 +130,7 @@ export default function AgentsPage() {
   const [enabledSkills, setEnabledSkills] = useState<string[]>([]);
   const [enabledConnectors, setEnabledConnectors] = useState<string[]>([]);
   const [selectedResultTab, setSelectedResultTab] = useState('Artifacts');
-  const { hasPro, claimTrial, claimError } = useProPlan();
+  const { hasPro, currentPlan, claimTrial, claimError } = useProPlan();
   const [showPaywall, setShowPaywall] = useState(false);
   const [contextReferences, setContextReferences] = useState('');
   const [attachments, setAttachments] = useState('');
@@ -247,8 +247,9 @@ export default function AgentsPage() {
                   type="button"
                   aria-label="Toggle Pro Mode"
                   aria-pressed={hasPro}
+                  disabled={currentPlan === null}
                   onClick={() => {
-                    if (!hasPro) setShowPaywall(true);
+                    if (currentPlan !== null && !hasPro) setShowPaywall(true);
                   }}
                   className={`h-6 w-10 rounded-full p-1 transition-colors outline-none ${hasPro ? 'bg-teal-600' : 'bg-zinc-300 dark:bg-zinc-700'}`}
                 >
@@ -311,7 +312,7 @@ export default function AgentsPage() {
           </div>
         </div>
       </header>
-      {showPaywall && (
+      {showPaywall && currentPlan !== null && !hasPro && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 backdrop-blur-[30px] saturate-[210%] p-4">
           <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
             <h2 className="text-2xl font-bold text-zinc-950 dark:text-white">Upgrade to Pro</h2>
