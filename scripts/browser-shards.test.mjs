@@ -143,3 +143,38 @@ test('a real browser child deadline is bounded across units and cleanup retains 
     }}),/browser budget exhausted/);
   assert.deepEqual(visited,shards.GROUPS[1].slice(0,1));
 });
+
+test('every repository browser spec must appear in actual native discovery', () => {
+  assert.equal(typeof shards.assertBrowserSpecOwnership, 'function');
+  const discovered = [{ id: 'owned', title: 'Owned', file: 'src/e2e/owned.spec.ts' }];
+  shards.assertBrowserSpecOwnership(['src/e2e/owned.spec.ts'], discovered);
+  assert.throws(() => shards.assertBrowserSpecOwnership([
+    'src/e2e/owned.spec.ts', 'new-browser-tests/missing.spec.ts',
+  ], discovered), /undiscovered browser spec.*new-browser-tests\/missing\.spec\.ts/i);
+  assert.throws(() => shards.assertBrowserSpecOwnership([
+    'src/e2e/owned.spec.ts', 'src/ui/next/src/e2e/future.spec.ts',
+  ], discovered), /undiscovered browser spec.*future\.spec\.ts/i);
+  shards.assertBrowserSpecOwnership(['src/ui/next/src/e2e/future.spec.ts'], [
+    ...discovered, { id: 'future', title: 'New Next test', file: 'src/ui/next/src/e2e/future.spec.ts' },
+  ]);
+  // These explicit naming contracts belong to Node/Vitest or the documented
+  // legacy fixture inventory; they are not runnable browser-spec exemptions.
+  shards.assertBrowserSpecOwnership([
+    'src/e2e/owned.spec.ts', 'src/ui/next/src/lib/unit.test.ts',
+    'src/ui/next/src/components/unit.test.tsx', 'scripts/unit.test.mjs',
+    'src/e2e/historical.mock-contract.ts',
+  ], discovered);
+});
+
+test('unsupported spec extensions cannot disappear outside native browser and unit ownership', () => {
+  const discovered = [{ id: 'owned', title: 'Owned', file: 'src/e2e/owned.spec.ts' }];
+  for (const extension of ['tsx', 'js', 'jsx', 'mjs', 'cjs', 'mts', 'cts']) {
+    assert.throws(() => shards.assertBrowserSpecOwnership([
+      'src/e2e/owned.spec.ts', `future-tests/unowned.spec.${extension}`,
+    ], discovered), /unsupported spec extension.*unowned\.spec\./i);
+  }
+  shards.assertBrowserSpecOwnership([
+    'src/e2e/owned.spec.ts', 'src/ui/next/src/lib/owned.test.ts',
+    'src/ui/next/src/components/owned.test.tsx', 'scripts/owned.test.mjs',
+  ], discovered);
+});

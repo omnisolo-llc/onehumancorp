@@ -40,11 +40,11 @@ test.describe('Documentation full suite', () => {
     await page.goto('/api-docs');
 
     // Check for Swagger UI wrapper
-    const swaggerUI = page.locator('.swagger-ui');
+    const swaggerUI = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui');
     await expect(swaggerUI).toBeVisible();
 
     // Ensure the topbar from Swagger has loaded, indicating success
-    const info = page.locator('.info .title').first();
+    const info = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.info .title').first();
     await expect(info).toBeVisible();
   });
 });

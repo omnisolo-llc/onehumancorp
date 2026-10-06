@@ -52,7 +52,7 @@ test.describe('In-App Help & Documentation Features', () => {
 
   test('api docs page', async ({ page }) => {
     await page.goto('/api/v1/ui/api-docs.html');
-    await expect(page.getByText('OmniSolo Advanced API Reference').first()).toBeVisible();
+    await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').getByText('OmniSolo Advanced API Reference').first()).toBeVisible();
   });
 
   test('changelog page', async ({ page }) => {

@@ -1,9 +1,6 @@
-use crate::hub::Hub;
 use ::server_common::Claims;
-use axum::extract::Extension;
-use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
+use axum::{Json, extract::Extension, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConnectWhatsAppRequest {
@@ -12,131 +9,44 @@ pub struct ConnectWhatsAppRequest {
     pub from_phone: Option<String>,
 }
 
+fn unavailable_for_owner(user: &Claims) -> axum::response::Response {
+    if user
+        .organization_id
+        .as_deref()
+        .is_none_or(|id| id.trim().is_empty())
+    {
+        return (
+            StatusCode::UNAUTHORIZED,
+            Json(serde_json::json!({"success": false, "usable": false, "status": "unavailable", "message": "Authenticated organization required"})),
+        )
+            .into_response();
+    }
+    if !user
+        .roles
+        .iter()
+        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
+    {
+        return (
+            StatusCode::FORBIDDEN,
+            Json(serde_json::json!({"success": false, "usable": false, "status": "unavailable", "message": "Owner approval is required"})),
+        )
+            .into_response();
+    }
+    // Neither provider has a verified encrypted connection flow on this route.
+    // In particular, do not store submitted strings or label them connected.
+    crate::api::integrations_settings::verification_unavailable().into_response()
+}
+
 pub async fn connect_whatsapp_cloud_api(
-    State(hub): State<Arc<Hub>>,
     Extension(user): Extension<Claims>,
-    Json(payload): Json<ConnectWhatsAppRequest>,
+    Json(_payload): Json<ConnectWhatsAppRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match user.organization_id {
-        Some(t) => t,
-        None => return (StatusCode::UNAUTHORIZED, "Missing tenant context").into_response(),
-    };
-
-    let api_token = payload.api_token.unwrap_or_default();
-    let from_phone = payload.from_phone.unwrap_or_default();
-
-    let integration_code = serde_json::json!({
-        "api_token": api_token,
-        "from_phone": from_phone,
-    })
-    .to_string();
-
-    let id = format!("{}_whatsapp_cloud_api", tenant_id);
-
-    let db_pool = &hub.pool;
-    let res = sqlx::query(
-        "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
-         VALUES ($1, $2, 'whatsapp_cloud_api', 'connected', $3)
-         ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3",
-    )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(&integration_code)
-    .execute(db_pool)
-    .await;
-
-    if let Err(e) = res {
-        tracing::error!("Failed to save WhatsApp Cloud API integration: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
-    }
-
-    let id_uuid = uuid::Uuid::new_v4().to_string();
-    let creds_res = sqlx::query(
-        "INSERT INTO integration_credentials (id, tenant_id, integration_id, bot_token, api_token, from_phone)
-         VALUES ($1, $2, 'whatsapp_cloud_api', '', $3, $4)
-         ON CONFLICT (tenant_id, integration_id) DO UPDATE SET bot_token = '', api_token = $3, from_phone = $4"
-    )
-    .bind(&id_uuid)
-    .bind(&tenant_id)
-    .bind(&api_token)
-    .bind(&from_phone)
-    .execute(db_pool)
-    .await;
-
-    if let Err(e) = creds_res {
-        tracing::error!("Failed to save WhatsApp Cloud API credentials: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
-    }
-
-    (
-        StatusCode::OK,
-        axum::Json(serde_json::json!({"success": true})),
-    )
-        .into_response()
+    unavailable_for_owner(&user)
 }
 
 pub async fn connect_whatsapp_twilio(
-    State(hub): State<Arc<Hub>>,
     Extension(user): Extension<Claims>,
-    Json(payload): Json<ConnectWhatsAppRequest>,
+    Json(_payload): Json<ConnectWhatsAppRequest>,
 ) -> impl IntoResponse {
-    let tenant_id = match user.organization_id {
-        Some(t) => t,
-        None => return (StatusCode::UNAUTHORIZED, "Missing tenant context").into_response(),
-    };
-
-    let bot_token = payload.bot_token.unwrap_or_default();
-    let api_token = payload.api_token.unwrap_or_default();
-    let from_phone = payload.from_phone.unwrap_or_default();
-
-    let integration_code = serde_json::json!({
-        "bot_token": bot_token,
-        "api_token": api_token,
-        "from_phone": from_phone,
-    })
-    .to_string();
-
-    let id = format!("{}_whatsapp", tenant_id);
-
-    let db_pool = &hub.pool;
-    let res = sqlx::query(
-        "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
-         VALUES ($1, $2, 'whatsapp', 'connected', $3)
-         ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $3",
-    )
-    .bind(&id)
-    .bind(&tenant_id)
-    .bind(&integration_code)
-    .execute(db_pool)
-    .await;
-
-    if let Err(e) = res {
-        tracing::error!("Failed to save WhatsApp Twilio integration: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
-    }
-
-    let id_uuid = uuid::Uuid::new_v4().to_string();
-    let creds_res = sqlx::query(
-        "INSERT INTO integration_credentials (id, tenant_id, integration_id, bot_token, api_token, from_phone)
-         VALUES ($1, $2, 'whatsapp', $3, $4, $5)
-         ON CONFLICT (tenant_id, integration_id) DO UPDATE SET bot_token = $3, api_token = $4, from_phone = $5"
-    )
-    .bind(&id_uuid)
-    .bind(&tenant_id)
-    .bind(&bot_token)
-    .bind(&api_token)
-    .bind(&from_phone)
-    .execute(db_pool)
-    .await;
-
-    if let Err(e) = creds_res {
-        tracing::error!("Failed to save WhatsApp Twilio credentials: {}", e);
-        return (StatusCode::INTERNAL_SERVER_ERROR, "Database error").into_response();
-    }
-
-    (
-        StatusCode::OK,
-        axum::Json(serde_json::json!({"success": true})),
-    )
-        .into_response()
+    unavailable_for_owner(&user)
 }

@@ -37,3 +37,12 @@ instead of inventing an `omnisolo-tenant` URL. No caller is activated or migrate
 The WhatsApp harness supplies only the handler's unrelated registry state and request DTO shape. Its registry is a negative effect sentinel: any attempt to configure an unverified connection is recorded and returns an error. It does not manufacture a successful connection. Both complete production handlers must return an unavailable response without invoking that effect. Actual provider verification and encrypted credential persistence are unavailable in this mounted path; `pending_verification` does not represent a queued verification job.
 
 Separate UI tests check that an absent Meta SDK causes no credential or connect request, an unavailable server result cannot show a connected state, and voice provisioning needs an explicit valid acknowledgement. Acknowledged voice numbers are already persisted by the backend, so the UI does not issue a second settings mutation. Unknown provisioning outcomes remain visibly held in the current view; a durable server reconciliation hold is a separately tracked follow-on. No live deployment, Meta ceremony, real phone assignment or cross-reload safety is certified by this focused gate.
+
+The active settings adapters in `src/server/api/settings/integrations/whatsapp.rs`
+share the canonical unavailable response while enforcing tenant/owner context.
+Their native HTTP tests are compiled by `api::settings::integrations::whatsapp_test`
+and require no database or provider state. They replace the former conditional
+PostgreSQL tests that silently returned when a database was absent. Browser
+journeys assert rejection leaves connection records and credential identities
+unchanged. These checks preserve the readiness boundary; they do not implement
+Meta embedded signup, token exchange, encrypted storage, or provider verification.

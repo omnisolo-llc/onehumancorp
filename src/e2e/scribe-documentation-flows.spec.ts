@@ -30,16 +30,16 @@ test.describe('Documentation Features Flow', () => {
         const spec = await response.json();
         expect(spec.info.title).toBe('API Documentation (for Advanced Users)');
         await expect(page.getByTestId('api-docs-title')).toContainText('Advanced:');
-        await expect(page.locator('.swagger-ui .info .title')).toBeVisible();
-        await expect(page.locator('.swagger-ui .info .title')).toContainText(spec.info.title);
+        await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui .info .title')).toBeVisible();
+        await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui .info .title')).toContainText(spec.info.title);
 
         const reloaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/api-docs-spec' && response.request().method() === 'GET');
         await page.reload();
         const refresh = await reloaded;
         expect(refresh.status()).toBe(200);
         expect(await refresh.json()).toEqual(spec);
-        await expect(page.locator('.swagger-ui .info .title')).toBeVisible();
-        await expect(page.locator('.swagger-ui .info .title')).toContainText(spec.info.title);
+        await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui .info .title')).toBeVisible();
+        await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui .info .title')).toContainText(spec.info.title);
     });
 
 });

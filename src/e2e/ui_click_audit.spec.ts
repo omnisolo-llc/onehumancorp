@@ -205,7 +205,7 @@ test('retiring a clicked document prevents its delayed navigation from replacing
   } finally { await isolated.close(); }
 });
 
-test('recovers an injected cleanup interruption after real logout without repeating its click or losing cookies', async ({ page }) => {
+test('settles an injected cleanup interruption after real logout without repeating its click or losing cookies', async ({ page }) => {
   let logins = 0;
   let logouts = 0;
   let lateRequests = 0;
@@ -258,24 +258,28 @@ test('recovers an injected cleanup interruption after real logout without repeat
     expect(cookies.find(cookie => cookie.name === 'audit_context')?.value).toBe('preserved');
     await isolated.evaluate(late => { setTimeout(() => { void fetch(late); }, 300); }, `${origin}/late`);
     // Replay the exact hosted cleanup failure at the Playwright boundary.
-    // The logout, cookies, old realm and replacement remain real browser state;
+    // The logout, cookies, old realm and blank commit remain real browser state;
     // no product response or click effect is fabricated by this injected fault.
     const goto = isolated.goto.bind(isolated);
     let retirementAttempts = 0;
     isolated.goto = async (url, options) => {
-      if (url === 'about:blank') {
-        retirementAttempts += 1;
+      if (url === 'about:blank' && ++retirementAttempts === 1) {
         throw new Error(`page.goto: Navigation to "about:blank" is interrupted by another navigation to "${origin}/login"`);
       }
       return goto(url, options);
     };
     const old = isolated;
+    const pages = isolated.context().pages();
+    const viewport = isolated.viewportSize();
+    const video = isolated.video();
     isolated = await replaceAuditDocument(isolated);
-    expect(old.isClosed()).toBe(true);
-    expect(isolated).not.toBe(old);
+    expect(old.isClosed()).toBe(false);
+    expect(isolated).toBe(old);
+    expect(isolated.url()).toBe('about:blank');
     expect(isolated.context()).toBe(old.context());
-    expect(Boolean(isolated.video())).toBe(Boolean(old.video()));
-    expect(isolated.viewportSize()).toEqual(old.viewportSize());
+    expect(isolated.context().pages()).toEqual(pages);
+    expect(isolated.video()).toBe(video);
+    expect(isolated.viewportSize()).toEqual(viewport);
     expect(await isolated.context().cookies(origin)).toEqual(cookies);
     await navigate(isolated, '/private');
     await isolated.waitForTimeout(450);
@@ -284,13 +288,76 @@ test('recovers an injected cleanup interruption after real logout without repeat
     expect(logins).toBe(2);
     expect(logouts).toBe(1);
     expect(lateRequests).toBe(0);
-    expect(retirementAttempts).toBe(1);
+    expect(retirementAttempts).toBe(2);
   } finally {
     await isolated.close();
     server.closeAllConnections();
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
 });
+
+for (const supersedingBlank of [false, true]) {
+  test(`retirement isolates a completed same-origin query action${supersedingBlank ? ' when the blank retry is superseded' : ''}`, async ({ page }) => {
+    let actions = 0, lateRequests = 0;
+    const server = createServer((request, response) => {
+      if (request.url === '/action' && request.method === 'POST') {
+        actions += 1; response.end('recorded'); return;
+      }
+      if (request.url === '/late') { lateRequests += 1; response.end('late'); return; }
+      response.writeHead(200, { 'content-type': 'text/html' });
+      response.end(request.url === '/growth-loop?ref=twitter'
+        ? '<h1>Recorded destination</h1>'
+        : `<button onclick="fetch('/action',{method:'POST'}).then(()=>location.href='/growth-loop?ref=twitter')">Share fixture</button>`);
+    });
+    await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+    const isolated = await page.context().newPage();
+    try {
+      const address = server.address();
+      if (!address || typeof address === 'string') throw new Error('Missing local retirement fixture address');
+      const origin = `http://127.0.0.1:${address.port}`;
+      const destination = `${origin}/growth-loop?ref=twitter`;
+      await isolated.goto(origin);
+      const effect = await observeClickEffects(isolated, (await isolated.getByRole('button', { name: 'Share fixture' }).elementHandle())!);
+      expect(hasMeaningfulClickEffect(effect)).toBe(true);
+      await isolated.waitForURL(destination, { waitUntil: 'commit' });
+      expect(actions).toBe(1);
+      await isolated.evaluate(late => {
+        document.body.dataset.oldRealm = 'present';
+        setTimeout(() => { void fetch(late); }, 400);
+      }, `${origin}/late`);
+      const goto = isolated.goto.bind(isolated);
+      let attempts = 0;
+      // Replay the observed Chromium transport interleavings. The trusted click,
+      // destination, blank commit, realm destruction and delayed fetch are real.
+      isolated.goto = async (url, options) => {
+        expect(url).toBe('about:blank');
+        if (++attempts === 1) {
+          throw new Error(`page.goto: Navigation to "about:blank" is interrupted by another navigation to "${destination}"`);
+        }
+        const result = await goto(url, options);
+        if (supersedingBlank) throw new Error('page.goto: Navigation to "about:blank" is interrupted by another navigation to "about:blank"');
+        return result;
+      };
+      const pages = isolated.context().pages();
+      const video = isolated.video();
+      expect(await replaceAuditDocument(isolated)).toBe(isolated);
+      expect(isolated.url()).toBe('about:blank');
+      expect(await isolated.locator('body').getAttribute('data-old-realm')).toBeNull();
+      expect(attempts).toBe(2);
+      expect(isolated.context().pages()).toEqual(pages);
+      expect(isolated.video()).toBe(video);
+      await isolated.setContent('<h1>Next isolated document</h1>');
+      await isolated.waitForTimeout(550);
+      await expect(isolated.getByRole('heading', { name: 'Next isolated document' })).toBeVisible();
+      expect(lateRequests).toBe(0);
+      expect(actions).toBe(1);
+    } finally {
+      await isolated.close();
+      server.closeAllConnections();
+      await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
+    }
+  });
+}
 
 test('retirement propagates other cleanup failures without closing the page or creating a replacement', async ({ page }) => {
   const server = createServer((_request, response) => {
@@ -305,9 +372,8 @@ test('retirement propagates other cleanup failures without closing the page or c
     const interrupted = (destination: string, source = 'about:blank') => new Error(`page.goto: Navigation to "${source}" is interrupted by another navigation to "${destination}"`);
     const failures: Array<[string, unknown]> = [
       ['cross-origin login', interrupted('http://other.invalid/login')],
-      ['different route', interrupted(`${origin}/settings`)],
-      ['login query', interrupted(`${origin}/login?next=/private`)],
-      ['login fragment', interrupted(`${origin}/login#fragment`)],
+      ['protocol-relative destination', interrupted('//127.0.0.1/login')],
+      ['blank fragment', interrupted('about:blank#fragment')],
       ['login credentials', interrupted(`${origin.replace('http://', 'http://user@')}/login`)],
       ['different navigation source', interrupted(`${origin}/login`, `${origin}/private`)],
       ['timeout', new Error('page.goto: Timeout 30000ms exceeded')],

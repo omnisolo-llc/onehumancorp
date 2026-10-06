@@ -35,7 +35,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 
         const data = await response.json();
         if (canonical === '/api-docs') {
           expect(data.paths).toBeTruthy();
-          await expect(page.locator('.swagger-ui')).toBeVisible();
+          await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui')).toBeVisible();
           const explanation = page.locator('#api-docs-tooltip');
           await explanation.focus();
           const tooltip = page.getByRole('tooltip');
@@ -95,5 +95,5 @@ test('shipped dashboard and Help links reach the canonical applications', async 
   await expect(documentation).toBeVisible();
   await documentation.click();
   await expect(page).toHaveURL(/\/api-docs$/);
-  await expect(page.locator('.swagger-ui')).toBeVisible();
+  await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui')).toBeVisible();
 });

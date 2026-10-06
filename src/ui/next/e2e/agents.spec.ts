@@ -3,6 +3,42 @@ import { e2eDbQuery } from '../../../e2e/db_utils';
 import { createGrowthOwner } from '../../../e2e/growth_owner';
 import { createEntitlementOwner, expectEntitlementUnchanged, trackTrialClaims } from '../../../e2e/support/entitlement_fixture';
 
+// Preserve the first failure's event ordering when CI retries are disabled.
+test.use({ trace: 'retain-on-failure' });
+
+// Each initial business read revalidates canonical identity. Wait for the real
+// page-owned startup reads as well as the plan body; an unpressed toggle alone
+// used to conflate pending identity with an acknowledged Free entitlement.
+async function openAgentsWithVerifiedPlan(
+  page: import('@playwright/test').Page,
+  fixture: Awaited<ReturnType<typeof createEntitlementOwner>>,
+  reload = false,
+) {
+  const endpoints = [
+    '/api/v1/billing/my-plan', '/api/v1/agents/approvals',
+    '/api/v1/agents/approvals/activity', '/api/v1/agents/workflows',
+  ];
+  const reads = endpoints.map(path => page.waitForResponse(response =>
+    response.request().method() === 'GET' && new URL(response.url()).pathname === path));
+  if (reload) await page.reload(); else await page.goto('/agents');
+  for (const [index, pending] of reads.entries()) {
+    const response = await pending;
+    expect(response.status()).toBe(200);
+    expect(response.request().headers()).toMatchObject({
+      'x-ohc-expected-user': fixture.owner.userId,
+      'x-ohc-expected-tenant': fixture.owner.tenantId,
+    });
+    const body = await response.json();
+    if (index === 0) expect(body.current_plan.toLowerCase()).toBe(fixture.plan.toLowerCase());
+  }
+  await expect(page.getByRole('status', { name: 'Pro Mode readiness' })).toHaveText(`Current plan: ${fixture.plan}`);
+  const toggle = page.getByRole('button', { name: 'Toggle Pro Mode' });
+  await expect(toggle).toBeEnabled();
+  await expect(toggle).toHaveAttribute('aria-busy', 'false');
+  await expect(toggle).toHaveAttribute('aria-pressed', String(fixture.plan !== 'Free'));
+  return toggle;
+}
+
 test.describe('AI Agent Department Architecture', () => {
   test('should display approval inbox and activity feed', async ({ page, baseURL }) => {
     if (!baseURL) throw new Error('Playwright baseURL is required for the agent records test.');
@@ -55,9 +91,7 @@ test.describe('AI Agent Department Architecture', () => {
     const fixture = await createEntitlementOwner(page, baseURL);
     const claims = trackTrialClaims(page);
     await page.addInitScript(() => localStorage.setItem('has_pro', 'true'));
-    await page.goto('/agents');
-    const toggle = page.getByRole('button', { name: 'Toggle Pro Mode' });
-    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    const toggle = await openAgentsWithVerifiedPlan(page, fixture);
     await toggle.click();
     const paywall = page.getByRole('heading', { name: 'Upgrade to Pro' });
     await expect(paywall).toBeVisible();
@@ -70,15 +104,17 @@ test.describe('AI Agent Department Architecture', () => {
     await expect(paywall).not.toBeVisible();
     await toggle.click();
     await expect(paywall).toBeVisible();
+    await openAgentsWithVerifiedPlan(page, fixture, true);
+    await expect(paywall).not.toBeVisible();
+    await toggle.click();
+    await expect(paywall).toBeVisible();
     expect(claims).toEqual([]);
     await expectEntitlementUnchanged(page, fixture);
   });
 
   test('Pro Mode still recognizes an existing persisted Pro entitlement', async ({ page, baseURL }) => {
     const fixture = await createEntitlementOwner(page, baseURL, 'Pro');
-    await page.goto('/agents');
-    const toggle = page.getByRole('button', { name: 'Toggle Pro Mode' });
-    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    const toggle = await openAgentsWithVerifiedPlan(page, fixture);
     await toggle.click();
     await expect(page.getByRole('heading', { name: 'Upgrade to Pro' })).not.toBeVisible();
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');

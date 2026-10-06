@@ -144,7 +144,7 @@ test.describe('Documentation Features Flow', () => {
     await page.goto('/api-docs');
     await expect(page.getByTestId('api-docs-title')).toContainText('Advanced:');
     await expect(page.getByTestId('api-docs-title')).toContainText('Not required for normal use.');
-    const swagger = page.locator('.swagger-ui');
+    const swagger = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui');
     await expect(swagger.getByRole('heading', { name: /^API Documentation \(for Advanced Users\)/ })).toBeVisible();
     await expect(swagger.locator('.opblock-summary-path').filter({ hasText: /^\/api\/v1\/help$/ })).toBeVisible();
     await expect(swagger.locator('.opblock-summary-path').filter({ hasText: /^\/api\/v1\/tooltips$/ })).toBeVisible();

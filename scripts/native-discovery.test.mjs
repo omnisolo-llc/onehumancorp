@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { lstat } from 'node:fs/promises';
 import ts from 'typescript';
+import browserShards from './browser-shards.cjs';
 
 test('browser runtime uses the same native Cargo target directory as the build', () => {
   const repository = path.resolve('fixture-repository');
@@ -51,6 +52,14 @@ test('complete browser discovery works without Docker, built binaries or provide
   const missing = [...discovered].filter(filename => !included.has(filename));
   assert.deepEqual(missing.map(filename => path.relative(root, filename)), [],
     'every actually discovered native browser spec must be included in the required TypeScript gate');
+  const tracked = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: root, encoding: 'utf8', timeout: 30000, maxBuffer: 8 * 1024 * 1024,
+  });
+  assert.ifError(tracked.error);
+  assert.equal(tracked.status, 0, tracked.stderr);
+  const actualFiles = [...discovered].map(filename => path.relative(root, filename).split(path.sep).join('/'));
+  browserShards.assertBrowserSpecOwnership(tracked.stdout.split('\0').filter(Boolean),
+    actualFiles.map(file => ({ id: file, title: file, file })));
   t.diagnostic(`TypeScript includes all ${discovered.size} discovered native spec files`);
 });
 

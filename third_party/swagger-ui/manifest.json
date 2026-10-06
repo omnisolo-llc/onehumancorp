@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "repository": "https://github.com/swagger-api/swagger-ui.git",
+    "tag": "v5.33.1",
+    "commit": "cac3d136b5e37bfbe3288c8591f6f4fcf9870599",
+    "sourceDateEpoch": 1790846452,
+    "name": "swagger-ui",
+    "version": "5.33.1"
+  },
+  "patches": [
+    "DOMPurify exact 3.4.16",
+    "Reproducible source-date build metadata",
+    "Integrity completion without other dependency version changes"
+  ],
+  "toolchain": {
+    "platform": "linux-x64",
+    "node": "24.21.0",
+    "npm": "11.19.0",
+    "nodeArchive": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.xz",
+    "nodeArchiveSha256": "fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6",
+    "installScripts": false
+  },
+  "runtimeInventorySha256": "8a8d71d34718c945aef841bcbe6f234584c90678518192e2d9575a608ef6ec92",
+  "recipe": {
+    "recipe/inventory.mjs": "155b0af06cd5f30419305c5f708841cb1a67c6c81bc6f90969bf6b847c9ce502",
+    "recipe/package-lock.json": "68aecdc20a88386ad26581cfac3e0f959ec5232b6b7c6876645e64d9bf571d34",
+    "recipe/rebuild.sh": "052f1728632f070ab3e4614e421745e83c4ef52fcdc694a420b71746429982f6",
+    "recipe/upstream.patch": "b7be318f31f8353fed53107d127c5105af460acb7fb9309603e64e358cac26e6"
+  },
+  "assets": {
+    "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "NOTICE": "0d20d1adef18aee3f40dd258172155521ce702ac445cb5f7b7d60ed32dad2fb2",
+    "THIRD_PARTY_LICENSES.txt": "c0f7f5d81182e90ac0f79b9de47767e1199eaf0cc42eaf489ff6431a98a36901",
+    "dist/oauth2-redirect.html": "f3546c5b74b44eac7de5b4193a641b4f23365470c109b490c566bac0de446745",
+    "dist/oauth2-redirect.js": "a5c8a34e09e49737382cc5019446eec7c3db3461963fc5bfe448361d3c5549e9",
+    "dist/swagger-ui-bundle.js": "9ca01b6d7e4973e6416913dd8c02be54221576e25f4b7738ebc13cc42286d9e2",
+    "dist/swagger-ui-bundle.js.LICENSE.txt": "e5a4792feaa5332dfba37f1d7adf84308b93b4f2d8da0569a9f48a3cb61c969b",
+    "dist/swagger-ui.css": "1ac324f7dcd27e4b9386b4bd6421271ec147e922a22c05ba24b11515e9aa6321",
+    "dist/swagger-ui.css.map": "54533f6e23b30b920a30bdca1368d1bf9d279c7005d62347dc38d9b13c547258"
+  }
+}

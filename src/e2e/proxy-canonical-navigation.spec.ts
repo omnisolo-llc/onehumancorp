@@ -95,7 +95,7 @@ async function navigateWithRouter(page: Page, method: 'push' | 'prefetch', path:
 
 async function expectCanonicalContent(page: Page, path: string) {
   if (path === '/integrations') await expect(page.getByRole('heading', { name: 'Verified business connections', exact: true })).toBeVisible();
-  else if (path === '/api-docs') await expect(page.locator('.swagger-ui')).toBeVisible();
+  else if (path === '/api-docs') await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui')).toBeVisible();
   else if (path === '/trial-extension') {
     await expect(page.getByRole('heading', { name: 'Plan and Trial Availability', exact: true })).toBeVisible();
     await expect(page.getByRole('status', { name: 'Current plan' })).toContainText('Current verified plan:');

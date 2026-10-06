@@ -140,3 +140,11 @@ test('real browser setup owns its PostgreSQL schema and consumes no PG-gate outp
   assert.match(runtime, /src\/server\/migrations\/sqlx_migration_contract_test\.sh/);
   assert.doesNotMatch(runtime, /needs\.postgres-security|postgres-security-evidence/);
 });
+
+for (const name of ['native-test', 'postgres-security']) {
+  test(`${name} preserves the approved one-hour test job budget`, async () => {
+    const { jobs } = await workflow();
+    assert.equal(jobs[name]['timeout-minutes'], 60,
+      `${name} must not cancel the approved one-hour test run early`);
+  });
+}

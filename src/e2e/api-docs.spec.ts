@@ -1,4 +1,5 @@
 import { test, expect } from './fixtures';
+import { observeClickEffects } from './support/ui_click_audit';
 
 test.describe('API Documentation', () => {
   test('should display interactive Swagger UI layout', async ({ page, loginAs, unlimitedAdminUser }) => {
@@ -25,7 +26,7 @@ test.describe('API Documentation', () => {
     await expect(wrapper).toBeVisible();
 
     // Check if swagger-ui container renders
-    const swaggerUI = page.locator('.swagger-ui');
+    const swaggerUI = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui');
     await expect(swaggerUI).toBeVisible();
   });
 
@@ -36,7 +37,7 @@ test.describe('API Documentation', () => {
     await page.goto('/api-docs');
 
     // Wait for the swagger UI to load
-    await expect(page.locator('.swagger-ui')).toBeVisible({ timeout: 15000 });
+    await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui')).toBeVisible({ timeout: 15000 });
 
     // Check if layout allows for horizontal scroll by evaluating the clientWidth vs scrollWidth
     const overflowInfo = await page.evaluate(() => {
@@ -47,5 +48,55 @@ test.describe('API Documentation', () => {
 
     // In a well-behaved mobile design, it shouldn't allow horizontal scroll at the root
     expect(overflowInfo.hasHorizontalScroll).toBe(false);
+    const frameOverflow = await page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('html').evaluate(element => element.scrollWidth > element.clientWidth);
+    expect(frameOverflow).toBe(false);
   });
+  for (const path of ['/api/v1/agents/status', '/api/v1/agents/task']) {
+  test(`pointer audit opens ${path} without re-scrolling the hovered frame control`, async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/api-docs');
+    const operation = page.frameLocator('iframe[data-ohc-api-docs-viewer]')
+      .locator('.opblock-summary-control').filter({ hasText: path });
+    await expect(operation).toHaveCount(1);
+    await expect(operation).toHaveAttribute('aria-expanded', 'false');
+    const target = await operation.elementHandle();
+    expect(target).not.toBeNull();
+    try {
+      const effect = await observeClickEffects(page, target!);
+      expect(effect.changed).toBe(true);
+      await expect(operation).toHaveAttribute('aria-expanded', 'true');
+    } finally { await target?.dispose(); }
+  });
+
+  }
+
+  test('keyboard operations and the real renderer survive client navigation and back', async ({ page, loginAs, unlimitedAdminUser }) => {
+    await loginAs(page, unlimitedAdminUser);
+    await page.goto('/api-docs');
+    for (let visit = 0; visit < 2; visit += 1) {
+      const iframe = page.locator('iframe[data-ohc-api-docs-viewer]');
+      await expect(iframe).toHaveAttribute('title', 'Interactive API documentation');
+      await expect(iframe).toHaveAttribute('aria-busy', 'false', { timeout: 15000 });
+      const handle = await iframe.elementHandle();
+      const renderer = await handle!.contentFrame();
+      expect(renderer).not.toBeNull();
+      const operation = page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.opblock-summary-control').first();
+      await expect(operation).toHaveAttribute('aria-expanded', 'false');
+      await operation.focus();
+      await operation.press('Enter');
+      await expect(operation).toHaveAttribute('aria-expanded', 'true');
+      await operation.press('Enter');
+      await expect(operation).toHaveAttribute('aria-expanded', 'false');
+      await page.locator('#help-center-nav-btn').click();
+      await expect(page).toHaveURL(/\/help$/);
+      await expect(iframe).toHaveCount(0);
+      expect(renderer!.isDetached()).toBe(true);
+      await handle!.dispose();
+      const loaded = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/api-docs-spec' && response.request().method() === 'GET');
+      await page.goBack();
+      expect((await loaded).status()).toBe(200);
+      await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui')).toBeVisible();
+    }
+  });
+
 });

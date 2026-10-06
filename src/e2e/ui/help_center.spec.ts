@@ -66,8 +66,8 @@ test.describe('Help Center & Documentation Features', () => {
 
     // 5. Verify API docs loaded (Swagger UI)
     await expect(page.locator('text=Advanced:')).toBeVisible();
-    await expect(page.locator('.swagger-ui').first()).toBeVisible();
-    await expect(page.locator('.swagger-ui .info .title')).toContainText(spec.info.title);
+    await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui').first()).toBeVisible();
+    await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui .info .title')).toContainText(spec.info.title);
   });
 
   test('Owner can trigger Interactive Walkthroughs from the Help Widget', async ({ page }) => {

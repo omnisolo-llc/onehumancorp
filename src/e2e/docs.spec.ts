@@ -72,7 +72,10 @@ test.describe('Documentation & Help Features', () => {
     const tooltipTarget = page.locator('[id="total-sales-tooltip"]');
     await tooltipTarget.waitFor({ state: "visible", timeout: 10000 });
     await tooltipTarget.hover();
-    await expect(page.locator('[role="tooltip"]')).toBeVisible({ timeout: 5000 });
+    const tooltip = page.getByRole('tooltip');
+    await expect(tooltip).toBeVisible({ timeout: 5000 });
+    await expect(tooltip).toContainText(/revenue generated/);
+    await expect(tooltipTarget).toHaveAttribute('aria-describedby', 'total-sales-tooltip-description');
   });
 
   test('should display recent orders tooltip correctly', async ({ page, loginAs, unlimitedAdminUser }) => {

@@ -28,22 +28,54 @@ function uniqueStrings(values, name) {
   requireTrue(new Set(values).size === values.length, `${name} contains duplicates`);
   return values;
 }
-function discoverAppRoutes(root) {
+// Inventory is source discovery only: a sampled URL or a click receipt does not
+// prove persistence, provider execution, or all states of a dynamic page.
+function discoverAppRouteInventory(root) {
   const app = path.join(root, 'src/ui/next/src/app');
-  const examples = { '[articleId]': 'getting-started-1', '[tenant]': 'default', '[id]': 'e2e-id' };
+  // Preserve the existing representative routes, including the canonical
+  // persisted order. New dynamic pages require an explicit reviewed mapping;
+  // sharing a parameter name is not evidence that the same fixture works.
+  const fixtures = {
+    '/bio/[tenant]': '/bio/default',
+    '/customer/subscriptions/[id]': '/customer/subscriptions/e2e-id',
+    '/help/[articleId]': '/help/getting-started-1',
+    '/orders/[id]': '/orders/e2e-seeded-record',
+    '/proposals/[id]': '/proposals/e2e-id',
+    '/quote/[id]': '/quote/e2e-id',
+    '/quotes/[id]': '/quotes/e2e-id',
+  };
   const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
     const file = path.join(dir, entry.name);
     return entry.isDirectory() ? walk(file) : entry.isFile() || entry.isSymbolicLink() ? [file] : [];
   });
-  const routes = walk(app).filter(file => file.endsWith(`${path.sep}page.tsx`)).map(file => {
+  return walk(app).filter(file => /^page\.(?:tsx?|jsx?)$/.test(path.basename(file))).sort().map(file => {
     const relative = path.relative(app, path.dirname(file));
     const segments = relative === '' ? [] : relative.split(path.sep);
-    if (segments.some(segment => segment === 'api' || segment.startsWith('('))) return null;
-    // Dynamic record pages must use a real canonical database fixture.
-    if (segments.join('/') === 'orders/[id]') return '/orders/e2e-seeded-record';
-    return `/${segments.filter(segment => !segment.startsWith('_')).map(segment => examples[segment] || segment).join('/')}`.replace(/\/$/, '') || '/';
-  }).filter(Boolean);
-  return [...new Set(routes)].sort();
+    const entry = { file: path.relative(root, file).split(path.sep).join('/'), routePattern: null, auditRoute: null, exclusionReason: null, fixtureRequirement: null };
+    if (segments.some(segment => segment.startsWith('_'))) entry.exclusionReason = 'private_directory';
+    if (entry.exclusionReason) return entry;
+    if (segments.some(segment => /^\(\.{1,3}\)/.test(segment))) {
+      entry.fixtureRequirement = 'intercepting_route_requires_navigation_fixture';
+      return entry;
+    }
+    // Next App Router groups and parallel slots are pathless. A group is not
+    // an excluded subtree, unlike a private folder. %5F escapes public _ paths.
+    const urlSegments = segments.filter(segment => !(segment.startsWith('(') && segment.endsWith(')')) && !segment.startsWith('@'))
+      .map(segment => segment.replace(/%5F/gi, '_'));
+    entry.routePattern = `/${urlSegments.join('/')}`;
+    if (urlSegments.some(segment => segment.includes('[')) && !Object.hasOwn(fixtures, entry.routePattern)) {
+      entry.fixtureRequirement = 'dynamic_route_requires_fixture';
+      return entry;
+    }
+    entry.auditRoute = Object.hasOwn(fixtures, entry.routePattern) ? fixtures[entry.routePattern] : entry.routePattern;
+    return entry;
+  });
+}
+function discoverAppRoutes(root) {
+  const entries = discoverAppRouteInventory(root);
+  const pending = entries.filter(entry => entry.fixtureRequirement);
+  requireTrue(pending.length === 0, `each reachable page requires an explicit audit fixture: ${pending.map(entry => `${entry.file} (${entry.fixtureRequirement})`).join(', ')}`);
+  return [...new Set(entries.map(entry => entry.auditRoute).filter(Boolean))].sort();
 }
 function completeSelection(args) {
   let shards = 0;
@@ -281,7 +313,7 @@ function writeReceipt(file, value) {
   fs.writeFileSync(pending, JSON.stringify(value, null, 2) + '\n', { flag: 'wx' });
   fs.renameSync(pending, file);
 }
-module.exports = { PROTOCOL, ATTACHMENT, CLICK_TITLE, INVENTORY_TITLE, PURPOSE_TITLE, GLOBAL_TITLES, CONTRACT_FILE, discoverAppRoutes, expectedAuditPath,
+module.exports = { PROTOCOL, ATTACHMENT, CLICK_TITLE, INVENTORY_TITLE, PURPOSE_TITLE, GLOBAL_TITLES, CONTRACT_FILE, discoverAppRoutes, discoverAppRouteInventory, expectedAuditPath,
   sourceIdentity, makeRunContext, completeSelection, validateContext, assertSource, validateReceipts, readReceipts, writeReceipt };
 if (require.main === module) {
   try {

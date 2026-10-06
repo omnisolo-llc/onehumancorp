@@ -4,7 +4,7 @@ import { e2eDbQuery, e2eDbTransaction } from '../../../../e2e/db_utils';
 
 const aliases = [
   { legacy: '/unified-feed.html', state: 'APPROVED', button: 'Record approval' },
-  { legacy: '/ui/unified-feed.html', state: 'DISMISSED', button: 'Reject' },
+  { legacy: '/ui/unified-feed.html', state: 'DISMISSED', button: 'Dismiss' },
 ] as const;
 
 for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {

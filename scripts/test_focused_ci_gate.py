@@ -12,6 +12,19 @@ SPEC.loader.exec_module(gate)
 
 
 class FocusedGateTests(unittest.TestCase):
+    def test_postgres_prefetches_the_entire_locked_graph_before_offline_gates(self):
+        import yaml
+        root = Path(__file__).resolve().parents[1]
+        steps = yaml.safe_load((root / '.github/workflows/ci.yml').read_text())['jobs']['postgres-security']['steps']
+        prefetch = next((i for i, step in enumerate(steps)
+                         if step.get('run', '').strip() == 'cargo fetch --locked'), None)
+        self.assertIsNotNone(prefetch, 'cold-cache offline gates need the full locked workspace graph, including non-host dependencies')
+        first_gate = next(i for i, step in enumerate(steps)
+                          if 'scripts/sync-durability/run.sh' in step.get('run', ''))
+        self.assertLess(prefetch, first_gate)
+        self.assertNotIn('--target', steps[prefetch]['run'])
+        self.assertNotIn('continue-on-error', steps[prefetch])
+
     def test_redis_reconnect_requires_owned_fixture_and_complete_inventory(self):
         import yaml
         root = Path(__file__).resolve().parents[1]

@@ -21,6 +21,18 @@ function inventory(items) {
   }
   return map;
 }
+// Native CI discovers every *.spec.ts under ./src. Compare that actual result
+// with repository source paths so adding a runnable spec elsewhere cannot pass
+// by silently disappearing. Unit *.test.ts[x]/*.test.mjs and historical
+// *.mock-contract.ts files retain their separate documented ownership.
+function assertBrowserSpecOwnership(sourceFiles, discovered) {
+  const owned = new Set([...inventory(discovered).values()].map(item => item.file));
+  const specs = [...new Set(sourceFiles.filter(file => /\.spec\.[cm]?[jt]sx?$/.test(file)))];
+  const unsupported = specs.filter(file => !file.endsWith('.spec.ts')).sort();
+  assert.deepEqual(unsupported, [], `Unsupported spec extension without a runner owner: ${unsupported.join(', ')}`);
+  const missing = specs.filter(file => !owned.has(file)).sort();
+  assert.deepEqual(missing, [], `Undiscovered browser spec files: ${missing.join(', ')}`);
+}
 function sameInventory(actual, expected) {
   const left = inventory(actual), right = inventory(expected);
   assert.equal(left.size, right.size, 'browser inventory size mismatch');
@@ -129,4 +141,4 @@ async function runGroupedUnits({index, source, list, runUnit, signal = new Abort
     if (failures.length) throw new AggregateError(failures, failures.map(error=>error.message).join('\n'));
   } finally { await fs.rm(prepared.directory, {recursive:true,force:true}); }
 }
-module.exports = { BROWSER_BUDGET_MS, GROUPS, sameInventory, groupInventory, validateProof, validateGroupedReceipts, readDiscovery, prepareGroupedShard, runGroupedUnits };
+module.exports = { assertBrowserSpecOwnership, BROWSER_BUDGET_MS, GROUPS, sameInventory, groupInventory, validateProof, validateGroupedReceipts, readDiscovery, prepareGroupedShard, runGroupedUnits };

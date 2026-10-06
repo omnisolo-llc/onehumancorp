@@ -46,7 +46,7 @@ it.each(['Pro', 'Business'])('does not open a false upgrade prompt during a %s o
   const pending = deferred<Response>(); identityReply = () => pending.promise;
   let checking!: Promise<unknown>; act(() => { checking = readQueueOwner(); });
   // Paid authority must still be withheld while canonical verification is pending.
-  expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
   fireEvent.click(toggle());
   expect(paywall()).not.toBeInTheDocument();
   expect(toggle()).toBeDisabled();
@@ -73,7 +73,7 @@ it.each(['Free', 'Starter'])('keeps a verified %s plan gated and trial activatio
 
 it('holds the toggle until the initial plan body is verified', async () => {
   const pending = deferred<Response>(); planReply = () => pending.promise;
-  await open(); expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  await open(); expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
   fireEvent.click(toggle()); expect(paywall()).not.toBeInTheDocument(); expect(toggle()).toBeDisabled();
   await act(async () => pending.resolve(Response.json({ current_plan: 'Pro' })));
   await waitFor(() => expect(toggle()).toHaveAttribute('aria-pressed', 'true'));
@@ -83,13 +83,70 @@ it('holds the toggle until the initial plan body is verified', async () => {
 it.each(['Unknown', null])('does not label an unverified plan %j as an upgrade opportunity', async plan => {
   currentPlan = plan; await open();
   expect(toggle()).toBeDisabled(); fireEvent.click(toggle()); expect(paywall()).not.toBeInTheDocument();
-  expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
 });
 
 it('hides an open Free paywall when owner authority is retired', async () => {
   currentPlan = 'Free'; await open();
   await waitFor(() => expect(toggle()).toBeEnabled()); fireEvent.click(toggle()); expect(paywall()).toBeVisible();
   act(() => window.dispatchEvent(new Event('pagehide')));
-  expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
   expect(toggle()).toBeDisabled(); expect(paywall()).not.toBeInTheDocument();
+});
+
+it('distinguishes an unknown plan from verified Free while its response body is pending', async () => {
+  localStorage.setItem('has_pro', 'true');
+  const body = deferred<unknown>();
+  planReply = async () => ({ status: 200, json: () => body.promise }) as Response;
+  await open();
+  expect(toggle()).toBeDisabled();
+  expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
+  expect(toggle()).toHaveAttribute('aria-busy', 'true');
+  expect(screen.getByRole('status', { name: 'Pro Mode readiness' })).toHaveTextContent('Checking current plan');
+  fireEvent.click(toggle()); expect(paywall()).not.toBeInTheDocument();
+  await act(async () => body.resolve({ current_plan: 'Free' }));
+  await waitFor(() => expect(toggle()).toBeEnabled());
+  expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  expect(toggle()).toHaveAttribute('aria-busy', 'false');
+  expect(screen.getByRole('status', { name: 'Pro Mode readiness' })).toHaveTextContent('Current plan: Free');
+  fireEvent.click(toggle()); expect(paywall()).toBeVisible();
+});
+
+it('does not publish Free readiness until every overlapping identity read is settled', async () => {
+  currentPlan = 'Free'; await open(); await waitFor(() => expect(toggle()).toBeEnabled());
+  const first = deferred<Response>(), second = deferred<Response>();
+  let reads = 0; identityReply = () => ++reads === 1 ? first.promise : second.promise;
+  let checking!: Promise<unknown>;
+  act(() => { checking = Promise.all([readQueueOwner(), readQueueOwner()]); });
+  expect(toggle()).toBeDisabled(); expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
+  fireEvent.click(toggle()); expect(paywall()).not.toBeInTheDocument();
+  await act(async () => second.resolve(identity()));
+  expect(toggle()).toBeDisabled(); expect(toggle()).toHaveAttribute('aria-busy', 'true');
+  await act(async () => { first.resolve(identity()); await checking; });
+  expect(toggle()).toBeEnabled(); expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(toggle()); expect(paywall()).toBeVisible();
+});
+
+it('requires a fresh verified plan after remount and does not trust a stored Pro flag', async () => {
+  currentPlan = 'Free'; await open(); await waitFor(() => expect(toggle()).toBeEnabled());
+  fireEvent.click(toggle()); expect(paywall()).toBeVisible();
+  cleanup(); localStorage.setItem('has_pro', 'true');
+  const pending = deferred<Response>(); planReply = () => pending.promise;
+  await open(); expect(toggle()).toBeDisabled();
+  expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
+  expect(paywall()).not.toBeInTheDocument();
+  await act(async () => pending.resolve(Response.json({ current_plan: 'Free' })));
+  await waitFor(() => expect(toggle()).toBeEnabled());
+  expect(toggle()).toHaveAttribute('aria-pressed', 'false');
+  fireEvent.click(toggle()); expect(paywall()).toBeVisible();
+});
+
+it('announces retired authority after an authentication change and ignores a late plan body', async () => {
+  const pending = deferred<Response>(); planReply = () => pending.promise;
+  await open();
+  act(() => window.dispatchEvent(new Event('omnisolo_auth_changed')));
+  await act(async () => pending.resolve(Response.json({ current_plan: 'Free' })));
+  expect(toggle()).toBeDisabled(); expect(toggle()).toHaveAttribute('aria-pressed', 'mixed');
+  expect(screen.getByRole('status', { name: 'Pro Mode readiness' })).toHaveTextContent('Your session changed');
+  fireEvent.click(toggle()); expect(paywall()).not.toBeInTheDocument();
 });
