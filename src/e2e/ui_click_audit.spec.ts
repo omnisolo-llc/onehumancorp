@@ -205,7 +205,7 @@ test('retiring a clicked document prevents its delayed navigation from replacing
   } finally { await isolated.close(); }
 });
 
-test('recovers an injected cleanup interruption after real logout without repeating its click or losing cookies', async ({ page }) => {
+test('settles an injected cleanup interruption after real logout without repeating its click or losing cookies', async ({ page }) => {
   let logins = 0;
   let logouts = 0;
   let lateRequests = 0;
@@ -258,24 +258,28 @@ test('recovers an injected cleanup interruption after real logout without repeat
     expect(cookies.find(cookie => cookie.name === 'audit_context')?.value).toBe('preserved');
     await isolated.evaluate(late => { setTimeout(() => { void fetch(late); }, 300); }, `${origin}/late`);
     // Replay the exact hosted cleanup failure at the Playwright boundary.
-    // The logout, cookies, old realm and replacement remain real browser state;
+    // The logout, cookies, old realm and blank commit remain real browser state;
     // no product response or click effect is fabricated by this injected fault.
     const goto = isolated.goto.bind(isolated);
     let retirementAttempts = 0;
     isolated.goto = async (url, options) => {
-      if (url === 'about:blank') {
-        retirementAttempts += 1;
+      if (url === 'about:blank' && ++retirementAttempts === 1) {
         throw new Error(`page.goto: Navigation to "about:blank" is interrupted by another navigation to "${origin}/login"`);
       }
       return goto(url, options);
     };
     const old = isolated;
+    const pages = isolated.context().pages();
+    const viewport = isolated.viewportSize();
+    const video = isolated.video();
     isolated = await replaceAuditDocument(isolated);
-    expect(old.isClosed()).toBe(true);
-    expect(isolated).not.toBe(old);
+    expect(old.isClosed()).toBe(false);
+    expect(isolated).toBe(old);
+    expect(isolated.url()).toBe('about:blank');
     expect(isolated.context()).toBe(old.context());
-    expect(Boolean(isolated.video())).toBe(Boolean(old.video()));
-    expect(isolated.viewportSize()).toEqual(old.viewportSize());
+    expect(isolated.context().pages()).toEqual(pages);
+    expect(isolated.video()).toBe(video);
+    expect(isolated.viewportSize()).toEqual(viewport);
     expect(await isolated.context().cookies(origin)).toEqual(cookies);
     await navigate(isolated, '/private');
     await isolated.waitForTimeout(450);
@@ -284,7 +288,7 @@ test('recovers an injected cleanup interruption after real logout without repeat
     expect(logins).toBe(2);
     expect(logouts).toBe(1);
     expect(lateRequests).toBe(0);
-    expect(retirementAttempts).toBe(1);
+    expect(retirementAttempts).toBe(2);
   } finally {
     await isolated.close();
     server.closeAllConnections();

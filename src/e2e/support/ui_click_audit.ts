@@ -281,28 +281,36 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
 // navigation from that document must not replace the next document under test.
 export async function replaceAuditDocument(page: Page): Promise<Page> {
   const retiredUrl = page.url();
-  const viewport = page.viewportSize();
+  const deadline = Date.now() + 10_000;
+  const remaining = () => {
+    if (page.isClosed()) throw new Error('Audit document retirement cancelled: page is closed');
+    const timeout = deadline - Date.now();
+    if (timeout <= 0) throw new Error('Audit document retirement exceeded its deadline');
+    return timeout;
+  };
+  const retire = () => page.goto('about:blank', { waitUntil: 'commit', timeout: remaining() });
   // A committed full-document navigation destroys the old JavaScript realm,
   // including delayed callbacks, while preserving one page/video per route.
   try {
-    await page.goto('about:blank', { waitUntil: 'load' });
+    await retire();
   } catch (error) {
+    let logoutUrl: string | undefined;
     let logoutInterruption: string | undefined;
     try {
       const source = new URL(retiredUrl);
       if (['http:', 'https:'].includes(source.protocol) && !source.username && !source.password) {
-        logoutInterruption = `page.goto: Navigation to "about:blank" is interrupted by another navigation to "${source.origin}/login"`;
+        logoutUrl = `${source.origin}/login`;
+        logoutInterruption = `page.goto: Navigation to "about:blank" is interrupted by another navigation to "${logoutUrl}"`;
       }
     } catch { /* An unclassified source cannot establish the logout boundary. */ }
     if (!(error instanceof Error) || error.message.split('\n', 1)[0] !== logoutInterruption) throw error;
-    // Logout may replace the document after its real click effect was observed.
-    // Retire that realm without retrying either the click or the navigation.
-    // Keeping the context retains cookies and its recording of both pages.
-    const context = page.context();
-    await page.close({ runBeforeUnload: false });
-    const replacement = await context.newPage();
-    if (viewport) await replacement.setViewportSize(viewport);
-    return replacement;
+    // The observed logout may still be committing. Closing its recorded page
+    // here hung for 127s in hosted Chromium, then allocated a replacement after
+    // test teardown began. Settle only that exact navigation, then destroy its
+    // realm with a fresh blank commit. Neither the click nor login is repeated.
+    // Every phase shares one deadline; failures propagate and allocate no page.
+    await page.waitForURL(logoutUrl!, { waitUntil: 'commit', timeout: remaining() });
+    await retire();
   }
   return page;
 }
