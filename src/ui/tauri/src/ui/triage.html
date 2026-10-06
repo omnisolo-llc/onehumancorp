@@ -607,6 +607,8 @@ window.renderWalkthroughStep = renderWalkthroughStep;
 
       async function handleDecision(id, approved, editValue = null) {
         try {
+          const requestedTenant = tenantId();
+          const requestedItem = items.find(item => item.id === id);
           // If approved is false, status should be DISMISSED
           const action_status = approved ? "APPROVED" : "DISMISSED";
           let payload = { triage_item_id: id, approved: approved };
@@ -614,15 +616,24 @@ window.renderWalkthroughStep = renderWalkthroughStep;
              payload.edited_payload = editValue;
           }
 
-          const res = await fetch(`/api/v1/ui/triage/action?tenant_id=${encodeURIComponent(tenantId())}`, {
+          const res = await fetch(`/api/v1/ui/triage/action?tenant_id=${encodeURIComponent(requestedTenant)}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
           });
 
-          if (!res.ok) {
-             console.error(await res.text());
-             throw new Error("Failed to update action");
+          // HTTP headers do not confirm a committed decision. Consume the
+          // durable receipt before discarding the owner's card or edited draft.
+          const receipt = await res.json().catch(() => null);
+          const record = value => value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+          const result = record(receipt), stored = record(result?.item);
+          if (tenantId() !== requestedTenant || !items.includes(requestedItem)) return;
+          if (res.status !== 200 || result?.success !== true || result.decision_recorded !== true || result.error != null
+              || !requestedItem?.tenant_id || stored?.id !== id || stored.tenant_id !== requestedItem.tenant_id
+              || stored.lifecycle_state !== action_status
+              || (stored.edited_payload !== null && typeof stored.edited_payload !== "string")
+              || (payload.edited_payload !== undefined && stored.edited_payload !== payload.edited_payload)) {
+            throw new Error("Outcome unconfirmed. Your card and draft are retained. Check recorded decisions before retrying.");
           }
           items = items.filter(i => i.id !== id);
           editingId = null;

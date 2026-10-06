@@ -155,18 +155,69 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
   test('should handle inline editing of a proposal', async ({ page }) => {
     await page.goto('/dashboard');
     const card = page.getByTestId(`triage-card-${itemId}`);
+    const remainingCard = page.getByTestId(`triage-card-${remainingId}`);
     await expect(card).toBeVisible();
+    await expect(remainingCard).toBeVisible();
+    const initialState = [{ lifecycle_state: 'PENDING_APPROVAL', proposed_action: { message: draft, generated_response: draft } }];
+    expect(await readItem(itemId)).toEqual(initialState);
+    const remainingState = await readItem(remainingId);
+    expect(remainingState).toHaveLength(1);
+    expect(remainingState[0].lifecycle_state).toBe('PENDING_APPROVAL');
+    const decisionUrl = new URL(`/api/v1/agent-feed/${itemId}`, page.url()).href;
+    const submittedDecisions: unknown[] = [];
+    page.on('request', request => {
+      if (request.url() === decisionUrl && request.method() === 'PUT') submittedDecisions.push(request.postDataJSON());
+    });
+
     await card.getByTestId('edit-proposal').click();
     const textarea = card.getByTestId('edit-proposal-textarea');
     await expect(textarea).toBeVisible();
+    await expect(textarea).toHaveValue(draft);
     await textarea.fill('This is my manually edited draft text');
     await card.getByTestId('cancel-edit-proposal').click();
     await expect(textarea).toBeHidden();
+    expect(submittedDecisions).toEqual([]);
+    expect(await readItem(itemId)).toEqual(initialState);
     await card.getByTestId('edit-proposal').click();
-    await textarea.fill('Second edited text');
-    await card.getByTestId('save-proposal').click();
+    await expect(textarea).toHaveValue(draft);
+    const editedDraft = 'Second edited text';
+    const savedAction = { message: editedDraft, generated_response: editedDraft };
+    await textarea.fill(editedDraft);
+    // Click dispatch does not await the async save handler. Observe its actual
+    // receipt before applying the existing editor/exit-animation deadline.
+    const [decision] = await Promise.all([
+      page.waitForResponse(response => response.url() === decisionUrl && response.request().method() === 'PUT'),
+      card.getByTestId('save-proposal').click(),
+    ]);
+    expect(decision.status()).toBe(200);
+    const expectedReceipt = {
+      id: itemId, tenant_id: tenantId, lifecycle_state: 'APPROVED', decision_recorded: true,
+      proposed_action: savedAction,
+    };
+    const receipt = await decision.json();
+    expect(receipt).toMatchObject(expectedReceipt);
+    expect(receipt.error).toBeUndefined();
     await expect(textarea).toBeHidden({ timeout: 2000 });
     await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(page.getByRole('status', { name: 'Decision status' })).toHaveText(
+      'Approval recorded. Execution or delivery is not verified by this decision.',
+    );
+    const savedState = [{ lifecycle_state: 'APPROVED', proposed_action: savedAction }];
+    expect(await readItem(itemId)).toEqual(savedState);
+    expect(await readItem(remainingId)).toEqual(remainingState);
+    await expect(remainingCard.getByTestId('feed-approve-btn')).toBeEnabled();
+
+    await page.reload();
+    await expect(remainingCard.getByTestId('feed-approve-btn')).toBeEnabled();
+    await expect(card).toBeHidden({ timeout: 2000 });
+    expect(await readItem(itemId)).toEqual(savedState);
+    expect(await readItem(remainingId)).toEqual(remainingState);
+    const readback = await page.request.get(`${decisionUrl}/decision`);
+    try {
+      expect(readback.status()).toBe(200);
+      expect(await readback.json()).toMatchObject(expectedReceipt);
+    } finally { await readback.dispose(); }
+    expect(submittedDecisions).toEqual([{ state: 'APPROVED', modified_content: editedDraft }]);
   });
 
   test('should handle inline editing of an ambassador reply', async ({ page }) => {
