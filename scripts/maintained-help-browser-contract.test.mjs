@@ -49,3 +49,11 @@ for (const [filename, title, gesture] of [
     assert.match(source, contract);
   }
 });
+
+test('Help video proof waits for real search completion and uses actionable media controls', async () => {
+  const source = await browserTest('documentation_features.spec.ts', 'should load Help Center, find videos, and click video to play');
+  assert.doesNotMatch(source, /\.evaluate\(|dispatchEvent\(/);
+  for (const contract of [/waitForEvent\('requestfinished'/, /url\.origin === origin/, /request\.response\(\)/, /\/api\/v1\/help\/search/, /searchParams\.get\('q'\)/,
+    /\/api\/v1\/videos/, /Play video:/, /Close video/, /\.click\(\)/,
+    /toHaveAttribute\('src', selectedVideo\.video_url\)/, /toHaveAttribute\('controls'/]) assert.match(source, contract);
+});

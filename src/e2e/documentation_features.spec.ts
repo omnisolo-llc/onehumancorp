@@ -39,33 +39,54 @@ test.describe('Help Chat Flow', () => {
 });
 
 test.describe('Help Center Complete UI Flow', () => {
-  test('should load Help Center, find videos, and click video to play', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('should load Help Center, find videos, and click video to play', async ({ page, loginAs, unlimitedAdminUser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated local app URL is required');
+    const origin = new URL(baseURL).origin;
     await loginAs(page, unlimitedAdminUser);
+    const videosRead = page.waitForEvent('requestfinished', { predicate: request => {
+      const url = new URL(request.url());
+      return url.origin === origin && url.pathname === '/api/v1/videos' && request.method() === 'GET';
+    } }).then(request => request.response());
     await page.goto('/help');
+    const videosResponse = await videosRead;
+    if (!videosResponse) throw new Error('Completed video catalog request has no response');
+    expect(videosResponse.status()).toBe(200);
+    const videos: { title: string; video_url: string }[] = await videosResponse.json();
+    expect(Array.isArray(videos)).toBe(true);
+    const title = 'Connecting a bank account to accept payments';
+    const selectedVideo = videos.find(video => video.title === title)!;
+    expect(selectedVideo).toBeDefined();
+    expect(selectedVideo.video_url).toEqual(expect.any(String));
+    expect(selectedVideo.video_url.length).toBeGreaterThan(0);
 
-    // Search for the video string
-    const searchBox = page.getByPlaceholder('Search for help articles and videos...');
-    await searchBox.fill('payment');
+    // The title is present before filtering too. Wait for the actual debounced
+    // search to finish before actionability checks track its final layout.
+    const searchRead = page.waitForEvent('requestfinished', { predicate: request => {
+      const url = new URL(request.url());
+      return url.origin === origin && url.pathname === '/api/v1/help/search' && url.searchParams.get('q') === 'payment'
+        && request.method() === 'GET';
+    } }).then(request => request.response());
+    await page.getByPlaceholder('Search for help articles and videos...').fill('payment');
+    const searchResponse = await searchRead;
+    if (!searchResponse) throw new Error('Completed Help search request has no response');
+    expect(searchResponse.status()).toBe(200);
+    expect(Array.isArray(await searchResponse.json())).toBe(true);
 
-    // Wait for UI to filter. We use exact matching because there are multiple elements matching "Accept your first payment"
-    await expect(page.getByText('Connecting a bank account to accept payments', { exact: true })).toBeVisible();
-
-    // Click the video (we specifically click the title paragraph/div)
-    // In our mobile view, the element might be outside the viewport or need forceful click
-    await page.getByText('Connecting a bank account to accept payments', { exact: true }).click({ force: true });
-
-    // Expect the video player modal
+    const play = page.getByRole('button', { name: `Play video: ${title}`, exact: true });
+    await expect(play).toBeVisible();
+    await play.click();
     const videoModal = page.locator('video');
     await expect(videoModal).toBeVisible();
+    await expect(videoModal).toHaveAttribute('src', selectedVideo.video_url);
+    await expect(videoModal).toHaveAttribute('controls', '');
+    await page.getByRole('button', { name: 'Close video', exact: true }).click();
+    await expect(videoModal).not.toBeVisible();
 
-    // Close the modal
-    const closeBtn = page.locator('button[aria-label="Close video"]');
-    // Ensure the modal animation is fully finished before clicking
-    await expect(closeBtn).toBeVisible();
-    await page.waitForTimeout(1000); // Wait for the modal animation (e.g. animate-pop-in) to finish before clicking the absolute positioned button
-    await closeBtn.evaluate((node) => (node as HTMLButtonElement).click());
-
-    // Modal should be gone
+    // Closing must restore a usable control, including after the search reflow.
+    await play.click();
+    await expect(videoModal).toBeVisible();
+    await expect(videoModal).toHaveAttribute('src', selectedVideo.video_url);
+    await page.getByRole('button', { name: 'Close video', exact: true }).click();
     await expect(videoModal).not.toBeVisible();
   });
 });
