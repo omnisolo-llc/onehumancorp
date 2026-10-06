@@ -177,12 +177,18 @@ export default function POSTerminal() {
 
 
     if (typeof window !== 'undefined') {
-        let storedDeviceId = localStorage.getItem('omnisolo_pos_device_id');
-        if (!storedDeviceId) {
+        try {
+          let storedDeviceId = localStorage.getItem('omnisolo_pos_device_id');
+          if (!storedDeviceId) {
             storedDeviceId = 'device_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
             localStorage.setItem('omnisolo_pos_device_id', storedDeviceId);
+          }
+          setDeviceId(storedDeviceId);
+        } catch {
+          // Keep recovery notices mounted and do not invent a device identity
+          // when this browser cannot preserve its existing local records.
+          setAuthenticationError('Device storage is unavailable. Enable browser storage before unlocking the terminal.');
         }
-        setDeviceId(storedDeviceId);
 
         setIsOffline(!navigator.onLine);
         window.addEventListener('online', handleOnline);
@@ -211,6 +217,11 @@ export default function POSTerminal() {
       const newPin = pin + digit;
       setPin(newPin);
       if (newPin.length === 4) {
+        if (!deviceId) {
+          setAuthenticationError('Device storage is unavailable. Enable browser storage before unlocking the terminal.');
+          setPin('');
+          return;
+        }
         if (isOffline || !navigator.onLine) {
            setAuthenticationError('Connect to the server to verify your staff identity. Offline access has not been authorized.');
            setPin('');
