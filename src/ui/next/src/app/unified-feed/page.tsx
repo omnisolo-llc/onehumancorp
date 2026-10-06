@@ -139,7 +139,7 @@ export default function UnifiedFeed() {
   };
 
   const handleApprove = (itemId: string) => handleAction(itemId, "APPROVED");
-  const handleReject = (itemId: string) => handleAction(itemId, "DISMISSED");
+  const handleDismiss = (itemId: string) => handleAction(itemId, "DISMISSED");
 
   const handleEdit = (item: FeedItem) => {
     if (decisions.blocked(item.workItem.id)) return;
@@ -243,9 +243,9 @@ export default function UnifiedFeed() {
                     <div className="flex gap-2 w-full mt-2">
                       <button
                         className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
-                        onClick={() => handleReject(item.workItem.id)}
+                        onClick={() => handleDismiss(item.workItem.id)}
                         disabled={decisions.blocked(item.workItem.id)}
-                        data-testid="unified-feed-reject-btn"
+                        data-testid="feed-dismiss-btn"
                       >
                         Dismiss
                       </button>
@@ -311,11 +311,11 @@ export default function UnifiedFeed() {
                       <div className="flex gap-2 w-full">
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
-                          onClick={() => handleReject(item.workItem.id)}
+                          onClick={() => handleDismiss(item.workItem.id)}
                           disabled={decisions.blocked(item.workItem.id)}
-                          data-testid="unified-feed-reject-btn"
+                          data-testid="feed-dismiss-btn"
                         >
-                          Reject
+                          Dismiss
                         </button>
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"

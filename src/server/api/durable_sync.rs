@@ -763,19 +763,29 @@ async fn apply_mutation(
         let available = level.unwrap_or(stock);
         if available < m.quantity_deducted {
             let c = json!({"transaction_id":m.transaction_id,"product_id":m.product_id,"shortage":i64::from(m.quantity_deducted)-i64::from(available)});
+
+            let notification_payload = json!({
+                "transaction_id": m.transaction_id,
+                "product_id": m.product_id,
+                "expected_stock": m.quantity_deducted,
+                "actual_stock": available,
+                "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", m.product_id)
+            });
+
             task(
                 tx.connection(),
                 tenant,
                 "operations",
                 "inventory.sync.conflict",
-                c.clone(),
+                notification_payload.clone(),
             )
             .await?;
 
-            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at) VALUES ($1, $2, 'durable_sync', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, clock_timestamp(), clock_timestamp())")
-                .bind(uuid::Uuid::new_v4().to_string())
+            let action_id = format!("sync_conflict_{}_{}", m.transaction_id, m.product_id);
+            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at) VALUES ($1, $2, 'durable_sync', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, clock_timestamp(), clock_timestamp()) ON CONFLICT DO NOTHING")
+                .bind(&action_id)
                 .bind(tenant)
-                .bind(c.to_string())
+                .bind(notification_payload.to_string())
                 .execute(tx.connection())
                 .await?;
 

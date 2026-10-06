@@ -273,7 +273,7 @@ async fn create_availability(
 
     let res = match &state.db.store {
         DbStore::Sqlite(pool) => {
-            sqlx::query("INSERT INTO availability_blocks (id, tenant_id, resource_id, start_time, end_time, is_recurring, recurrence_rule) VALUES (?, ?, ?, ?, ?, ?, ?)")
+            sqlx::query("INSERT INTO availability_blocks (id, tenant_id, service_id, resource_id, start_time, end_time, is_recurring, recurrence_rule) VALUES (?, ?, '', ?, ?, ?, ?, ?)")
                 .bind(&id).bind(&tenant_id).bind(&payload.resource_id).bind(&st.to_rfc3339()).bind(&et.to_rfc3339()).bind(&is_recurring).bind(&payload.recurrence_rule)
                 .execute(pool)
                 .await
@@ -281,7 +281,7 @@ async fn create_availability(
         DbStore::Postgres(pool) => {
             let mut tx = pool.begin().await.unwrap();
             let _ = ::server_common::auth_utils::set_org_context(&mut *tx, &tenant_id).await;
-            let result = sqlx::query("INSERT INTO availability_blocks (id, tenant_id, resource_id, start_time, end_time, is_recurring, recurrence_rule) VALUES ($1, $2, $3, $4, $5, $6, $7)")
+            let result = sqlx::query("INSERT INTO availability_blocks (id, tenant_id, service_id, resource_id, start_time, end_time, is_recurring, recurrence_rule) VALUES ($1, $2, '', $3, $4, $5, $6, $7)")
                 .bind(&id).bind(&tenant_id).bind(&payload.resource_id).bind(st).bind(et).bind(&is_recurring).bind(&payload.recurrence_rule)
                 .execute(&mut *tx)
                 .await;

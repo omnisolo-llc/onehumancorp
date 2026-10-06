@@ -242,6 +242,7 @@ async fn apply(
 
             let notification_id = uuid::Uuid::new_v4().to_string();
             let notification_payload = json!({
+                "transaction_id": id,
                 "product_id": product,
                 "expected_stock": *quantity,
                 "actual_stock": stock,
@@ -251,8 +252,9 @@ async fn apply(
             sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING')")
                 .bind(&notification_id).bind(tenant).bind(notification_payload.to_string()).execute(&mut *tx).await?;
 
-            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at) VALUES ($1, $2, 'terminal_offline_sync', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, clock_timestamp(), clock_timestamp())")
-                .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(notification_payload.to_string()).execute(&mut *tx).await?;
+            let action_id = format!("sync_conflict_{}_{}", id, product);
+            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, status, confidence_score, payload, created_at, updated_at) VALUES ($1, $2, 'terminal_offline_sync', 'operations', 'inventory.sync.conflict', 'Pending', 1.0, $3::jsonb, clock_timestamp(), clock_timestamp()) ON CONFLICT DO NOTHING")
+                .bind(&action_id).bind(tenant).bind(notification_payload.to_string()).execute(&mut *tx).await?;
         }
         sqlx::query(if has_counters {
             "UPDATE products SET pn_counter_n=COALESCE(pn_counter_n,0)+$1,inventory_count=GREATEST(0,COALESCE(pn_counter_p,0)-(COALESCE(pn_counter_n,0)+$1)),available_quantity=GREATEST(0,available_quantity-$1),updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3"
