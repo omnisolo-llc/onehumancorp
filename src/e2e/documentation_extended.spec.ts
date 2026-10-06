@@ -30,9 +30,13 @@ test.describe('Extended Documentation & Help Features', () => {
     await expect(page.locator('.omnisolo-walkthrough-bubble')).toContainText('Welcome');
 
     // Ensure the close button works
-    const closeBtn = page.locator('.omnisolo-walkthrough-close');
+    const closeBtn = page.locator('.omnisolo-walkthrough-bubble').getByRole('button', { name: 'Close walkthrough', exact: true });
     await closeBtn.click();
-    await expect(page.locator('.omnisolo-walkthrough-bubble')).not.toBeVisible();
+    await expect(page.locator('.omnisolo-walkthrough-bubble')).toBeHidden();
+    await walkBtn.click();
+    await expect(page.locator('.omnisolo-walkthrough-bubble')).toContainText('Welcome');
+    await closeBtn.click();
+    await expect(page.locator('.omnisolo-walkthrough-bubble')).toBeHidden();
   });
 
   test('Advanced Persona: Can load Swagger UI in API Documentation page', async ({ page }) => {
