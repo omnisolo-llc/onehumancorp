@@ -237,7 +237,23 @@ async fn apply(
             return Ok(blocked(id, "product_not_found_in_tenant"));
         };
         if stock < *quantity {
-            conflicts.push(json!({"transaction_id":id,"product_id":product,"shortage":i64::from(*quantity)-i64::from(stock)}));
+            let expected_stock = i64::from(*quantity);
+            let actual_stock = i64::from(stock);
+            conflicts.push(json!({"transaction_id":id,"product_id":product,"shortage":expected_stock-actual_stock}));
+
+            let conflict_id = format!("sync_conflict_{}_{}", id, product);
+            let notification_payload = json!({
+                "transaction_id": id,
+                "product_id": product,
+                "expected_stock": expected_stock,
+                "actual_stock": actual_stock,
+                "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product)
+            });
+            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'terminal_offline', 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING') ON CONFLICT DO NOTHING")
+                .bind(&conflict_id)
+                .bind(tenant)
+                .bind(notification_payload)
+                .execute(&mut *tx).await?;
         }
         sqlx::query(if has_counters {
             "UPDATE products SET pn_counter_n=COALESCE(pn_counter_n,0)+$1,inventory_count=GREATEST(0,COALESCE(pn_counter_p,0)-(COALESCE(pn_counter_n,0)+$1)),available_quantity=GREATEST(0,available_quantity-$1),updated_at=clock_timestamp() WHERE id=$2 AND tenant_id=$3"
