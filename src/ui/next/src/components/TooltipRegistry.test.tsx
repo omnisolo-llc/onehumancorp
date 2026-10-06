@@ -271,37 +271,61 @@ describe('TooltipRegistry scroll and contextmenu', () => {
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
   });
 
-  it('hides tooltip on scroll', async () => {
-    const ui = (
-      <TooltipProvider>
-        <WithTooltip id="test-id" defaultText="Default Tooltip">
-          <button>Hover me</button>
-        </WithTooltip>
-      </TooltipProvider>
-    );
+  it.each(['window', 'container'])('keeps a hovered tooltip when a queued %s scroll event arrives after entry', async (scroller) => {
     await act(async () => {
-      render(ui);
-      vi.advanceTimersByTime(200);
+      render(<TooltipProvider><div data-testid="scroll-container">
+        <WithTooltip id="total-sales-tooltip"><span>Total Sales</span></WithTooltip>
+      </div></TooltipProvider>);
     });
+    const target = screen.getByText('Total Sales').parentElement!;
+    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue(new DOMRect(200, 300, 100, 20));
+    fireEvent.mouseEnter(target);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Total gross revenue generated.');
 
-    const button = screen.getByText('Hover me');
+    // The browser can deliver the scrollIntoView event after pointer entry.
+    // Its layout change already happened before the tooltip captured its anchor.
+    fireEvent.scroll(scroller === 'window' ? window : screen.getByTestId('scroll-container'));
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Total gross revenue generated.');
+    expect(target).toHaveAttribute('aria-describedby', 'total-sales-tooltip-description');
+  });
 
-    Element.prototype.getBoundingClientRect = vi.fn(() => ({
-      width: 100, height: 20, top: 10, left: 10, bottom: 30, right: 110, x: 10, y: 10, toJSON: () => {}
-    }));
-
+  it('tracks the actual hovered wrapper when multiple cards share tooltip copy', async () => {
     await act(async () => {
-        fireEvent.mouseEnter(button.parentElement!);
-        vi.advanceTimersByTime(200);
+      render(<TooltipProvider>
+        <WithTooltip id="department-card-tooltip"><span>First department</span></WithTooltip>
+        <WithTooltip id="department-card-tooltip"><span>Second department</span></WithTooltip>
+      </TooltipProvider>);
     });
+    const firstTarget = screen.getByText('First department').parentElement!;
+    const activeTarget = screen.getByText('Second department').parentElement!;
+    Object.defineProperty(firstTarget, 'getBoundingClientRect', { value: () => new DOMRect(100, 100, 100, 20) });
+    const activeRect = vi.fn(() => new DOMRect(300, 300, 100, 20));
+    Object.defineProperty(activeTarget, 'getBoundingClientRect', { value: activeRect });
+    fireEvent.mouseEnter(activeTarget);
+    fireEvent.scroll(window);
+    expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
-    expect(screen.getByText('Fetched tooltip text')).toBeInTheDocument();
+    activeRect.mockReturnValue(new DOMRect(300, 200, 100, 20));
+    fireEvent.scroll(window);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
 
+  it.each(['window', 'container'])('hides a tooltip when %s scrolling moves its anchor', async (scroller) => {
     await act(async () => {
-        fireEvent.scroll(window);
+      render(<TooltipProvider><div data-testid="scroll-container">
+        <WithTooltip id="test-id" defaultText="Default Tooltip"><button>Hover me</button></WithTooltip>
+      </div></TooltipProvider>);
     });
+    const target = screen.getByText('Hover me').parentElement!;
+    const anchorRect = vi.spyOn(target, 'getBoundingClientRect');
+    anchorRect.mockReturnValue(new DOMRect(10, 300, 100, 20));
+    fireEvent.mouseEnter(target);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Fetched tooltip text');
 
-    expect(screen.queryByText('Fetched tooltip text')).not.toBeInTheDocument();
+    anchorRect.mockReturnValue(new DOMRect(10, 200, 100, 20));
+    fireEvent.scroll(scroller === 'window' ? window : screen.getByTestId('scroll-container'));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    expect(target).not.toHaveAttribute('aria-describedby');
   });
 
   it('prevents default on context menu', async () => {
