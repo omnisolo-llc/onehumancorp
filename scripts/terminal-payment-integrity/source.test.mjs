@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { test } from 'node:test';
+import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 const root=resolve(import.meta.dirname,'../..');
 const read=p=>readFileSync(resolve(root,p),'utf8');
@@ -73,4 +74,16 @@ test('the unchanged production POS envelope builder precedes the complete test m
  const source=read('src/server/services/pos/service.rs');
  assert.ok(source.indexOf('fn grpc_offline_job(')<source.indexOf('\n#[cfg(test)]\nmod tests {'));
  for(const name of ['test_sync_offline_transactions','test_reconcile_crdt_payloads','test_handle_incoming_crdt_delta_spiffe_validation']) assert.match(source,new RegExp(`async fn ${name}\\(`));
+});
+
+
+test('the mounted field harness preserves the transitive offline authority import',()=>{
+ const result=spawnSync('python3',['scripts/field-boundary-contract/prepare.py'],{cwd:root,encoding:'utf8'});
+ assert.equal(result.status,0,`${result.stdout}\n${result.stderr}`);
+ const generated=read('scripts/field-boundary-contract/generated.rs');
+ assert.equal((generated.match(/terminal_offline_authority\.rs/g)||[]).length,1);
+ assert.match(generated,/pub mod terminal_offline_authority;/);
+ assert.match(generated,/pub mod api \{ pub use crate::\{field_ops,field_service_routing,offline_sync,terminal_offline_authority\}; \}/);
+ const manifest=JSON.parse(read('scripts/field-boundary-contract/source-manifest.json'));
+ assert.ok(manifest['src/server/api/terminal_offline_authority.rs']);
 });
