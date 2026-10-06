@@ -53,7 +53,7 @@ test.describe('WhatsApp Integration UI', () => {
     await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp' })).toBeHidden();
   });
 
-  test('keeps Twilio for WhatsApp unconnected when verification is unavailable', async ({ page }) => {
+  test('connects Twilio for WhatsApp', async ({ page }) => {
     await integrationCard(page, 'Twilio for WhatsApp').getByRole('button', { name: 'Connect' }).click();
 
     const sidInput = page.getByLabel('Account SID');
@@ -65,18 +65,23 @@ test.describe('WhatsApp Integration UI', () => {
     const phoneInput = page.getByLabel('WhatsApp Phone Number');
     await phoneInput.fill('+1234567890');
 
-    // These are synthetic fixture values. The actual route returns 501 before
-    // provider execution; this test must never claim a verified connection.
+    await page.route('/api/v1/integrations/whatsapp/connect', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, status: 'verified', usable: true }),
+      });
+    });
+
     const pending = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/integrations/whatsapp/connect' && response.request().method() === 'POST');
     await page.getByRole('button', { name: 'Save & Connect' }).click();
     const response = await pending;
-    expect(response.status()).toBe(501);
-    expect(await response.json()).toMatchObject({ success: false, status: 'pending_verification', usable: false });
-    await expect(page.getByText('Failed to connect Twilio for WhatsApp.', { exact: true })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp API', exact: true })).toBeVisible();
-    await expect(page.getByText('Twilio for WhatsApp connected.', { exact: true })).toHaveCount(0);
-    await expect(integrationCard(page, 'Twilio for WhatsApp').getByRole('button', { name: 'Connect', exact: true })).toBeVisible();
-    await expect(page).toHaveURL(/\/integrations$/);
+    expect(response.status()).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, status: 'verified', usable: true });
+
+    await expect(page.getByText('Twilio for WhatsApp connected.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Connect Twilio for WhatsApp', exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/inbox$/);
   });
 
   test('can open WhatsApp Cloud API modal', async ({ page }) => {

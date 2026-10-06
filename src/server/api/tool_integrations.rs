@@ -248,10 +248,86 @@ pub async fn connect_integration_handler(
             )
             .into_response();
         }
-        return match vault.verify_and_store(&tenant_id,&validated.integration_id,secret).await {
-            Ok(_) => connection_response(StatusCode::OK,true,"Provider API key verified and encrypted; available to supported tenant-scoped routes","verified",true).into_response(),
-            Err(_) => connection_response(StatusCode::BAD_GATEWAY,false,"Provider verification failed; no connection was stored","unavailable",false).into_response(),
+
+        // Use a transaction so that metadata is only visible if verify_and_store succeeds.
+        // We do not store an empty token; we only store bot_token and from_phone which
+        // are required by the messaging adapters, while the real api_token stays in the vault.
+        let mut tx = match state.db.pool.begin().await {
+            Ok(tx) => tx,
+            Err(e) => {
+                tracing::error!("Failed to begin transaction for {}: {}", validated.integration_id, e);
+                return connection_response(StatusCode::INTERNAL_SERVER_ERROR, false, "Database error", "unavailable", false).into_response();
+            }
         };
+
+        if let Err(e) = vault.verify_and_store(&tenant_id, &validated.integration_id, secret).await {
+            let _ = tx.rollback().await;
+            tracing::warn!(tenant_id = %tenant_id, error = %e, "Provider verification failed");
+            return connection_response(StatusCode::BAD_GATEWAY, false, "Provider verification failed; no connection was stored", "unavailable", false).into_response();
+        }
+
+        let integration_id = &validated.integration_id;
+        let id = format!("{}_{}", tenant_id, integration_id);
+
+        let mut bot_token_val = None;
+        let mut from_phone_val = None;
+
+        if let Some(bot_token) = validated.bot_token.as_deref() {
+            bot_token_val = Some(bot_token.to_string());
+        }
+        if let Some(from_phone) = validated.from_phone.as_deref() {
+            from_phone_val = Some(from_phone.to_string());
+        }
+
+        let integration_code = serde_json::json!({
+            "bot_token": bot_token_val.as_deref().unwrap_or_default(),
+            "from_phone": from_phone_val.as_deref().unwrap_or_default(),
+        }).to_string();
+
+        let res = sqlx::query(
+            "INSERT INTO tool_integrations (id, tenant_id, name, status, integration_code)
+             VALUES ($1, $2, $3, 'connected', $4)
+             ON CONFLICT (id) DO UPDATE SET status = 'connected', integration_code = $4"
+        )
+        .bind(&id)
+        .bind(&tenant_id)
+        .bind(integration_id)
+        .bind(&integration_code)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = res {
+            let _ = tx.rollback().await;
+            tracing::error!("Failed to save integration {}: {}", integration_id, e);
+            return connection_response(StatusCode::INTERNAL_SERVER_ERROR, false, "Database error", "unavailable", false).into_response();
+        }
+
+        let creds_id = uuid::Uuid::new_v4().to_string();
+        let creds_res = sqlx::query(
+            "INSERT INTO integration_credentials (id, tenant_id, integration_id, bot_token, from_phone)
+             VALUES ($1, $2, $3, $4, $5)
+             ON CONFLICT (tenant_id, integration_id) DO UPDATE SET bot_token = $4, from_phone = $5"
+        )
+        .bind(&creds_id)
+        .bind(&tenant_id)
+        .bind(integration_id)
+        .bind(&bot_token_val)
+        .bind(&from_phone_val)
+        .execute(&mut *tx)
+        .await;
+
+        if let Err(e) = creds_res {
+            let _ = tx.rollback().await;
+            tracing::error!("Failed to save integration credentials for {}: {}", integration_id, e);
+            return connection_response(StatusCode::INTERNAL_SERVER_ERROR, false, "Database error", "unavailable", false).into_response();
+        }
+
+        if let Err(e) = tx.commit().await {
+            tracing::error!("Failed to commit integration save for {}: {}", integration_id, e);
+            return connection_response(StatusCode::INTERNAL_SERVER_ERROR, false, "Database error", "unavailable", false).into_response();
+        }
+
+        return connection_response(StatusCode::OK, true, "Provider API key verified and encrypted; available to supported tenant-scoped routes", "verified", true).into_response();
     }
     tracing::info!(
         integration_id = %validated.integration_id,
