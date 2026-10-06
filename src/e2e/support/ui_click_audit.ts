@@ -1,3 +1,4 @@
+import { auditDocumentsHandle, auditElementHandles, evaluateAuditDocuments, evaluateAuditElements } from './ui_audit_documents';
 export type ClickEffects = {
   changed: boolean;
   requestSeen: boolean;
@@ -20,7 +21,8 @@ import type { Dialog, Download, ElementHandle, FileChooser, JSHandle, Page, Requ
 
 // Hover help is preparation for a click, not evidence that the click worked.
 // Strip only semantically identified tooltips, not status messages or dialogs.
-export function auditDocumentSignature() {
+export function auditDocumentSignature(documents: Document[] = [document]) {
+  return documents.map(document => {
   const body = document.body.cloneNode(true) as HTMLElement;
   body.querySelectorAll('[role="tooltip"], .omnisolo-tooltip').forEach((tooltip) => tooltip.remove());
   body.querySelectorAll('[data-ui-audit-click-index], [data-ui-audit-click-key]').forEach((element) => {
@@ -32,24 +34,25 @@ export function auditDocumentSignature() {
     for (let index = 0; index < value.length; index += 1) hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0;
     return hash;
   };
-  return `${location.href}|${checksum(body.textContent || '')}|${checksum(body.innerHTML)}|${body.querySelectorAll('*').length}`;
+  return `${document.location.href}|${checksum(body.textContent || '')}|${checksum(body.innerHTML)}|${body.querySelectorAll('*').length}`;
+  }).join('\n');
 }
 
-async function pageSignature(page: Page) {
-  return page.evaluate(auditDocumentSignature).catch(() => page.url());
+export async function auditPageSignature(page: Page) {
+  return evaluateAuditDocuments(page, auditDocumentSignature).catch(() => page.url());
 }
 
 async function waitForClickEffect(page: Page, beforeUrl: string, beforeSignature: string) {
   for (let attempt = 0; attempt < 6; attempt += 1) {
     await page.waitForTimeout(50);
     const afterUrl = page.url();
-    const afterSignature = await pageSignature(page);
+    const afterSignature = await auditPageSignature(page);
     if (afterUrl !== beforeUrl || afterSignature !== beforeSignature) {
       return { afterUrl, afterSignature, changed: true };
     }
   }
 
-  return { afterUrl: page.url(), afterSignature: await pageSignature(page), changed: false };
+  return { afterUrl: page.url(), afterSignature: await auditPageSignature(page), changed: false };
 }
 
 
@@ -83,6 +86,8 @@ async function prepareExclusiveChoice(target: ElementHandle<HTMLElement | SVGEle
 // Observe only a focus transition produced during this same trusted click.
 // Hover/button preparation and later timers are outside the event interval.
 export function installClickFocusProbe(element: HTMLElement | SVGElement) {
+  const document = element.ownerDocument;
+  const view = document.defaultView!;
   let clicked: MouseEvent | undefined;
   let before: Element | null = null;
   let focusSeen = false;
@@ -95,9 +100,8 @@ export function installClickFocusProbe(element: HTMLElement | SVGElement) {
     if (event !== clicked || !event.isTrusted) return;
     const focused = document.activeElement;
     if (focused === before || focused === element || focused === document.body
-        || !(focused instanceof HTMLElement)) return;
-    if (!(focused instanceof HTMLInputElement || focused instanceof HTMLTextAreaElement
-        || focused instanceof HTMLSelectElement || focused.isContentEditable)
+        || focused?.nodeType !== 1) return;
+    if (!(['INPUT', 'TEXTAREA', 'SELECT'].includes(focused.tagName) || (focused as HTMLElement).isContentEditable)
         || focused.matches(':disabled') || focused.closest('[hidden], [inert], [aria-hidden="true"]')) return;
     const bounds = focused.getBoundingClientRect();
     if (bounds.width <= 0 || bounds.height <= 0) return;
@@ -108,13 +112,13 @@ export function installClickFocusProbe(element: HTMLElement | SVGElement) {
     }
     focusSeen = true;
   };
-  window.addEventListener('click', capture, true);
-  window.addEventListener('click', bubble);
+  view.addEventListener('click', capture, true);
+  view.addEventListener('click', bubble);
   return {
     get focusSeen() { return focusSeen; },
     dispose() {
-      window.removeEventListener('click', capture, true);
-      window.removeEventListener('click', bubble);
+      view.removeEventListener('click', capture, true);
+      view.removeEventListener('click', bubble);
     },
   };
 }
@@ -122,8 +126,10 @@ export function installClickFocusProbe(element: HTMLElement | SVGElement) {
 // Playwright exposes a popup Page only after its initial response starts. A
 // slow destination must not erase a real navigation from this trusted click.
 export function installClickPopupProbe(element: HTMLElement | SVGElement) {
-  const originalOpen = window.open;
-  const closedGetter = Object.getOwnPropertyDescriptor(window, 'closed')?.get;
+  const document = element.ownerDocument;
+  const view = document.defaultView!;
+  const originalOpen = view.open;
+  const closedGetter = Object.getOwnPropertyDescriptor(view, 'closed')?.get;
   const nativeOpen = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(originalOpen));
   const opened: Array<{ popup: Window; url?: string }> = [];
   let clicked: MouseEvent | undefined;
@@ -133,10 +139,10 @@ export function installClickPopupProbe(element: HTMLElement | SVGElement) {
   const isLiveWindow = (popup: Window) => {
     // Native getter branding rejects fake { closed: false } return values and
     // works for real child WindowProxies across JavaScript realms.
-    try { return popup !== window && closedGetter?.call(popup) === false; } catch { return false; }
+    try { return popup !== view && closedGetter?.call(popup) === false; } catch { return false; }
   };
   const observeOpen: Window['open'] = function (this: Window, ...args) {
-    const trusted = nativeOpen && clicked?.isTrusted && window.event === clicked;
+    const trusted = nativeOpen && clicked?.isTrusted && view.event === clicked;
     const popup = Reflect.apply(originalOpen, this, args) as Window | null;
     const [url, name] = args;
     // Never take ownership of _self/_parent/_top or a reused named window.
@@ -158,13 +164,13 @@ export function installClickPopupProbe(element: HTMLElement | SVGElement) {
     }
     return popup;
   };
-  window.addEventListener('click', capture, true);
-  window.open = observeOpen;
+  view.addEventListener('click', capture, true);
+  view.open = observeOpen;
   return {
     get destinations() { return opened.flatMap(({ popup, url }) => url && isLiveWindow(popup) ? [url] : []); },
     dispose() {
-      window.removeEventListener('click', capture, true);
-      if (window.open === observeOpen) window.open = originalOpen;
+      view.removeEventListener('click', capture, true);
+      if (view.open === observeOpen) view.open = originalOpen;
       // Pending windows do not yet exist in Playwright's page list.
       for (const { popup } of opened) if (isLiveWindow(popup)) popup.close();
     },
@@ -176,7 +182,7 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   await target.hover({ timeout: 5000 });
   await target.focus();
   const beforeUrl = page.url();
-  const beforeSignature = await pageSignature(page);
+  const beforeSignature = await auditPageSignature(page);
   const observed: ClickEffects = { changed: false, requestSeen: false, downloadSeen: false,
     fileChooserSeen: false, popupSeen: false, validationSeen: false, dialogSeen: false, decisionSeen: false, focusSeen: false };
   const popups: Page[] = [];
@@ -215,13 +221,15 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
       observed.popupSeen ||= !popup.isClosed() && hasDocument;
     })());
   };
-  await page.evaluate(() => {
-    const state = window as Window & { __uiAuditInvalid?: boolean };
+  await target.evaluate(element => {
+    const document = element.ownerDocument;
+    const state = document.defaultView as Window & { __uiAuditInvalid?: boolean };
     state.__uiAuditInvalid = false;
     document.addEventListener('invalid', (event) => {
       const input = event.target;
-      if ((input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)
-          && !input.validity.valid && input.validationMessage) state.__uiAuditInvalid = true;
+      if (input instanceof document.defaultView!.HTMLInputElement || input instanceof document.defaultView!.HTMLTextAreaElement || input instanceof document.defaultView!.HTMLSelectElement) {
+        if (!input.validity.valid && input.validationMessage) state.__uiAuditInvalid = true;
+      }
     }, { capture: true, once: true });
   });
   page.on('dialog', onDialog);
@@ -242,7 +250,7 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
     const popupDestinations = await popupProbe.evaluate(probe => probe.destinations).catch(() => [] as string[]);
     observed.requestSeen ||= popupDestinations.some(url => initialPopupRequests.has(url));
     observed.focusSeen = await focusProbe.evaluate(probe => probe.focusSeen).catch(() => false);
-    observed.validationSeen = await page.evaluate(() => Boolean((window as Window & { __uiAuditInvalid?: boolean }).__uiAuditInvalid)).catch(() => false);
+    observed.validationSeen = await target.evaluate(element => Boolean((element.ownerDocument.defaultView as Window & { __uiAuditInvalid?: boolean }).__uiAuditInvalid)).catch(() => false);
     await Promise.all(pending);
     if (selectionAttribute) {
       observed.selectionRestored=await target.evaluate((element,attribute)=>element.isConnected && element.getAttribute(attribute)==='true',selectionAttribute).catch(()=>false);
@@ -314,17 +322,17 @@ export async function resolveAuditTarget(
   // Reacquisition is read-only. Once observation starts, even a detached target
   // remains a failure; this function never repeats a clicked business action.
   const locate = async () => {
-    let documentHandle: JSHandle<Document> | undefined;
+    let documentHandle: JSHandle<Document[]> | undefined;
     let selected: ElementHandle<HTMLElement | SVGElement> | undefined;
     try {
-      documentHandle = await page.evaluateHandle(() => document);
-      const sameDocument = () => page.evaluate((original) => original === document, documentHandle!).catch(() => false);
+      documentHandle = await auditDocumentsHandle(page);
+      const sameDocument = () => evaluateAuditDocuments<boolean, Document[]>(page, (documents, original) => documents.length === original.length && documents.every((document, index) => document === original[index]), documentHandle!).catch(() => false);
       while (!expired && Date.now() < deadline) {
         if (page.url() !== url || !(await sameDocument())) throw new Error(`Audit document changed before inspecting ${key}`);
         const candidate = (await retag()).find((item) => item.key === key);
         if (expired) break;
         if (candidate) {
-          const handles = await page.locator(`[data-ui-audit-click-index="${candidate.index}"]`).elementHandles();
+          const handles = await auditElementHandles(page, `[data-ui-audit-click-index="${candidate.index}"]`);
           if (expired) {
             await Promise.all(handles.map((handle) => handle.dispose()));
             break;
@@ -373,12 +381,15 @@ export async function resolveAuditTarget(
 }
 
 // Browser-realm fragment validation used by the purpose/link contracts.
-export function hasFragmentTarget(href: string): boolean {
+export function hasFragmentTarget(target: string | { href: string; embedded?: boolean }): boolean {
+  const href = typeof target === 'string' ? target : target.href;
+  const owner = typeof target === 'object' && target.embedded ? document.querySelector<HTMLIFrameElement>('iframe[data-ohc-api-docs-viewer]')?.contentDocument : document;
+  if (!owner) return false;
   if (!href.startsWith('#') || href.length === 1) return false;
   let name: string;
   try { name = decodeURIComponent(href.slice(1)); } catch { return false; }
-  return document.getElementById(name) !== null
-    || Array.from(document.getElementsByName(name)).some(element => element.tagName === 'A');
+  return owner.getElementById(name) !== null
+    || Array.from(owner.getElementsByName(name)).some(element => element.tagName === 'A');
 }
 
 
@@ -393,7 +404,7 @@ export const clickableAuditSelector = [
 ].join(', ');
 
 export async function tagClickTargets(page: Page, ownerNamespace?: string, canonicalIds: Record<string, string> = {}) {
-  return page.locator(clickableAuditSelector).evaluateAll((elements, { namespace, identifiers }) => {
+  return evaluateAuditElements(page, clickableAuditSelector, (elements, { namespace, identifiers }) => {
     const counts = new Map<string, number>();
     return elements.filter((element) => {
       const style = window.getComputedStyle(element);
@@ -416,7 +427,8 @@ export async function tagClickTargets(page: Page, ownerNamespace?: string, canon
         : [element.tagName, element.id, label]);
       const occurrence = counts.get(identity) || 0;
       counts.set(identity, occurrence + 1);
-      const key = `${identity}:${occurrence}`;
+      const frame = element.ownerDocument === document ? '' : 'api-docs-viewer|';
+      const key = `${frame}${identity}:${occurrence}`;
       element.setAttribute('data-ui-audit-click-index', String(index));
       element.setAttribute('data-ui-audit-click-key', key);
       return { index, label, key };

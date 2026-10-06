@@ -61,7 +61,7 @@ test.describe('Documentation Features CUJ', () => {
     const tooltip = page.getByRole('tooltip');
     await expect(tooltip).toHaveCount(1);
     await expect(tooltip).toHaveText('Direct API access is only for custom integrations.');
-    await expect(page.locator('.swagger-ui .opblock-summary-path').filter({ hasText: /^\/api\/v1\/help$/ })).toBeVisible();
+    await expect(page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('.swagger-ui .opblock-summary-path').filter({ hasText: /^\/api\/v1\/help$/ })).toBeVisible();
   });
 
   test('User can open and close the actual video controls at a mobile viewport', async ({ page }) => {

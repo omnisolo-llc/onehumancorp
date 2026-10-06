@@ -28,7 +28,7 @@ const operations = [['First', 'GET', '/api/v1/one'], ['First', 'POST', '/api/v1/
 // Execute the maintained navigation helper and its browser predicates against
 // actual DOM fixtures. The Page boundary controls source and renderer completion
 // independently, without requiring a backend or substituting an E2E response.
-function browserBoundary() {
+function browserBoundary(embedded = false) {
   const dom = new JSDOM('<body><button>Voice Assistant</button></body>', { url: `${origin}/api-docs`, runScripts: 'outside-only' });
   const context = new EventEmitter();
   const page = new EventEmitter();
@@ -52,8 +52,10 @@ function browserBoundary() {
   });
   const flush = () => { for (const check of [...checks]) check.run(); };
   const render = rows => {
-    dom.window.document.body.innerHTML = '<button>Voice Assistant</button><div class="swagger-ui"></div>';
-    const root = dom.window.document.querySelector('.swagger-ui');
+    dom.window.document.body.innerHTML = '<button>Voice Assistant</button>' + (embedded ? '<iframe data-ohc-api-docs-viewer="true" src="/api-docs/viewer"></iframe>' : '<div class="swagger-ui"></div>');
+    const owner = embedded ? dom.window.document.querySelector('iframe').contentDocument : dom.window.document;
+    if (embedded) { owner.open(); owner.write('<body><div class="swagger-ui"></div></body>'); owner.close(); }
+    const root = owner.querySelector('.swagger-ui');
     for (const [tag, method, route] of rows) {
       const section = dom.window.document.createElement('section');
       section.className = 'opblock-tag-section';
@@ -140,3 +142,14 @@ for (const [label, status, source] of [
     assert.equal(browser.page.listenerCount('response'), 0);
   });
 }
+
+test('documentation readiness waits for the complete iframe operation identities', async t => {
+  const browser = browserBoundary(true); t.after(browser.close);
+  const pending = browser.begin(); await nextTurn(); browser.respond();
+  browser.render(operations.slice(0, 1)); await nextTurn();
+  assert.equal(pending.settled(), false, 'embedded partial rendering must not omit missing operations');
+  browser.render([operations[0], operations[1], ['Second', 'POST', '/wrong']]); await nextTurn();
+  assert.equal(pending.settled(), false, 'embedded identity mismatch must fail despite equal counts');
+  browser.render(operations); await pending.result;
+  assert.equal(browser.navigations(), 1);
+});

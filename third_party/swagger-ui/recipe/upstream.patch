@@ -1,0 +1,18 @@
+diff --git a/package.json b/package.json
+index 341dde3..a485129 100644
+--- a/package.json
++++ b/package.json
+@@ -85 +85 @@
+-    "dompurify": "^3.4.13",
++    "dompurify": "3.4.16",
+diff --git a/webpack/_config-builder.js b/webpack/_config-builder.js
+index c50244f..4a6f462 100644
+--- a/webpack/_config-builder.js
++++ b/webpack/_config-builder.js
+@@ -52,0 +53,3 @@ function buildConfig(
++  if (!/^\d+$/.test(process.env.SOURCE_DATE_EPOCH || "")) {
++    throw new Error("The source-bound distribution requires SOURCE_DATE_EPOCH")
++  }
+@@ -60 +63 @@ function buildConfig(
+-        BUILD_TIME: new Date().toUTCString(),
++        BUILD_TIME: new Date(Number(process.env.SOURCE_DATE_EPOCH) * 1000).toUTCString(),

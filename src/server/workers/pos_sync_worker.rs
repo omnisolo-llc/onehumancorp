@@ -458,7 +458,6 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                     .await;
 
                     // Trigger an actionable push notification event via Operations Agent
-                    let notification_id = uuid::Uuid::new_v4().to_string();
                     let notification_payload = serde_json::json!({
                         "product_id": product_id,
                         "expected_stock": quantity_deducted,
@@ -816,7 +815,6 @@ impl crate::queue::TaskJobHandler for PosSyncWorker {
                                 .await;
 
                             // Trigger an actionable push notification event via Operations Agent
-                            let notification_id = uuid::Uuid::new_v4().to_string();
                             let notification_payload = serde_json::json!({
                                     "product_id": product_id,
                                     "expected_stock": qty,

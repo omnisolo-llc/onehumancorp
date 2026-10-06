@@ -139,6 +139,9 @@ jobs:
         working-directory: src/ui/next
         run: npm audit --omit=dev
 
+      - name: Audit the source-bound Swagger runtime inventory
+        run: node scripts/audit-swagger-bundle.mjs
+
   native-build:
     name: Native backend binaries
     needs: [check-changes]
@@ -194,7 +197,7 @@ jobs:
     needs: [check-changes]
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     services:
       ignored_postgres:
         image: postgres:17
@@ -817,7 +820,7 @@ jobs:
       - check-changes
     if: ${{ needs.check-changes.outputs.markdown-only == 'false' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -903,6 +906,12 @@ jobs:
           FROM pg_roles
           WHERE rolname = current_user;
           SQL
+
+      # Focused locks are checked against Cargo.lock. Warm the entire workspace
+      # graph, including non-host crates needed by offline cargo metadata, before
+      # any focused gate. No gate may rely on a prior gate's incidental downloads.
+      - name: Prefetch complete locked graph for offline PostgreSQL gates
+        run: cargo fetch --locked
 
       - name: Verify durable sync receipts and mounted handlers in PostgreSQL
         env:

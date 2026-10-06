@@ -1,3 +1,4 @@
+import { evaluateAuditDocuments, evaluateAuditElements, measureAuditLayouts } from './support/ui_audit_documents';
 import { expect, test } from './fixtures';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -109,7 +110,7 @@ function visiblePageErrors(bodyText: string): string[] {
 }
 
 async function visibleText(page: Page) {
-  return page.locator('body').innerText({ timeout: 3000 }).catch(() => '');
+  return evaluateAuditDocuments(page, documents => documents.map(document => document.body.innerText).join('\n')).catch(() => '');
 }
 
 const auditBaseURL = process.env.BASE_URL || 'http://127.0.0.1:18789';
@@ -133,7 +134,7 @@ async function gotoReady(page: Page, route: string): Promise<AuditNavigationRece
 
 async function auditInteractivePurposeForRoute(page: Page, route: string) {
   await gotoReady(page, route);
-  const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
+  const results = await evaluateAuditElements(page, interactiveSelector, (elements) =>
     elements.filter((element) => {
       const style = window.getComputedStyle(element);
       const rect = element.getBoundingClientRect();
@@ -154,7 +155,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
         Array.from((element as HTMLInputElement).labels || []).map((labelElement) => labelElement.textContent || '').join(' ').trim() ||
         (element.textContent || '').trim().replace(/\s+/g, ' ');
       const disabled = element.hasAttribute('disabled') || element.getAttribute('aria-disabled') === 'true';
-      return { index, tag, type, href, role, purpose: purpose.trim(), disabled };
+      return { index, tag, type, href, role, purpose: purpose.trim(), disabled, embedded: element.ownerDocument !== document };
     }),
   );
 
@@ -166,7 +167,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
     }
     if (result.tag === 'a') {
       if (!result.href.trim()) failures.push(`${target} has no href`);
-      if (result.href.startsWith('#') && !await page.evaluate(hasFragmentTarget, result.href)) failures.push(`${target} uses a missing or placeholder fragment href`);
+      if (result.href.startsWith('#') && !await page.evaluate(hasFragmentTarget, { href: result.href, embedded: result.embedded })) failures.push(`${target} uses a missing or placeholder fragment href`);
       if (result.href.startsWith('javascript:')) failures.push(`${target} uses a javascript: href`);
       if (isFakeOmniSoloUrl(result.href)) failures.push(`${target} uses fake OmniSolo destination ${result.href}`);
     }
@@ -490,7 +491,7 @@ test.describe('comprehensive UI contract', () => {
 
     for (const route of appRoutes) {
       await gotoReady(page, route);
-      const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
+      const hrefs = await evaluateAuditElements(page, 'a[href]', (anchors) =>
         anchors
           .filter((anchor) => {
             const style = window.getComputedStyle(anchor);
@@ -498,11 +499,11 @@ test.describe('comprehensive UI contract', () => {
             if (anchor.closest('[aria-hidden="true"]')) return false;
             return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
           })
-          .map((anchor) => (anchor as HTMLAnchorElement).getAttribute('href') || ''),
+          .map((anchor) => ({ href: (anchor as HTMLAnchorElement).getAttribute('href') || '', baseUrl: anchor.ownerDocument.location.href })),
       );
 
       for (const rawHref of hrefs) {
-        const href = normalizeInternalHref(rawHref, page.url());
+        const href = normalizeInternalHref(rawHref.href, rawHref.baseUrl);
         if (!href) continue;
         if (href === 'javascript:') {
           failures.push(`${routeLabel(route)}: javascript: link`);
@@ -530,7 +531,7 @@ test.describe('comprehensive UI contract', () => {
 
     for (const route of appRoutes) {
       await gotoReady(page, route);
-      const hrefs = await page.locator('a[href]').evaluateAll((anchors) =>
+      const hrefs = await evaluateAuditElements(page, 'a[href]', (anchors) =>
         anchors
           .filter((anchor) => {
             const style = window.getComputedStyle(anchor);
@@ -541,6 +542,8 @@ test.describe('comprehensive UI contract', () => {
           .map((anchor, index) => ({
             index,
             href: (anchor as HTMLAnchorElement).getAttribute('href') || '',
+            embedded: anchor.ownerDocument !== document,
+            baseUrl: anchor.ownerDocument.location.href,
             target: anchor.getAttribute('target') || '',
             rel: anchor.getAttribute('rel') || '',
             text: (anchor.textContent || '').trim().replace(/\s+/g, ' '),
@@ -554,7 +557,7 @@ test.describe('comprehensive UI contract', () => {
           continue;
         }
         if (link.href.startsWith('#')) {
-          if (!await page.evaluate(hasFragmentTarget, link.href)) failures.push(`${target} uses a missing or placeholder fragment href`);
+          if (!await page.evaluate(hasFragmentTarget, { href: link.href, embedded: link.embedded })) failures.push(`${target} uses a missing or placeholder fragment href`);
           continue;
         }
         if (link.href.startsWith('javascript:')) {
@@ -572,12 +575,12 @@ test.describe('comprehensive UI contract', () => {
         let url: URL;
         try {
           if (link.href.length > 8192) throw new Error('Oversized destination');
-          url = new URL(link.href, page.url());
+          url = new URL(link.href, link.baseUrl);
         } catch {
           failures.push(`${target} uses an invalid URL`);
           continue;
         }
-        if (normalizeInternalHref(link.href, page.url()) !== null) continue;
+        if (normalizeInternalHref(link.href, link.baseUrl) !== null) continue;
 
         if (!['http:', 'https:'].includes(url.protocol)) {
           failures.push(`${target} uses unexpected protocol ${url.protocol}`);
@@ -617,7 +620,7 @@ test.describe('comprehensive UI contract', () => {
 
     for (const route of appRoutes) {
       await gotoReady(page, route);
-      const results = await page.locator(interactiveSelector).evaluateAll((elements) =>
+      const results = await evaluateAuditElements(page, interactiveSelector, (elements) =>
         elements.filter((element) => {
           const style = window.getComputedStyle(element);
           if (element.closest('[aria-hidden="true"]')) return false;
@@ -692,62 +695,18 @@ test.describe('comprehensive UI contract', () => {
       for (const route of appRoutes) {
         await gotoReady(page, route);
         auditedLayouts += 1;
-        const layout = await page.evaluate((selector) => {
-          const documentElement = document.documentElement;
-          const body = document.body;
-          const horizontalOverflow = Math.max(documentElement.scrollWidth, body.scrollWidth) - window.innerWidth;
-          const verticalOverflow = Math.max(documentElement.scrollHeight, body.scrollHeight) - window.innerHeight;
+        const layouts = await evaluateAuditDocuments(page, measureAuditLayouts, interactiveCssSelector);
 
-          const elements = Array.from(document.querySelectorAll(selector))
-            .filter((element) => {
-              const rect = element.getBoundingClientRect();
-              const style = window.getComputedStyle(element);
-              if (element.closest('[data-ui-overlay="true"]')) return false;
-              if (element.closest('[aria-hidden="true"]')) return false;
-              if (element.closest('nextjs-portal')) return false;
-              return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
-            })
-            .map((element, index) => {
-              const rect = element.getBoundingClientRect();
-              return {
-                index,
-                label: element.getAttribute('aria-label') || (element.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 80) || element.tagName.toLowerCase(),
-                left: rect.left,
-                top: rect.top,
-                right: rect.right,
-                bottom: rect.bottom,
-                width: rect.width,
-                height: rect.height,
-              };
-            });
-
-          const overlaps: string[] = [];
-          for (let i = 0; i < elements.length; i += 1) {
-            for (let j = i + 1; j < elements.length; j += 1) {
-              const a = elements[i];
-              const b = elements[j];
-              const overlapX = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
-              const overlapY = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
-              const overlapArea = overlapX * overlapY;
-              if (overlapArea === 0) continue;
-              const smallerArea = Math.min(a.width * a.height, b.width * b.height);
-              if (smallerArea > 0 && overlapArea / smallerArea > 0.35) {
-                overlaps.push(`"${a.label}" overlaps "${b.label}"`);
-              }
-            }
+        for (const layout of layouts) {
+          if (layout.horizontalOverflow > 2) {
+            failures.push(`${route} (${viewport.name}) horizontal overflow ${Math.round(layout.horizontalOverflow)}px`);
           }
-
-          return { horizontalOverflow, verticalOverflow, overlaps };
-        }, interactiveCssSelector);
-
-        if (layout.horizontalOverflow > 2) {
-          failures.push(`${route} (${viewport.name}) horizontal overflow ${Math.round(layout.horizontalOverflow)}px`);
-        }
-        if (layout.verticalOverflow < -2) {
-          failures.push(`${route} (${viewport.name}) invalid vertical layout measurement`);
-        }
-        for (const overlap of layout.overlaps) {
-          failures.push(`${route} (${viewport.name}) ${overlap}`);
+          if (layout.verticalOverflow < -2) {
+            failures.push(`${route} (${viewport.name}) invalid vertical layout measurement`);
+          }
+          for (const overlap of layout.overlaps) {
+            failures.push(`${route} (${viewport.name}) ${overlap}`);
+          }
         }
       }
     }
