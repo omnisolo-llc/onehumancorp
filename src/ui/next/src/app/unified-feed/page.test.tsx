@@ -42,7 +42,7 @@ it('keeps a pending card and submits only once until its matching persisted deci
   await mount(); await approve();
   expect(screen.getByText('Real pending work')).toBeVisible();
   expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Waiting for the recorded decision');
-  fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
   expect(writes()).toHaveLength(1);
   const options = writes()[0][1]!;
   expect(new Headers(options.headers).get('x-ohc-expected-user')).toBe(ownerA.userId);
@@ -57,7 +57,7 @@ it('keeps an explicitly rejected decision visible and allows a new deliberate ac
   await mount(); await approve();
   expect(await screen.findByRole('alert')).toHaveTextContent('Request rejected (HTTP 400)');
   expect(screen.getByText('Real pending work')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Reject' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeEnabled();
 });
 it.each(['http-500', 'network', 'wrong-id', 'wrong-tenant', 'wrong-state', 'empty-body', 'error-body'])('holds an ambiguous %s outcome without discarding the card or retrying', async failure => {
   mutation = async () => {
@@ -70,7 +70,7 @@ it.each(['http-500', 'network', 'wrong-id', 'wrong-tenant', 'wrong-state', 'empt
   await mount(); await approve();
   expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
   expect(screen.getByText('Real pending work')).toBeVisible();
-  expect(screen.getByRole('button', { name: 'Reject' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Dismiss' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Record approval' })).toBeDisabled();
   expect(writes()).toHaveLength(1);
 });
@@ -129,7 +129,7 @@ it('requires the acknowledged edited content and retains its draft when the outc
 
 it('preserves dismissal only after its actual row acknowledgement', async () => {
   mutation = async () => Response.json({ ...row, lifecycle_state: 'DISMISSED' });
-  await mount(); fireEvent.click(screen.getByRole('button', { name: 'Reject' }));
+  await mount(); fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
   expect(await screen.findByRole('status', { name: 'Decision status' })).toHaveTextContent('Dismissal recorded');
   expect(screen.queryByText('Real pending work')).toBeNull();
 });

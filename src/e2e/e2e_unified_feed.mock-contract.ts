@@ -84,7 +84,7 @@ test.describe('Unified Action Feed e2e', () => {
     await expect(page.getByText('Staffing alert: Only 1 person scheduled for closing shift.')).toBeVisible({ timeout: 15000 });
 
     // 3. Tap reject
-    await page.getByTestId('unified-feed-reject-btn').click();
+    await page.getByTestId('feed-dismiss-btn').click();
 
     // The item should disappear from the list (or show a success message)
     await expect(page.getByText('Staffing alert: Only 1 person scheduled for closing shift.')).not.toBeVisible();
