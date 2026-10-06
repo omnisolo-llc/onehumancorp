@@ -2,6 +2,9 @@ pub mod mcp_sync_worker;
 
 pub mod forecaster;
 
+#[cfg(test)]
+mod metrics_contract_test;
+
 pub use ::server_config as config;
 use chrono::Utc;
 use opentelemetry::global;
@@ -81,11 +84,15 @@ pub fn categorize_error_signal(err_msg: &str) -> &'static str {
 pub fn get_error_signal_counter() -> &'static Counter<u64> {
     ERROR_SIGNAL_CATEGORIZED.get_or_init(|| {
         let meter = global::meter("ohc.telemetry");
-        meter
-            .u64_counter("ohc_error_signals_total")
-            .with_description("Total number of error signals categorized")
-            .build()
+        build_error_signal_counter(&meter)
     })
+}
+
+fn build_error_signal_counter(meter: &opentelemetry::metrics::Meter) -> Counter<u64> {
+    meter
+        .u64_counter("ohc_error_signals_total")
+        .with_description("Total number of error signals categorized")
+        .build()
 }
 
 pub fn get_sandbox_violation_total() -> &'static UpDownCounter<i64> {
@@ -103,8 +110,12 @@ pub fn record_error_signal(err_msg: &str) {
         return;
     }
 
-    let category = categorize_error_signal(err_msg);
     let counter = get_error_signal_counter();
+    record_error_signal_on(counter, err_msg);
+}
+
+fn record_error_signal_on(counter: &Counter<u64>, err_msg: &str) {
+    let category = categorize_error_signal(err_msg);
     counter.add(1, &[opentelemetry::KeyValue::new("category", category)]);
 }
 
@@ -141,11 +152,15 @@ pub fn get_mcp_tool_calls_counter() -> &'static Counter<u64> {
 pub fn get_harness_execution_latency() -> &'static Histogram<f64> {
     HARNESS_EXECUTION_LATENCY.get_or_init(|| {
         let meter = global::meter("ohc.harness");
-        meter
-            .f64_histogram("ohc_harness_command_duration_seconds")
-            .with_description("Execution latency for Harness")
-            .build()
+        build_harness_execution_latency(&meter)
     })
+}
+
+fn build_harness_execution_latency(meter: &opentelemetry::metrics::Meter) -> Histogram<f64> {
+    meter
+        .f64_histogram("ohc_harness_command_duration_seconds")
+        .with_description("Execution latency for Harness")
+        .build()
 }
 
 pub fn get_token_usage_counter() -> &'static Counter<u64> {
@@ -242,6 +257,10 @@ pub fn record_harness_execution_latency(latency_seconds: f64) {
     }
 
     let histogram = get_harness_execution_latency();
+    record_harness_execution_latency_on(histogram, latency_seconds);
+}
+
+fn record_harness_execution_latency_on(histogram: &Histogram<f64>, latency_seconds: f64) {
     let deployment_mode = get_deployment_mode();
     histogram.record(
         latency_seconds,
