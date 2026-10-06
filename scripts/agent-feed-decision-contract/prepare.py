@@ -99,6 +99,8 @@ if worker_guard.exists():
  paths.append(worker_guard);lines.append(f'#[path={json.dumps(str(worker_guard))}]pub mod agent_feed_dispatch;')
  lines.append('pub mod workers {pub use crate::{agent_action_worker,agent_feed_dispatch,agent_catalog_dispatch};}')
 lines.append('#[cfg(test)]#[path="test.rs"]mod contract;')
+from prepare_legacy import extend_legacy_contract
+extend_legacy_contract(ROOT, HERE, paths, lines, read)
 (HERE/'generated.rs').write_text('\n'.join(lines)+'\n')
 paths += [ROOT/'Cargo.lock',ROOT/'src/server/lib.rs',ROOT/'.github/workflows/ci.yml',ROOT/'scripts/focused_ci_gate.py']
 for folder in ['src/server/auth','src/server/common']:

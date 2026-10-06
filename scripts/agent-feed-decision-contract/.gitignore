@@ -1,6 +1,8 @@
 Cargo.lock
 generated.rs
 schema.sql
+legacy_schema.sql
+legacy_sqlite_schema.sql
 token_fence.sql
 products_rls.sql
 source-manifest.json

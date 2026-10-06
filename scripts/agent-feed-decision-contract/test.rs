@@ -9,6 +9,8 @@ use sqlx::postgres::PgConnectOptions;
 use std::sync::Arc;
 use tower::ServiceExt;
 use uuid::Uuid;
+#[path = "legacy_triage_test.rs"]
+mod legacy_triage;
 struct Fixture {
     pool: sqlx::PgPool,
     admin: sqlx::PgPool,
