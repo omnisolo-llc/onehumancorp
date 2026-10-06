@@ -47,7 +47,6 @@
     "glob": "^13.0.6",
     "google-protobuf": "^3.21.4",
     "isomorphic-dompurify": "^3.18.0",
-    "jsonc-parser": "3.3.1",
     "lucide-react": "^1.48.0",
     "marked": "^18.0.5",
     "next": "^16.3.6",
@@ -81,7 +80,9 @@
     "ink-spinner": "^5.0.0",
     "ink-testing-library": "^4.0.0",
     "ink-text-input": "^6.0.0",
+    "js-yaml": "4.3.2",
     "jsdom": "^29.1.1",
+    "jsonc-parser": "3.3.1",
     "next-router-mock": "^1.0.5",
     "pg": "^8.23.1",
     "playwright": "^1.61.1",
@@ -95,6 +96,7 @@
     "typescript-eslint": "8.70.0",
     "undici": "7.29.1",
     "vitest": "^4.1.11",
+    "yaml": "^2.9.1",
     "zustand": "^5.0.13"
   },
   "overrides": {
