@@ -116,7 +116,7 @@ function NavLink({ item }: { item: NavItem }) {
   const active = pathname === item.href || (pathname || "").startsWith(`${item.href}/`);
 
   const link = (
-    <Link className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href}>
+    <Link className={`app-nav-link ${active ? "is-active" : ""}`} href={item.href} aria-label={item.label} aria-current={active ? "page" : undefined}>
       <span className="app-nav-marker"><ShellIcon name={item.icon} /></span>
       <span>{item.label}</span>
     </Link>
