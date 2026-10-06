@@ -66,3 +66,29 @@ and verifies a fresh NOSUPERUSER/NOBYPASSRLS/NOINHERIT role with FORCE RLS, and 
 rejects missing/ignored cases or a changed source fingerprint. Local Node/source/SQLite
 checks do not substitute for Rust compilation, PostgreSQL execution or repository
 `make lint` / `make test` acceptance.
+
+## Recorded supply reads
+
+The maintained inventory page also displays the authenticated business's recorded
+raw materials, quantities, reorder thresholds, vendors and contact information.
+These are read-only records alongside the product ledger, not forecasts or proof
+of a purchase order, supplier dispatch or receipt. The stock adjustment component,
+receipt reconciliation and unknown-outcome holds retain their existing boundary.
+
+Supply reloads use the authenticated Next proxy with an expected owner precondition
+and canonical session checks before and after the read. Identity changes, expiry,
+interrupted reads and malformed data cannot revive a former business's records.
+Loading, unavailable and confirmed empty results remain distinct. The Rust loader
+reads all three supply tables in a scoped transaction, installs PostgreSQL tenant
+context, propagates query/decode errors and does not serve stale cached supply on
+explicit reload. A NULL quantity is unavailable data, never an invented zero.
+Mobile responses include the recorded reorder threshold. The unified dashboard
+keeps independent healthy data when supply fails and marks supply counts unavailable.
+
+Owned database browser fixtures cover vendor/material readback, foreign-tenant
+exclusion, threshold states, explicit refresh, decode failure/recovery, mobile and
+keyboard access, account switching, and committed product-adjustment receipts.
+Earlier smoke-test titles about predictive restocking, dismissal, glass styling and
+single-tap purchase-order approval did not exercise those capabilities; the tests
+now assert these concrete mounted workflows. Native Rust/PostgreSQL and browser
+acceptance still require the full repository gates described above.

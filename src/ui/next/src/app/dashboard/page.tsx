@@ -121,6 +121,7 @@ export default function Dashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [messages, setMessages] = useState<InboxMessage[]>([]);
   const [supply, setSupply] = useState<SupplyPayload>({ vendors: [], raw_materials: [], bom_items: [] });
+  const [supplyAvailable, setSupplyAvailable] = useState(false);
   const [, setApprovals] = useState<ApprovalRequest[]>([]);
   const [dashboardData, setDashboardData] = useState<AgentFeedData & { initialAgentFeed?: AgentFeedData }>({ pendingReviews: [] });
   const [loading, setLoading] = useState(true);
@@ -208,6 +209,7 @@ export default function Dashboard() {
 
     async function loadDashboard() {
       setLoading(true);
+      setSupplyAvailable(false);
       setError("");
 
       try {
@@ -258,6 +260,8 @@ export default function Dashboard() {
         setMetrics({ ...emptyMetrics, ...metricsData });
         setOrders(Array.isArray(ordersData) ? ordersData : []);
         setMessages(Array.isArray(inboxData) ? inboxData : []);
+        setSupplyAvailable(supplyData?.error == null && supplyData?.success !== false
+          && Array.isArray(supplyData?.vendors) && Array.isArray(supplyData?.raw_materials) && Array.isArray(supplyData?.bom_items));
         setSupply({
           vendors: Array.isArray(supplyData?.vendors) ? supplyData.vendors : [],
           raw_materials: Array.isArray(supplyData?.raw_materials) ? supplyData.raw_materials : [],
@@ -300,14 +304,19 @@ export default function Dashboard() {
   }, []);
 
   const lowStockCount = useMemo(
-    () => supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length,
+    () => supply.raw_materials.every((item) => item && Number.isSafeInteger(item.current_quantity) && item.current_quantity >= 0
+      && Number.isSafeInteger(item.reorder_threshold) && item.reorder_threshold >= 0)
+      ? supply.raw_materials.filter((item) => item.current_quantity <= item.reorder_threshold).length : null,
     [supply.raw_materials],
   );
+
+  const supplyCount = loading ? "Loading…" : supplyAvailable ? String(supply.vendors.length) : "Unavailable";
+  const stockCount = loading ? "Loading…" : supplyAvailable && lowStockCount !== null ? String(lowStockCount) : "Unavailable";
 
   const statusItems = [
     { label: "API", value: error ? "Degraded" : "Online", tone: error ? "bad" as const : "good" as const },
     { label: "Orders", value: String(metrics.pending_orders || 0), tone: metrics.pending_orders > 0 ? "warn" as const : "good" as const },
-    { label: "Stock", value: String(lowStockCount), tone: lowStockCount > 0 ? "warn" as const : "good" as const },
+    { label: "Stock", value: stockCount, tone: !supplyAvailable || lowStockCount === null || lowStockCount > 0 ? "warn" as const : "good" as const },
     {
       label: "Growth",
       value: loading ? "Unknown" : error ? "Unavailable" : activeDepartments.some((department) => department.trim().toLowerCase() === "growth") ? "Active" : "Inactive",
@@ -616,7 +625,7 @@ export default function Dashboard() {
               </div>
               <div className="app-card">
                 <div className="app-metric-label">Low Stock</div>
-                <div className="app-metric-value">{lowStockCount}</div>
+                <div className="app-metric-value">{stockCount}</div>
                 <div className="app-metric-note">Materials below threshold</div>
               </div>
             </div>
@@ -670,7 +679,7 @@ export default function Dashboard() {
                 </div>
                 <div className="app-card">
                   <div className="app-metric-label">Vendors</div>
-                  <div className="app-metric-value">{supply.vendors.length}</div>
+                  <div className="app-metric-value">{supplyCount}</div>
                   <div className="app-metric-note">Supply partners</div>
                 </div>
               </div>

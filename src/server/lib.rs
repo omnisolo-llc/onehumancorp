@@ -145,8 +145,6 @@ static UI_ANALYTICS_BRIEFING_CACHE: std::sync::OnceLock<
 static UI_ANALYTICS_CHAT_CACHE: std::sync::OnceLock<
     ::server_utils::cache::HybridCache<serde_json::Value>,
 > = std::sync::OnceLock::new();
-static UI_SUPPLY_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<serde_json::Value>> =
-    std::sync::OnceLock::new();
 static METRICS_CACHE: std::sync::OnceLock<::server_utils::cache::HybridCache<HttpMetricsResponse>> =
     std::sync::OnceLock::new();
 
@@ -5546,97 +5544,54 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         tenant_id: &str,
         mobile_optimized: bool,
     ) -> Result<serde_json::Value, sqlx::Error> {
+        // Query and decode errors remain unavailable data, never empty inventory.
+        // The same transaction installs PostgreSQL RLS context and owns all reads.
         match &db.store {
             crate::db::DbStore::Postgres => {
-                let pool1 = db.pool.clone();
-                let pool2 = db.pool.clone();
-                let pool3 = db.pool.clone();
-                let t1 = tenant_id.to_string();
-                let t2 = tenant_id.to_string();
-                let t3 = tenant_id.to_string();
-                let (v_res, rm_res, bi_res) = if mobile_optimized {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query(
-                                "SELECT id, name FROM vendors WHERE tenant_id = $1 ORDER BY name",
-                            )
-                            .bind(&t1)
-                            .fetch_all(&pool1)
-                            .await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                } else {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name").bind(&t1).fetch_all(&pool1).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                };
-                let v_res = v_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let rm_res = rm_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let bi_res = bi_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let vendors = v_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") }) }).collect::<Vec<_>>();
-                let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") }) }).collect::<Vec<_>>();
-                let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
+                let mut tx = db.pool.begin().await?;
+                ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
+                let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = $1 ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        let mut value = serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?});
+                        if !mobile_optimized { value["contact_info"] = serde_json::json!(row.try_get::<String, _>("contact_info")?); }
+                        Ok(value)
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = $1 ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?, "current_quantity": row.try_get::<i32, _>("current_quantity")?, "reorder_threshold": row.try_get::<i32, _>("reorder_threshold")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = $1 ORDER BY id")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "finished_good_id": row.try_get::<String, _>("finished_good_id")?, "raw_material_id": row.try_get::<String, _>("raw_material_id")?, "quantity_required": row.try_get::<i32, _>("quantity_required")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                tx.commit().await?;
                 Ok(
                     serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }),
                 )
             }
             crate::db::DbStore::Sqlite(pool) => {
-                let pool1 = pool.clone();
-                let pool2 = pool.clone();
-                let pool3 = pool.clone();
-                let t1 = tenant_id.to_string();
-                let t2 = tenant_id.to_string();
-                let t3 = tenant_id.to_string();
-                let (v_res, rm_res, bi_res) = if mobile_optimized {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query(
-                                "SELECT id, name FROM vendors WHERE tenant_id = ? ORDER BY name",
-                            )
-                            .bind(&t1)
-                            .fetch_all(&pool1)
-                            .await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity FROM raw_materials WHERE tenant_id = ? ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                } else {
-                    tokio::join!(
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name").bind(&t1).fetch_all(&pool1).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name").bind(&t2).fetch_all(&pool2).await
-                        }),
-                        tokio::spawn(async move {
-                            sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id").bind(&t3).fetch_all(&pool3).await
-                        })
-                    )
-                };
-                let v_res = v_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let rm_res = rm_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let bi_res = bi_res.unwrap_or_else(|_| Err(sqlx::Error::RowNotFound));
-                let vendors = v_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "contact_info": row.get::<String, _>("contact_info") }) }).collect::<Vec<_>>();
-                let raw_materials = rm_res.unwrap_or_default().into_iter().map(|row| if mobile_optimized { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity") }) } else { serde_json::json!({ "id": row.get::<String, _>("id"), "name": row.get::<String, _>("name"), "current_quantity": row.get::<i32, _>("current_quantity"), "reorder_threshold": row.get::<i32, _>("reorder_threshold") }) }).collect::<Vec<_>>();
-                let bom_items = bi_res.unwrap_or_default().into_iter().map(|row| serde_json::json!({ "id": row.get::<String, _>("id"), "finished_good_id": row.get::<String, _>("finished_good_id"), "raw_material_id": row.get::<String, _>("raw_material_id"), "quantity_required": row.get::<i32, _>("quantity_required") })).collect::<Vec<_>>();
+                let mut tx = pool.begin().await?;
+                let vendors = sqlx::query("SELECT id, name, COALESCE(contact_info, '') AS contact_info FROM vendors WHERE tenant_id = ? ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        let mut value = serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?});
+                        if !mobile_optimized { value["contact_info"] = serde_json::json!(row.try_get::<String, _>("contact_info")?); }
+                        Ok(value)
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let raw_materials = sqlx::query("SELECT id, name, current_quantity, reorder_threshold FROM raw_materials WHERE tenant_id = ? ORDER BY name")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "name": row.try_get::<String, _>("name")?, "current_quantity": row.try_get::<i32, _>("current_quantity")?, "reorder_threshold": row.try_get::<i32, _>("reorder_threshold")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                let bom_items = sqlx::query("SELECT id, finished_good_id, raw_material_id, quantity_required FROM bom_items WHERE tenant_id = ? ORDER BY id")
+                    .bind(tenant_id).fetch_all(&mut *tx).await?
+                    .into_iter().map(|row| {
+                        Ok(serde_json::json!({"id": row.try_get::<String, _>("id")?, "finished_good_id": row.try_get::<String, _>("finished_good_id")?, "raw_material_id": row.try_get::<String, _>("raw_material_id")?, "quantity_required": row.try_get::<i32, _>("quantity_required")?}))
+                    }).collect::<Result<Vec<_>, sqlx::Error>>()?;
+                tx.commit().await?;
                 Ok(
                     serde_json::json!({ "vendors": vendors, "raw_materials": raw_materials, "bom_items": bom_items }),
                 )
@@ -6823,10 +6778,10 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
 
         // Supply should not be cached because it changes continuously (inventory counts),
         // so we fetch supply and merge it on cache hit or miss.
-        let supply_val = supply_future
-            .await
-            .unwrap_or_else(|_| Err(sqlx::Error::RowNotFound))
-            .unwrap_or_else(|_| serde_json::json!({}));
+        let supply_val = match supply_future.await {
+            Ok(Ok(supply)) => supply,
+            _ => serde_json::json!({"error": "supply_unavailable", "success": false}),
+        };
         if let Some(obj) = final_result.as_object_mut() {
             obj.insert("supply".to_string(), supply_val.clone());
         }
@@ -7433,34 +7388,19 @@ pub async fn run_server() -> Result<(), Box<dyn std::error::Error>> {
         };
         let mobile_optimized = query.mobile_optimized.unwrap_or(false);
 
-        let cache_key = format!("ui_supply:{}:mobile:{}", tenant_id, mobile_optimized);
-        let cache = UI_SUPPLY_CACHE
-            .get_or_init(|| ::server_utils::cache::HybridCache::new(get_redis_client()));
-
-        let item_opt = cache.get_or_fetch_with_swr(&cache_key, std::time::Duration::from_secs(5), {
-        let db = db.clone();
-        let t = tenant_id.clone();
-        move || async move {
-            match load_ui_supply_from_db(&db, &t, mobile_optimized).await {
-                Ok(items) => Some(items),
-                Err(sqlx::Error::RowNotFound) => Some(serde_json::json!({"vendors": [], "raw_materials": [], "bom_items": []})),
-                Err(_) => None,
-            }
-        }
-    }).await;
-
-        match item_opt {
-            Some(item) => {
+        // An explicit reload must not return a stale-while-revalidate snapshot.
+        match load_ui_supply_from_db(&db, &tenant_id, mobile_optimized).await {
+            Ok(item) => {
                 let fields = query.fields.as_deref();
                 let shaped = ::server_utils::payload_shaper::shape_payload(item, fields);
                 (axum::http::StatusCode::OK, axum::Json(shaped)).into_response()
             }
-            None => {
-                tracing::error!("Failed to fetch UI supply");
+            Err(error) => {
+                tracing::error!("Failed to fetch UI supply: {}", error);
                 (
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                     axum::Json(
-                        serde_json::json!({"vendors": [], "raw_materials": [], "bom_items": []}),
+                        serde_json::json!({"error": "supply_unavailable", "success": false}),
                     ),
                 )
                     .into_response()
