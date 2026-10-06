@@ -245,8 +245,10 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
   try {
     popupProbe = await target.evaluateHandle(installClickPopupProbe);
     focusProbe = await target.evaluateHandle(installClickFocusProbe);
-    // A real user gesture is required by clipboard, popup and file APIs.
-    await target.click({ timeout: 5000 });
+    // Keep the position already proven hittable by hover. A second automatic
+    // scroll can move frame-owned controls behind the sticky parent header.
+    // This retains actionability and frame-hit checks and a real user gesture.
+    await target.click({ timeout: 5000, scroll: 'none' });
     const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
     observed.changed = effect.changed;
     const popupDestinations = await popupProbe.evaluate(probe => probe.destinations).catch(() => [] as string[]);
@@ -289,29 +291,46 @@ export async function replaceAuditDocument(page: Page): Promise<Page> {
     return timeout;
   };
   const retire = () => page.goto('about:blank', { waitUntil: 'commit', timeout: remaining() });
-  // A committed full-document navigation destroys the old JavaScript realm,
-  // including delayed callbacks, while preserving one page/video per route.
+  const interruptedDestination = (error: unknown): string | undefined => {
+    if (!(error instanceof Error)) return;
+    const match = /^page\.goto: Navigation to "about:blank" is interrupted by another navigation to "([^"\r\n]+)"$/.exec(error.message.split('\n', 1)[0]);
+    if (!match) return;
+    try {
+      const source = new URL(retiredUrl);
+      if (!['http:', 'https:'].includes(source.protocol) || source.username || source.password) return;
+      // A blank commit proves a new realm only relative to the original HTTP
+      // document. An originally blank/setContent document remains ambiguous.
+      if (match[1] === 'about:blank') return match[1];
+      const destination = new URL(match[1]);
+      if (['http:', 'https:'].includes(destination.protocol) && destination.origin === source.origin
+          && !destination.username && !destination.password
+          && destination.href === match[1]) return destination.href;
+    } catch { /* Unclassified destinations cannot establish a retirement boundary. */ }
+  };
+  const settleBlank = async (error: unknown) => {
+    if (interruptedDestination(error) !== 'about:blank') throw error;
+    // Chromium can commit the first blank request after a client redirect has
+    // already superseded it. Await that fresh realm; never issue a third goto.
+    await page.waitForURL('about:blank', { waitUntil: 'commit', timeout: remaining() });
+  };
   try {
     await retire();
   } catch (error) {
-    let logoutUrl: string | undefined;
-    let logoutInterruption: string | undefined;
-    try {
-      const source = new URL(retiredUrl);
-      if (['http:', 'https:'].includes(source.protocol) && !source.username && !source.password) {
-        logoutUrl = `${source.origin}/login`;
-        logoutInterruption = `page.goto: Navigation to "about:blank" is interrupted by another navigation to "${logoutUrl}"`;
-      }
-    } catch { /* An unclassified source cannot establish the logout boundary. */ }
-    if (!(error instanceof Error) || error.message.split('\n', 1)[0] !== logoutInterruption) throw error;
-    // The observed logout may still be committing. Closing its recorded page
-    // here hung for 127s in hosted Chromium, then allocated a replacement after
-    // test teardown began. Settle only that exact navigation, then destroy its
-    // realm with a fresh blank commit. Neither the click nor login is repeated.
-    // Every phase shares one deadline; failures propagate and allocate no page.
-    await page.waitForURL(logoutUrl!, { waitUntil: 'commit', timeout: remaining() });
-    await retire();
+    const destination = interruptedDestination(error);
+    if (destination === undefined) throw error;
+    if (destination === 'about:blank') {
+      await settleBlank(error);
+    } else {
+      // A trusted click may still be committing logout or another same-origin
+      // client navigation after its effect was recorded. Observe that exact
+      // commit, then destroy its realm. No business click or navigation is replayed.
+      await page.waitForURL(destination, { waitUntil: 'commit', timeout: remaining() });
+      try { await retire(); }
+      catch (nextError) { await settleBlank(nextError); }
+    }
   }
+  remaining();
+  if (page.url() !== 'about:blank') throw new Error('Audit document retirement did not retain its committed blank document');
   return page;
 }
 

@@ -51,11 +51,12 @@ test.describe('API Documentation', () => {
     const frameOverflow = await page.frameLocator('iframe[data-ohc-api-docs-viewer]').locator('html').evaluate(element => element.scrollWidth > element.clientWidth);
     expect(frameOverflow).toBe(false);
   });
-  test('pointer audit opens the first frame operation after non-scrolling focus preparation', async ({ page, loginAs, unlimitedAdminUser }) => {
+  for (const path of ['/api/v1/agents/status', '/api/v1/agents/task']) {
+  test(`pointer audit opens ${path} without re-scrolling the hovered frame control`, async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
     await page.goto('/api-docs');
     const operation = page.frameLocator('iframe[data-ohc-api-docs-viewer]')
-      .locator('.opblock-summary-control').filter({ hasText: '/api/v1/agents/status' });
+      .locator('.opblock-summary-control').filter({ hasText: path });
     await expect(operation).toHaveCount(1);
     await expect(operation).toHaveAttribute('aria-expanded', 'false');
     const target = await operation.elementHandle();
@@ -66,6 +67,8 @@ test.describe('API Documentation', () => {
       await expect(operation).toHaveAttribute('aria-expanded', 'true');
     } finally { await target?.dispose(); }
   });
+
+  }
 
   test('keyboard operations and the real renderer survive client navigation and back', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
