@@ -152,7 +152,7 @@ body {
 .app-topbar {
   min-height: 64px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 20px;
   padding: 14px 24px;
@@ -186,10 +186,31 @@ body {
 
 .app-topbar-right {
   display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* Async status text must not move the Help, logout or voice pointer targets. */
+.app-topbar-utilities {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  gap: 10px;
+  max-width: 100%;
+}
+
+.app-topbar-context {
+  display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex-wrap: wrap;
   gap: 10px;
   min-width: 0;
+  max-width: 100%;
 }
 
 .app-breadcrumb {

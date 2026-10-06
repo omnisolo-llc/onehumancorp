@@ -3,8 +3,7 @@ import { test, expect } from './fixtures';
 test.describe('Help Chat Flow', () => {
   test('should open help chat, type message, and see response', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    // Navigate to the dashboard
-    await page.goto('/dashboard');
+    // loginAs opens the authenticated dashboard.
 
     // Check that the floating chat button exists
     const chatButton = page.locator('#omnisolo-floating-help-btn').first();
@@ -28,9 +27,9 @@ test.describe('Help Chat Flow', () => {
 
     // Submit
     const sendButton = page.locator('#ohc-help-chat-send');
-    await sendButton.click({ force: true });
+    await sendButton.click();
 
-    // Wait for the backend mocked response to appear
+    // Verify the current backend response and its follow-up link
     await expect(page.locator('text=I have routed your request to the Operations department.')).toBeVisible();
 
     // Verify link exists
@@ -109,7 +108,6 @@ test.describe('Tooltip functionality', () => {
 
   test('should display tooltip on dashboard hover', async ({ page, loginAs, unlimitedAdminUser }) => {
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
 
     // We expect the tooltip with text "View your daily sales and overall business health." to appear
     const dashboardTooltipTrigger = page.locator('.cursor-help', { hasText: 'Dashboard' }).first();
@@ -146,19 +144,37 @@ test.describe('API Documentation', () => {
 });
 
 test.describe('AppShell Help Button', () => {
-  test('should display Help Center link and navigate successfully', async ({ page, loginAs, unlimitedAdminUser }) => {
+  test('should display Help Center link and navigate successfully', async ({ page, loginAs, unlimitedAdminUser, baseURL }) => {
+    if (!baseURL) throw new Error('The isolated local app URL is required');
+    const origin = new URL(baseURL).origin;
+    const dashboardReady = Promise.all([
+      '/api/v1/ui/dashboard/unified-feed', '/api/v1/onboarding/state',
+    ].map(path => page.waitForEvent('requestfinished', { predicate: request => {
+      const url = new URL(request.url());
+      return url.origin === origin && url.pathname === path && request.method() === 'GET';
+    } }).then(async request => {
+      const response = await request.response();
+      if (!response) throw new Error('Completed dashboard request has no response');
+      expect(response.status()).toBe(200);
+      expect(await response.json()).toEqual(expect.any(Object));
+    })));
+    // Observe early failures immediately; awaiting the original promise below
+    // still reports transport failures without masking a login failure.
+    void dashboardReady.catch(() => undefined);
+    // loginAs already opens Dashboard; do not replace that document while its
+    // hydration and initial status reads are still finishing.
     await loginAs(page, unlimitedAdminUser);
-    await page.goto('/dashboard');
+    await dashboardReady;
+    const statusStrip = page.locator('.app-topbar .app-status-strip');
+    await expect(statusStrip).not.toContainText('Loading');
+    await expect(statusStrip).not.toContainText('Unknown');
 
-    const helpButton = page.locator('#help-center-nav-btn');
-    await expect(helpButton).toBeVisible();
-
-    await Promise.all([
-      page.waitForURL(/\/help/),
-      helpButton.click(),
-    ]);
-
-    // Help Center should have its search input
+    const helpLink = page.getByRole('link', { name: 'Help Center', exact: true });
+    await expect(helpLink).toHaveAttribute('href', '/help');
+    await expect(helpLink).toBeVisible();
+    await helpLink.click();
+    await expect(page).toHaveURL(`${origin}/help`);
+    await expect(page.getByRole('heading', { name: 'In-App Help Center', level: 1, exact: true })).toBeVisible();
     await expect(page.getByPlaceholder('Search for help articles and videos...')).toBeVisible();
   });
 });
