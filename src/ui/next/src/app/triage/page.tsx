@@ -1,10 +1,11 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { SyncManager } from "../../lib/sync/SyncManager";
 import { getActions } from "../utils/offlineQueue";
+import { subscribeOnboardingInvalidation } from "../onboarding/draftSession";
 
 
 type TriageItem = {
@@ -51,6 +52,9 @@ const getSourceIcon = (source: string) => {
 };
 
 export default function TriagePage() {
+  const decisionInFlight = useRef(false);
+  const sessionEpoch = useRef(0);
+  const sessionRetired = useRef(false);
   const [items, setItems] = useState<TriageItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,11 +68,22 @@ export default function TriagePage() {
 
 
   useEffect(() => {
+    const unsubscribe = subscribeOnboardingInvalidation(() => {
+      ++sessionEpoch.current;
+      sessionRetired.current = true;
+      decisionInFlight.current = false;
+      setItems([]); setEditingId(null); setEditValue(''); setSelectedItemId(null);
+      setProcessingId(null); setActionStatus(''); setOfflineActionsCount(0); setLoading(false);
+      setError('Your session changed. Reload to review work for the current account.');
+    });
     loadItems();
 
     const updateOfflineCount = async () => {
+      if (sessionRetired.current) return;
+      const generation = sessionEpoch.current;
       try {
         const actions = await getActions();
+        if (generation !== sessionEpoch.current) return;
         setOfflineActionsCount(actions.length);
       } catch (err) {
         console.warn("Failed to fetch offline actions count:", err);
@@ -87,6 +102,8 @@ export default function TriagePage() {
     window.addEventListener('omnisolo_queue_updated', handleQueueUpdated);
 
     return () => {
+      ++sessionEpoch.current;
+      unsubscribe();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener('omnisolo_queue_updated', handleQueueUpdated);
@@ -95,12 +112,14 @@ export default function TriagePage() {
 
 
   async function loadItems() {
+    const generation = sessionEpoch.current;
     setLoading(true);
     setError("");
     try {
       const res = await fetch(
         `/api/v1/triage/pending?tenant_id=${encodeURIComponent(tenantId())}`,
       );
+      if (generation !== sessionEpoch.current) return;
       if (res.status === 401) {
         setItems([]);
         return;
@@ -108,6 +127,7 @@ export default function TriagePage() {
       if (!res.ok)
         throw new Error("Triage items temporarily unavailable");
       const data = await res.json();
+      if (generation !== sessionEpoch.current) return;
       const rows = Array.isArray(data)
         ? data
         : Array.isArray(data?.items)
@@ -115,10 +135,11 @@ export default function TriagePage() {
           : [];
       setItems(rows);
     } catch (e: unknown) {
+      if (generation !== sessionEpoch.current) return;
       const msg = e instanceof Error ? e.message : "";
       setError(msg && !/failed to load/i.test(msg) ? msg : "Triage items temporarily unavailable");
     } finally {
-      setLoading(false);
+      if (generation === sessionEpoch.current) setLoading(false);
     }
   }
 
@@ -128,46 +149,59 @@ export default function TriagePage() {
   ).length;
 
   async function handleDecision(id: string, approved: boolean, edited_payload?: string) {
-    if (isOffline) {
-      await SyncManager.getInstance().enqueue({
-        id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-        type: 'triage_action',
-        payload: { triage_item_id: id, approved, edited_payload },
-        timestamp: Date.now()
-      });
-      const newItems = items.filter((i) => i.id !== id);
-      setItems(newItems);
-      setActionStatus(approved ? "Approved offline." : "Dismissed offline.");
-      setTimeout(() => setActionStatus(""), 3000);
-      return;
-    }
-
+    if (decisionInFlight.current || sessionRetired.current) return;
+    const generation = sessionEpoch.current;
+    const item = items.find(item => item.id === id);
+    if (!item) return;
+    decisionInFlight.current = true;
+    setProcessingId(id);
     try {
-      setProcessingId(id);
-      setActionStatus(approved ? "Approving..." : "Dismissing...");
-      const res = await fetch(
-        `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ triage_item_id: id, approved, edited_payload }),
-        },
-      );
-      if (!res.ok) throw new Error("Failed to update action");
-
-      setActionStatus(approved ? "Approved!" : "Dismissed.");
-
-      // Optimistic UI update
-      const newItems = items.filter((i) => i.id !== id);
-      setItems(newItems);
-
-      setTimeout(() => setActionStatus(""), 3000);
-    } catch (e) {
-      console.error(e);
-      setActionStatus("Error updating action.");
-    } finally {
-      setProcessingId(null);
+      if (isOffline) {
+        await SyncManager.getInstance().enqueue({
+          id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+          type: 'triage_action',
+          payload: { triage_item_id: id, approved, edited_payload },
+          timestamp: Date.now(),
+        });
+        if (generation !== sessionEpoch.current) return;
+        setOfflineActionsCount(count => count + 1);
+        setActionStatus("Decision queued offline. Approval or dismissal is not yet recorded.");
+      } else {
+        setActionStatus("Waiting for the recorded decision. No execution or delivery is confirmed.");
+        const res = await fetch(
+          `/api/v1/triage/action?tenant_id=${encodeURIComponent(tenantId())}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ triage_item_id: id, approved, edited_payload }),
+          },
+        );
+        const receipt: unknown = await res.json().catch(() => null);
+        if (generation !== sessionEpoch.current) return;
+        const record = (value: unknown): Record<string, unknown> | null => value !== null && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+        const result = record(receipt), stored = record(result?.item);
+        if (res.status !== 200 || result?.success !== true || result.decision_recorded !== true || result.error != null
+          || !item.tenant_id || stored?.id !== item.id || stored.tenant_id !== item.tenant_id
+          || stored.lifecycle_state !== (approved ? 'APPROVED' : 'DISMISSED')
+          || (edited_payload !== undefined && stored.edited_payload !== edited_payload)) {
+          throw new Error("Outcome unconfirmed. Your card and draft are retained. Check recorded decisions before retrying.");
+        }
+        setActionStatus(approved
+          ? "Approval recorded. Execution or delivery is not verified by this decision."
+          : "Dismissal recorded.");
+      }
+      setItems(previous => previous.filter(item => item.id !== id));
       setEditingId(null);
+    } catch {
+      if (generation !== sessionEpoch.current) return;
+      setActionStatus(isOffline
+        ? "Decision was not queued. Your card and draft are retained."
+        : "Outcome unconfirmed. Your card and draft are retained. Check recorded decisions before retrying.");
+    } finally {
+      if (generation === sessionEpoch.current) {
+        setProcessingId(null);
+        decisionInFlight.current = false;
+      }
     }
   }
 
@@ -199,7 +233,7 @@ export default function TriagePage() {
         </div>
       )}
       {actionStatus && (
-        <div id="action-status" className="mb-4 app-badge good" role="status">
+        <div id="action-status" className="mb-4 app-badge neutral" role="status">
           {actionStatus}
         </div>
       )}
@@ -212,13 +246,13 @@ export default function TriagePage() {
             <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-full"></div>
           </div>
         ) : !error && items.length === 0 ? (
-          <div className="app-empty flex flex-col items-center justify-center py-16 px-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[24px] border border-white/40 dark:border-white/10" data-testid="triage-feed-empty">
+          <div className="app-empty flex flex-col items-center justify-center py-16 px-4 bg-white/40 dark:bg-black/20 backdrop-blur-md rounded-[16px] border border-white/40 dark:border-white/10" data-testid="triage-feed-empty">
             <div className="text-5xl mb-6">✨</div>
             <div className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
-              Inbox Zero Achieved
+              No pending triage items are recorded.
             </div>
             <div className="text-[15px] text-gray-500 dark:text-gray-400 text-center max-w-[280px]">
-              Your AI assistant has handled all outstanding items. Take a breath, you're all caught up!
+              This view shows recorded pending items. Queued decisions still need to sync.
             </div>
           </div>
         ) : (
@@ -230,11 +264,15 @@ export default function TriagePage() {
               <div
                 key={item.id}
                 data-testid={`triage-card-${item.id}`}
-                className="omnisolo-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[24px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
+                className="omnisolo-card w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-sm flex flex-col mb-4 overflow-hidden transition-all duration-300"
               >
                 {/* Header Context */}
-                <div
-                  className="p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] cursor-pointer"
+                <button
+                  type="button"
+                  aria-expanded={isSelected}
+                  aria-controls={`triage-details-${item.id}`}
+                  disabled={isProcessing}
+                  className="w-full text-left p-5 border-b border-[rgba(255,255,255,0.2)] bg-[rgba(255,255,255,0.4)] dark:bg-[rgba(22,22,26,0.5)] backdrop-blur-[30px] backdrop-saturate-[210%] cursor-pointer"
                   onClick={() => {
                     if (isSelected) {
                         setSelectedItemId(null);
@@ -265,11 +303,11 @@ export default function TriagePage() {
                         <span>✨</span> AI Drafted: {item.action_type} (Tap to review)
                      </div>
                   )}
-                </div>
+                </button>
 
                 {/* Slide-in / Expanded Detail View */}
                 {isSelected && (
-                  <div className="animate-in slide-in-from-top-2 duration-200 fade-in">
+                  <div id={`triage-details-${item.id}`} className="animate-in slide-in-from-top-2 duration-200 fade-in">
                     {item.action_type && (
                       <div className="p-5 bg-[#0066FF]/10 dark:bg-[#0066FF]/20 backdrop-blur-[30px] saturate-[210%] flex flex-col gap-2">
                         <div className="text-[11px] uppercase tracking-wider font-bold text-[#0066FF] dark:text-[#3388FF]">
@@ -291,6 +329,8 @@ export default function TriagePage() {
                     {editingId === item.id ? (
                       <div className="p-5 flex flex-col gap-3 border-t border-white/20 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-[30px] saturate-[210%]">
                         <textarea
+                          aria-label="Edit draft"
+                          disabled={isProcessing}
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
                           className="w-full min-h-[88px] text-[13px] text-gray-900 dark:text-white bg-white/80 dark:bg-gray-800/80 border border-gray-300 dark:border-gray-600 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-[#0066FF] shadow-inner resize-y"
@@ -304,7 +344,7 @@ export default function TriagePage() {
                             className="w-full flex-1 min-h-[44px] min-w-[44px] px-4 bg-[#0066FF] text-white font-medium hover:bg-[#0052CC] transition-all duration-200 shadow-md flex items-center justify-center disabled:opacity-50"
                             data-testid={`triage-save-btn-${item.id}`}
                           >
-                            {isProcessing ? "Processing..." : "Save & Send"}
+                            {isProcessing ? "Processing..." : "Save & Approve"}
                           </button>
                           <button
                             onClick={() => {
@@ -350,7 +390,7 @@ export default function TriagePage() {
                             data-testid={`triage-approve-${item.id}`}
                             onClick={() => handleDecision(item.id, true)}
                           >
-                            {isProcessing ? "Processing..." : "Approve & Send"}
+                            {isProcessing ? "Processing..." : "Approve"}
                           </button>
                         )}
                         <button

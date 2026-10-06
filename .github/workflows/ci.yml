@@ -298,16 +298,31 @@ jobs:
           path: target/focused-ci-results
           if-no-files-found: error
 
-      - name: Reject fabricated production capability receipts through real HTTP handlers
+      - name: Prefetch dependencies for offline contract gates
+        id: offline-contract-dependencies
         if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for contract in production-readiness-contract fixture-boundary-contract agent-startup-auth-contract; do
+            cp Cargo.lock "scripts/$contract/Cargo.lock"
+            # Adapt the copied workspace lock to each standalone root, then
+            # reject any dependency identity absent from the workspace lock.
+            # Fetch every target: offline metadata also resolves non-host crates.
+            cargo fetch --manifest-path "scripts/$contract/Cargo.toml"
+            python3 "scripts/$contract/verify_lock.py"
+          done
+
+      - name: Reject fabricated production capability receipts through real HTTP handlers
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' && steps.offline-contract-dependencies.outcome == 'success' }}
         run: bash scripts/production-readiness-contract/run.sh
 
       - name: Reject retired fixture paths before real approval handling
-        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' && steps.offline-contract-dependencies.outcome == 'success' }}
         run: bash scripts/fixture-boundary-contract/run.sh
 
       - name: Reject invented agent credentials in actual startup configuration
-        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.rust-setup.outcome == 'success' && steps.offline-contract-dependencies.outcome == 'success' }}
         run: bash scripts/agent-startup-auth-contract/run.sh
 
       - name: Check out the already pinned OpenHarness SDK for isolated tests
