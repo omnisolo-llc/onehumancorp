@@ -11,6 +11,7 @@ test("global commerce settings use the authenticated backend transport", async (
   expect(proxyBackendRequest).toHaveBeenLastCalledWith(
     getRequest,
     "/api/v1/settings/global-commerce",
+    undefined,
   );
 
   const putRequest = new Request("http://localhost/api/v1/settings/global-commerce", {
