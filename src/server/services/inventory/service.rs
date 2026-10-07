@@ -277,38 +277,6 @@ impl InventoryService {
 
         if !acquired {
             let pool = crate::db::get_pool();
-            let action_request_id = Uuid::new_v4().to_string();
-            let payload = serde_json::json!({
-                "product_id": product_id,
-                "suggested_action": "Restock Item",
-                "reason": "Lock contention on limited item"
-            })
-            .to_string();
-
-            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'Reorder', 'Pending', 0.95, $3, $4::jsonb, 'inventory_service', 'operations', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                    .bind(&action_request_id)
-                    .bind(tenant_id)
-                    .bind(product_id)
-                    .bind(&payload)
-                    .execute(&pool)
-                    .await;
-
-            let cs_action_request_id = Uuid::new_v4().to_string();
-            let cs_payload = serde_json::json!({
-                "product_id": product_id,
-                "suggested_action": "Notify Customer of Out of Stock",
-                "reason": "Lock contention on limited item during checkout"
-            })
-            .to_string();
-
-            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, action_type, status, confidence_score, product_id, payload, source, agent_type, created_at, updated_at) VALUES ($1, $2, 'NotifyCustomer', 'Pending', 0.99, $3, $4::jsonb, 'inventory_service', 'customer_success', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
-                    .bind(&cs_action_request_id)
-                    .bind(tenant_id)
-                    .bind(product_id)
-                    .bind(&cs_payload)
-                    .execute(&pool)
-                    .await;
-
             let product_title: String =
                 sqlx::query_scalar("SELECT title FROM products WHERE id = $1 AND tenant_id = $2")
                     .bind(product_id)
@@ -318,27 +286,21 @@ impl InventoryService {
                     .unwrap_or(Some(product_id.to_string()))
                     .unwrap_or_else(|| product_id.to_string());
 
-            // Operations Agent: trigger push notification for out-of-stock/lock failure
-            let job_id = Uuid::new_v4().to_string();
-            let message = format!(
-                "{} sold out. Would you like to draft a restock order?",
-                product_title
-            );
-            let job_payload = serde_json::json!({
+            let conflict_id = format!("sync_conflict_{}_{}", Uuid::new_v4(), product_id);
+            let notification_payload = serde_json::json!({
+                "transaction_id": lock_id,
                 "product_id": product_id,
-                "product_title": product_title,
-                "remaining_stock": 0,
-                "threshold": 5,
-                "message": message
-            })
-            .to_string();
+                "expected_stock": quantity,
+                "actual_stock": 0,
+                "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product_title)
+            });
 
-            let _ = sqlx::query("INSERT INTO department_tasks (id, tenant_id, department, event_type, payload, status) VALUES ($1, $2, 'operations', 'LowStockAlert', $3::jsonb, 'PENDING')")
-                    .bind(job_id)
-                    .bind(tenant_id)
-                    .bind(&job_payload)
-                    .execute(&pool)
-                    .await;
+            let _ = sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'inventory_service', 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING') ON CONFLICT (id) DO NOTHING")
+                .bind(&conflict_id)
+                .bind(tenant_id)
+                .bind(notification_payload.to_string())
+                .execute(&pool)
+                .await;
 
             return Ok(ReserveResult {
                 success: false,
