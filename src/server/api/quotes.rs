@@ -485,6 +485,28 @@ async fn draft_quote_agent(
         "inquiry": payload.inquiry,
     });
 
+    let agent_feed_item_id = Uuid::new_v4().to_string();
+    let proposed_action = serde_json::json!({
+        "feature_type": "quote_draft",
+        "quote_id": quote_id.to_string(),
+        "customer_inquiry": payload.inquiry,
+        "scope": "Estimate Request",
+        "suggested_price": 0
+    });
+
+    if let Err(e) = sqlx::query(
+        "INSERT INTO agent_feed_items (id, tenant_id, event_source, context_payload, proposed_action, lifecycle_state, created_at, updated_at) VALUES ($1, $2, 'Sales Agent', '{}'::jsonb, $3::jsonb, 'PENDING_APPROVAL', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP) ON CONFLICT (id) DO NOTHING"
+    )
+    .bind(&agent_feed_item_id)
+    .bind(authority.tenant_id())
+    .bind(proposed_action.to_string())
+    .execute(&mut *tx)
+    .await
+    {
+        tracing::error!("Failed to insert agent feed item: {}", e);
+        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    }
+
     if let Err(e) = sqlx::query(
         "INSERT INTO ohc_job_queue (id, parent_task_id, job_type, payload, status, next_retry_at, tenant_id)
          VALUES ($1, '', 'draft_quote_agent', $2, 'PENDING', CURRENT_TIMESTAMP, $3)"
