@@ -1,0 +1,10 @@
+{
+  "issue_title": "[architecture] Unified Multilingual Hybrid Translation Mesh",
+  "issue_description": "Fatima, who runs a food cart and speaks limited English, needs to operate her entire business interface in Arabic while allowing customers to order in English, Spanish, or any local language. OHC currently lacks a globally consistent, real-time localized mesh that instantly translates storefronts, invoices, receipts, SMS notifications, and agent interactions without forcing the user to install a 3rd party localization plugin (which legacy competitors like Shopify and Wix require).\n\nResearch Report\nCompetitor Analysis: Shopify uses third-party plugins (e.g., Langify) which creates fragmented UI states and slows down page loads. Wix has a multi-lingual tool but it is manual and doesn't handle real-time conversational agent translations.\nOHC Advantage: With the KAIROS underlying orchestration engine and LLM providers already embedded, OHC can dynamically translate the UI, product descriptions, and chat logs at the edge or locally (via standalone offline capabilities) without external plugin bloat.\nMarket Context: The LATAM and MENA markets represent huge growth potential. Native, zero-configuration multilingual support allows immediate deployment in non-English native contexts.",
+  "issue_priority": "P2",
+  "issue_category": "Blocked Finding",
+  "issue_type": "Blocked",
+  "issue_label": "blocked_finding",
+  "assignees": ["Echo"],
+  "blocked_reason": "The 'Unified Multilingual Hybrid Translation Mesh' (Issue #24057) is classified as an unauthorized feature expansion. Do not implement it without explicit, evidence-backed approval in RESEARCH.md; otherwise, classify the request as a [blocked finding]. The issue requests broad capabilities for real-time translation across all interfaces. In RESEARCH.md, we see the instruction: 'New epics need an explicit evidence-backed decision; assigned concrete defect work may continue.' It is not yet documented or authorized as an explicit goal."
+}
