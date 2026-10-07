@@ -23,6 +23,7 @@ pub struct TerminalPaymentRequest<'a> {
     pub quantity: Option<i32>,
     pub order_id: Option<&'a str>,
     pub idempotency_key: &'a str,
+    pub reader_id: Option<&'a str>,
 }
 
 pub struct TerminalSessionManager {
@@ -102,6 +103,7 @@ impl StripeClient {
             quantity,
             order_id,
             idempotency_key,
+            reader_id: _,
         } = request;
         let api_key = self.require_api_key()?;
         if amount_cents <= 0 {
@@ -135,6 +137,9 @@ impl StripeClient {
         if let Some(oid) = order_id {
             form.insert("metadata[order_id]".to_string(), oid.to_string());
         }
+        if let Some(rid) = request.reader_id {
+            form.insert("metadata[reader_id]".to_string(), rid.to_string());
+        }
 
         let res = reqwest::Client::new()
             .post(format!("{}/v1/payment_intents", Self::api_base()))
@@ -151,9 +156,30 @@ impl StripeClient {
             return Err(format!("Stripe API error ({}): {}", status, text));
         }
 
-        res.json::<TerminalIntentReceipt>()
+        let receipt = res.json::<TerminalIntentReceipt>()
             .await
-            .map_err(|_| "Invalid Stripe terminal intent receipt".to_string())
+            .map_err(|_| "Invalid Stripe terminal intent receipt".to_string())?;
+
+        if let Some(rid) = request.reader_id {
+            let mut process_form = std::collections::HashMap::new();
+            process_form.insert("payment_intent".to_string(), receipt.id.clone());
+
+            let process_res = reqwest::Client::new()
+                .post(format!("{}/v1/terminal/readers/{}/process_payment_intent", Self::api_base(), rid))
+                .basic_auth(api_key, Some(""))
+                .form(&process_form)
+                .send()
+                .await
+                .map_err(|e| format!("Stripe Terminal Reader API request failed: {}", e))?;
+
+            if !process_res.status().is_success() {
+                let status = process_res.status();
+                let text = process_res.text().await.unwrap_or_default();
+                return Err(format!("Stripe Terminal Reader API error ({}): {}", status, text));
+            }
+        }
+
+        Ok(receipt)
     }
 
     pub async fn create_terminal_payment_intent(
@@ -277,6 +303,7 @@ mod tests {
                 quantity: None,
                 order_id: None,
                 idempotency_key: "idempotency_key",
+                reader_id: None,
             })
             .await;
         let err = result

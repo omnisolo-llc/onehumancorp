@@ -78,6 +78,7 @@ pub trait Provider: Send + Sync {
         operation: &str,
         amount: i64,
         currency: &str,
+        reader_id: Option<&str>,
     ) -> Result<TerminalIntentReceipt, String>;
     async fn retrieve(&self, id: &str) -> Result<TerminalIntentReceipt, String>;
     async fn capture(&self, id: &str, amount_cents: i64) -> Result<TerminalIntentReceipt, String>;
@@ -90,6 +91,7 @@ impl Provider for StripeClient {
         operation: &str,
         amount: i64,
         currency: &str,
+        reader_id: Option<&str>,
     ) -> Result<TerminalIntentReceipt, String> {
         self.create_terminal_payment_intent_receipt(TerminalPaymentRequest {
             tenant_id: tenant,
@@ -99,6 +101,7 @@ impl Provider for StripeClient {
             quantity: None,
             order_id: None,
             idempotency_key: operation,
+            reader_id,
         })
         .await
     }
@@ -115,6 +118,7 @@ pub struct IntentInput {
     pub operation_id: String,
     pub amount_cents: i64,
     pub currency: String,
+    pub reader_id: Option<String>,
 }
 #[derive(Debug, Serialize)]
 pub struct IntentResponse {
@@ -224,6 +228,7 @@ pub async fn create(
             &remote_operation,
             input.amount_cents,
             &input.currency,
+            input.reader_id.as_deref(),
         )
         .await
     {

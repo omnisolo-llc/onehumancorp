@@ -32,6 +32,7 @@ pub struct PaymentIntentRequest {
     pub order_id: Option<String>,
     pub idempotency_key: Option<String>,
     pub total: Option<f64>,
+    pub reader_id: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -725,6 +726,7 @@ pub async fn create_payment_intent_handler(
             operation_id,
             amount_cents,
             currency: input.currency,
+            reader_id: input.reader_id,
         },
         &fingerprint,
         &client,

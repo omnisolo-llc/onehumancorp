@@ -94,3 +94,4 @@ pub(crate) mod fixture_boundary;
 mod staff_timecards_test;
 
 pub mod sms_settings;
+pub mod pos_hardware_api;
