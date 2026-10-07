@@ -1,0 +1,10 @@
+get.
+
+For Nora's fixed-scope web/design/marketing service, demonstrate:
+
+1. Owner describes the offer, operating hours, price rules and standing authority; business context persists.
+2. A customer inquiry is ingested and answered; a quote links to the same customer and work item.
+3. Customer accepts, pays a deposit through the provider test flow, and receives a valid appointment confirmation.
+4. Produce one supported draft digital deliverable, obtain owner quality review and client acceptance through the supported product flow, then invoice the remaining balance and record collection/receipt/reconciliation. Test fixtures may simulate client acceptance but must be labeled; a generated draft is not proof of real customer acceptance.
+5. A follow-up/rebooking action executes within policy, with delivery and attribution evidence.
+6. Repeat with a declined payment, duplicate webhook, concurren

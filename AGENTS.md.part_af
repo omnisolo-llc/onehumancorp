@@ -1,0 +1,3 @@
+ full required Linux CI and fifteen-minute cached CI are distinct goals. Only the documented local build measurements have been demonstrated; do not relax full acceptance or promise hosted timing from them.
+
+A justified no-change result is valid. Preserve unrelated work and summarize modified paths, verification and remaining uncertainty.

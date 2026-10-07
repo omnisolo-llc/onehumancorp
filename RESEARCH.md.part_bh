@@ -1,0 +1,5 @@
+tion records; no fabricated success | P0 correctness / P1 completion |
+| Understand cash and margin | Match income/expenses/fees, flag overdue balances, forecast with assumptions, prepare accountant exports | Source-linked cash/receivables/payables and per-job margin, freshness indicators | P1 |
+| Support and retain customers | Resolve issues, coordinate changes/refunds within policy, rebook and request appropriate feedback | Resolved case, confirmed refund/change, measured repeat business | P1 |
+| Manage suppliers and helpers | Order within stock/budget policy; track delivery, contractor work and liabilities | Confirmed purchase/work order, receipt and payable | P2 after core loop |
+| Meet obligations | Maintain sourced, location-specific deadline/document checklists; prepare provider/professional handoffs | Evidence of submission/acknowledgement when supported; explicit pending prerequ

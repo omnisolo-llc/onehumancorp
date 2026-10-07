@@ -1,0 +1,6 @@
+rements synthesize the earlier cited market research and the [current owner-needs/capability audit](docs/research/business_capability_and_usage_economics_audit.md). They are product judgments to validate, not a new survey result. The Federal Reserve evidence points toward sales and integration/accuracy pain; the workflow references below show connected sales, delivery and collection patterns. Neither establishes one universally best first segment.
+
+### Scope and task priorities
+
+1. **Correctness before expansion:** recheck F01–F15 against the current code and remediation evidence. Prioritize unresolved false payment/completion claims, usage feedback/double accounting, tenant leakage, authority and budget defects. Do not reopen an already repaired defect from its historical description.
+2. **Prove a reusable operating loop:** choose one observed owner workflow and trace inquiry/need →

@@ -1,0 +1,9 @@
+d directly by the customer; no duplicate inference charging in BYOK mode. Use durable usage identity, model/payer/rate attribution, tenant-specific reads, atomic reservations and invoice reconciliation. The former $26 monthly serving-cost illustration is not a measured baseline.
+
+## Development task gate
+
+Read current code and the audit before proposing features. Establish what is source-present, mounted, tested, provider-sandbox verified and owner verified. Prioritize reproducing/triaging concrete correctness and billing defects; preserve existing components and unrelated work. Research may document an uncertainty without manufacturing an issue. Existing authorized defect work may continue, but new segment, pricing or feature epics require evidence and an explicit decision. Keep all deployment, communication, spending and professional-action authorization boundaries.
+
+---
+
+# Superseded

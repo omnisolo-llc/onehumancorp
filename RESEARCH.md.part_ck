@@ -1,0 +1,8 @@
+e. Report blockers/next actions without asking a human to manage the development process.
+- No eligible task or already-satisfied criteria means an evidence-backed no-work result. Do not manufacture refactors, viral tools, new harness integrations or changed files to justify a session.
+
+Prompts guide agent behavior; they do not provide atomic claims, exactly-once external writes, independent review scheduling or crash recovery. Those require the Automator lifecycle implementation. Until those mechanisms exist, check active issue/session/PR ownership and report conflicts; never assume a label is a distributed lock.
+
+## What to defer
+
+Defer new viral generators, referral badges, paywalls, agent marketplaces, additional harness adapters, visual workflow builders, simultaneous HR/payroll/MRP coverage, generic UI restyling and unsupported global compliance claims unless an accepted issue show

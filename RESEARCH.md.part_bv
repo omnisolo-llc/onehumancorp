@@ -1,0 +1,7 @@
+12 | Jurisdiction and employer extensions (`governance`) | Proven owner demand and provider coverage | Region-specific sourced requirements, connected specialist/provider handoff and truthful status; no universal compliance claim |
+
+Tenant isolation, authorized action, money correctness and recovery tests apply to every target. The sequence is dependency-driven, not a mandate to wait for unrelated cosmetic work. Break large targets into linked acceptance-preserving slices; do not close a parent merely because its first screen shipped.
+
+### Release gate: one business runs without agent babysitting
+
+Use a real local product stack with official provider test mode or documented external adapters. Test data must flow through the real internal UI/API/database; keep provider simulation explicitly test-only. All automated tests run through `bazel test`, including Playwright through its Bazel tar

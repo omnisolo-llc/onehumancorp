@@ -1,0 +1,5 @@
+ |
+| Receivables automation | `src/agents/builtin/finance/agentic_receivables.rs` | Records a “Drafted overdue reminder” action where drafting remains a comment. Prove content creation, delivery, dedupe and stopping after payment before calling this autonomous collection |
+| Financial foundation | `src/server/services/ledger/service.rs`, `src/server/services/capital/` | Transaction/account code exists. Audit money representation, retries, source linkage, reconciliation, org isolation and ledger-to-business-record consistency rather than creating a competing ledger |
+| End-to-end evidence | `src/e2e/full_journey_e2e.spec.ts`, `src/e2e/autonomous_ops.spec.ts`, `src/e2e/current_app_smoke.ts` | These named journeys call a shared smoke helper that checks many pages/styles. They do not by themselves establish lead → service → payment → reconciliation completion |
+| Agent/department f

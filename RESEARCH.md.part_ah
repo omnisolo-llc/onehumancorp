@@ -1,0 +1,5 @@
+ions |
+| Sell work or goods | Pricing rules, quote/proposal, scope, contract/signature integration, follow-up | Accepted versioned scope and terms, linked to the customer and resulting work | Backend |
+| Reserve capacity | Calendar/stock availability, deposits, buffers, timezones, changes/cancellation | Confirmed reservation without double booking or overselling; released capacity on cancellation | Backend / reliability |
+| Fulfill the promise | Digital deliverables and review; project milestones; physical-work/supplier coordination; shipping or access entitlements | Actual artifact, customer acceptance, shipment/entitlement or physical-work evidence | Backend / agent runtime |
+| Collect and reconcile money | Real payment requests, invoices, partial payments, deposits, refunds, disputes, overdue follow-up | Provider IDs and receipts agree with invoice balance and ledger; retries do not d

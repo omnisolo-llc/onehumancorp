@@ -1,0 +1,12 @@
+ommunication accounts. Disclose their processor fees, existing SaaS subscriptions, domains and optional advertising separately. Avoid a percentage of all customer revenue, hidden inference markup, “unlimited AI,” and automatic overages. Higher-volume/team tiers follow measured demand. Preserve existing standalone availability and licensing; managed hosting, reliable operations and support are the paid value, not artificial lock-in.
+
+### Illustrative monthly unit economics
+
+| Variable cost per $99 business | Base budget assumption | Downside assumption |
+|---|---:|---:|
+| Model/tool compute, including failed attempts/retries | $10 | $24 |
+| Incremental infrastructure, storage and communication | $5 | $8 |
+| Support/operations labor at a disclosed loaded rate | $8 | $17 |
+| OHC subscription collection and other variable costs | $3 | $3 |
+| **Total serving cost** | **$26** | **$52** |
+|

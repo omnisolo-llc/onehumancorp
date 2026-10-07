@@ -1,0 +1,10 @@
+ention evidence exists.
+
+## Sequenced 90-day plan and stop criteria
+
+Timing is relative to an agreed pilot start, not an assertion that these stages have begun. Stable OHC target IDs below remain available for issue deduplication; apply this segment and stage scope to them.
+
+| Stage | Focus | Decision evidence |
+|---|---|---|
+| Days 1–14 | OHC-01/02 investigation, interviews, workflow inventory, offer/authority policy and baseline economics | Documented / implemented / test-verified / provider-sandbox-verified / pilot-verified matrix; real workflow examples when available; one honest sandbox journey |
+| Days 15–45 | OHC-03–08 slices: onboarding, inquiry/proposal, booking/deposit, delivery/review, final payment, durable exceptions | 10 design partners progressively onboarded; enforce isolation, budgets, authorization, deduplication, revocation and restart recovery **before** enablin

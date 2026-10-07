@@ -1,0 +1,8 @@
+ll and buyer hypothesis → evidence-backed offer/cost model → small demand test → approved page/intake → first qualified conversation. Measure first payment without promising it. Existing businesses use the **Run** track below.
+
+### Build, integrate, and defer
+
+| Layer | Initial responsibility | Boundary |
+|---|---|---|
+| Native OHC | Business/offer context; customer/project state; scoped authority; durable orchestration; owner decisions; evidence/exception feed; usage and outcome measurement | This is the differentiated operating layer; reuse existing implementation rather than duplicate it |
+| Connected systems | One email/calendar stack and one payment processor; existing document/artifact tools for one supported deliverable | Initial hypothesis: Google Workspace + Stripe. Verify connector/API access, OAuth scopes, provider review, costs and actual owner preference before commi

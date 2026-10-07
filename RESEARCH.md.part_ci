@@ -1,0 +1,6 @@
+ds this product; the in-product AI team runs customers' businesses. Keep these two task lifecycles distinct. A merged development PR is not evidence that a customer's business goal was completed.
+
+- Research/architecture/integration scouts read this file and propose one evidence-backed issue at a time. Reuse existing issue IDs and research target IDs; do not multiply reports for the same gap.
+- Implementation workers consume an assigned GitHub issue. Their role is a preferred lane, not permission to invent unrelated work. The general mission worker also consumes legacy issues without new labels.
+- Required issue content: target ID, persona/journey, observed versus inferred gap, source/code evidence, current behavior, expected business result, scope/non-goals, dependencies, stable acceptance criteria, recovery/authority/cost requirements, and Bazel verification.
+- Suggested routing labels

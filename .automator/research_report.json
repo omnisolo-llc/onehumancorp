@@ -1,0 +1,6 @@
+{
+  "kind": "artifact",
+  "provenance": "research",
+  "title": "[blocked finding] Unified Multilingual Hybrid Translation Mesh",
+  "content": "The 'Unified Multilingual Hybrid Translation Mesh' (Issue #24057) is classified as an unauthorized feature expansion. It proposes building an extensive automatic translation mesh, but there is no evidence or approval in `RESEARCH.md` or `docs/research/business_capability_and_usage_economics_audit.md` that authorizes adding a global real-time translation cache/sub-agent mesh layer. As instructed by `AGENTS.md` and `RESEARCH.md` (revision 2026-09-18-usage-audit), new feature epics require explicit evidence-backed approval. Therefore, this issue cannot be implemented and is classified as a blocked finding."
+}

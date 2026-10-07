@@ -1,0 +1,7 @@
+Product decision
+
+OmniSolo should let one person describe the business they want to build, give their AI team the necessary business context and authority, and receive completed, verifiable business outcomes. The team should find customers, sell an offer, coordinate delivery, collect payment, keep records, support customers, and improve the business. The owner should not have to become an expert in software, prompting, marketing operations, or managing agents.
+
+The initial product promise is: **“Tell your AI team what business you want to run. It sets up the operation and handles the routine work, shows what it accomplished, and makes unresolved exceptions clear.”**
+
+This file is the canonical product-priority reference for the development agents. Existing architecture and brand documents still describe their respective domains; conflicting older product priorities, completion labels

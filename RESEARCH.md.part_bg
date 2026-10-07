@@ -1,0 +1,5 @@
+ries | Persisted inquiry, delivered response, delivery status and next action | P1 |
+| Turn interest into revenue | Qualify, propose scope, calculate from price/cost rules, send quotes/contracts, follow up | Accepted versioned quote/contract with explicit scope and terms | P1 |
+| Promise only feasible work | Check capacity, calendars, stock, travel/buffers, deposits, timezones and changes | One reservation, confirmed booking/order and customer confirmation | P0 correctness / P1 completion |
+| Deliver the work | Coordinate tasks, documents, subcontractors, materials, shipping or digital access | Actual deliverable/service proof, customer acceptance, unresolved items | P1 for first segment |
+| Collect and keep money records | Create real payment requests, reconcile provider events, manage partial payments/refunds/disputes and overdue follow-ups | Payment IDs, receipts, balances, reconcilia

@@ -1,0 +1,6 @@
+ts and failures |
+| Routine autonomy | At least 90% of supported routine test scenarios finish under standing authority without another owner intervention; measure separately from real-world pilot execution |
+| Response readiness | p95 under 5 minutes from authorized inbound event to useful draft when input/provider is available; separately report outages, missing information and approval waits |
+| Cost and safety | All variable serving costs at most 30% of subscription revenue after onboarding; zero observed unauthorized commitments/spend, duplicate charges/bookings/refunds or cross-tenant disclosure. Any such event blocks expansion; zero observed is not a guarantee |
+
+Select eligible work before the run; do not remove failures afterward. Legitimate approval waits, out-of-scope requests and unavailable providers are separate visible categories, not fabricated successes. Track full clien

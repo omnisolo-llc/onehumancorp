@@ -1,0 +1,8 @@
+ issue. Put the target ID, actual evidence, dependencies and acceptance criteria into that issue.
+
+| ID | Target and preferred lane | Dependency | Completion evidence |
+|---|---|---|---|
+| OHC-01 | Trace the active service journey; eliminate false booking/invoice payment success (`revenue`) | None | Real provider test session or explicit unavailable state; no fake checkout URL; route and deployment mode documented |
+| OHC-02 | Durable goal execution and verified departmental handoff (`agents`) | None; can run alongside OHC-01 | Worker restart resumes the same goal; unacknowledged handoff is recovered; no duplicate external effect or false completion |
+| OHC-03 | Intent-to-operating-business onboarding (`activation`) | OHC-01/02 for enabled paid actions | Saved offer, business policy and connections; publish/intake readiness verified; setup resumes without losing work |
+| OHC-04 | Custome

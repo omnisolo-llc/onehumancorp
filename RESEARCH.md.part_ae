@@ -1,0 +1,9 @@
+al loaded frontend code rather than dismissing Next as legacy or initiating a Go/Flutter rewrite.
+
+These are **source-level observations from the original audit**, not full runtime certification. That audit's pricing-budget Bazel test timed out during analysis after 180 seconds, before test results. Subsequent implementation and native verification belong to the remediation ledger. This research document itself does not establish that a repair passed, that a provider action succeeded, or that a business outcome was achieved.
+
+## Active business-capability map
+
+Implementation acceptance uses `make lint` and `make test`; the latter covers Rust, Node/frontend/CLI/desktop UI, contracts and freshly built real-stack E2E. Use focused Make targets during iteration and record exact failures/prerequisites. Research evidence alone does not certify these gates or a shipped business outcome.
+
+Updated

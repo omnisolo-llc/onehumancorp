@@ -1,0 +1,11 @@
+ checkpoints and bounded recovery. Offline preparation must not turn into stale sends/bookings/payments on reconnect.
+
+Hard dollar caps pause new spending safely, with advance warnings and a clear recovery path. Keep records readable/exportable and allow reconciliation of in-flight work. Do not silently buy more compute, bypass approval, or retry a financial action merely to achieve a green status.
+
+## Repository review: what exists and what needs proof
+
+This was a source/document review, not a running-product audit. Existing uncommitted brand/docs work was left alone. Paths identify investigation starting points; verify active route registration, authentication, database mode and deployment configuration before changing behavior.
+
+| Area | Evidence inspected | Finding and next investigation |
+|---|---|---|
+| Canonical architecture | `README.md`, `src/server/lib.rs`, `src/ui/tauri/`, `sr

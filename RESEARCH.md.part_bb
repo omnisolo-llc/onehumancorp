@@ -1,0 +1,6 @@
+ reservation foundations |
+| Food/preorder operator: Fatima | Accept feasible orders and prepare on time | Menu/availability → prepaid pickup slot → prep list → ready notification → pickup | Vertical extension with capacity and language needs |
+| Digital creator/subscription owner | Deliver access and recurring value | Offer → subscription → entitlement → usage/delivery → renewal/recovery/cancellation | After recurring payment and entitlement integrity |
+| Employer/multi-location operator: Jun | Delegate physical work and coordinate people | Demand → staff/contractor assignment → proof of work → payables/payroll integration | Later; do not make HR/MRP prerequisites for solo owners |
+
+The first supported geographic market and payment/channel providers must be explicit per deployed business. Do not imply universal tax, payment, identity, language, or offline support.

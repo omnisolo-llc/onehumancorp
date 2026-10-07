@@ -1,0 +1,5 @@
+r inquiry → qualified quote (`revenue`) | Customer/offer context from OHC-03 | Real inbound message creates one lead, grounded response and priced quote; follow-up has delivery evidence |
+| OHC-05 | Accepted quote → deposit → conflict-free booking (`revenue`) | OHC-01/04 | Accepted scope/pricing preserved; payment verified; concurrent requests cannot double-book; expiry/cancellation releases capacity |
+| OHC-06 | Delivery → invoice → collected/reconciled balance (`finance`) | OHC-05 | Work acceptance, final amount, deposit deduction, provider payment, receipt and ledger reconcile after duplicate events/restart |
+| OHC-07 | Autonomous exceptions and owner outcome feed (`ux`) | OHC-02; integrate each completed stage | Owner sees completed results, evidence, costs and precise remaining dependency; routine decisions require no repeated clicks |
+| OHC-08 | Overdue collection, refund

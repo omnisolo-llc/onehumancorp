@@ -1,0 +1,8 @@
+oundation | `src/agents/builtin/`, `src/server/orchestration/departments/` | Many runtime and department components already exist. Trace one business goal through actual execution/verification before adding another harness or specialist |
+| Strategy drift | `docs/vision/market_strategy.md`, Automator's OHC job prompts | Broad superiority claims, architecture catalogs and viral-feature mandates are not verified demand evidence. Use current primary sources and selected journey gaps |
+
+These findings justify a correctness-first audit. They do not establish that every booking or invoice route is broken or that the whole application has been exercised.
+
+## Ordered delivery targets
+
+Stable target IDs support deduplication; they are not claims that GitHub issues already exist. A researcher should check the current implementation and existing issues/PRs before turning one target into one bounded

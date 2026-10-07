@@ -1,0 +1,6 @@
+upported; preparation is never mislabeled as filing or certification | Governance |
+| Run the AI team | Durable goals, delegated specialists, shared context, acknowledged handoffs, timers, retries, cancellation and verification | Goal survives restart; completion has evidence; unresolved dependencies remain visible | Agent runtime / reliability |
+| Control authority and cost | Tenant/client scoping, standing policies, hard spend reservations, revoke/stop, audit trail and recovery | Server-enforced limits, no unauthorized effect, truthful outcome feed, tested export/restore | Security / finance / UX |
+| Choose and pay for AI resources | Managed API, supported customer-key/account modes, permitted native clients, local inference; usage and payer attribution | Usage reconciles once to the right tenant/payer; customer-direct inference is not charged twice | Cost / integrations |
+
+These requi

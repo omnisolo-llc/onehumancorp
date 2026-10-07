@@ -1,0 +1,5 @@
+ documents the current Cargo/Tauri/Node implementation, substantive safety/test fixes and exact cache conditions. A Linux backend build from empty compiler outputs completed in **8m 33.94s** with downloaded dependencies already available; an unchanged rerun took **1.87s**. A fresh Node proxy build took **31.40s** without stderr warnings. The **10-minute core compilation goal** is distinct from the **30-minute full required-CI target**, which is not yet demonstrated: strict repository-wide lint and full execution/release gates remain outstanding. These engineering measurements are not customer validation, measured serving economics, or permission to enable billing.
+
+## Decisions that remain open
+
+The earlier **$99 subscription, 300-step allowance, $299 setup, fixed cohort/margin targets and exclusive web/design/marketing segment are suspended hypotheses**, not accepted requirements. Do no

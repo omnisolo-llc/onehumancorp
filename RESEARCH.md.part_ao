@@ -1,0 +1,7 @@
+ompt text cannot supply atomic task claims, provider idempotency or runtime recovery—those remain implementation requirements.
+
+## Economics and access investigation
+
+Keep managed API, customer API-key billing, permitted native-client subscription access and local inference as separate modes. An API key and a ChatGPT/Claude/Gemini subscription are not interchangeable. Confirm each provider's actual permitted authentication/hosting pattern; do not proxy consumer session tokens or promise universal subscription reuse. The audit records an important distinction between permitted unmodified Claude Code hosting and prohibited third-party Claude.ai credential relay.
+
+Before choosing rates, measure actual model/tool usage, compute and reserved capacity, storage/network/queues, failed attempts, idle allocation, payment collection and support. Separate OHC-funded charges from provider bills pai

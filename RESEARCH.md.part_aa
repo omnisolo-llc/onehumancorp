@@ -1,0 +1,11 @@
+# Current research direction — evidence before a new plan
+
+**Revision: 2026-09-18-usage-audit.** This section supersedes the earlier strategy draft retained below and conflicting role-prompt assumptions.
+
+The user has asked us to evaluate charging for **compute and AI API usage**, plus **customer BYOK or provider-permitted native subscription access**, and to understand existing code and real owner needs before committing to another plan.
+
+**Read the [capability, owner-needs and usage-economics audit](docs/research/business_capability_and_usage_economics_audit.md) first.** It contains source paths, route/caller evidence, concrete gaps, public owner stories, current ChatGPT/Gemini/Claude capabilities, provider access boundaries and cost-accounting prerequisites.
+
+## Native-build evidence — 2026-09-19
+
+The [measured cleanup record](docs/research/native_build_measurements_2026-09-19.md)

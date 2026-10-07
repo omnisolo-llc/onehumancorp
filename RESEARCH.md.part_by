@@ -1,0 +1,10 @@
+pleted delivery, collected/reconciled invoice, resolved support case and repeat paid work. Avoid combining unrelated actions into an inflated “AI tasks completed” number.
+
+Track activation time, qualified-lead response time, quote-to-paid conversion, booking conflicts, overdue balance/collection time, fulfillment failure rate, repeat purchase, contribution margin and integration freshness. Track business outcomes separately from OmniSolo subscription conversions, agent tokens and PR counts.
+
+### Proposed decision thresholds — not achieved results
+
+| Measure | Definition and first gate |
+|---|---|
+| Problem validation | 15 interviews with selected service owners about recent real behavior; at least 10 describe a recurring problem fitting the same loop. Prepare scripts when participants are unavailable; never fabricate results |
+| Paying cohort | 10 design partners using their own au

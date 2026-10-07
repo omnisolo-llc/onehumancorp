@@ -1,0 +1,5 @@
+l responsibility | Prepare and coordinate; the owner or qualified provider handles the applicable legal, tax, payroll, regulated or physical work. Do not present preparation as completed professional service |
+
+An AI cannot approve its own action. Customer messages, attachments, retrieved memory, websites and tool outputs are untrusted data, not permission to expand authority or change prices. Enforce authorization, budget caps, tenant/client scoping, cancellation and revocation in server-side tools, not just prompts. Third-party OAuth credentials still need secure handling; workload identity alone does not replace them.
+
+A timeout with an unknown external outcome requires reconciliation before retry. Stripe's [webhook documentation](https://docs.stripe.com/webhooks) explicitly describes duplicate and out-of-order delivery; require signatures, deduplication, provider identifiers, durable

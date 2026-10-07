@@ -1,0 +1,8 @@
+t booking, refund, channel outage, lost response and worker restart. State remains truthful and no action is duplicated.
+7. Repeat tenant-isolation checks and inspect the owner feed: completed, pending, failed and externally dependent work are distinguishable.
+
+Do not count heading visibility, a generated URL, a mocked success response, a “sent” log entry, or the number of agents as business completion. Stripe specifically documents webhook-driven fulfillment and repeated/concurrent fulfillment handling; use provider facts rather than the checkout redirect alone. [Stripe fulfillment documentation](https://docs.stripe.com/checkout/fulfillment).
+
+## Product metrics and validation
+
+Primary metric: **verified business outcomes completed per active business per week**, with owner minutes/interventions, failure rate and cost reported alongside it. Break outcomes down by accepted quote, com

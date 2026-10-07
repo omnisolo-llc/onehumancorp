@@ -1,0 +1,4 @@
+c/ui/next/` | README identifies Rust API/agents, canonical Tauri UI, legacy Next.js. Old development prompts still mandate Go/Flutter in places; discover the active path instead of starting another frontend |
+| Booking/payment integrity | `src/server/api/booking/public.rs` | Deposit branches construct checkout-looking URLs from a local booking ID. Investigate the public route and replace fake provider success with real session creation plus verified payment handling |
+| Invoice integrity | `src/server/api/invoice.rs` | The inspected invoice service builds a checkout-looking URL using a UUID. A persisted invoice does not prove a usable payment session |
+| Booking behavior | `src/server/services/booking.rs` | Contains a fixed example time-slot path, simulated pricing comments, and generated payment URLs. Establish which paths are active and consolidate on truthful capacity/payment behavior

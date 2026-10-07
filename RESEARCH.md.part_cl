@@ -1,0 +1,3 @@
+s they block the selected business outcome. Retain useful existing implementations; avoid deletion or a platform rewrite just to fit this document.
+
+Prefer popular, actively maintained libraries for standard infrastructure and established providers for payments, delivery, messaging, banking and specialized obligations. Verify licenses and maintenance at selection time. Build OmniSolo's differentiated layer: persistent business context, specialist coordination, reliable cross-tool execution, verification and recovery, and a simple owner experience.

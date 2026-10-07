@@ -1,0 +1,11 @@
+eam can run operations while a person or supplier delivers the physical service.
+
+### Delegated authority and safe execution
+
+| Action class | Default behavior |
+|---|---|
+| Read/draft | Work within scoped access; preserve source links; do not imply an external action occurred |
+| Reversible internal changes | Execute under workspace policy with an audit record and undo where supported |
+| Routine external work | Execute only under an owner-approved standing policy specifying recipients, allowed content/terms, frequency, amount/budget, expiry and stop conditions; otherwise queue approval |
+| New commitments or high-impact changes | Require fresh approval of the exact payload, recipient, amount/scope and version for new/changed contracts, public publication, refunds/transfers, new ad spend, bulk outreach or destructive actions; changed payload invalidates approval |
+| Professional/physica

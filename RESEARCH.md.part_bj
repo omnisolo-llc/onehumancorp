@@ -1,0 +1,15 @@
+ness changes. The product chooses the necessary specialists; owners should not build agent graphs, select models, or manually pass messages between departments.
+
+```mermaid
+flowchart LR
+    O[Business goal and standing rules] --> L[Lead agent and durable task record]
+    L --> S[Sales and customer team]
+    S --> F[Delivery and scheduling team]
+    F --> M[Money and records team]
+    M --> C[Customer success team]
+    C --> V[Verify business outcome]
+    V --> R[Outcome feed and next action]
+    V -->|incomplete or failed| L
+```
+
+Use roles as responsibilities, not a requirement to run a fixed number of agents on every action. Start with a lead/coordinator, sales/customer specialist, delivery specialist, money/records specialist, and verifier. Add marketing, knowledge, supplier or compliance specialists when a task needs them. Parallelize independent investigation; serialize conflicting r

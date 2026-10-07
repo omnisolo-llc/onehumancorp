@@ -1,0 +1,5 @@
+# OneHumanCorp repository instructions
+
+Read the current section of `RESEARCH.md` and `docs/research/business_capability_and_usage_economics_audit.md` before selecting or expanding work. Revision: 2026-09-18-usage-audit. GitHub issues remain the active work tracker. The earlier fixed-price/segment strategy is superseded.
+
+Current work is evidence-first: inspect implemented/mounted behavior, public owner stories and current provider products before committing to new features or a segment. The former $99 subscription, 300-step allowance, $299 setup and exclusive digital-service buyer are suspended hypotheses. Evaluate metered compute/API, customer BYOK, provider-permitted native subscription clients and local modes separately. Keep OHC charges separate from customer-direct provider bills. Reuse existing business and provider modules; do not create new epics merely to satisfy old role catal

@@ -1,0 +1,5 @@
+eservations, payments, refunds, and shared customer updates.
+
+Every business task needs a stable ID, owner goal, customer/work record, acceptance criteria, assigned agent, dependency state, deadline, attempt history, permitted actions, spend allowance, provider references, and completion evidence. A handoff needs a recipient and acknowledgement. A message such as “invoice sent” is not proof of delivery or collection. A summary saying “finished” must not complete a task whose business record is still pending.
+
+Persist timers and work before sending external requests. Recover after app/worker restarts, deduplicate webhooks, reconcile uncertain writes before repeating them, and account for late/out-of-order provider events. A provider outage leaves a visible unresolved task with a retry time, not an invented result. Completion is a verified business-state transition, not an LLM resp

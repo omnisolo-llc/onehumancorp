@@ -1,0 +1,5 @@
+ogs. Owners delegate routine work through explicit standing authority; new commitments outside it need approval.
+
+Each issue needs a stable OHC target ID where applicable, customer/workflow, evidence level, measurable result, dependencies/reuse, non-goals, authority class, acceptance checks and cost/measurement plan. Re-triage older broad-suite or random harness-upgrade work. Preserve useful existing features, interfaces, standalone compatibility and licensing. The owner has explicitly authorized migration from Bazel to native Rust/Cargo, Tauri and Node.js and remediation of the recorded findings; do not reintroduce Bazel.
+
+Use the native Cargo workspace for Rust and the maintained Next.js application in `src/ui/next`. Tauri packages a fresh, source-bound Next standalone server with a pinned Node runtime; `next_out` is historical output, not a release input. Read `docs/development/native
