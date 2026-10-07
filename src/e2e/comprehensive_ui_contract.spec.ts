@@ -437,7 +437,8 @@ test.describe('comprehensive UI contract', () => {
             response = await page.request.get(navigation.finalUrl, { failOnStatusCode: false, timeout: 5000 });
           } catch (error) {
             progress.status = 0;
-            return null;
+            // re-throw to allow load progress telemetry test to assert on it
+            throw error;
           }
           progress.status = response?.status() ?? 0;
           return response;
