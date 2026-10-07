@@ -11,14 +11,14 @@ const tauriManifest = JSON.parse(execFileSync('python3', ['-c',
 ], { cwd: root, encoding: 'utf8' }));
 
 test('native Node pin and all archive digests match the reviewed official release', async () => {
-  // Snapshot retrieved over HTTPS from nodejs.org/dist/v22.23.3/SHASUMS256.txt.
+  // Snapshot retrieved over HTTPS from nodejs.org/dist/v22.22.1/SHASUMS256.txt.
   // Keep upstream evidence with the pin; do not fetch mutable data during tests.
-  const sums = await readFile(new URL('./test-support/node-releases/v22.23.3-SHASUMS256.txt', import.meta.url), 'utf8');
+  const sums = await readFile(new URL('./test-support/node-releases/v22.22.1-SHASUMS256.txt', import.meta.url), 'utf8');
   const official = new Map(sums.trim().split('\n').map((line) => {
     const [sha256, archive] = line.trim().split(/\s+/);
     return [archive, sha256];
   }));
-  assert.equal(NODE_VERSION, '22.23.3');
+  assert.equal(NODE_VERSION, '22.22.1');
   assert.equal((await readFile(new URL('../.node-version', import.meta.url), 'utf8')).trim(), NODE_VERSION);
   for (const platform of ['linux', 'darwin', 'win32']) {
     for (const architecture of ['x64', 'arm64']) {

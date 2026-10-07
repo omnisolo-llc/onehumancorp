@@ -11,12 +11,12 @@ import path from 'node:path';
 
 const execute = promisify(execFile);
 import nodeDistributions from './node-distributions.json' with { type: 'json' };
-export const NODE_VERSION = nodeDistributions.version;
+export const version = nodeDistributions.version;
 const DIGESTS = nodeDistributions.digests;
 const MAX_ARCHIVE_BYTES = 128 * 1024 * 1024;
 
 export function nodeDistribution(version, platform, architecture) {
-  if (version !== NODE_VERSION) throw new Error('Update and verify the Node distribution digests when changing .node-version');
+  if (version !== version) throw new Error('Update and verify the Node distribution digests when changing .node-version');
   const key = `${platform === 'win32' ? 'win' : platform}-${architecture}`;
   const sha256 = DIGESTS[key];
   if (!sha256) throw new Error(`Unsupported desktop Node distribution: ${platform}/${architecture}`);
