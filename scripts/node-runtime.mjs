@@ -1,5 +1,5 @@
 // Desktop distribution, not the developer's potentially shared-library Node.
-// Digests are pinned from https://nodejs.org/dist/v22.23.3/SHASUMS256.txt.
+// Digests are pinned from https://nodejs.org/dist/v22.22.1/SHASUMS256.txt.
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream } from 'node:fs';
 import { access, chmod, mkdir, mkdtemp, readFile, rename, rm, stat } from 'node:fs/promises';
