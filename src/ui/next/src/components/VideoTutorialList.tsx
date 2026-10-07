@@ -105,29 +105,29 @@ export function VideoTutorialList({
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredVideos.map(video => (
-            <div key={video.id} onClick={() => setActiveVideo(video)} className="backdrop-blur-[30px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] saturate-[210%] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden group hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1">
-            {/* Mock video player area (portrait optimized 9:16 approx for mobile shorts feel, or standard 16:9) */}
-            <div className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
+            <button type="button" key={video.id} aria-label={`Play video: ${video.title}`} onClick={() => setActiveVideo(video)} className="text-left w-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600 backdrop-blur-[30px] bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] saturate-[210%] rounded-2xl shadow-[0_4px_24px_rgba(0,0,0,0.04)] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] overflow-hidden group hover:shadow-lg transition-all cursor-pointer flex flex-col hover:-translate-y-1">
+            {/* Video preview (portrait 9:16 on mobile, standard 16:9 on wider screens) */}
+            <span className="w-full aspect-[9/16] sm:aspect-video bg-gray-900 relative flex items-center justify-center">
               {/* Play button overlay */}
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="w-12 h-12 bg-white/30 backdrop-blur-[30px] saturate-[210%] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+              <span className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                <span className="w-12 h-12 bg-white/30 backdrop-blur-[30px] saturate-[210%] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
                   <svg className="w-6 h-6 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z" />
                   </svg>
-                </div>
-              </div>
+                </span>
+              </span>
               {/* Duration badge */}
-              <div className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-medium">
+              <span className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-md font-medium">
                 {video.duration}
-              </div>
-            </div>
+              </span>
+            </span>
 
-            <div className="p-4 flex-grow">
-              <h3 className="font-bold text-gray-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
+            <span className="p-4 flex-grow">
+              <span className="block font-bold text-gray-900 leading-tight mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
                 {video.title}
-              </h3>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
           ))}
         </div>
       )}
