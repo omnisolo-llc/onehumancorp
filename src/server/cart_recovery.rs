@@ -837,8 +837,10 @@ where
             .to_string();
         let id = uuid::Uuid::new_v4().to_string();
         let proposed_action = serde_json::json!({
+            "action_type": "Draft Reply",
             "description": format!("The Assistant recovered 1 abandoned cart this week, securing {} in revenue. The Salesperson drafted a recovery message for {}.", cart_value, customer_name),
-            "response": body
+            "draft_reply": body,
+            "feature_type": "quote_draft"
         });
 
         let mut completion_tx = pool
