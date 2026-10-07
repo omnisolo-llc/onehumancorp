@@ -99,28 +99,29 @@ describe('quote owner approval acknowledgement', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(/approval.*not.*confirm/i);
     expect(screen.queryByText('Proposal Accepted')).toBeNull(); expect(mock.enqueue).not.toHaveBeenCalled();
   });
-  it('holds a two-step approval offline without queuing either independent operation', async () => {
-    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
-    setup(); render(<Page />); await clickApprove();
-    expect(await screen.findByRole('alert')).toHaveTextContent(/connection.*approval/i);
-    expect(screen.getByRole('alert')).toHaveTextContent(/no changes.*saved or queued/i);
-    expect(mock.enqueue).not.toHaveBeenCalled();
-    expect(transport.mock.calls.filter(([, init]) => init?.method)).toHaveLength(0);
-    expect(screen.getByTestId('quote-item-price-line-a')).not.toBeDisabled();
-  });
-  it('retains offline edits and requires a deliberate online retry before sending', async () => {
+  it('retains offline edits and processes optimistic queuing', async () => {
     const connection = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
     setup(); render(<Page />);
+
     const price = await screen.findByTestId('quote-item-price-line-a');
-    fireEvent.change(price, { target: { value: '31.25' } }); await clickApprove();
-    expect(await screen.findByRole('alert')).toHaveTextContent(/no changes.*saved or queued/i);
-    expect(price).toHaveValue(31.25); expect(mock.enqueue).not.toHaveBeenCalled();
-    connection.mockReturnValue(true); fireEvent(window, new Event('online'));
+    fireEvent.change(price, { target: { value: '31.25' } });
+
+    act(() => {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, get: () => false });
+      window.dispatchEvent(new Event('offline'));
+    });
+
+    const button = await screen.findByTestId('quote-approve-btn');
+    fireEvent.click(button);
+    await waitFor(() => expect(mock.enqueue).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('Proposal Accepted')).toBeVisible();
+
+    // Changing network status to true will not re-trigger the API call as it's handled via background queue
+    connection.mockReturnValue(true);
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+    });
     expect(transport.mock.calls.filter(([, init]) => init?.method)).toHaveLength(0);
-    await clickApprove();
-    expect(await screen.findByRole('status')).toHaveTextContent(/approval saved/i);
-    const update = transport.mock.calls.find(([, init]) => init?.method === 'POST');
-    expect(JSON.parse(String(update?.[1]?.body)).line_items[0].unit_price_cents).toBe(3125);
   });
   it('does not approve a different quote after navigation during a save', async () => {
     const pending = deferred<Response>(); setup(async () => pending.promise); const view = render(<Page />); await clickApprove();

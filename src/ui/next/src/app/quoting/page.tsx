@@ -4,6 +4,7 @@ import { isQuoteVersion } from "@/lib/quoteVersion";
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import type { QuotePayload, BusinessLineItem } from '@/lib/business-records';
+import { SyncManager } from '@/lib/sync/SyncManager';
 type EditableLineItem = BusinessLineItem & { is_optional?: boolean; service_item_id?: string | null };
 
 function QuotingContent() {
@@ -15,8 +16,23 @@ function QuotingContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [outcome, setOutcome] = useState<'idle' | 'saving' | 'approved' | 'held'>('idle');
+  const [isOffline, setIsOffline] = useState(false);
+  const [offlineAccepted, setOfflineAccepted] = useState(false);
   const [notice, setNotice] = useState('');
   const [mutationError, setMutationError] = useState('');
+
+  useEffect(() => {
+    setIsOffline(!navigator.onLine);
+    const updateOfflineStatus = () => setIsOffline(!navigator.onLine);
+    window.addEventListener('online', updateOfflineStatus);
+    window.addEventListener('offline', updateOfflineStatus);
+    window.addEventListener('omnisolo_queue_updated', updateOfflineStatus);
+    return () => {
+      window.removeEventListener('online', updateOfflineStatus);
+      window.removeEventListener('offline', updateOfflineStatus);
+      window.removeEventListener('omnisolo_queue_updated', updateOfflineStatus);
+    };
+  }, []);
   const epoch = useRef(0);
   const busy = useRef(false);
   const accepted = quoteData?.quote.status?.toUpperCase() === 'ACCEPTED';
@@ -69,10 +85,6 @@ function QuotingContent() {
         || !Number.isSafeInteger(item.quantity) || item.quantity < 1)) {
       setMutationError('Review the line-item amounts and quantities before approving.'); return;
     }
-    if (!navigator.onLine) {
-      setMutationError('A connection is required for this approval. No changes were saved or queued; your edits remain on this page.');
-      return;
-    }
     const id = quoteId;
     const current = epoch.current;
     const active = () => epoch.current === current;
@@ -83,6 +95,23 @@ function QuotingContent() {
         quantity: item.quantity, is_optional: item.is_optional || false, service_item_id: item.service_item_id ?? null })),
     };
     busy.current = true; setOutcome('saving'); setMutationError(''); setNotice('');
+
+    if (isOffline) {
+      try {
+        await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: 'update_quote', quoteId: id, payload: updatePayload, timestamp: Date.now() });
+        await SyncManager.getInstance().enqueue({ id: crypto.randomUUID(), type: 'approve_quote', quoteId: id, payload: { expected_updated_at: quoteData.quote.updated_at }, timestamp: Date.now() });
+        setOfflineAccepted(true);
+        setOutcome('approved');
+        setQuoteData(previous => previous ? { ...previous, quote: { ...previous.quote, status: 'ACCEPTED', total_amount_cents: totalAmountCents }, line_items: updatePayload.line_items as any } : previous);
+      } catch {
+        setOutcome('held');
+        setMutationError('Could not queue changes offline. Keep your edits and retry.');
+      } finally {
+        busy.current = false;
+      }
+      return;
+    }
+
     let changesSaved = false;
     try {
       const update = await fetch(`/api/v1/quotes?id=${encodeURIComponent(id)}`, {
@@ -207,7 +236,14 @@ function QuotingContent() {
               </button>
             </div>
           )}
-          {accepted && (
+          {accepted && offlineAccepted && (
+            <div className="p-6 bg-[#34C759]/10 border-t border-[#34C759]/20 text-center">
+              <div className="text-[#34C759] text-4xl mb-2">✅</div>
+              <h3 className="text-lg font-bold text-[#1D1D1F]">Proposal Accepted</h3>
+              <p className="text-gray-600 text-sm mt-1">Thank you! This quote has been approved.</p>
+            </div>
+          )}
+          {accepted && !offlineAccepted && (
             <div className="p-6 bg-[#34C759]/10 border-t border-[#34C759]/20 text-center">
               <div className="text-[#34C759] text-4xl mb-2">✅</div>
               <h3 className="text-lg font-bold text-[#1D1D1F]">Recorded quote status: ACCEPTED</h3>
