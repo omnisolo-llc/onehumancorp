@@ -1,0 +1,9 @@
+{
+  "issue_title": "Integrate Twilio WhatsApp API for Customer Messaging & Work Triage",
+  "issue_description": "Task Room REST API Blocked Finding Report:\n\nThe request to 'Integrate Twilio WhatsApp API for Customer Messaging & Work Triage' (Issue #26196) involves adding a new channel and harness adapter (Twilio/WhatsApp) to the One Human Corp repository.\n\nAccording to the OneHumanCorp operating contract and the active business-capability map in `RESEARCH.md` (revision 2026-09-18-usage-audit), integrating additional channels or harnesses requires explicit, retained-customer need, measurable value, and explicit strategy approval. Specifically, the 'Gated expansion' policy states that 'Additional channels, industry packs, accounting integrations, physical operations, HR/payroll, POS, manufacturing, marketplaces and more harnesses' require explicit expansion decisions and evidence.\n\nThe current `RESEARCH.md` does not mention Twilio or WhatsApp as an approved channel or target integration. Therefore, this issue represents an unauthorized feature expansion.\n\nThis task is classified as a [blocked finding]. No implementation will be performed, and this task is concluded as a no-work outcome.\n\nSkills loaded: `superpowers/skills/using-superpowers`, `superpowers/skills/brainstorming`, `superpowers/skills/systematic-debugging`.\nRevision: 8ca22dba9a94f28898bbce59f2537ff4d87c747d\nChecks run: Explicit code and documentation audit against `RESEARCH.md` and `docs/research/business_capability_and_usage_economics_audit.md`.\nOutcomes: Blocked finding.",
+  "issue_priority": "P0",
+  "issue_category": "research",
+  "issue_type": "blocked_finding",
+  "issue_label": "agent-report",
+  "assignees": ["automator"]
+}
