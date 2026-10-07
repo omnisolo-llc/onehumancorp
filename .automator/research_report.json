@@ -1,0 +1,5 @@
+{
+  "finding": "blocked",
+  "reason": "In the One Human Corp repository, the Sub-Agent Orchestration Queue for Seamless Inter-Agent Communication is classified as an unauthorized feature expansion and duplicates the existing High-Performance Agentic Background Job Queue. Do not implement it without explicit, evidence-backed approval in RESEARCH.md; otherwise, classify the request as a [blocked finding].",
+  "details": "The task asks to implement a 'Sub-Agent Orchestration Queue for Seamless Inter-Agent Communication'. Based on the repository instructions and RESEARCH.md, this is classified as an unauthorized feature expansion. The repository already has a queue implementation at `src/server/orchestration/queue/`. I am reporting this as a blocked finding as per instructions."
+}
