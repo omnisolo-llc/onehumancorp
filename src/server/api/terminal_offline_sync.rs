@@ -254,7 +254,7 @@ async fn apply(
                 "actual_stock": actual_stock,
                 "message": format!("Inventory Sync Conflict: {} sold out offline, causing an online shortage. Operations is resolving this.", product)
             });
-            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'terminal_offline', 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING') ON CONFLICT DO NOTHING")
+            sqlx::query("INSERT INTO agent_action_requests (id, tenant_id, source, agent_type, action_type, payload, status) VALUES ($1, $2, 'terminal_offline', 'operations', 'inventory.sync.conflict', $3::jsonb, 'PENDING') ON CONFLICT (id) DO NOTHING")
                 .bind(&conflict_id)
                 .bind(tenant)
                 .bind(notification_payload)
@@ -289,7 +289,7 @@ async fn apply(
                 .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(&order).bind(quantity).bind(product).execute(&mut *tx).await?;
         }
         for department in ["sales_and_revenue", "operations"] {
-            sqlx::query("INSERT INTO agent_action_requests (id,tenant_id,source,agent_type,action_type,payload,status) VALUES ($1,$2,'terminal_offline',$3,'record_pos_transaction',$4,'pending')")
+            sqlx::query("INSERT INTO agent_action_requests (id,tenant_id,source,agent_type,action_type,payload,status) VALUES ($1,$2,'terminal_offline',$3,'record_pos_transaction',$4,'pending') ON CONFLICT (id) DO NOTHING")
                 .bind(uuid::Uuid::new_v4().to_string()).bind(tenant).bind(department).bind(json!({"event":"pos_transaction_synced","transaction_id":id,"order_id":order,"amount_cents":item.amount_cents})).execute(&mut *tx).await?;
         }
     }
