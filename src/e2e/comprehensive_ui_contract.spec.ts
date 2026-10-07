@@ -432,7 +432,13 @@ test.describe('comprehensive UI contract', () => {
         // Check the verified final document with the same authenticated context.
         // The share-card's initial shell is not the document being audited.
         const response = await timed(route, lane, 'final-document', async progress => {
-          const response = await page.request.get(navigation.finalUrl, { failOnStatusCode: false, timeout: 5000 });
+          let response;
+          try {
+            response = await page.request.get(navigation.finalUrl, { failOnStatusCode: false, timeout: 5000 });
+          } catch (error) {
+            progress.status = 0;
+            return null;
+          }
           progress.status = response?.status() ?? 0;
           return response;
         }, documentPathFor(route, navigation.finalUrl));
@@ -518,9 +524,13 @@ test.describe('comprehensive UI contract', () => {
         if (checked.has(href)) continue;
         checked.add(href);
 
-        const response = await page.request.get(href, { failOnStatusCode: false, timeout: 5000 });
-        if (response.status() >= 400) {
-          failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
+        try {
+          const response = await page.request.get(href, { failOnStatusCode: false, timeout: 5000 });
+          if (response.status() >= 400) {
+            failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
+          }
+        } catch (error) {
+          failures.push(`${routeLabel(route)}: ${href} failed to resolve: ${String(error).split('\n')[0]}`);
         }
       }
     }
