@@ -1,0 +1,9 @@
+{
+  "finding": "blocked",
+  "reason": "The 'Integrate Twilio WhatsApp API for Customer Messaging & Work Triage' issue requests features that require a new integration/channel not backed by explicit owner metrics. In RESEARCH.md and the business capability audit, adding new verticals, channels, or marketplaces requires explicit evidence and the expansion gate. Furthermore, there is already existing WhatsApp functionality in the codebase (`api/twilio_webhook.rs` and `omnichannel_webhook.rs`), and 'unauthorized feature expansion' is mentioned in memory for similar communication expansions.",
+  "evidence": [
+    "RESEARCH.md states: 'Expand from evidence: add vertical-specific fulfillment, channels, HR/payroll, MRP or additional harnesses only when a current issue demonstrates why the reusable loop cannot satisfy the observed need.'",
+    "No evidence of validated demand in docs/research/business_capability_and_usage_economics_audit.md.",
+    "WhatsApp handling already exists in src/server/api/twilio_webhook.rs."
+  ]
+}
