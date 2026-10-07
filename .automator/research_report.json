@@ -1,0 +1,6 @@
+{
+  "finding": "blocked",
+  "reason": "Issue #26041 'The Unified Mobile Command Center for Solopreneurs' represents an unauthorized feature expansion. It proposes a unified, mobile-first feed that aggregates cross-channel data and drafts responses, which is not currently backed by evidence in RESEARCH.md. Adding new channels and a unified mobile feed requires explicit, evidence-backed approval in the RESEARCH.md priority document, which dictates keeping the existing architecture and deferring new feature epics.",
+  "issue": "26041",
+  "evidence": "RESEARCH.md explicitly suspends the earlier exclusive digital-service market strategy and instructs not to start new epics from the superseded strategy without a current-code inventory, observed owner need, and reuse analysis. 'Unified Agent Feed' type features are classified as unauthorized feature expansions."
+}
