@@ -38,8 +38,8 @@ test.describe('Autonomous Influencer and Affiliate Marketing Engine', () => {
         await expect(affiliateWidget).toBeVisible();
 
         // Check that stats are rendered correctly
-        await expect(page.locator('div:has-text("Active Affiliates")').first()).toBeVisible();
-        await expect(page.locator('div:has-text("Paid Commissions")').first()).toBeVisible();
+        await expect(page.locator('div:has-text("Active Affiliates")'.first())).toBeVisible();
+        await expect(page.locator('div:has-text("Paid Commissions")'.first())).toBeVisible();
 
         // Check "Manage Affiliates" link
         const manageLink = page.locator('a', { hasText: 'Manage Affiliates' });

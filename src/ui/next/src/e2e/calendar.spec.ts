@@ -10,7 +10,7 @@ test.describe('Calendar & Bookings', () => {
 
     // Wait for the appointments to load or show empty state
     const loadingOrContent = page.locator('text=Loading appointments...').or(page.locator('text=No upcoming appointments.')).or(page.locator('.app-card h3'));
-    await expect(loadingOrContent.first()).toBeVisible();
+    await expect(loadingOrContent).first().toBeVisible();
 
     // The component will display a loading indicator first,
     // wait until it disappears and actual data or empty text is present.

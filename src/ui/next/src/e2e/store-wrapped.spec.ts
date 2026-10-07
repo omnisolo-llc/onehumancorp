@@ -10,7 +10,7 @@ test.describe('Store Wrapped Growth Loop', () => {
         await expect(sectionHeader).toBeVisible();
 
         // Check for the "Viral Loop" badge next to the header
-        await expect(page.locator('span:has-text("Viral Loop")').first()).toBeVisible();
+        await expect(page.locator('span:has-text("Viral Loop")'.first())).toBeVisible();
 
         // Click "View Your Wrapped" button
         const getWrappedBtn = page.locator('a:has-text("View Your Wrapped 🎁")');

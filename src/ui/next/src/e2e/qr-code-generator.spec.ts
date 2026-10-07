@@ -14,7 +14,7 @@ test.describe('QR Code Generation Widget', () => {
         }
 
         // Wait for page to load
-        await expect(page.locator('h1').filter({ hasText: 'QR Code Generator' }).first()).toBeVisible();
+        await expect(page.locator('h1').filter({ hasText: 'QR Code Generator' }.first())).toBeVisible();
 
         // Check if QR code is visible
         const qrCode = page.locator('img[alt="QR Code"]').first();

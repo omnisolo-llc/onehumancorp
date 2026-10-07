@@ -37,7 +37,7 @@ test.describe('Agentic Service Booking CUJ', () => {
 
     // Verify submission success
     const heading = page.getByRole('heading', { name: /Almost there!|Booking request confirmed\./i });
-    await expect(heading.first()).toBeVisible({ timeout: 15000 });
+    await expect(heading).first().toBeVisible({ timeout: 15000 });
 
     // 2. Owner Flow. The suite's default page already carries the owner session.
     await page.goto('/feed');

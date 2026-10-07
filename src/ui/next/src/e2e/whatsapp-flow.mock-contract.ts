@@ -140,6 +140,6 @@ test.describe('WhatsApp Flow CUJ', () => {
     await page.goto('/inbox');
 
     // Check that the WhatsApp message text appears with the image markdown
-    await expect(page.getByText(/!\[Image\]\(media-12345\) Can you make a cake like this\?/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/!\[Image\]\(media-12345\) Can you make a cake like this\?/i.first())).toBeVisible({ timeout: 15000 });
   });
 });
