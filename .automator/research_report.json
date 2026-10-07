@@ -1,0 +1,4 @@
+{
+  "finding": "blocked",
+  "reason": "The 'Unified Agent Feed (Mobile MVP)' (Issue #26321) requests a replacement of the traditional complex admin dashboard with a vertical feed of Action Cards. Based on the audit and the current evidence in RESEARCH.md, creating another frontend/rewrite or replacing the static dashboard is an unauthorized feature expansion. The current codebase already has 'UnifiedAgentFeed' implementations in 'src/ui/next/src/app/dashboard/UnifiedAgentFeed.tsx' and 'src/ui/tauri/src/components/AgentFeed.tsx' that render 'Agent Feed' and agent action cards using 'AgentFeedItem'. Any new epics need an explicit evidence-backed decision in RESEARCH.md. Rebuilding all modes afresh or replacing the dashboard is not allowed. Therefore, this issue is a blocked finding."
+}
