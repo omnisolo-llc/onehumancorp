@@ -63,6 +63,7 @@ async function auditPages(pages, capture = {}) {
     } },
     './support/dashboard_audit_fixture': {},
     './support/inventory_audit': { observeInventoryAuditClick: () => { throw new Error('The read-only load audit must not dispatch stock controls'); } },
+    './support/milestone_invitation_audit': { observeMilestoneInvitationAuditClick: () => { throw new Error('The read-only load audit must not create invitations'); } },
     './support/quote_audit_fixture': { quoteAuditRoutes: new Set(quoteRoutes), prepareQuoteAudit: async (page, _baseURL, route) => {
       preparedQuotes.push(route);
       const row = await navigate(page, route);

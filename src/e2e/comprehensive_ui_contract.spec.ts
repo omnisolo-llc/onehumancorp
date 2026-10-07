@@ -12,6 +12,7 @@ import { createAuditNavigation, type AuditNavigationReceipt } from './support/ui
 import { createDashboardAuditCase, isolatedClickAuditRoutes, clickAuditStates, prepareClickAuditState } from './support/dashboard_audit_fixture';
 import { prepareQuoteAudit, quoteAuditRoutes } from './support/quote_audit_fixture';
 import { observeInventoryAuditClick } from './support/inventory_audit';
+import { observeMilestoneInvitationAuditClick } from './support/milestone_invitation_audit';
 import { assertSameClickInventory } from '../../scripts/ui-audit-fixture.cjs';
 import { runFiniteClickInventory, runDynamicClickInventory, scopeClickInventory, FINITE_CLICK_CASE_BUDGET } from '../../scripts/ui-audit-inventory.cjs';
 
@@ -235,6 +236,8 @@ async function auditClickEffectsForRoute(sourcePage: Page, route: string, audit:
             try {
               const observed = await timed('observe', () => route === '/inventory'
                 ? observeInventoryAuditClick(owned.page, target, owned.actor, () => observeClickEffects(owned.page, target))
+                : route === '/' || route === '/dashboard'
+                  ? observeMilestoneInvitationAuditClick(owned.page, target, owned.actor, () => observeClickEffects(owned.page, target))
                 : observeClickEffects(owned.page, target), candidate.label);
               audit.observations.push({ key: candidate.key, completed: true, effect: observed, error: null });
               if (!hasMeaningfulClickEffect(observed)) {

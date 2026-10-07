@@ -1,8 +1,27 @@
 import { test, expect } from './fixtures';
 import { createRecordedOrderOwner, captureRecordedOrders } from './support/recorded_order_fixture';
 import { requireLoopbackUrl } from './support/recorded_invitation';
+import { observeMilestoneInvitationAuditClick } from './support/milestone_invitation_audit';
 
 test.describe('Success Milestone Widget', () => {
+  test('the owned click audit scrolls to one real invitation and verifies its persisted record and mounted share preview', async ({ page, baseURL }) => {
+    const owner = await createRecordedOrderOwner(page, baseURL, 1);
+    const reading = captureRecordedOrders(page, owner);
+    await page.goto('/dashboard'); await reading;
+    const widget = page.getByRole('region', { name: 'Recorded order milestone', exact: true });
+    const button = widget.getByRole('button', { name: 'Create milestone invitation', exact: true });
+    await expect(button).toBeEnabled();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const target = await button.elementHandle();
+    expect(target).not.toBeNull();
+    expect(await target!.evaluate(element => element.getBoundingClientRect().top >= element.ownerDocument.defaultView!.innerHeight)).toBe(true);
+    const effect = await observeMilestoneInvitationAuditClick(page, target!, owner, async () => {
+      throw new Error('The owned milestone control must use its persisted invitation proof');
+    });
+    expect(effect.changed).toBe(true);
+    expect(effect.requestSeen).toBe(true);
+  });
+
   test('shares only the recorded owned aggregate with a confirmed link and actual clipboard acknowledgement', async ({ page, baseURL }) => {
     const owner = await createRecordedOrderOwner(page, baseURL, 101);
     const reading = captureRecordedOrders(page, owner);

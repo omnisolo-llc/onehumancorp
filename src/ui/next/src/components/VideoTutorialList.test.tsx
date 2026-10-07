@@ -3,9 +3,40 @@ import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VideoTutorialList } from './VideoTutorialList';
+import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from './TooltipRegistry';
 
 describe('VideoTutorialList', () => {
+  it.each(['pointer', 'Enter', 'Space'])('opens the exact source using a native %s control and closes through its button', async activation => {
+    const user = userEvent.setup();
+    const selected = { id: 71, title: 'Accept payments', duration: '0:45', video_url: '/owned-payment-tutorial.mp4' };
+    const { container, rerender } = render(<VideoTutorialList videos={[selected]} loading={false} />);
+    const play = screen.getByRole('button', { name: 'Play video: Accept payments' });
+    expect(play.tagName).toBe('BUTTON');
+    expect(play).toHaveAttribute('type', 'button');
+    if (activation === 'pointer') await user.click(play);
+    else {
+      await user.tab(); // Search videos.
+      await user.tab(); // The actual video control, not a synthetic DOM click.
+      expect(play).toHaveFocus();
+      await user.keyboard(activation === 'Enter' ? '{Enter}' : ' ');
+    }
+    const media = container.querySelector('video');
+    expect(media).toBeVisible();
+    expect(media).toHaveAttribute('src', selected.video_url);
+    expect(media).toHaveAttribute('controls');
+    expect(media).toHaveAttribute('autoplay');
+    // A delayed search response can update/reflow the list without discarding the chosen source.
+    rerender(<VideoTutorialList videos={[{ ...selected, id: 72, title: 'Another video', video_url: '/other.mp4' }, selected]} loading={false} />);
+    expect(container.querySelector('video')).toHaveAttribute('src', selected.video_url);
+    await user.click(screen.getByRole('button', { name: 'Close video' }));
+    expect(container.querySelector('video')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Play video: Another video' }));
+    expect(container.querySelector('video')).toHaveAttribute('src', '/other.mp4');
+    await user.click(screen.getByRole('button', { name: 'Close video' }));
+    expect(container.querySelector('video')).not.toBeInTheDocument();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

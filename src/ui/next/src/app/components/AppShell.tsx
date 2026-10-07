@@ -199,33 +199,37 @@ export function AppShell({
             {subtitle && <p className="app-subtitle">{subtitle}</p>}
           </div>
           <div className="app-topbar-right">
-            <div className="app-status-strip">
-              {statusItems.map((item) => (
-                <div key={item.label} className="app-status-item">
-                  <span className={`app-dot ${item.tone || "neutral"}`} />
-                  <span className="app-status-label">{item.label}</span>
-                  <span className="app-status-value">{item.value}</span>
-                </div>
+            <div className="app-topbar-utilities">
+              <WithTooltip id="help-btn-tooltip-appshell" defaultText="Need help? Click here to access our Help Center and tutorials.">
+                <Link id="help-center-nav-btn" href="/help" role="link" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-sm transition-all" aria-label="Help Center">
+                  <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
+                </Link>
+              </WithTooltip>
+              <LogoutButton />
+              <VoiceAssistant />
+            </div>
+            <div className="app-topbar-context">
+              <div className="app-status-strip">
+                {statusItems.map((item) => (
+                  <div key={item.label} className="app-status-item">
+                    <span className={`app-dot ${item.tone || "neutral"}`} />
+                    <span className="app-status-label">{item.label}</span>
+                    <span className="app-status-value">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+              {actions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  role={action.primary ? "button" : undefined}
+                  className={action.primary ? "app-button primary min-h-[44px]" : "app-button min-h-[44px]"}
+                >
+                  <ShellIcon name={actionIcon(action)} />
+                  {action.label}
+                </Link>
               ))}
             </div>
-            {actions.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                role={action.primary ? "button" : undefined}
-                className={action.primary ? "app-button primary min-h-[44px]" : "app-button min-h-[44px]"}
-              >
-                <ShellIcon name={actionIcon(action)} />
-                {action.label}
-              </Link>
-            ))}
-            <WithTooltip id="help-btn-tooltip-appshell" defaultText="Need help? Click here to access our Help Center and tutorials.">
-              <Link id="help-center-nav-btn" href="/help" role="link" className="app-button min-h-[44px] flex items-center justify-center aspect-square rounded-full px-3 hover:bg-black/10 dark:hover:bg-white/20 backdrop-blur-[30px] saturate-[210%] bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 shadow-sm transition-all" aria-label="Help Center">
-                <span style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>?</span>
-              </Link>
-            </WithTooltip>
-            <LogoutButton />
-            <VoiceAssistant />
           </div>
         </header>
         <main className="app-page">{children}
