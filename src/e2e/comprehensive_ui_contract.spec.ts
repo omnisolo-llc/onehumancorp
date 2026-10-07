@@ -518,9 +518,13 @@ test.describe('comprehensive UI contract', () => {
         if (checked.has(href)) continue;
         checked.add(href);
 
-        const response = await page.request.get(href, { failOnStatusCode: false });
-        if (response.status() >= 400) {
-          failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
+        try {
+          const response = await page.request.get(href, { failOnStatusCode: false });
+          if (response.status() >= 400) {
+            failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
+          }
+        } catch (e: any) {
+          failures.push(`${routeLabel(route)}: ${href} request failed: ${e.message}`);
         }
       }
     }
