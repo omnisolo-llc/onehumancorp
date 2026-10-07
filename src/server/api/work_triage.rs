@@ -246,8 +246,8 @@ pub async fn get_daily_work_handler(
                                                 let mobile_items = items.into_iter().map(|item| crate::api::agent_feed::MobileAgentFeedItem {
                                                     id: item.id,
                                                     event_source: item.event_source,
-                                                    context_payload: None,
-                                                    proposed_action: None,
+                                                    context_payload: item.context_payload.clone(),
+                                                    proposed_action: item.proposed_action.clone(),
                                                     lifecycle_state: item.lifecycle_state,
                                                     created_at: item.created_at,
                                                 }).collect();
@@ -396,8 +396,8 @@ pub async fn get_daily_work_handler(
                                                 let mobile_items = items.into_iter().map(|item| crate::api::agent_feed::MobileAgentFeedItem {
                                                     id: item.id,
                                                     event_source: item.event_source,
-                                                    context_payload: None,
-                                                    proposed_action: None,
+                                                    context_payload: item.context_payload.clone(),
+                                                    proposed_action: item.proposed_action.clone(),
                                                     lifecycle_state: item.lifecycle_state,
                                                     created_at: item.created_at,
                                                 }).collect();

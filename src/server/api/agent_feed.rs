@@ -332,8 +332,8 @@ pub async fn list_feed_items(
                     .map(|item| MobileAgentFeedItem {
                         id: item.id,
                         event_source: item.event_source,
-                        context_payload: None,
-                        proposed_action: None,
+                        context_payload: item.context_payload.clone(),
+                        proposed_action: item.proposed_action.clone(),
                         lifecycle_state: item.lifecycle_state,
                         created_at: item.created_at,
                     })
@@ -475,8 +475,8 @@ mod tests {
                 items: vec![super::MobileAgentFeedItem {
                     id: item.id,
                     event_source: item.event_source,
-                    context_payload: None,
-                    proposed_action: None,
+                    context_payload: item.context_payload.clone(),
+                    proposed_action: item.proposed_action.clone(),
                     lifecycle_state: item.lifecycle_state,
                     created_at: item.created_at,
                 }],
