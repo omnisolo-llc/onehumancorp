@@ -155,3 +155,5 @@ dummy_*
 # Reviewed, reproducible Swagger distribution; hashes and source recipe are tracked.
 !src/ui/next/public/vendor/swagger-ui/dist/swagger-ui-bundle.js
 !src/ui/next/public/vendor/swagger-ui/dist/oauth2-redirect.js
+.scratch_split/
+.scratch/
