@@ -62,7 +62,7 @@ it('load failure holds save rather than overwriting unseen private configuration
 it('clipboard denial is visible without a copied claim',async()=>{
  vi.mocked(navigator.clipboard.writeText).mockRejectedValue(new Error('denied'));render(<Page/>);await ready();
  await act(async()=>fireEvent.click(screen.getByRole('button',{name:'Copy saved private preview link'})));
- expect(screen.getByRole('alert',{name:'Private profile clipboard'})).toHaveTextContent(/Copy failed/);
+ expect(screen.getByText('Copy failed. Select the content and copy it manually.')).toBeInTheDocument();
  expect(screen.queryByText('Copied private preview link')).not.toBeInTheDocument();
 });
 it('repeated same-view save clicks dispatch only one captured update',async()=>{
