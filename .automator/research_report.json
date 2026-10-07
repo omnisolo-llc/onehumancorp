@@ -1,0 +1,9 @@
+{
+  "issue_title": "[research] Autonomous AI-Driven Dynamic Pricing Engine",
+  "issue_description": "The AI-Driven Dynamic Pricing Engine research request (#24048) requires implementing an autonomous pricing feature based on inventory, booking state, and market demand. However, the `RESEARCH.md` document and repository memory instructions explicitly classify this type of dynamic pricing or yield management engine as an unauthorized feature expansion without explicit, evidence-backed approval. There is no such approval present. Therefore, this task is blocked.",
+  "issue_priority": "P1",
+  "issue_category": "research",
+  "issue_type": "blocked finding",
+  "issue_label": "blocked",
+  "assignees": ["Echo"]
+}
