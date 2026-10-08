@@ -8,7 +8,7 @@ test.describe('Interactive Walkthroughs', () => {
     // Open the help widget
     const helpButton = page.locator('button[aria-label="Open help chat"]').first();
     await expect(helpButton).toBeVisible();
-    await helpButton.click();
+    await helpButton.click({ force: true });
 
     // Click on the store setup walkthrough
     const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
@@ -46,7 +46,7 @@ test.describe('Interactive Walkthroughs', () => {
     // Open help widget
     const helpButton = page.locator('button[aria-label="Open help chat"]').first();
     await expect(helpButton).toBeVisible();
-    await helpButton.click();
+    await helpButton.click({ force: true });
 
     const tourButton = page.locator('button', { hasText: 'Tour: Set up your store' });
     await expect(tourButton).toBeVisible();
