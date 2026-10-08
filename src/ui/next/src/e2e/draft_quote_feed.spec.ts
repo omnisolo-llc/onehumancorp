@@ -91,7 +91,7 @@ test.describe('Quote Draft Feed UI', () => {
       proposed_action: payload, dispatch: { status: 'PENDING' } });
     expect(receipt.dispatch.job_id).toMatch(/^[0-9a-f-]{36}$/);
     const jobId = receipt.dispatch.job_id as string;
-    await expect(page.getByRole('status', { name: 'Decision status', exact: true })).toHaveText(approvalNotice);
+    await expect(page.getByRole('status', { name: 'Decision status', exact: true }).first()).toHaveText(approvalNotice);
     await expect(card).toHaveCount(0);
 
     const readDecision = async () => {

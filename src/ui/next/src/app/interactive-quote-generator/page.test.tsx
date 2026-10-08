@@ -9,23 +9,32 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
+// Provide act wrapper explicitly just in case.
+import { act } from 'react';
+
 describe('InteractiveQuoteGeneratorPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('renders correctly', () => {
-    render(<InteractiveQuoteGeneratorPage />);
+  it('renders correctly', async () => {
+    await act(async () => {
+      render(<InteractiveQuoteGeneratorPage />);
+    });
     expect(screen.getByText('Interactive Quote Generator 🧮')).toBeDefined();
     expect(screen.getByText('Widget Settings')).toBeDefined();
     expect(screen.getByText('Live Preview')).toBeDefined();
   });
 
-  it('updates preview when inputs change', () => {
-    render(<InteractiveQuoteGeneratorPage />);
+  it('updates preview when inputs change', async () => {
+    await act(async () => {
+      render(<InteractiveQuoteGeneratorPage />);
+    });
 
     const titleInput = screen.getByPlaceholderText('e.g. Custom Cake Design');
-    fireEvent.change(titleInput, { target: { value: 'Landscaping Service' } });
+    await act(async () => {
+      fireEvent.change(titleInput, { target: { value: 'Landscaping Service' } });
+    });
 
     // Check if the preview updates
     const textElements = screen.getAllByText('Landscaping Service Quote');
