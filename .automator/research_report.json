@@ -1,9 +1,0 @@
-{
-  "issue_title": "Implement Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture",
-  "issue_description": "The 'Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture' (Issue #27416) is classified as an unauthorized feature expansion based on the guidelines in RESEARCH.md. The repository instructions explicitly state that new verticals, POS engines, and harnesses require evidence and an expansion gate in RESEARCH.md. The current product focus is on a single digital service loop (e.g. web/design/marketing) and explicit POS / retail operations are deferred until core loop verification. Therefore, this request is blocked.",
-  "issue_priority": "P1",
-  "issue_category": "feature",
-  "issue_type": "blocked_finding",
-  "issue_label": "blocked",
-  "assignees": ["Echo"]
-}
