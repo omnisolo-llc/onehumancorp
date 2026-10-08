@@ -161,7 +161,7 @@ async function auditInteractivePurposeForRoute(page: Page, route: string) {
     }),
   );
 
-  const failures: string[] = [];
+    const failures: string[] = [];
   for (const result of results) {
     const target = `${route}: ${result.tag}${result.type ? `[type=${result.type}]` : ''} #${result.index + 1}`;
     if (!result.disabled && !result.purpose) {
