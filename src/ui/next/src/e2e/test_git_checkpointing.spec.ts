@@ -11,9 +11,11 @@ test.describe('Agent Protocol Git Checkpointing', () => {
     await expect(page.getByRole('heading', { name: 'Agent Protocol UI', exact: true })).toBeVisible();
     await expect(page.getByText('No tasks found.', { exact: true })).toHaveCount(0);
     const pending = page.waitForResponse(response => {
-      const url = new URL(response.url());
-      return url.pathname === protocolPath && url.searchParams.get('method') === 'ap_list_tasks'
-        && response.request().method() === 'GET';
+      try {
+        const url = new URL(response.url());
+        return url.pathname === protocolPath && url.searchParams.get('method') === 'ap_list_tasks'
+          && response.request().method() === 'GET';
+      } catch { return false; }
     });
     await page.getByRole('button', { name: 'Load workspace runtime tasks' }).click();
     const response = await pending;
@@ -32,8 +34,12 @@ test.describe('Agent Protocol Git Checkpointing', () => {
     await expect(page.getByRole('heading', { name: 'Agent Protocol UI', exact: true })).toBeVisible();
     const taskInput = `Real E2E Checkpointing Test ${crypto.randomUUID()}`;
     await page.getByPlaceholder('New Task Input...').fill(taskInput);
-    const created = page.waitForResponse(response => new URL(response.url()).pathname === protocolPath
-      && response.request().method() === 'POST' && response.request().postDataJSON()?.method === 'ap_create_task');
+    const created = page.waitForResponse(response => {
+      try {
+        return new URL(response.url()).pathname === protocolPath
+          && response.request().method() === 'POST' && response.request().postDataJSON()?.method === 'ap_create_task';
+      } catch { return false; }
+    });
     await page.getByRole('button', { name: 'Create', exact: true }).click();
     const creation = await created;
     expect(creation.status()).toBe(200);
@@ -48,8 +54,12 @@ test.describe('Agent Protocol Git Checkpointing', () => {
     await taskItem.click();
 
     await page.getByPlaceholder('Optional Step Input...').fill('Please execute step to generate a checkpoint');
-    const executed = page.waitForResponse(response => new URL(response.url()).pathname === protocolPath
-      && response.request().method() === 'POST' && response.request().postDataJSON()?.method === 'ap_execute_step');
+    const executed = page.waitForResponse(response => {
+      try {
+        return new URL(response.url()).pathname === protocolPath
+          && response.request().method() === 'POST' && response.request().postDataJSON()?.method === 'ap_execute_step';
+      } catch { return false; }
+    });
     await page.getByRole('button', { name: 'Execute Step' }).click();
     const execution = await executed;
     expect(execution.status()).toBe(200);
@@ -67,8 +77,12 @@ test.describe('Agent Protocol Git Checkpointing', () => {
     const restore = page.getByRole('button', { name: 'Restore Checkpoint' }).first();
     await expect(restore).toBeEnabled({ timeout: 30_000 });
     await expect(page.getByText('No checkpoints saved.', { exact: true })).toHaveCount(0);
-    const restored = page.waitForResponse(response => new URL(response.url()).pathname === protocolPath
-      && response.request().method() === 'POST' && response.request().postDataJSON()?.method === 'ap_restore_checkpoint');
+    const restored = page.waitForResponse(response => {
+      try {
+        return new URL(response.url()).pathname === protocolPath
+          && response.request().method() === 'POST' && response.request().postDataJSON()?.method === 'ap_restore_checkpoint';
+      } catch { return false; }
+    });
     await restore.click();
     const restoration = await restored;
     const submitted = restoration.request().postDataJSON();

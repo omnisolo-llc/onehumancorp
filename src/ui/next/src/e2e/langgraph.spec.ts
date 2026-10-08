@@ -34,7 +34,11 @@ test.describe('LangGraph State Machine', () => {
     await page.locator('a[href="/langgraph"]').click();
     const prompt = 'Use the Bash tool to execute "echo hello". Then confirm you have done so.';
     await page.locator('#message').fill(prompt);
-    const execution = page.waitForResponse(response => new URL(response.url()).pathname === '/api/v1/agents/langgraph' && response.request().method() === 'POST');
+    const execution = page.waitForResponse(response => {
+      try {
+        return new URL(response.url()).pathname === '/api/v1/agents/langgraph' && response.request().method() === 'POST';
+      } catch { return false; }
+    });
     await page.getByRole('button', { name: 'Run LangGraph' }).click();
     await expectRuntimeUnavailable(await execution);
     await expect(page.getByTestId('error-message')).toContainText(runtimeUnavailableMessage);
