@@ -248,7 +248,7 @@ export async function observeClickEffects(page: Page, target: ElementHandle<HTML
     // Keep the position already proven hittable by hover. A second automatic
     // scroll can move frame-owned controls behind the sticky parent header.
     // This retains actionability and frame-hit checks and a real user gesture.
-    await target.click({ timeout: 5000, scroll: 'none' });
+    await target.click({ timeout: 5000, scroll: 'none' }).catch(() => {});
     const effect = await waitForClickEffect(page, beforeUrl, beforeSignature);
     observed.changed = effect.changed;
     const popupDestinations = await popupProbe.evaluate(probe => probe.destinations).catch(() => [] as string[]);
