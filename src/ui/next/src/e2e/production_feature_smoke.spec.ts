@@ -105,6 +105,10 @@ test("all application pages render through the real authenticated service", asyn
       }
       // The root route also redirects here; retain that document until its
       // owned savings response is verified before the next navigation.
+      if (route === '/share-card') {
+        const destination = new URL('/onboarding', response.url()).href;
+        await page.waitForURL(destination, { waitUntil: 'load' });
+      }
       if (new URL(response.url()).pathname === '/dashboard') {
         const savings = page.getByRole('region', { name: 'Recorded time savings' });
         await expect(savings.getByRole('heading', { name: 'Recorded time savings' })).toBeVisible();
