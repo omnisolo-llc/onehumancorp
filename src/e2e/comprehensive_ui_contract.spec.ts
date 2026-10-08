@@ -527,9 +527,9 @@ test.describe('comprehensive UI contract', () => {
             status = response.status();
             success = true;
             break;
-          } catch (e: any) {
-            lastError = e;
-            if (e.message && e.message.includes('ECONNRESET')) {
+          } catch (e: unknown) {
+            lastError = e as Error;
+            if ((e as Error).message && (e as Error).message.includes('ECONNRESET')) {
               await new Promise(resolve => setTimeout(resolve, 1000));
             } else {
               throw e;
