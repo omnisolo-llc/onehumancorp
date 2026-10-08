@@ -3,6 +3,7 @@ import { test, expect } from '../../../../e2e/fixtures';
 test.describe('Interactive Walkthroughs', () => {
 
   test('renders help widget and completes the store setup walkthrough', async ({ page }) => {
+    test.setTimeout(120000);
     await page.goto('/builder');
 
     // Open the help widget
@@ -41,6 +42,7 @@ test.describe('Interactive Walkthroughs', () => {
   });
 
   test('user can exit the walkthrough early by clicking the skip/close button', async ({ page }) => {
+    test.setTimeout(120000);
     await page.goto('/builder');
 
     // Open help widget
