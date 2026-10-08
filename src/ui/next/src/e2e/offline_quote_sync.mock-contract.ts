@@ -23,14 +23,14 @@ test.describe('Offline-First AI Sync Mesh - Quote Creation', () => {
     await page.evaluate(async () => {
        const request = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
        request.onupgradeneeded = (e) => {
-           // @ts-ignore
+           // @ts-expect-error required
            const db = e.target.result;
            if (!db.objectStoreNames.contains('actions')) {
                db.createObjectStore('actions', { keyPath: 'id' });
            }
        };
        request.onsuccess = (e) => {
-           // @ts-ignore
+           // @ts-expect-error required
            const db = e.target.result;
            const tx = db.transaction(['actions'], 'readwrite');
            const store = tx.objectStore('actions');
@@ -49,14 +49,14 @@ test.describe('Offline-First AI Sync Mesh - Quote Creation', () => {
         return new Promise((resolve) => {
            const request = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
            request.onsuccess = (e) => {
-               // @ts-ignore
+               // @ts-expect-error required
                const db = e.target.result;
                try {
                    const tx = db.transaction(['actions'], 'readonly');
                    const store = tx.objectStore('actions');
                    const getAll = store.getAll();
                    getAll.onsuccess = () => resolve(getAll.result.length);
-               } catch (e) {
+               } catch {
                    resolve(0);
                }
            };
