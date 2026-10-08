@@ -33,8 +33,8 @@ test.describe('Automated Cart Recovery Focused UI Contract', () => {
     await page.goto('/unified-feed');
 
     // Wait for the feed item to load and assert contract UI rendering
-    await expect(page.getByText('abandoned cart')).first().toBeVisible({ timeout: 15000 });
-    await expect(page.getByText('Hi Alice, noticed you left something in your cart!')).first().toBeVisible();
+    await expect(page.getByText('abandoned cart').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Hi Alice, noticed you left something in your cart!').first()).toBeVisible();
     await expect(page.getByTestId('approve-run-sale').or(page.getByTestId('feed-approve-btn'))).toBeVisible();
   });
 });
