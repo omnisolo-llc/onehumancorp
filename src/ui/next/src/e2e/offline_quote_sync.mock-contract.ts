@@ -17,7 +17,7 @@ test.describe('Offline-First AI Sync Mesh - Quote Creation', () => {
     });
 
     // Check offline indicator
-    await expect(page.getByText('Offline - Changes saved locally').first()).toBeVisible({ timeout: 10000 }).catch(() => {});
+    await expect(page.getByText('Offline - Changes saved locally')).toBeVisible({ timeout: 10000 }).catch(() => {});
 
     // Mock queue interaction via the application's native queue storage mechanism
     await page.evaluate(async () => {
