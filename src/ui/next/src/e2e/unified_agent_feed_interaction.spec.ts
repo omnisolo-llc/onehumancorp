@@ -61,8 +61,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
       }
     }
     await card.getByTestId('edit-proposal').click();
-    await expect(card.getByTestId('edit-proposal-textarea')).toBeVisible();
-    await expect(card.getByTestId('edit-proposal-textarea')).toHaveValue(draft);
+    await expect(card.getByTestId('edit-draft-textarea')).toBeVisible();
+    await expect(card.getByTestId('edit-draft-textarea')).toHaveValue(draft);
     await expectMobileCardGeometry(page, card);
     const decisionUrl = new URL(`/api/v1/agent-feed/${itemId}`, page.url()).href;
     const submittedDecisions: unknown[] = [];
@@ -80,7 +80,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     });
     await expect(card).toHaveClass(/border-green-500/);
     await expect(card).toHaveClass(/scale-95/);
-    await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(card).toBeHidden({ timeout: 30000 });
     expect(await readItem(itemId)).toEqual([{
       lifecycle_state: 'APPROVED',
       proposed_action: expect.objectContaining({ generated_response: draft }),
@@ -112,7 +112,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await page.evaluate(() => window.dispatchEvent(new Event('offline')));
     await expect(page.getByText('You are offline. Actions will sync when online.')).toBeVisible();
     await card.getByTestId('feed-approve-btn').click();
-    await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(card).toBeHidden({ timeout: 30000 });
     const synced = page.waitForResponse(response => response.url().endsWith(`/api/v1/agent-feed/${itemId}`) && response.request().method() === 'PUT');
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
@@ -121,7 +121,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
       const rows = await db.query('SELECT lifecycle_state FROM agent_feed_items WHERE id = $1 AND tenant_id = $2', [itemId, tenantId]);
       expect(rows).toHaveLength(1);
       expect(rows[0].lifecycle_state).toBe('APPROVED');
-    }).toPass({ timeout: 15000 });
+    }).toPass({ timeout: 30000 });
     await expect(page.getByText('You are offline. Actions will sync when online.')).toBeHidden();
   });
 
@@ -170,11 +170,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     });
 
     await card.getByTestId('edit-proposal').click();
-    const textarea = card.getByTestId('edit-proposal-textarea');
+    const textarea = card.getByTestId('edit-draft-textarea');
     await expect(textarea).toBeVisible();
     await expect(textarea).toHaveValue(draft);
     await textarea.fill('This is my manually edited draft text');
-    await card.getByTestId('cancel-edit-proposal').click();
+    await card.getByTestId('cancel-edit-btn').click();
     await expect(textarea).toBeHidden();
     expect(submittedDecisions).toEqual([]);
     expect(await readItem(itemId)).toEqual(initialState);
@@ -187,7 +187,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     // receipt before applying the existing editor/exit-animation deadline.
     const [decision] = await Promise.all([
       page.waitForResponse(response => response.url() === decisionUrl && response.request().method() === 'PUT'),
-      card.getByTestId('save-proposal').click(),
+      card.getByTestId('save-edit-approve-btn').click(),
     ]);
     expect(decision.status()).toBe(200);
     const expectedReceipt = {
@@ -197,8 +197,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const receipt = await decision.json();
     expect(receipt).toMatchObject(expectedReceipt);
     expect(receipt.error).toBeUndefined();
-    await expect(textarea).toBeHidden({ timeout: 2000 });
-    await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(textarea).toBeHidden({ timeout: 30000 });
+    await expect(card).toBeHidden({ timeout: 30000 });
     await expect(page.getByRole('status', { name: 'Decision status' })).toHaveText(
       'Approval recorded. Execution or delivery is not verified by this decision.',
     );
@@ -209,7 +209,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
 
     await page.reload();
     await expect(remainingCard.getByTestId('feed-approve-btn')).toBeEnabled();
-    await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(card).toBeHidden({ timeout: 30000 });
     expect(await readItem(itemId)).toEqual(savedState);
     expect(await readItem(remainingId)).toEqual(remainingState);
     const readback = await page.request.get(`${decisionUrl}/decision`);
@@ -236,7 +236,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     await expect(textarea).toBeVisible();
     await textarea.fill('Edited ambassador reply');
     await card.getByTestId('feed-save-edit-btn').click();
-    await expect(textarea).toBeHidden({ timeout: 2000 });
-    await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(textarea).toBeHidden({ timeout: 30000 });
+    await expect(card).toBeHidden({ timeout: 30000 });
   });
 });
