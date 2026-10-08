@@ -1,0 +1,5 @@
+{
+  "finding": "blocked",
+  "reason": "The 'Implement Centralized Inventory & Distributed POS Architecture' feature (Issue #25504) is classified as an unauthorized feature expansion. It requests implementation of a multi-channel inventory sync and POS architecture using Redis Redlock and PostgreSQL, which expands into POS and physical retail operations without explicit, evidence-backed approval in RESEARCH.md.",
+  "issue": "25504"
+}
