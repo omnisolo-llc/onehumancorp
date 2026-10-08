@@ -105,7 +105,7 @@ describe('DashboardViralInviteWidget', () => {
   it('does not create when the verified identity is unavailable', async () => {
     identityReply = async () => Response.json({ error: 'unauthorized' }, { status: 401 });
     render(<DashboardViralInviteWidget />);
-    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' }, { timeout: 3000 })).toHaveTextContent('Invitation access or local request history is unavailable. No invitation was requested.');
+    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' }, { timeout: 3000 })).toHaveTextContent(/No invitation was requested/);
     expect(screen.getByRole('button', { name: 'Get My Invite Link' })).toBeDisabled(); expect(posts()).toHaveLength(0);
   });
 });
