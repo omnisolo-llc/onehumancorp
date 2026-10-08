@@ -505,7 +505,7 @@ test.describe('comprehensive UI contract', () => {
             if (anchor.closest('[aria-hidden="true"]')) return false;
             return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
           })
-          .map((anchor) => ({ href: (anchor as HTMLAnchorElement).getAttribute('href') || '', baseUrl: anchor.ownerDocument.location.href })),
+          .map((anchor: Element) => ({ href: (anchor as HTMLAnchorElement).getAttribute('href') || '', baseUrl: anchor.ownerDocument.location.href })),
       );
 
       for (const rawHref of hrefs) {
@@ -545,7 +545,7 @@ test.describe('comprehensive UI contract', () => {
             if (anchor.closest('[aria-hidden="true"]')) return false;
             return style.visibility !== 'hidden' && style.display !== 'none' && style.opacity !== '0' && rect.width > 0 && rect.height > 0;
           })
-          .map((anchor, index) => ({
+          .map((anchor: Element, index: number) => ({
             index,
             href: (anchor as HTMLAnchorElement).getAttribute('href') || '',
             embedded: anchor.ownerDocument !== document,
