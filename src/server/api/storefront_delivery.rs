@@ -472,9 +472,7 @@ fn set_storefront_headers(
 
     response.headers_mut().insert(
         axum::http::header::CACHE_CONTROL,
-        "public, s-maxage=60, stale-while-revalidate=86400"
-            .parse()
-            .unwrap(),
+        "private, no-store".parse().unwrap(),
     );
 }
 
@@ -502,10 +500,7 @@ mod tests {
             response.headers()["Surrogate-Key"],
             format!("tenant-id:{tenant} catalog:published")
         );
-        assert_eq!(
-            response.headers()[CACHE_CONTROL],
-            "public, s-maxage=60, stale-while-revalidate=86400"
-        );
+        assert_eq!(response.headers()[CACHE_CONTROL], "private, no-store");
         let expected = format!("\"{:x}\"", Sha256::digest(b"<h1>Store</h1>"));
         assert_eq!(response.headers()["ETag"], expected);
         let previous = response.headers()["ETag"].clone();
