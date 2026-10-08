@@ -242,6 +242,37 @@ class CheckChangesTests(unittest.TestCase):
         git(self.source, 'push', '-q', 'origin', 'main')
         self.assert_classification(tested, event='push', before=before)
 
+    def test_pr_head_change_absorbed_by_base_is_not_markdown_only(self):
+        # PR 41700 regression: feature branch modified code, but base branch
+        # already had the same change before the PR merge commit was created.
+        git(self.source, 'checkout', '-q', '-b', 'feature-absorbed', self.pivot)
+        (self.source / 'source.rs').write_text('pub fn absorbed() {}\n')
+        self.commit('feature code change')
+        # Base branch applies the identical change too:
+        git(self.source, 'checkout', '-q', 'main')
+        (self.source / 'source.rs').write_text('pub fn absorbed() {}\n')
+        self.commit('base absorbed code change')
+        git(self.source, 'push', '-q', 'origin', 'main')
+        git(self.source, 'merge', '-q', '--no-ff', 'feature-absorbed', '-m', 'merge absorbed PR')
+        tested = self.sha()
+        git(self.source, 'push', '-q', 'origin', f'{tested}:refs/pull/8/merge')
+        shallow = self.checkout(tested)
+        actual, stdout, _ = self.run_check(shallow, tested, event='pull_request')
+        self.assertEqual(actual, 'false')
+        self.assertIn('source.rs', stdout)
+
+    def test_empty_diff_is_not_markdown_only(self):
+        # When no files changed at all, the run must NOT be treated as markdown-only.
+        git(self.source, 'checkout', '-q', '-b', 'feature-empty', self.base)
+        head = self.commit('empty commit')
+        git(self.source, 'checkout', '-q', 'main')
+        git(self.source, 'merge', '-q', '--no-ff', 'feature-empty', '-m', 'merge empty PR')
+        tested = self.sha()
+        git(self.source, 'push', '-q', 'origin', f'{tested}:refs/pull/9/merge')
+        shallow = self.checkout(tested)
+        actual, stdout, _ = self.run_check(shallow, tested, event='pull_request')
+        self.assertEqual(actual, 'false')
+
     def test_missing_tested_revision_and_checkout_mismatch_fail_conservatively(self):
         tested = self.sha()
         client = self.checkout(tested)

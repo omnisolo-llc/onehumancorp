@@ -106,7 +106,7 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
     expect((await request.get(storefrontPath)).status()).toBe(404);
     const first = await page.request.get(storefrontPath);
     expect(first.status()).toBe(200);
-    expect(first.headers()['cache-control']).toContain('public, s-maxage=60, stale-while-revalidate=86400');
+    expect(first.headers()['cache-control']).toContain('private, no-store');
     expect(first.headers()['x-cache']).toBeUndefined();
     expect(productSchema(await first.text())).toMatchObject({ '@type': 'Product', name: productName, offers: { price: 50, priceCurrency: 'USD' } });
     const initialSeo = (await persistedProduct()).seo_schema_json as SiteSnapshot['pages'][number]['seo_metadata'];
@@ -119,7 +119,7 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
     const publicPath = published.receipt.public_path as string;
     const publicResponse = await anonymousPage.request.get(publicPath);
     expect(publicResponse.status()).toBe(200);
-    expect(publicResponse.headers()['cache-control']).toContain('public, s-maxage=60, stale-while-revalidate=86400');
+    expect(publicResponse.headers()['cache-control']).toContain('no-store');
     expect(publicResponse.headers()['etag']).toBeTruthy();
     const publicHtml = await publicResponse.text();
     expect(productSchema(publicHtml)).toMatchObject({ '@type': 'Product', name: productName, offers: { price: 50, priceCurrency: 'USD' } });
@@ -150,7 +150,7 @@ test.describe('Universal Edge-Cached Dynamic Storefront & Agentic SEO Pre-render
     await expect(page.getByText('$45.00', { exact: true })).toBeVisible();
     const invalidated = await page.request.get(storefrontPath);
     expect(invalidated.status()).toBe(200);
-    expect(invalidated.headers()['cache-control']).toContain('public, s-maxage=60, stale-while-revalidate=86400');
+    expect(invalidated.headers()['cache-control']).toContain('private, no-store');
     expect(invalidated.headers()['x-cache']).toBeUndefined();
 
     await expect.poll(async () => {

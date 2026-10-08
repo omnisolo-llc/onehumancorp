@@ -94,6 +94,14 @@ jobs:
               full_run 'PR comparison history is unavailable'
             fi
             changed_files=$(git diff --name-only "refs/remotes/origin/$CI_BASE_REF...$CI_TESTED_SHA") || full_run 'PR comparison failed'
+            # If the tested commit is a merge commit, also inspect the PR head commit (parent 2).
+            # If the PR head branch modified code files that happen to be identical to or absorbed by base,
+            # comparing only base...merge can yield an empty diff and erroneously skip tests.
+            pr_head=$(git rev-parse --verify -q "$CI_TESTED_SHA^2" 2>/dev/null || true)
+            if [[ -n "$pr_head" ]]; then
+              pr_head_files=$(git diff --name-only "refs/remotes/origin/$CI_BASE_REF...$pr_head" 2>/dev/null || true)
+              changed_files=$(printf '%s\n%s\n' "$changed_files" "$pr_head_files" | sort -u | sed '/^$/d')
+            fi
           else
             if [[ ! "$CI_BEFORE_SHA" =~ ^[0-9a-f]{40}$ || "$CI_BEFORE_SHA" == 0000000000000000000000000000000000000000 ]]; then
               full_run 'push before revision is unavailable'
@@ -109,6 +117,10 @@ jobs:
 
           echo "Changed files:"
           echo "$changed_files"
+
+          if [ -z "$changed_files" ]; then
+            full_run 'no changed files detected'
+          fi
 
           non_md_files=$(echo "$changed_files" | grep -v '\.md$' | grep -v '^$' || true)
 

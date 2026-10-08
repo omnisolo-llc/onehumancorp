@@ -2745,11 +2745,13 @@ export const AgentActionCard: React.FC<AgentActionCardProps> = ({ approval, queu
                 data-testid="save-proposal"
                 disabled={loadingAction !== null}
               >
-                {isActionLoading("approve") ? (
-                  <span className="animate-pulse">Loading...</span>
-                ) : (
-                  "Save & Approve"
-                )}
+                <span data-testid="save-edit-approve-btn">
+                  {isActionLoading("approve") ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : (
+                    "Save & Approve"
+                  )}
+                </span>
               </button>
               <button
                 onClick={async () => {

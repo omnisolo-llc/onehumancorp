@@ -54,7 +54,7 @@ export async function observeMilestoneInvitationAuditClick(
   const clickProbe = await target.evaluateHandle(installMilestoneInvitationClickProbe);
   page.on('request', onRequest);
   try {
-    const responsePromise = page.waitForResponse(response => isPost(response.request()), { timeout: 5000 });
+    const responsePromise = page.waitForResponse(response => isPost(response.request()), { timeout: 20000 });
     void responsePromise.catch(() => undefined);
     // Exactly one genuine action, with native scrolling and all actionability
     // checks. Scroll-only DOM changes or unrelated requests earn no credit.

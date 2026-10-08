@@ -10,6 +10,7 @@ const DEFAULT_REQUEST_LIMIT_BYTES = 1_048_576;
 const DEFAULT_RESPONSE_LIMIT_BYTES = 2_097_152;
 const ALLOWED_METHODS = new Set(["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE"]);
 const SAFE_RESPONSE_HEADERS = new Set([
+  "cache-control",
   "content-disposition",
   "content-type",
   "etag",
