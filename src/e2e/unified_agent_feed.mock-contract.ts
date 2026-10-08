@@ -65,7 +65,7 @@ test.describe("Unified Agent Feed Mobile UX", () => {
     await expect(igCard).toBeVisible({ timeout: 15000 });
 
     const parent = igCard.locator('..').locator('..');
-    const approveBtn = parent.locator('button[data-testid="approve-instagram-dm"]').first();
+    const approveBtn = parent.locator('button[data-testid="feed-approve-btn"]').first();
     await expect(approveBtn).toBeVisible({ timeout: 15000 });
     await approveBtn.click();
 
