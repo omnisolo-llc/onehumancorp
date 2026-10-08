@@ -527,7 +527,7 @@ test.describe('comprehensive UI contract', () => {
             status = response.status();
             success = true;
             break;
-          } catch (e: any) {
+          } catch (e: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
             lastError = e;
             if (e.message && e.message.includes('ECONNRESET')) {
               await new Promise(resolve => setTimeout(resolve, 1000));
