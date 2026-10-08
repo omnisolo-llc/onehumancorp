@@ -60,7 +60,7 @@ test.describe('Dashboard Triage Action Feed Edit UI', () => {
         await expect(itemCard).not.toBeVisible({ timeout: 5000 });
     } else {
         // Just approve if textarea is missing in this view
-        const approveButton = page.locator('button[data-testid="feed-approve-btn"]').first();
+        const approveButton = page.locator('button[data-testid="approve-instagram-dm"]').first();
         if (await approveButton.isVisible()) {
             await approveButton.click();
             await expect(itemCard).not.toBeVisible({ timeout: 5000 });
