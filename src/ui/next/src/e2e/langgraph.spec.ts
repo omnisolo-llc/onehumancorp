@@ -22,10 +22,10 @@ test.describe('LangGraph State Machine', () => {
     await page.click('button:has-text("Run LangGraph")');
 
     // Verify that the success message appears
-    await expect(page.locator('h2:has-text("LangGraph Output")')).toBeVisible({ timeout: 120000 });
+    await expect(page.locator('h2:has-text("LangGraph Output")').first()).toBeVisible({ timeout: 120000 });
 
     // Verify the text content indicates that the tool was actually used and completed
-    const resultText = await page.locator('pre').textContent();
+    const resultText = await page.locator('pre').first().textContent();
     expect(resultText?.toLowerCase()).toContain('hello');
   });
   test('unconfigured runtime retains the LangGraph prompt without claiming tool execution', async ({ page }) => {
