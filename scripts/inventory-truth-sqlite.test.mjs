@@ -29,14 +29,14 @@ with tempfile.TemporaryDirectory() as directory:
  assert db.execute('SELECT count(*) FROM products').fetchone()[0]==1
  db.rollback()
  assert update(new=0)==1
- db.execute(sql('INSERT_RECEIPT'),('a','mutation','owned','request','{"stock":0}'))
+ db.execute(sql('INSERT_RECEIPT'),{'1':'a','2':'mutation','3':'owned','4':'request','5':'{"stock":0}'})
  db.commit();db.close()
  db=sqlite3.connect(path)
  assert db.execute('SELECT inventory_count,is_sold_out FROM products').fetchone()==(0,1)
  assert db.execute('SELECT receipt_json FROM inventory_adjustment_receipts').fetchone()[0]=='{"stock":0}'
  try:
   assert update(old=0,new=1)==1
-  db.execute(sql('INSERT_RECEIPT'),('a','mutation','owned','changed','{}'))
+  db.execute(sql('INSERT_RECEIPT'),{'1':'a','2':'mutation','3':'owned','4':'changed','5':'{}'})
   db.commit()
   raise AssertionError('duplicate identity must fail')
  except sqlite3.IntegrityError: db.rollback()
