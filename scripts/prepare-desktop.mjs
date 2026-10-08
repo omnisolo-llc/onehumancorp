@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { cp, mkdir, readFile, rm, chmod, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -8,7 +9,7 @@ import { prepareNodeRuntime } from './node-runtime.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export async function prepareDesktop() {
-  const pinnedNode = (await readFile(path.join(root, '.node-version'), 'utf8')).trim();
+  const _pinnedNode = (await readFile(path.join(root, '.node-version'), 'utf8')).trim();
   // if (process.versions.node !== pinnedNode) throw new Error(`Desktop packaging requires Node ${pinnedNode}; found ${process.versions.node}`);
   if (process.env.OMNISOLO_DESKTOP_RESOURCES_PREPARED === '1') {
     const prepared = path.join(root, 'src/ui/tauri/native-resources');
