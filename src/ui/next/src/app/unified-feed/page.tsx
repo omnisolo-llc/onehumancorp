@@ -14,6 +14,7 @@ interface WorkItem {
 interface AgentDraft {
   id: string;
   response: string;
+  description?: string;
   status: string;
   action_type?: string;
 }
@@ -93,6 +94,7 @@ export default function UnifiedFeed() {
                   raw.proposed_action.draft_reply ||
                   raw.proposed_action.summary ||
                   JSON.stringify(raw.proposed_action),
+                description: raw.proposed_action.description,
                 status: "draft",
                 action_type:
                   raw.proposed_action.action_type ||
@@ -190,8 +192,10 @@ export default function UnifiedFeed() {
               key={item.workItem.id}
               className="w-full glassmorphism bg-[rgba(255,255,255,0.65)] dark:bg-[rgba(22,22,26,0.7)] backdrop-blur-[30px] backdrop-saturate-[210%] border border-[rgba(255,255,255,0.4)] dark:border-[rgba(255,255,255,0.1)] rounded-[16px] shadow-sm overflow-hidden transition-all duration-300"
               style={{ backdropFilter: 'blur(30px) saturate(210%)' }}
-              data-testid={`triage-card-${item.workItem.id}`}
+              data-testid="agent-feed-card"
+              id={`triage-card-${item.workItem.id}`}
             >
+              <div data-testid={`triage-card-${item.workItem.id}`} className="contents">
               <div
                 className="p-4 pb-3 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center cursor-pointer"
                 onClick={() => {
@@ -220,6 +224,8 @@ export default function UnifiedFeed() {
                   {item.workItem.payload?.msg ||
                     item.workItem.payload?.text ||
                     item.workItem.payload?.description ||
+                    item.workItem.payload?.title ||
+                    item.draft?.description ||
                     JSON.stringify(item.workItem.payload)}
                 </p>
               </div>
@@ -282,7 +288,8 @@ export default function UnifiedFeed() {
                           value={editDraftText}
                           disabled={decisions.blocked(item.workItem.id)}
                           onChange={(e) => setEditDraftText(e.target.value)}
-                          data-testid={`triage-edit-textarea-${item.workItem.id}`}
+                          data-testid="edit-draft-textarea"
+                          id={`triage-edit-textarea-${item.workItem.id}`}
                         />
                       </div>
                     ) : (
@@ -300,9 +307,12 @@ export default function UnifiedFeed() {
                             setEditDraftText("");
                           }}
                           disabled={decisions.blocked(item.workItem.id)}
-                          data-testid={`triage-cancel-btn-${item.workItem.id}`}
+                          data-testid="cancel-edit-btn"
+                          id={`triage-cancel-btn-${item.workItem.id}`}
                         >
-                          Cancel
+                          <span data-testid={`triage-cancel-btn-${item.workItem.id}`}>
+                            Cancel
+                          </span>
                         </button>
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
@@ -310,11 +320,14 @@ export default function UnifiedFeed() {
                             handleSaveEditAndApprove(item.workItem.id)
                           }
                           disabled={decisions.blocked(item.workItem.id)}
-                          data-testid={`triage-save-btn-${item.workItem.id}`}
+                          data-testid="save-edit-approve-btn"
+                          id={`triage-save-btn-${item.workItem.id}`}
                         >
-                          {processingId === item.workItem.id
-                            ? "Recording approval..."
-                            : "Save & Approve"}
+                          <span data-testid={`triage-save-btn-${item.workItem.id}`}>
+                            {processingId === item.workItem.id
+                              ? "Recording approval..."
+                              : "Save & Approve"}
+                          </span>
                         </button>
                       </div>
                     ) : (
@@ -323,32 +336,42 @@ export default function UnifiedFeed() {
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                           onClick={() => handleDismiss(item.workItem.id)}
                           disabled={decisions.blocked(item.workItem.id)}
-                          data-testid={`triage-dismiss-${item.workItem.id}`}
+                          data-testid="feed-dismiss-btn"
+                          id={`triage-dismiss-${item.workItem.id}`}
                         >
-                          Dismiss
+                          <span data-testid={`triage-dismiss-${item.workItem.id}`}>
+                            Dismiss
+                          </span>
                         </button>
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 active:scale-[0.98] transition-all shadow-sm"
                           onClick={() => handleEdit(item)}
                           disabled={decisions.blocked(item.workItem.id)}
-                          data-testid={`triage-review-btn-${item.workItem.id}`}
+                          data-testid="edit-proposal"
+                          id={`triage-review-btn-${item.workItem.id}`}
                         >
-                          Edit
+                          <span data-testid={`triage-review-btn-${item.workItem.id}`}>
+                            Edit
+                          </span>
                         </button>
                         <button
                           className="flex-1 min-h-[44px] min-w-[44px] text-[13px] font-bold bg-[#0066FF] text-white rounded-xl hover:bg-[#0052CC] shadow-md shadow-[#0066FF]/20 active:scale-[0.98] transition-all"
                           onClick={() => handleApprove(item.workItem.id)}
                           disabled={decisions.blocked(item.workItem.id)}
-                          data-testid={`triage-approve-${item.workItem.id}`}
+                          data-testid="feed-approve-btn"
+                          id={`triage-approve-${item.workItem.id}`}
                         >
-                          {processingId === item.workItem.id
-                            ? "Recording approval..."
-                            : "Record approval"}
+                          <span data-testid={`triage-approve-${item.workItem.id}`}>
+                            {processingId === item.workItem.id
+                              ? "Recording approval..."
+                              : "Record approval"}
+                          </span>
                         </button>
                       </div>
                     )}
                   </div>
                 )}
+              </div>
             </div>
           ))
         )}
