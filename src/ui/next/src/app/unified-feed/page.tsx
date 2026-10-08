@@ -83,7 +83,10 @@ export default function UnifiedFeed() {
           workItem: {
             id: raw.id,
             source: raw.event_source || "Unknown",
-            payload: raw.context_payload,
+            payload: {
+              ...raw.context_payload,
+              description: raw.context_payload?.description || raw.proposed_action?.description || raw.description,
+            },
             status: raw.lifecycle_state,
           },
           draft: raw.proposed_action

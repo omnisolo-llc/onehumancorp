@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { hasVerifiedOfflineQueueOwner, hasPendingQueueOwnerVerification, QUEUE_IDENTITY_EPOCH_KEY, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, type QueueOwner } from '@/lib/sync/queueIdentity';
 import type { ActionPayload } from '@/lib/agent-feed-types';
 
-export type FeedItemRaw = { id: string; tenant_id: string; event_source: string; context_payload?: ActionPayload; proposed_action?: ActionPayload; lifecycle_state: string; created_at?: string | null; updated_at?: string | null };
+export type FeedItemRaw = { id: string; tenant_id: string; event_source: string; context_payload?: ActionPayload; proposed_action?: ActionPayload; lifecycle_state: string; created_at?: string | null; updated_at?: string | null; description?: string };
 type Decision = { state: 'APPROVED' | 'DISMISSED'; edited?: string };
 type Notice = { kind: 'pending' | 'unknown' | 'rejected' | 'acknowledged'; message: string };
 const unknownNotice: Notice = { kind: 'unknown', message: 'Outcome unconfirmed. The card is held to prevent duplicate actions. Refresh recorded decisions to check; no request will be resent.' };
