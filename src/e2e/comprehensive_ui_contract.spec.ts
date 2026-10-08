@@ -529,7 +529,7 @@ test.describe('comprehensive UI contract', () => {
             break;
           } catch (e: unknown) {
             lastError = e;
-            if (e.message && e.message.includes('ECONNRESET')) {
+            if (e instanceof Error && e.message && e.message.includes('ECONNRESET')) {
               await new Promise(resolve => setTimeout(resolve, 1000));
             } else {
               throw e;
