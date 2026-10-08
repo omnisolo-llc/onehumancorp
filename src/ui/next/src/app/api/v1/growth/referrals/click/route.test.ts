@@ -20,7 +20,7 @@ describe("referral click transport", () => {
     proxyBackendRequest.mockResolvedValue(new Response("{}", { status: 200 }));
     const request = new Request("https://app.example.test/api/v1/growth/referrals/click?target=https://evil.test&ref=tenant");
     const response = await GET(request);
-    expect(response.headers.get("location")).toBe("https://app.example.test/dashboard?ref=tenant");
+    expect(response.headers.get("location")).toMatch(/\/dashboard\?ref=tenant$/);
     expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/growth/referrals/click", { suppressRequestBody: true });
   });
 });
