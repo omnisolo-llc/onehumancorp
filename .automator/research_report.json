@@ -1,8 +1,10 @@
 {
-  "kind": "artifact",
-  "provenance": "research",
-  "issue": "#27416",
-  "title": "Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture",
-  "status": "blocked_finding",
-  "reason": "The 'Stripe Terminal POS Integration' / 'Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture' proposing a mobile-first architecture for offline tap-to-pay is classified as an unauthorized feature expansion. It has not been explicitly authorized by RESEARCH.md."
+  "issue_title": "Scribe: Documentation Feature",
+  "issue_description": "The request for the In-App Help Center documentation feature is blocked as a no-work finding due to the current scope override in RESEARCH.md, which suspends new broad features in favor of evidence-backed decisions and fixing known defects.",
+  "issue_priority": "P2",
+  "issue_category": "documentation",
+  "issue_type": "feature",
+  "issue_label": "ohc:lane:documentation",
+  "assignees": ["Scribe"],
+  "outcome": "blocked"
 }
