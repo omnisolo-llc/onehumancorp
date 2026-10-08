@@ -120,10 +120,10 @@ it('does not dispatch a card loaded under a different newly verified owner', asy
 it('requires the acknowledged edited content and retains its draft when the outcome is unknown', async () => {
   mutation = async () => Response.json({ ...row, lifecycle_state: 'APPROVED' });
   await mount(); fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-  fireEvent.change(screen.getByTestId('edit-draft-textarea'), { target: { value: 'Reviewed updated draft' } });
+  fireEvent.change(screen.getByTestId('triage-edit-textarea-feed-one'), { target: { value: 'Reviewed updated draft' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save & Approve' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
-  expect(screen.getByTestId('edit-draft-textarea')).toHaveValue('Reviewed updated draft');
+  expect(screen.getByTestId('triage-edit-textarea-feed-one')).toHaveValue('Reviewed updated draft');
   expect(writes()).toHaveLength(1);
 });
 
@@ -205,7 +205,7 @@ it('clears private rows when the verified identity lease expires', async () => {
 it('accepts a recorded edited decision only when the actual receipt preserves its content', async () => {
   mutation = async () => Response.json({ ...row, lifecycle_state: 'APPROVED', proposed_action: { message: 'Reviewed updated draft' } });
   await mount(); fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-  fireEvent.change(screen.getByTestId('edit-draft-textarea'), { target: { value: 'Reviewed updated draft' } });
+  fireEvent.change(screen.getByTestId('triage-edit-textarea-feed-one'), { target: { value: 'Reviewed updated draft' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save & Approve' }));
   await waitFor(() => expect(screen.queryByText('Real pending work')).toBeNull());
   expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded');
@@ -220,22 +220,22 @@ it('reloads its owned feed after StrictMode retires the initial effect', async (
 it('rejects edited acknowledgements with conflicting displayed and secondary fields', async () => {
   mutation = async () => Response.json({ ...row, lifecycle_state: 'APPROVED', proposed_action: { draft_reply: 'Old draft', message: 'Reviewed updated draft' } });
   await mount(); fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-  fireEvent.change(screen.getByTestId('edit-draft-textarea'), { target: { value: 'Reviewed updated draft' } });
+  fireEvent.change(screen.getByTestId('triage-edit-textarea-feed-one'), { target: { value: 'Reviewed updated draft' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save & Approve' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('Outcome unconfirmed');
-  expect(screen.getByTestId('edit-draft-textarea')).toHaveValue('Reviewed updated draft');
+  expect(screen.getByTestId('triage-edit-textarea-feed-one')).toHaveValue('Reviewed updated draft');
 });
 it('does not select a convenient acknowledgement from conflicting duplicate readback records', async () => {
   mutation = async () => { throw new Error('Network disconnected'); };
   await mount(); fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
-  fireEvent.change(screen.getByTestId('edit-draft-textarea'), { target: { value: 'Reviewed updated draft' } });
+  fireEvent.change(screen.getByTestId('triage-edit-textarea-feed-one'), { target: { value: 'Reviewed updated draft' } });
   fireEvent.click(screen.getByRole('button', { name: 'Save & Approve' }));
   await screen.findByRole('alert');
   rows = [{ ...row, lifecycle_state: 'APPROVED', proposed_action: { action_type: 'proposal', message: 'Reviewed updated draft' } }, { ...row, lifecycle_state: 'APPROVED' }];
   fireEvent.click(screen.getByRole('button', { name: 'Refresh recorded decisions' }));
   await screen.findByText('Recorded decisions could not be refreshed. Existing uncertain outcomes remain held.');
   expect(screen.getByText('Real pending work')).toBeVisible();
-  expect(screen.getByTestId('edit-draft-textarea')).toHaveValue('Reviewed updated draft');
+  expect(screen.getByTestId('triage-edit-textarea-feed-one')).toHaveValue('Reviewed updated draft');
   expect(writes()).toHaveLength(1);
 });
 it('bounds a stalled initial identity read and releases its loading state', async () => {

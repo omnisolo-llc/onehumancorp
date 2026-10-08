@@ -68,10 +68,10 @@ test.describe("OmniSolo browser branding", () => {
     await page.setViewportSize({ width: 390, height: 844 });
 
     await page.goto("/help");
-    await expect(page.getByRole("button", { name: "Open help chat" })).toBeVisible();
+    await expect(page.locator('#omnisolo-floating-help-btn')).toBeVisible();
 
     await page.goto("/website-builder");
-    await expect(page.getByRole("button", { name: "Open help chat" })).toBeHidden();
+    await expect(page.locator('#omnisolo-floating-help-btn')).toBeHidden();
   });
 
   test("customer referral embeds use the canonical cloud origin", async ({ page }) => {
