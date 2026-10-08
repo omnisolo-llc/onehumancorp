@@ -366,7 +366,7 @@ test.describe('comprehensive UI contract', () => {
     expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
     test.setTimeout(180000);
     const failures: string[] = [];
-    const appRoutes = discoverAppRoutes();
+    const appRoutes: string[] = discoverAppRoutes();
     console.info(`Discovered ${appRoutes.length} app routes for load audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
@@ -491,7 +491,7 @@ test.describe('comprehensive UI contract', () => {
     test.setTimeout(180000);
     const failures: string[] = [];
     const checked = new Set<string>();
-    const appRoutes = discoverAppRoutes();
+    const appRoutes: string[] = discoverAppRoutes();
     console.info(`Discovered ${appRoutes.length} app routes for internal link audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
@@ -531,7 +531,7 @@ test.describe('comprehensive UI contract', () => {
   test('visible external and protocol links use expected destinations', async ({ page }) => {
     test.setTimeout(180000);
     const failures: string[] = [];
-    const appRoutes = discoverAppRoutes();
+    const appRoutes: string[] = discoverAppRoutes();
     console.info(`Discovered ${appRoutes.length} app routes for external/protocol link audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
 
@@ -619,7 +619,7 @@ test.describe('comprehensive UI contract', () => {
   test('all visible interactive elements are usable and named', async ({ page }) => {
     test.setTimeout(180000);
     const failures: string[] = [];
-    const appRoutes = discoverAppRoutes();
+    const appRoutes: string[] = discoverAppRoutes();
     let auditedElements = 0;
     console.info(`Discovered ${appRoutes.length} app routes for interactive element audit.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
@@ -690,7 +690,7 @@ test.describe('comprehensive UI contract', () => {
   test('layouts do not overflow or overlap click targets on desktop and mobile', async ({ page }) => {
     test.setTimeout(240000);
     const failures: string[] = [];
-    const appRoutes = discoverAppRoutes();
+    const appRoutes: string[] = discoverAppRoutes();
     let auditedLayouts = 0;
     console.info(`Discovered ${appRoutes.length} app routes for layout audit across ${viewports.length} viewports.`);
     expect(appRoutes.length, 'App route discovery must include at least one page.').toBeGreaterThan(0);
