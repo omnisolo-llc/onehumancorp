@@ -537,7 +537,7 @@ test.describe('comprehensive UI contract', () => {
           }
         }
         if (!success) {
-          failures.push(`${routeLabel(route)}: ${href} failed with error ${lastError instanceof Error ? lastError.message : String(lastError) || 'unknown'}`);
+          failures.push(`${routeLabel(route)}: ${href} failed with error ${lastError instanceof Error ? lastError.message : (lastError ? String(lastError) : 'unknown')}`);
         } else if (status >= 400) {
           failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${status}`);
         }
