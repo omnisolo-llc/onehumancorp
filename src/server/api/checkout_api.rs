@@ -135,6 +135,7 @@ pub async fn create_checkout_session_handler(
     if let Some(cart) = &req_data.cart_payload
         && let Some(items) = cart.get("items").and_then(|i| i.as_array())
     {
+        let mut checkout_locks: Vec<(String, String, i32)> = Vec::new();
         let service = crate::services::inventory::InventoryService::new(hub.redis_client());
         for item in items {
             if let Some(product_id) = item.get("product_id").and_then(|p| p.as_str()) {
@@ -145,6 +146,9 @@ pub async fn create_checkout_session_handler(
                     .await
                 {
                     Ok(res) if !res.success => {
+                        for (pid, lid, qty) in checkout_locks {
+                            let _ = service.release_inventory(&tenant_id, &pid, qty, &lid).await;
+                        }
                         let _ = db_tx.rollback().await;
                         return (
                             StatusCode::BAD_REQUEST,
@@ -157,6 +161,9 @@ pub async fn create_checkout_session_handler(
                             .into_response();
                     }
                     Err(e) => {
+                        for (pid, lid, qty) in checkout_locks {
+                            let _ = service.release_inventory(&tenant_id, &pid, qty, &lid).await;
+                        }
                         let _ = db_tx.rollback().await;
                         return (
                             StatusCode::INTERNAL_SERVER_ERROR,
@@ -168,7 +175,30 @@ pub async fn create_checkout_session_handler(
                         )
                             .into_response();
                     }
-                    _ => {}
+                    Ok(res) => {
+                        if res.success {
+                            checkout_locks.push((product_id.to_string(), res.lock_id.clone(), quantity));
+                        }
+                    }
+                }
+            }
+        }
+        if !checkout_locks.is_empty() {
+            if updated_cart_payload.is_none() {
+                updated_cart_payload = Some(serde_json::json!({}));
+            }
+            if let Some(cart_obj) = updated_cart_payload.as_mut().and_then(|c| c.as_object_mut()) {
+                let lock_ids: Vec<String> = checkout_locks.into_iter().map(|(_, lid, _)| lid).collect();
+                if lock_ids.len() == 1 {
+                    cart_obj.insert(
+                        "inventory_lock_id".to_string(),
+                        serde_json::Value::String(lock_ids[0].clone()),
+                    );
+                } else if lock_ids.len() > 1 {
+                    cart_obj.insert(
+                        "inventory_lock_ids".to_string(),
+                        serde_json::json!(lock_ids),
+                    );
                 }
             }
         }
