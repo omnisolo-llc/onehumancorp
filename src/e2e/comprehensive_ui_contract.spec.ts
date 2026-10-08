@@ -518,9 +518,28 @@ test.describe('comprehensive UI contract', () => {
         if (checked.has(href)) continue;
         checked.add(href);
 
-        const response = await page.request.get(href, { failOnStatusCode: false });
-        if (response.status() >= 400) {
-          failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
+        let success = false;
+        let status = 0;
+        let lastError = null;
+        for (let i = 0; i < 3; i++) {
+          try {
+            const response = await page.request.get(href, { failOnStatusCode: false });
+            status = response.status();
+            success = true;
+            break;
+          } catch (e: any) {
+            lastError = e;
+            if (e.message && e.message.includes('ECONNRESET')) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+            } else {
+              throw e;
+            }
+          }
+        }
+        if (!success) {
+          failures.push(`${routeLabel(route)}: ${href} failed with error ${lastError?.message || 'unknown'}`);
+        } else if (status >= 400) {
+          failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${status}`);
         }
       }
     }
