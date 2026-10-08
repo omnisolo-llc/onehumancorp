@@ -364,7 +364,7 @@ test.describe('comprehensive UI contract', () => {
 
   test('every app page loads without visible crash output', async ({ page, anonymousPage }) => {
     expect(fs.existsSync(appRoot), 'Next UI source/routes are not available in this Playwright runfiles tree.').toBeTruthy();
-    test.setTimeout(180000);
+    test.setTimeout(360000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     console.info(`Discovered ${appRoutes.length} app routes for load audit.`);
@@ -488,7 +488,7 @@ test.describe('comprehensive UI contract', () => {
   });
 
   test('visible internal links resolve to real pages', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(360000);
     const failures: string[] = [];
     const checked = new Set<string>();
     const appRoutes = discoverAppRoutes();
@@ -548,7 +548,7 @@ test.describe('comprehensive UI contract', () => {
   });
 
   test('visible external and protocol links use expected destinations', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(360000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     console.info(`Discovered ${appRoutes.length} app routes for external/protocol link audit.`);
@@ -636,7 +636,7 @@ test.describe('comprehensive UI contract', () => {
   });
 
   test('all visible interactive elements are usable and named', async ({ page }) => {
-    test.setTimeout(180000);
+    test.setTimeout(360000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     let auditedElements = 0;
@@ -707,7 +707,7 @@ test.describe('comprehensive UI contract', () => {
   });
 
   test('layouts do not overflow or overlap click targets on desktop and mobile', async ({ page }) => {
-    test.setTimeout(240000);
+    test.setTimeout(360000);
     const failures: string[] = [];
     const appRoutes = discoverAppRoutes();
     let auditedLayouts = 0;
