@@ -91,7 +91,8 @@ export async function observeMilestoneInvitationAuditClick(
     await preview.waitFor({ state: 'visible', timeout: 5000 });
     assert.equal(await preview.inputValue(), text);
     await widget.getByText(`${count} recorded orders`, { exact: true }).waitFor({ state: 'visible', timeout: 5000 });
-    const threshold = [1, 10, 50, 100, 1000].filter(value => count >= value).at(-1);
+    const validThresholds = [1, 10, 50, 100, 1000].filter(value => count >= value);
+    const threshold = validThresholds[validThresholds.length - 1];
     await widget.getByText(`Recorded-order milestone: ${threshold}`, { exact: true }).waitFor({ state: 'visible', timeout: 5000 });
     for (const [name, destination] of [['Share on X', 'https://twitter.com/intent/tweet'], ['Share to WhatsApp', 'https://wa.me/']]) {
       const expectedUrl = new URL(destination); expectedUrl.searchParams.set('text', text);

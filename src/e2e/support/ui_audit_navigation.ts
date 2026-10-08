@@ -36,7 +36,7 @@ function observeApiDocumentation(page: Page, origin: string) {
             if (!record(operation)) throw new Error('API documentation operation is malformed');
             const tags = operation.tags === undefined ? [] : operation.tags;
             if (!Array.isArray(tags) || tags.some(tag => typeof tag !== 'string' || !tag)) throw new Error('API documentation operation tags are malformed');
-            for (const tag of new Set(tags.length ? tags : ['default'])) expected.push(JSON.stringify([tag, method.toUpperCase(), path]));
+            for (const tag of Array.from(new Set(tags.length ? tags : ['default']))) expected.push(JSON.stringify([tag, method.toUpperCase(), path]));
           }
         }
         if (!expected.length) throw new Error('API documentation source declares no operations');

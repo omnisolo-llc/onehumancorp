@@ -32,7 +32,7 @@ async function elementsHandle(page: Page, selector: string): Promise<JSHandle<El
   try {
     return await documents.evaluateHandle((documents, selector) => {
       const visible = selector.includes(':visible');
-      const css = selector.replaceAll(':visible', '');
+      const css = selector.replace(/:visible/g, '');
       return documents.flatMap(document => Array.from(document.querySelectorAll(css)).filter(element => {
         if (!visible) return true;
         const style = document.defaultView!.getComputedStyle(element);
