@@ -65,6 +65,7 @@ test.describe('Agent Protocol Git Checkpointing', () => {
     // A configured acceptance run must actually produce and restore a checkpoint.
     // An empty list or disabled checkpointer cannot satisfy this positive gate.
     const restore = page.getByRole('button', { name: 'Restore Checkpoint' }).first();
+    await expect(restore).toBeVisible({ timeout: 30_000 });
     await expect(restore).toBeEnabled({ timeout: 30_000 });
     await expect(page.getByText('No checkpoints saved.', { exact: true })).toHaveCount(0);
     const restored = page.waitForResponse(response => new URL(response.url()).pathname === protocolPath
