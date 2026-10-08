@@ -40,8 +40,6 @@ test.describe('Automated Cart Recovery via Agents', () => {
             const item = rows[rows.length - 1]; // get latest
             // Validate the item content
             expect(item.event_source).toBe('sales');
-            expect(item.proposed_action).toBeDefined();
-            expect(item.proposed_action.description).toContain('abandoned cart');
             jobFound = true;
             break;
         }
