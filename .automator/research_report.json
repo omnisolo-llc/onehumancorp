@@ -1,9 +1,0 @@
-{
-  "issue_title": "AI-Native SMB Platform Landscape: Gap Analysis & Agentic Solutions",
-  "issue_description": "Current platforms either offer robust features wrapped in complex technical interfaces (Shopify) or basic simplicity lacking true end-to-end operational power (Link-in-bio tools). AI-native tools (Durable, 10web) focus primarily on *website generation*, missing the ongoing operational needs of a business. OHC's unique value lies in **AI as invisible operational infrastructure** rather than a mere generation tool.",
-  "issue_priority": "P1",
-  "issue_category": "Research",
-  "issue_type": "Market Analysis",
-  "issue_label": "agent-report",
-  "assignees": ["agent"]
-}
