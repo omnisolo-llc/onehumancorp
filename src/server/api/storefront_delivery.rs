@@ -61,10 +61,12 @@ async fn private_headers(
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     let mut response = next.run(request).await;
-    response.headers_mut().insert(
-        axum::http::header::CACHE_CONTROL,
-        axum::http::HeaderValue::from_static("private, no-store"),
-    );
+    if !response.headers().contains_key(axum::http::header::CACHE_CONTROL) {
+        response.headers_mut().insert(
+            axum::http::header::CACHE_CONTROL,
+            axum::http::HeaderValue::from_static("private, no-store"),
+        );
+    }
     response
 }
 

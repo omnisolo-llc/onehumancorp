@@ -171,11 +171,11 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     });
 
     await card.getByTestId('edit-proposal').click();
-    const textarea = card.getByTestId('edit-proposal-textarea').or(card.getByTestId('edit-draft-textarea'));
+    const textarea = card.getByTestId('edit-proposal-textarea').or(card.getByTestId('edit-draft-textarea')).first();
     await expect(textarea).toBeVisible();
     await expect(textarea).toHaveValue(draft);
     await textarea.fill('This is my manually edited draft text');
-    await card.getByTestId('cancel-edit-proposal').or(card.getByTestId('cancel-edit-btn')).click();
+    await card.getByTestId('cancel-edit-proposal').or(card.getByTestId('cancel-edit-btn')).first().click();
     await expect(textarea).toBeHidden();
     expect(submittedDecisions).toEqual([]);
     expect(await readItem(itemId)).toEqual(initialState);
@@ -188,7 +188,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     // receipt before applying the existing editor/exit-animation deadline.
     const [decision] = await Promise.all([
       page.waitForResponse(response => response.url() === decisionUrl && response.request().method() === 'PUT'),
-      card.getByTestId('save-proposal').or(card.getByTestId('save-edit-approve-btn')).click(),
+      card.getByTestId('save-proposal').or(card.getByTestId('save-edit-approve-btn')).first().click(),
     ]);
     expect(decision.status()).toBe(200);
     const expectedReceipt = {
