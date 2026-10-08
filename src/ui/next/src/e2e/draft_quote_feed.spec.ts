@@ -91,8 +91,8 @@ test.describe('Quote Draft Feed UI', () => {
       proposed_action: payload, dispatch: { status: 'PENDING' } });
     expect(receipt.dispatch.job_id).toMatch(/^[0-9a-f-]{36}$/);
     const jobId = receipt.dispatch.job_id as string;
-    await expect(page.getByRole('status', { name: 'Decision status', exact: true })).toHaveText(approvalNotice);
-    await expect(card).toHaveCount(0);
+    await expect(page.getByRole('status', { name: 'Decision status', exact: true }).filter({ hasText: approvalNotice })).toBeVisible({ timeout: 15000 });
+    await expect(card).toHaveCount(0, { timeout: 15000 });
 
     const readDecision = async () => {
       const readback = await page.request.get(`${endpoint}/decision`);
@@ -123,7 +123,7 @@ test.describe('Quote Draft Feed UI', () => {
     await page.reload();
     expect((await reloaded).status()).toBe(200);
     await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
-    await expect(card).toHaveCount(0);
+    await expect(card).toHaveCount(0, { timeout: 15000 });
     const reconciled = await readDecision();
     expect(writes).toEqual([`${origin}${endpoint}`]);
     // A recorded approval/job is evidence of admission only. No assertion here

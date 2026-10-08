@@ -19,7 +19,7 @@ test.describe('LangGraph State Machine', () => {
     await page.fill('textarea[placeholder*="Write a quick poem about a cake"]', 'Use the Bash tool to execute "echo hello". Then confirm you have done so.');
 
     // Click the execute button
-    await page.click('button:has-text("Run LangGraph")');
+    await page.locator('button', { hasText: 'Run LangGraph' }).click();
 
     // Verify that the success message appears
     await expect(page.locator('h2:has-text("LangGraph Output")')).toBeVisible({ timeout: 120000 });
