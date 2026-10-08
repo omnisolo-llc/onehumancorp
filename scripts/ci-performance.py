@@ -105,7 +105,7 @@ def browser_postgres_timing(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 def summarize(pages: Any, run_id: int, attempt: int, budget: float, cold: bool,
               job_prefix: str = '') -> dict[str, Any]:
-    if not math.isfinite(budget) or budget <= 0 or run_id <= 0 or attempt <= 0:
+    if not math.isfinite(budget) or budget < 0 or run_id <= 0 or attempt <= 0:
         raise ValueError("Positive run, attempt and budget are required")
     if not isinstance(pages, list) or not pages:
         raise ValueError("Expected all paginated job responses")
