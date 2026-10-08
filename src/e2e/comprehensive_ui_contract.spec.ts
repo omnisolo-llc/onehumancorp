@@ -523,7 +523,7 @@ test.describe('comprehensive UI contract', () => {
           if (response.status() >= 400) {
             failures.push(`${routeLabel(route)}: ${href} resolved with HTTP ${response.status()}`);
           }
-        } catch (error: unknown) {
+        } catch (error) {
            failures.push(`${routeLabel(route)}: ${href} failed: ${error instanceof Error ? error.message : String(error)}`);
         }
       }

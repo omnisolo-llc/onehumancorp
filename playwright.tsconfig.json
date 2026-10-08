@@ -6,7 +6,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "@playwright/test": ["./node_modules/@playwright/test"],
       "@/*": ["./src/ui/next/src/*"]
