@@ -15,7 +15,7 @@ describe("product-shell overlay authority", () => {
     expect(layout).not.toMatch(/components\/HelpChat/);
     expect(layout).not.toContain('id="omnisolo-floating-help-widget"');
     expect(widget.match(/id="omnisolo-floating-help-widget"/g)).toHaveLength(1);
-    expect(widget).not.toMatch(/fixed bottom-6 right-6[^"']*\bhidden\b/);
+    expect(widget).not.toMatch(/fixed bottom-\[1\.5rem\] right-6[^"']*\bhidden\b/);
     expect(widget).toMatch(/omnisolo-floating-help-widget[^>]*backdrop-saturate-\[210%\]/);
   });
 

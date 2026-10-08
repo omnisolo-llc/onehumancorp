@@ -446,7 +446,7 @@ export function HelpWidget() {
   return (
     <>
       <div
-        className={`${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"} z-[90] flex items-center gap-2 fixed bottom-6 right-6`}
+        className={`${shouldShowMobileHelpLauncher(pathname) ? "block" : "hidden sm:block"} z-[90] flex items-center gap-2 fixed bottom-[1.5rem] right-6`}
         data-ui-overlay="true"
       >
         <button

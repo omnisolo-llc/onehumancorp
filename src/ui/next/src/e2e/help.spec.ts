@@ -129,7 +129,7 @@ test.describe("Help Center", () => {
     await page.goto("/help");
 
     await expect(page.locator("h1", { hasText: "In-App Help Center" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open help chat" })).toBeVisible();
+    await expect(page.locator('#omnisolo-floating-help-btn')).toBeVisible();
   });
 
   test("should have accessible inputs for screen readers", async ({ page }) => {

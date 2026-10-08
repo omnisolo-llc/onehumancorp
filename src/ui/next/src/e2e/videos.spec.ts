@@ -9,7 +9,7 @@ test.describe("In-App Video Tutorials", () => {
     await page.goto("/dashboard"); // Use the dashboard or any public page where layout applies
 
     // The help widget should be present.
-    const helpButton = page.getByRole("button", { name: "Open help chat" });
+    const helpButton = page.locator('#omnisolo-floating-help-btn');
     await expect(helpButton).toBeVisible();
 
     // Click the help widget floating button to open the menu
