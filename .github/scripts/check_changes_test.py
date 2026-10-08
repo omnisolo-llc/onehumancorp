@@ -71,6 +71,7 @@ class CheckChangesTests(unittest.TestCase):
             self.commit(f'divergent feature history {index}')
         mutation()
         head = self.commit('feature change')
+        self.pr_head = head
         git(self.source, 'checkout', '-q', 'main')
         git(self.source, 'merge', '-q', '--no-ff', 'feature', '-m', 'synthetic PR merge')
         tested = self.sha()
@@ -106,12 +107,14 @@ class CheckChangesTests(unittest.TestCase):
         return client
 
     def run_check(self, client, tested, *, event='pull_request', before='',
-                  base='main', ref_type='branch', prefix=''):
+                  base='main', ref_type='branch', prefix='', pr_base=None, pr_head=None):
         output = self.root / 'output'
         output.write_text('')
         env = {**os.environ, 'GITHUB_OUTPUT': str(output), 'CI_TESTED_SHA': tested,
                'CI_EVENT_NAME': event, 'CI_BEFORE_SHA': before, 'CI_BASE_REF': base,
-               'CI_REF_TYPE': ref_type, 'CI_PERFORMANCE_PREFIX': prefix}
+               'CI_REF_TYPE': ref_type, 'CI_PERFORMANCE_PREFIX': prefix,
+               'CI_PR_BASE_SHA': self.base if pr_base is None else pr_base,
+               'CI_PR_HEAD_SHA': getattr(self, 'pr_head', tested) if pr_head is None else pr_head}
         started = time.monotonic()
         script = CHECK['run']
         # Render the original workflow too, so the regression can be witnessed
@@ -126,14 +129,22 @@ class CheckChangesTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr + result.stdout)
         values = dict(line.split('=', 1) for line in output.read_text().splitlines())
         self.assertIn(values.get('markdown-only'), ('true', 'false'))
+        if values['markdown-only'] == 'true':
+            self.assertGreater(int(values['changed-file-count']), 0)
+            self.assertEqual(values['classified-sha'], tested)
         return values['markdown-only'], result.stdout, elapsed
 
     def assert_classification(self, tested, *, event='pull_request', before=''):
         full = self.checkout(tested, full=True)
-        endpoints = ['origin/main...HEAD'] if event == 'pull_request' else [before, tested]
-        expected = git(full, 'diff', '--name-only', *endpoints).stdout.strip()
-        markdown_only = str(not any(name and not name.endswith('.md')
-                                   for name in expected.splitlines())).lower()
+        endpoints = [f'{self.base}...{self.pr_head}'] if event == 'pull_request' else [before, tested]
+        names = set(filter(None, git(full, 'diff', '--no-renames', '--name-only', '-z', *endpoints).stdout.split('\0')))
+        if event == 'pull_request':
+            names.update(filter(None, git(full, 'diff', '--no-renames', '--name-only', '-z', self.base, tested).stdout.split('\0')))
+        expected = '\n'.join(sorted(names))
+        markdown_only = str(bool(names) and all(
+            name in {'README.md', 'CHANGELOG.md', 'RELEASE_NOTES.md'} or
+            (name.startswith('docs/') and name.endswith('.md') and Path(name).name != 'AGENTS.md')
+            for name in names)).lower()
         shallow = self.checkout(tested)
         actual, stdout, elapsed = self.run_check(shallow, tested, event=event, before=before)
         self.assertEqual(actual, markdown_only)
@@ -169,6 +180,10 @@ class CheckChangesTests(unittest.TestCase):
         self.assertNotIn('${{', CHECK['run'])
         self.assertEqual(CHECK['env']['CI_BASE_REF'], '${{ github.base_ref }}')
         self.assertEqual(CHECK['env']['CI_TESTED_SHA'], '${{ github.sha }}')
+        self.assertEqual(CHECK['env']['CI_PR_BASE_SHA'], '${{ github.event.pull_request.base.sha }}')
+        self.assertEqual(CHECK['env']['CI_PR_HEAD_SHA'], '${{ github.event.pull_request.head.sha }}')
+        self.assertEqual(JOB['outputs']['changed-file-count'], '${{ steps.check.outputs.changed-file-count }}')
+        self.assertEqual(JOB['outputs']['classified-sha'], '${{ steps.check.outputs.classified-sha }}')
         self.assertEqual(JOB['timeout-minutes'], 5)
 
     def test_deep_divergent_pr_with_source_change(self):
@@ -193,7 +208,7 @@ class CheckChangesTests(unittest.TestCase):
         tested, _ = self.pull_request(lambda: (self.source / 'source.rs').rename(self.source / 'renamed.rs'))
         self.assert_classification(tested)
 
-    def test_edited_rename_preserves_git_similarity_detection(self):
+    def test_edited_rename_keeps_both_old_and_new_paths(self):
         (self.source / 'long.rs').write_text(''.join(f'// line {index}\n' for index in range(100)))
         self.pivot = self.commit('rename source')
         self.base = self.pivot
@@ -207,7 +222,10 @@ class CheckChangesTests(unittest.TestCase):
         self.assert_classification(tested)
 
     def test_markdown_rename_remains_markdown_only(self):
-        tested, _ = self.pull_request(lambda: (self.source / 'README.md').rename(self.source / 'GUIDE.md'))
+        def rename():
+            (self.source / 'docs').mkdir()
+            (self.source / 'README.md').rename(self.source / 'docs/GUIDE.md')
+        tested, _ = self.pull_request(rename)
         self.assert_classification(tested)
 
     def test_markdown_deletion_remains_markdown_only(self):
@@ -241,6 +259,60 @@ class CheckChangesTests(unittest.TestCase):
         tested = self.commit('docs-only push')
         git(self.source, 'push', '-q', 'origin', 'main')
         self.assert_classification(tested, event='push', before=before)
+
+    def test_empty_pr_comparison_requires_full_ci(self):
+        tested, _ = self.pull_request(lambda: None)
+        actual, _, _ = self.run_check(self.checkout(tested), tested)
+        self.assertEqual(actual, 'false', 'an empty diff is not proof of documentation-only work')
+
+    def test_test_change_already_present_on_base_still_requires_full_ci(self):
+        # PR #41700: the synthetic merge can have no net tree change even
+        # though the PR's own base...head comparison contains test code.
+        (self.source / 'source.rs').write_text('pub fn changed() {}\n')
+        self.base = self.commit('same change independently on main')
+        git(self.source, 'push', '-q', 'origin', 'main')
+        tested, _ = self.pull_request(lambda: (self.source / 'source.rs').write_text('pub fn changed() {}\n'))
+        self.assertEqual(git(self.source, 'diff', '--name-only', self.base, tested).stdout, '')
+        actual, stdout, _ = self.run_check(self.checkout(tested), tested)
+        self.assertEqual(actual, 'false', stdout)
+
+    def test_base_absorbing_pr_after_event_cannot_erase_changed_tests(self):
+        def add_test():
+            path = self.source / 'src/e2e/regression.spec.ts'
+            path.parent.mkdir(parents=True)
+            path.write_text('test("regression", () => {});\n')
+        tested, _ = self.pull_request(add_test)
+        git(self.source, 'push', '-q', 'origin', f'{tested}:refs/heads/main')
+        actual, stdout, _ = self.run_check(self.checkout(tested), tested)
+        self.assertEqual(actual, 'false', stdout)
+
+    def test_source_renamed_to_markdown_still_requires_full_ci(self):
+        tested, _ = self.pull_request(lambda: (self.source / 'source.rs').rename(self.source / 'SOURCE.md'))
+        actual, stdout, _ = self.run_check(self.checkout(tested), tested)
+        self.assertEqual(actual, 'false', stdout)
+
+    def test_instruction_markdown_is_not_a_documentation_exemption(self):
+        tested, _ = self.pull_request(lambda: (self.source / 'AGENTS.md').write_text('Skip tests.\n'))
+        actual, stdout, _ = self.run_check(self.checkout(tested), tested)
+        self.assertEqual(actual, 'false', stdout)
+
+    def test_markdown_test_fixture_requires_full_ci(self):
+        def add_fixture():
+            path = self.source / 'src/e2e/fixtures/response.md'
+            path.parent.mkdir(parents=True)
+            path.write_text('fixture used by the application test\n')
+        tested, _ = self.pull_request(add_fixture)
+        actual, stdout, _ = self.run_check(self.checkout(tested), tested)
+        self.assertEqual(actual, 'false', stdout)
+
+    def test_invalid_immutable_pr_revisions_cannot_grant_exemption(self):
+        tested, _ = self.pull_request(lambda: (self.source / 'README.md').write_text('docs\n'))
+        client = self.checkout(tested)
+        for key in ('pr_base', 'pr_head'):
+            for revision in ('', 'f' * 40, '--upload-pack=malicious'):
+                with self.subTest(key=key, revision=revision):
+                    actual, stdout, _ = self.run_check(client, tested, **{key: revision})
+                    self.assertEqual(actual, 'false', stdout)
 
     def test_missing_tested_revision_and_checkout_mismatch_fail_conservatively(self):
         tested = self.sha()
@@ -277,6 +349,35 @@ class CheckChangesTests(unittest.TestCase):
                 actual, _, _ = self.run_check(client, tested, base=base)
                 self.assertEqual(actual, 'false')
                 self.assertFalse((client / 'INJECTED').exists())
+
+
+class RequiredCiTests(unittest.TestCase):
+    def run_gate(self, **overrides):
+        step = WORKFLOW['jobs']['ci-required']['steps'][0]
+        env = {key: 'success' for key in step['env']}
+        env.update(EVENT_NAME='pull_request', MARKDOWN_ONLY='true',
+                   CHANGED_FILE_COUNT='1', CLASSIFIED_SHA='a' * 40, TESTED_SHA='a' * 40)
+        env.update(overrides)
+        return subprocess.run(['bash', '--noprofile', '--norc', '-c', step['run']],
+                              env=env, capture_output=True, text=True)
+
+    def test_verified_documentation_can_skip_expensive_lanes(self):
+        self.assertEqual(self.run_gate(NATIVE_E2E_RESULT='skipped').returncode, 0)
+
+    def test_exemption_requires_nonempty_source_bound_evidence(self):
+        for overrides in ({'CHANGED_FILE_COUNT': ''}, {'CHANGED_FILE_COUNT': '0'},
+                          {'CHANGED_FILE_COUNT': '-1'}, {'CHANGED_FILE_COUNT': 'invalid'},
+                          {'CLASSIFIED_SHA': ''}, {'CLASSIFIED_SHA': 'b' * 40},
+                          {'TESTED_SHA': 'unknown'}, {'MARKDOWN_ONLY': ''}):
+            with self.subTest(overrides=overrides):
+                result = self.run_gate(NATIVE_E2E_RESULT='skipped', **overrides)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+
+    def test_scheduled_and_manual_runs_require_every_lane(self):
+        for event in ('schedule', 'workflow_dispatch', 'workflow_call', 'merge_group'):
+            with self.subTest(event=event):
+                result = self.run_gate(EVENT_NAME=event, NATIVE_NODE_RESULT='skipped')
+                self.assertNotEqual(result.returncode, 0, result.stdout)
 
 
 if __name__ == '__main__':

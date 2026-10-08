@@ -102,6 +102,7 @@ def assert_dependency_audit_blocks_required_check() -> None:
         for audit in ("success", "failure", "cancelled", "skipped"):
             environment = {key: "success" for key in step["env"]}
             environment.update(EVENT_NAME="push", MARKDOWN_ONLY=markdown, DEPENDENCY_AUDIT_RESULT=audit)
+            environment.update(CHANGED_FILE_COUNT="1", CLASSIFIED_SHA="a" * 40, TESTED_SHA="a" * 40)
             result = subprocess.run(["bash", "--noprofile", "--norc", "-c", step["run"]],
                                     env=environment, capture_output=True, text=True)
             expected = audit == "success" or (markdown == "true" and audit == "skipped")

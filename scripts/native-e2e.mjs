@@ -212,6 +212,14 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
       runId: suffix, containerName: pg, containerId: container.Id, port: pgPort,
     }), { mode: 0o600, flag: 'wx' });
     verifiedFixtureDatabaseUrl(env);
+    // Exercise the real, opt-in queue only on this run's verified database.
+    // These are the production scheduler's minimum intervals; no delivery
+    // credentials are inherited and no production defaults are changed.
+    Object.assign(env, {
+      OMNISOLO_CART_RECOVERY_AGENT_QUEUE_ENABLED: 'true',
+      OMNISOLO_CART_RECOVERY_SCAN_INTERVAL_SECONDS: '30',
+      OMNISOLO_CART_RECOVERY_DISPATCH_INTERVAL_SECONDS: '5',
+    });
     // The configured-checkout journey alone may start a second owned process
     // pair from these same-run outputs. It verifies producer/source hashes and
     // this DB identity before startup; global Stripe-missing cases stay intact.

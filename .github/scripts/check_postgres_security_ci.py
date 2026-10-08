@@ -43,6 +43,16 @@ EXPECTED_REQUIRED_RESULT_LINES = (
     "fi",
     "}",
     'require_success "check-changes" "$CHECK_CHANGES_RESULT"',
+    'if [ "$MARKDOWN_ONLY" = true ]; then',
+    'if [[ "$EVENT_NAME" != pull_request && "$EVENT_NAME" != push ]]; then',
+    "echo '::error::This event requires every CI lane.'",
+    "false",
+    "fi",
+    'if [[ ! "$CHANGED_FILE_COUNT" =~ ^[1-9][0-9]*$ || ! "$CLASSIFIED_SHA" =~ ^[0-9a-f]{40}$ || "$CLASSIFIED_SHA" != "$TESTED_SHA" ]]; then',
+    "echo '::error::Documentation exemption lacks nonempty, source-bound evidence.'",
+    "false",
+    "fi",
+    "fi",
     'if [[ "$MARKDOWN_ONLY" != "true" || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then',
     'require_success "native-build" "$NATIVE_BUILD_RESULT"',
     "else",
@@ -113,6 +123,9 @@ EXPECTED_POSTGRES_ENV = {
 EXPECTED_REQUIRED_ENV = {
     "EVENT_NAME": "${{ github.event_name }}",
     "MARKDOWN_ONLY": "${{ needs.check-changes.outputs.markdown-only }}",
+    "CHANGED_FILE_COUNT": "${{ needs.check-changes.outputs.changed-file-count }}",
+    "CLASSIFIED_SHA": "${{ needs.check-changes.outputs.classified-sha }}",
+    "TESTED_SHA": "${{ github.sha }}",
     **{
         job.upper().replace("-", "_") + "_RESULT": "${{ needs." + job + ".result }}"
         for job in (

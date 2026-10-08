@@ -22,16 +22,14 @@ test.describe('Offline-First AI Sync Mesh - Quote Creation', () => {
     // Mock queue interaction via the application's native queue storage mechanism
     await page.evaluate(async () => {
        const request = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-       request.onupgradeneeded = (e) => {
-           // @ts-ignore
-           const db = e.target.result;
+       request.onupgradeneeded = () => {
+           const db = request.result;
            if (!db.objectStoreNames.contains('actions')) {
                db.createObjectStore('actions', { keyPath: 'id' });
            }
        };
-       request.onsuccess = (e) => {
-           // @ts-ignore
-           const db = e.target.result;
+       request.onsuccess = () => {
+           const db = request.result;
            const tx = db.transaction(['actions'], 'readwrite');
            const store = tx.objectStore('actions');
            store.put({
@@ -48,15 +46,14 @@ test.describe('Offline-First AI Sync Mesh - Quote Creation', () => {
     const offlineQueueLength = await page.evaluate(async () => {
         return new Promise((resolve) => {
            const request = window.indexedDB.open('OMNISOLO_Offline_Queue', 1);
-           request.onsuccess = (e) => {
-               // @ts-ignore
-               const db = e.target.result;
+           request.onsuccess = () => {
+               const db = request.result;
                try {
                    const tx = db.transaction(['actions'], 'readonly');
                    const store = tx.objectStore('actions');
                    const getAll = store.getAll();
                    getAll.onsuccess = () => resolve(getAll.result.length);
-               } catch (e) {
+               } catch {
                    resolve(0);
                }
            };

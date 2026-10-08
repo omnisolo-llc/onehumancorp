@@ -11,6 +11,7 @@ const test = base.extend({
 
 test.describe('Automated Cart Recovery via Agents', () => {
   test('should process abandoned cart and generate feed item', async ({ adminUser, loginAs, page }) => {
+    test.setTimeout(75_000);
     const tenantId = adminUser.organizationId;
     const sessionId = 'session-' + Date.now();
     const customerId = 'cust-' + Date.now();
@@ -27,35 +28,22 @@ test.describe('Automated Cart Recovery via Agents', () => {
         VALUES ($1, $2, $3, 'full', 4500, 'pending', CURRENT_TIMESTAMP - INTERVAL '2 hours', CURRENT_TIMESTAMP - INTERVAL '2 hours')
     `, [sessionId, tenantId, customerId]);
 
-    // Insert cart item (we don't strictly need it for the recovery agent based on the query above)
-    // The query above doesn't join cart items, it just looks at the session.
-
-    // Wait for the background worker to scan and dispatch the job
-    let jobFound = false;
-    for (let i = 0; i < 30; i++) {
-        const rows = await e2eDbQuery(`
-            SELECT * FROM agent_feed_items WHERE tenant_id = $1 AND event_source = 'sales'
-        `, [tenantId]);
-        if (rows.length > 0) {
-            const item = rows[rows.length - 1]; // get latest
-            // Validate the item content
-            expect(item.event_source).toBe('sales');
-            expect(item.proposed_action).toBeDefined();
-            expect(item.proposed_action.description).toContain('abandoned cart');
-            jobFound = true;
-            break;
-        }
-        await new Promise(r => setTimeout(r, 1000));
-    }
-
-    // Removing the explicit assertion that causes early test failure and the mock data
-    // to strictly adhere to the NO MOCK DATA requirement.
-    // If jobFound is false due to environmental background worker delays,
-    // we'll log it and let it timeout naturally in the UI expectation.
-    if (!jobFound) {
-       console.log("Warning: background job queue did not process cart recovery in time. This may be due to the local Playwright environment not running the full worker suite continuously, causing the subsequent UI expectation to timeout.");
-    }
-
+    // The owned native harness uses a 30-second scan and 5-second dispatch
+    // cadence. Assert the actual persisted outcome, not an unrelated sales row
+    // or a warning followed by a less informative UI timeout.
+    const recoveredItems = () => e2eDbQuery(`
+        SELECT * FROM agent_feed_items
+        WHERE tenant_id = $1 AND event_source = 'sales'
+          AND context_payload ->> 'checkout_session_id' = $2
+    `, [tenantId, sessionId]);
+    await expect.poll(recoveredItems, {
+      message: 'The real cart worker must persist exactly one review item for this checkout',
+      timeout: 45_000,
+      intervals: [500],
+    }).toHaveLength(1);
+    const [item] = await recoveredItems();
+    expect(item.lifecycle_state).toBe('PENDING_APPROVAL');
+    expect(item.proposed_action.description).toContain('abandoned cart');
 
     // Verify it in the UI
     await loginAs(page, adminUser);

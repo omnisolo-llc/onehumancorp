@@ -41,6 +41,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       markdown-only: ${{ steps.check.outputs.markdown-only }}
+      changed-file-count: ${{ steps.check.outputs.changed-file-count }}
+      classified-sha: ${{ steps.check.outputs.classified-sha }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -61,9 +63,12 @@ jobs:
           CI_REF_TYPE: ${{ github.ref_type }}
           CI_EVENT_NAME: ${{ github.event_name }}
           CI_BASE_REF: ${{ github.base_ref }}
+          CI_PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           CI_BEFORE_SHA: ${{ github.event.before }}
           CI_TESTED_SHA: ${{ github.sha }}
         run: |
+          set -euo pipefail
           full_run() {
             echo "markdown-only=false" >> "$GITHUB_OUTPUT"
             echo "Full run: $1"
@@ -77,23 +82,36 @@ jobs:
           if [[ ! "$CI_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$(git rev-parse HEAD)" != "$CI_TESTED_SHA" ]]; then
             full_run 'tested revision cannot be verified'
           fi
+          changes_file=$(mktemp)
+          trap 'rm -f "$changes_file"' EXIT
           if [[ "$CI_EVENT_NAME" == pull_request ]]; then
             if [[ -z "$CI_BASE_REF" ]] || ! git check-ref-format "refs/heads/$CI_BASE_REF"; then
               full_run 'base ref cannot be verified'
+            fi
+            if [[ ! "$CI_PR_BASE_SHA" =~ ^[0-9a-f]{40}$ || ! "$CI_PR_HEAD_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+              full_run 'immutable PR revisions cannot be verified'
             fi
             depth=()
             if [[ "$(git rev-parse --is-shallow-repository)" == true ]]; then
               depth=(--unshallow)
             fi
-            # Both tips need complete ancestry for the existing three-dot diff.
-            # Blob filtering avoids bulk historical contents; rename detection
-            # can still retrieve the specific old blobs it needs on demand.
+            # Compare immutable event revisions, never a moving base branch.
+            # A synthetic merge can be tree-identical to base when the same
+            # test change landed independently (PR #41700); that is NOT docs.
             if ! git -c protocol.version=2 fetch --no-tags --no-recurse-submodules --filter=blob:none "${depth[@]}" origin \
               "+$CI_TESTED_SHA:refs/remotes/ci/tested" \
-              "+refs/heads/$CI_BASE_REF:refs/remotes/origin/$CI_BASE_REF"; then
+              "+$CI_PR_BASE_SHA:refs/remotes/ci/base" \
+              "+$CI_PR_HEAD_SHA:refs/remotes/ci/head"; then
               full_run 'PR comparison history is unavailable'
             fi
-            changed_files=$(git diff --name-only "refs/remotes/origin/$CI_BASE_REF...$CI_TESTED_SHA") || full_run 'PR comparison failed'
+            if [[ "$(git rev-list --parents -n 1 "$CI_TESTED_SHA")" != "$CI_TESTED_SHA $CI_PR_BASE_SHA $CI_PR_HEAD_SHA" ]]; then
+              full_run 'tested merge does not match the immutable PR revisions'
+            fi
+            # Disable rename collapsing so source.rs -> source.md cannot hide
+            # the source deletion. NUL delimiters preserve unusual filenames.
+            git diff --no-renames --name-only -z "$CI_PR_BASE_SHA...$CI_PR_HEAD_SHA" > "$changes_file" || full_run 'PR comparison failed'
+            # Include any changes introduced by the tested merge itself too.
+            git diff --no-renames --name-only -z "$CI_PR_BASE_SHA" "$CI_TESTED_SHA" >> "$changes_file" || full_run 'tested merge comparison failed'
           else
             if [[ ! "$CI_BEFORE_SHA" =~ ^[0-9a-f]{40}$ || "$CI_BEFORE_SHA" == 0000000000000000000000000000000000000000 ]]; then
               full_run 'push before revision is unavailable'
@@ -104,21 +122,29 @@ jobs:
                 full_run 'push before revision cannot be fetched'
               fi
             fi
-            changed_files=$(git diff --name-only "$CI_BEFORE_SHA" "$CI_TESTED_SHA") || full_run 'push comparison failed'
+            git diff --no-renames --name-only -z "$CI_BEFORE_SHA" "$CI_TESTED_SHA" > "$changes_file" || full_run 'push comparison failed'
           fi
 
+          LC_ALL=C sort -zu -o "$changes_file" "$changes_file" || full_run 'changed paths cannot be normalized'
+          count=0
+          markdown_only=true
           echo "Changed files:"
-          echo "$changed_files"
-
-          non_md_files=$(echo "$changed_files" | grep -v '\.md$' | grep -v '^$' || true)
-
-          if [ -z "$non_md_files" ]; then
-            echo "markdown-only=true" >> "$GITHUB_OUTPUT"
-            echo "Only markdown files changed"
-          else
-            echo "markdown-only=false" >> "$GITHUB_OUTPUT"
-            echo "Non-markdown files changed: $non_md_files"
+          while IFS= read -r -d '' file; do
+            printf '%s\n' "$file"
+            count=$((count + 1))
+            case "$file" in
+              AGENTS.md|*/AGENTS.md|RESEARCH.md) markdown_only=false ;;
+              README.md|CHANGELOG.md|RELEASE_NOTES.md|docs/*.md) ;;
+              *) markdown_only=false ;;
+            esac
+          done < "$changes_file"
+          echo "changed-file-count=$count" >> "$GITHUB_OUTPUT"
+          echo "classified-sha=$CI_TESTED_SHA" >> "$GITHUB_OUTPUT"
+          if [[ "$count" == 0 ]]; then
+            full_run 'an empty comparison is not documentation-only evidence'
           fi
+          echo "markdown-only=$markdown_only" >> "$GITHUB_OUTPUT"
+          echo "Verified passive documentation only: $markdown_only ($count changed paths)"
 
       - name: Install PyYAML
         run: |
@@ -1383,6 +1409,9 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           MARKDOWN_ONLY: ${{ needs.check-changes.outputs.markdown-only }}
+          CHANGED_FILE_COUNT: ${{ needs.check-changes.outputs.changed-file-count }}
+          CLASSIFIED_SHA: ${{ needs.check-changes.outputs.classified-sha }}
+          TESTED_SHA: ${{ github.sha }}
           DEPENDENCY_AUDIT_RESULT: ${{ needs.dependency-audit.result }}
           CHECK_CHANGES_RESULT: ${{ needs.check-changes.result }}
           NATIVE_BUILD_RESULT: ${{ needs.native-build.result }}
@@ -1432,6 +1461,18 @@ jobs:
           }
 
           require_success "check-changes" "$CHECK_CHANGES_RESULT"
+
+          # A bare boolean is insufficient evidence to waive the full suite.
+          if [ "$MARKDOWN_ONLY" = true ]; then
+            if [[ "$EVENT_NAME" != pull_request && "$EVENT_NAME" != push ]]; then
+              echo '::error::This event requires every CI lane.'
+              false
+            fi
+            if [[ ! "$CHANGED_FILE_COUNT" =~ ^[1-9][0-9]*$ || ! "$CLASSIFIED_SHA" =~ ^[0-9a-f]{40}$ || "$CLASSIFIED_SHA" != "$TESTED_SHA" ]]; then
+              echo '::error::Documentation exemption lacks nonempty, source-bound evidence.'
+              false
+            fi
+          fi
 
           if [[ "$MARKDOWN_ONLY" != "true" || "$EVENT_NAME" == "schedule" || "$EVENT_NAME" == "workflow_dispatch" ]]; then
             require_success "native-build" "$NATIVE_BUILD_RESULT"

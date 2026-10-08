@@ -36,6 +36,22 @@ beforeEach(() => {
 });
 afterEach(() => { vi.useRealTimers(); cleanup(); notifyQueueIdentityChange(); Object.defineProperty(window, 'localStorage', { value: originalStorage, writable: true }); vi.unstubAllGlobals(); });
 
+it.each(['proposal', 'subscription_win_back'])('preserves discoverable feed cards and controls for %s', async actionType => {
+  rows = [{ ...row, proposed_action: { ...row.proposed_action, action_type: actionType } }];
+  await mount();
+  const card = screen.getByTestId('agent-feed-card');
+  expect(card).toHaveAttribute('id', `triage-card-${row.id}`);
+  expect(within(card).getByText('Real pending work')).toBeVisible();
+  expect(within(card).getByTestId('feed-approve-btn')).toBeEnabled();
+  expect(within(card).getByTestId('feed-dismiss-btn')).toBeEnabled();
+  if (actionType === 'proposal') {
+    fireEvent.click(within(card).getByTestId('edit-proposal'));
+    expect(within(card).getByTestId('edit-draft-textarea')).toHaveValue(JSON.stringify(rows[0].proposed_action));
+    expect(within(card).getByTestId('save-edit-approve-btn')).toBeEnabled();
+  }
+  expect(writes()).toHaveLength(0);
+});
+
 it('keeps a pending card and submits only once until its matching persisted decision arrives', async () => {
   let finish!: (response: Response) => void;
   mutation = () => new Promise(resolve => { finish = resolve; });
