@@ -182,6 +182,7 @@ test.describe('Terminal clocks have actual authenticated timecard receipts', () 
       expect(await readClockRows(page)).toEqual(originals);
       await expect(page.getByText('2 historical clock changes require review. Original records are preserved.', { exact: true })).toBeVisible();
       await page.context().setOffline(true); await page.context().setOffline(false);
+      await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(true);
       const submitted = waitForClockPost(page);
       await page.getByRole('button', { name: 'Clock In', exact: true }).click();
       const event = await assertClockPost(await submitted, owner, 'CLOCK_IN');
