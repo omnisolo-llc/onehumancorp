@@ -1,0 +1,58 @@
+--- transport.rs
++++ transport.rs
+@@ -248,15 +248,15 @@
+         .map_err(|e| e.to_string())?;
+
+         // Attempt to add the column, ignoring error if it already exists
+-        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
+-            .execute(&pool)
+-            .await
+-        {
+-            Ok(_) => {}
+-            Err(e) => {
+-                let err_str = e.to_string();
+-                if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
+-                    return Err(format!("Failed to migrate mesh_messages: {}", err_str));
+-                }
+-            }
+-        }
++        let _ = match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
++            .execute(&pool)
++            .await
++        {
++            Ok(_) => {}
++            Err(e) => {
++                let err_str = e.to_string();
++                if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
++                    return Err(format!("Failed to migrate mesh_messages: {}", err_str));
++                }
++            }
++        };
+@@ -559,15 +559,15 @@
+         .map_err(|e| e.to_string())?;
+
+         // Attempt to add the column, ignoring error if it already exists
+-        match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
+-            .execute(&pool)
+-            .await
+-        {
+-            Ok(_) => {}
+-            Err(e) => {
+-                let err_str = e.to_string();
+-                if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
+-                    tracing::debug!("Failed to migrate mesh_messages: {}", err_str);
+-                }
+-            }
+-        }
++        let _ = match sqlx::query("ALTER TABLE mesh_messages ADD COLUMN msg_id TEXT")
++            .execute(&pool)
++            .await
++        {
++            Ok(_) => {}
++            Err(e) => {
++                let err_str = e.to_string();
++                if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
++                    tracing::debug!("Failed to migrate mesh_messages: {}", err_str);
++                }
++            }
++        };

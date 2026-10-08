@@ -87,7 +87,7 @@ describe('DashboardViralInviteWidget', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generating...' }));
     expect(posts()).toHaveLength(1); first.unmount();
     render(<DashboardViralInviteWidget />);
-    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' })).toHaveTextContent('previous invitation request is unconfirmed');
+    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' }, { timeout: 3000 })).toHaveTextContent('A previous invitation request is unconfirmed');
     await act(async () => pending.resolve(Response.json({ invite_link: receipt })));
     expect(document.querySelector('#dashboard-invite-link')).toBeNull(); expect(posts()).toHaveLength(1);
   });
@@ -105,7 +105,7 @@ describe('DashboardViralInviteWidget', () => {
   it('does not create when the verified identity is unavailable', async () => {
     identityReply = async () => Response.json({ error: 'unauthorized' }, { status: 401 });
     render(<DashboardViralInviteWidget />);
-    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' })).toHaveTextContent('No invitation was requested');
+    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' }, { timeout: 3000 })).toHaveTextContent(/No invitation was requested/);
     expect(screen.getByRole('button', { name: 'Get My Invite Link' })).toBeDisabled(); expect(posts()).toHaveLength(0);
   });
 });

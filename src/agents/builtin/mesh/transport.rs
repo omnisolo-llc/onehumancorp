@@ -254,7 +254,7 @@ impl PgTransport {
             Ok(_) => {}
             Err(e) => {
                 let err_str = e.to_string();
-                if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
+                if !err_str.to_lowercase().contains("duplicate column") && !err_str.to_lowercase().contains("already exists") {
                     return Err(format!("Failed to migrate mesh_messages: {}", err_str));
                 }
             }
@@ -565,7 +565,7 @@ impl SqliteTransport {
             Ok(_) => {}
             Err(e) => {
                 let err_str = e.to_string();
-                if !err_str.contains("duplicate column") && !err_str.contains("already exists") {
+                if !err_str.to_lowercase().contains("duplicate column") && !err_str.to_lowercase().contains("already exists") {
                     tracing::debug!("Failed to migrate mesh_messages: {}", err_str);
                 }
             }
