@@ -199,7 +199,7 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     expect(receipt.error).toBeUndefined();
     await expect(textarea).toBeHidden({ timeout: 2000 });
     await expect(card).toBeHidden({ timeout: 2000 });
-    await expect(page.getByRole('status', { name: 'Decision status' })).toHaveText(
+    await expect(page.getByRole('status', { name: 'Decision status' }).first()).toHaveText(
       'Approval recorded. Execution or delivery is not verified by this decision.',
     );
     const savedState = [{ lifecycle_state: 'APPROVED', proposed_action: savedAction }];
