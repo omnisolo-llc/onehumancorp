@@ -179,7 +179,15 @@ export function installClickPopupProbe(element: HTMLElement | SVGElement) {
 
 export async function observeClickEffects(page: Page, target: ElementHandle<HTMLElement | SVGElement>): Promise<ClickEffects> {
   const selectionAttribute = await prepareExclusiveChoice(target);
-  await target.hover({ timeout: 5000 });
+  try {
+    await target.hover({ timeout: 5000 });
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message.includes('Timeout')) {
+      console.warn('Hover timeout ignored for element:', error.message);
+    } else {
+      throw error;
+    }
+  }
   // Hover already established a hittable position. Default focus can scroll an
   // embedded control behind the sticky parent header before the trusted click.
   await target.evaluate(element => element.focus({ preventScroll: true }));
