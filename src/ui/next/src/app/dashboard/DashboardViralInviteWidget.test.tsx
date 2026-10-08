@@ -87,7 +87,7 @@ describe('DashboardViralInviteWidget', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generating...' }));
     expect(posts()).toHaveLength(1); first.unmount();
     render(<DashboardViralInviteWidget />);
-    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' })).toHaveTextContent('previous invitation request is unconfirmed');
+    expect(await screen.findByRole('status', { name: 'Dashboard invitation status' })).toHaveTextContent(/previous invitation request is unconfirmed/i);
     await act(async () => pending.resolve(Response.json({ invite_link: receipt })));
     expect(document.querySelector('#dashboard-invite-link')).toBeNull(); expect(posts()).toHaveLength(1);
   });

@@ -197,8 +197,8 @@ test.describe('Unified Agent Feed Interactive Flow', () => {
     const receipt = await decision.json();
     expect(receipt).toMatchObject(expectedReceipt);
     expect(receipt.error).toBeUndefined();
-    await expect(textarea).toBeHidden({ timeout: 2000 });
-    await expect(card).toBeHidden({ timeout: 2000 });
+    await expect(textarea).not.toBeVisible({ timeout: 2000 });
+    await expect(card).not.toBeVisible({ timeout: 2000 });
     await expect(page.getByRole('status', { name: 'Decision status' })).toHaveText(
       'Approval recorded. Execution or delivery is not verified by this decision.',
     );
