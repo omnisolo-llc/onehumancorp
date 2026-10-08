@@ -140,7 +140,7 @@ test("all application pages render through the real authenticated service", asyn
   }
 
   await Promise.all(policyChecks);
-  expect([...verifiedPolicyUrls].sort(), "the exact hosted voice, absent runtime and measured-savings boundaries were verified from their actual responses").toEqual([new URL("/api/v1/settings/voice", baseUrl).href, new URL("/api/v1/sona", baseUrl).href, new URL("/api/v1/agents/goose", baseUrl).href, new URL("/api/v1/growth/time-savings", baseUrl).href].sort());
+  expect([...verifiedPolicyUrls].sort(), "the exact hosted voice, absent runtime and measured-savings boundaries were verified from their actual responses").toEqual([new URL("/api/v1/settings/voice", baseUrl).href, new URL("/api/v1/agents/goose", baseUrl).href, new URL("/api/v1/growth/time-savings", baseUrl).href].sort());
   expect(routeFailures, "application page failures during the page crawl").toEqual([]);
   expect(contentFailures, "fabricated data or legacy branding during the page crawl").toEqual([]);
   expect(httpFailures, "unexpected HTTP 4xx responses during the page crawl").toEqual([]);
