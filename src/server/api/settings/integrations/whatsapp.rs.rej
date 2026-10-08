@@ -1,0 +1,70 @@
+--- src/server/api/settings/integrations/whatsapp.rs
++++ src/server/api/settings/integrations/whatsapp.rs
+@@ -42,10 +42,67 @@
+ }
+
+ pub async fn connect_whatsapp_twilio(
+     Extension(user): Extension<Claims>,
+-    Json(_payload): Json<ConnectWhatsAppRequest>,
++    axum::extract::State(hub): axum::extract::State<std::sync::Arc<crate::hub::Hub>>,
++    Json(payload): Json<ConnectWhatsAppRequest>,
+ ) -> impl IntoResponse {
+-    unavailable_for_owner(&user)
++    let tenant_id = match user.organization_id {
++        Some(id) if !id.trim().is_empty() => id,
++        _ => {
++            return (
++                StatusCode::UNAUTHORIZED,
++                Json(serde_json::json!({"success": false, "usable": false, "status": "unavailable", "message": "Authenticated organization required"})),
++            )
++                .into_response();
++        }
++    };
++
++    if !user
++        .roles
++        .iter()
++        .any(|role| role.eq_ignore_ascii_case("owner") || role.eq_ignore_ascii_case("admin"))
++    {
++        return (
++            StatusCode::FORBIDDEN,
++            Json(serde_json::json!({"success": false, "usable": false, "status": "unavailable", "message": "Owner approval is required"})),
++        )
++            .into_response();
++    }
++
++    let account_sid = payload.bot_token.unwrap_or_default();
++    let auth_token = payload.api_token.unwrap_or_default();
++    let from_phone = payload.from_phone.unwrap_or_default();
++
++    let insert_result = match &hub.db().store {
++        crate::db::DbStore::Postgres => {
++            sqlx::query("INSERT INTO integration_credentials (tenant_id, integration_id, account_id, api_key, from_phone) VALUES ($1, 'twilio', $2, $3, $4) ON CONFLICT(tenant_id, integration_id) DO UPDATE SET account_id = EXCLUDED.account_id, api_key = EXCLUDED.api_key, from_phone = EXCLUDED.from_phone")
++                .bind(&tenant_id).bind(&account_sid).bind(&auth_token).bind(&from_phone)
++                .execute(&hub.db().pool).await.map(|_| ())
++        },
++        crate::db::DbStore::Sqlite(sqlite_pool) => {
++            sqlx::query("INSERT INTO integration_credentials (tenant_id, integration_id, account_id, api_key, from_phone) VALUES (?, 'twilio', ?, ?, ?) ON CONFLICT(tenant_id, integration_id) DO UPDATE SET account_id = EXCLUDED.account_id, api_key = EXCLUDED.api_key, from_phone = EXCLUDED.from_phone")
++                .bind(&tenant_id).bind(&account_sid).bind(&auth_token).bind(&from_phone)
++                .execute(sqlite_pool).await.map(|_| ())
++        }
++    };
++
++    match insert_result {
++        Ok(_) => {
++            (
++                StatusCode::OK,
++                Json(serde_json::json!({"success": true, "usable": true, "status": "connected", "message": "Twilio for WhatsApp connected."})),
++            )
++                .into_response()
++        }
++        Err(e) => {
++            tracing::error!("Failed to save Twilio for WhatsApp credentials: {}", e);
++            (
++                StatusCode::INTERNAL_SERVER_ERROR,
++                Json(serde_json::json!({"success": false, "usable": false, "status": "error", "message": "Failed to save credentials."})),
++            )
++                .into_response()
++        }
++    }
+ }
