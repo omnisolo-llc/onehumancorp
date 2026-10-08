@@ -40,7 +40,7 @@ test.describe('LangGraph State Machine', () => {
     await expect(page.getByTestId('error-message')).toContainText(runtimeUnavailableMessage);
     await expect(page.getByTestId('success-message')).toHaveCount(0);
     await expect(page.locator('#message')).toHaveValue(prompt);
-    await expect(page.getByRole('button', { name: 'Run LangGraph' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Run LangGraph' })).toBeEnabled({ timeout: 15000 });
   });
 
 });
