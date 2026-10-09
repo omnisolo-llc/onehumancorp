@@ -225,30 +225,33 @@ impl UsageCapture {
         self.buffer.clear();
         self.overflow = true;
     }
+    #[allow(clippy::collapsible_if)]
     pub fn push(&mut self, bytes: &[u8]) {
         if self.overflow {
             return;
         }
-        if self.buffer.len().saturating_add(bytes.len()) > 1024 * 1024 {
+        if self.buffer.len().saturating_add(bytes.len()) > 8 * 1024 * 1024 {
             self.buffer.clear();
             self.overflow = true;
             return;
         }
         self.buffer.extend_from_slice(bytes);
 
+        // If the payload appears to be a single JSON object (non-streaming),
+        // we defer processing until `receipt()` to avoid incorrectly splitting
+        // pretty-printed JSON by newlines.
+        if self.buffer.iter().find(|&&b| !b.is_ascii_whitespace()) == Some(&b'{') {
+            return;
+        }
+
+        // Otherwise, process incrementally as an SSE stream.
         while let Some(pos) = self.buffer.iter().position(|&b| b == b'\n') {
             let line = &self.buffer[..pos];
             if let Ok(line_str) = std::str::from_utf8(line) {
                 let trimmed = line_str.trim();
-                if trimmed.starts_with('{') {
-                    #[allow(clippy::collapsible_if)]
-                    if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
-                        extract(&value, &mut self.provider_request_id, &mut self.counts);
-                    }
-                } else if let Some(data) = trimmed.strip_prefix("data:") {
+                if let Some(data) = trimmed.strip_prefix("data:") {
                     let data = data.trim();
                     if data != "[DONE]" {
-                        #[allow(clippy::collapsible_if)]
                         if let Ok(value) = serde_json::from_str::<Value>(data) {
                             extract(&value, &mut self.provider_request_id, &mut self.counts);
                         }
@@ -259,15 +262,21 @@ impl UsageCapture {
         }
     }
 
+    #[allow(clippy::collapsible_if)]
     pub fn receipt(mut self, fallback: &str) -> UsageReceipt {
-        #[allow(clippy::collapsible_if)]
         if !self.overflow && !self.buffer.is_empty() {
-            if let Ok(line_str) = std::str::from_utf8(&self.buffer) {
+            // First, try parsing the entire buffer as a single JSON object.
+            if let Ok(value) = serde_json::from_slice::<Value>(&self.buffer) {
+                extract(&value, &mut self.provider_request_id, &mut self.counts);
+            } else if let Ok(line_str) = std::str::from_utf8(&self.buffer) {
+                // If it fails, it might be the trailing end of an SSE stream missing a final newline.
                 let trimmed = line_str.trim();
-                if trimmed.starts_with('{') {
-                    #[allow(clippy::collapsible_if)]
-                    if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
-                        extract(&value, &mut self.provider_request_id, &mut self.counts);
+                if let Some(data) = trimmed.strip_prefix("data:") {
+                    let data = data.trim();
+                    if data != "[DONE]" {
+                        if let Ok(value) = serde_json::from_str::<Value>(data) {
+                            extract(&value, &mut self.provider_request_id, &mut self.counts);
+                        }
                     }
                 }
             }
