@@ -241,12 +241,14 @@ impl UsageCapture {
             if let Ok(line_str) = std::str::from_utf8(line) {
                 let trimmed = line_str.trim();
                 if trimmed.starts_with('{') {
+                    #[allow(clippy::collapsible_if)]
                     if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
                         extract(&value, &mut self.provider_request_id, &mut self.counts);
                     }
                 } else if let Some(data) = trimmed.strip_prefix("data:") {
                     let data = data.trim();
                     if data != "[DONE]" {
+                        #[allow(clippy::collapsible_if)]
                         if let Ok(value) = serde_json::from_str::<Value>(data) {
                             extract(&value, &mut self.provider_request_id, &mut self.counts);
                         }
@@ -256,11 +258,14 @@ impl UsageCapture {
             self.buffer.drain(..pos + 1);
         }
     }
+
     pub fn receipt(mut self, fallback: &str) -> UsageReceipt {
+        #[allow(clippy::collapsible_if)]
         if !self.overflow && !self.buffer.is_empty() {
             if let Ok(line_str) = std::str::from_utf8(&self.buffer) {
                 let trimmed = line_str.trim();
                 if trimmed.starts_with('{') {
+                    #[allow(clippy::collapsible_if)]
                     if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
                         extract(&value, &mut self.provider_request_id, &mut self.counts);
                     }
@@ -269,7 +274,8 @@ impl UsageCapture {
         }
 
         UsageReceipt {
-            provider_request_id: self.provider_request_id
+            provider_request_id: self
+                .provider_request_id
                 .filter(|v| !v.is_empty() && v.len() <= 255)
                 .unwrap_or_else(|| format!("unknown:{fallback}")),
             counts: self.counts,
