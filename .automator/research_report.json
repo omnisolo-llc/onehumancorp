@@ -1,8 +1,5 @@
 {
-  "kind": "artifact",
-  "provenance": "research",
-  "issue": "#27416",
-  "title": "Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture",
-  "status": "blocked_finding",
-  "reason": "The 'Stripe Terminal POS Integration' / 'Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture' proposing a mobile-first architecture for offline tap-to-pay is classified as an unauthorized feature expansion. It has not been explicitly authorized by RESEARCH.md."
+  "finding": "Blocked / No-Work: The request implies implementing an agent marketplace expansion. According to RESEARCH.md, 'agent marketplaces' are explicitly gated and require an explicit evidence-backed decision (e.g., observed owner need, willingness to pay, reuse analysis). This is currently missing. Consequently, per AGENTS.md, this work is blocked and must be reported as a 'blocked' or 'no-work' outcome without implementation.",
+  "status": "blocked",
+  "reason": "Missing required strategic evidence for agent marketplace expansion per RESEARCH.md."
 }
