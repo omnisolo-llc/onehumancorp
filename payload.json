@@ -1,0 +1,11 @@
+{
+  "kind": "artifact",
+  "provenance": "research",
+  "path": ".automator/research_report.json",
+  "data": {
+    "task": "Issue #42027: 🗺️ Guide: [new onboarding feature]",
+    "outcome": "blocked",
+    "reason": "Blocked due to missing UX features and PR requirements as documented in F16. No code changes to be made as per instruction override.",
+    "evidence": "F16 is not yet addressed, preventing new onboarding UX flows from proceeding safely without contradicting F16 remediation path."
+  }
+}
