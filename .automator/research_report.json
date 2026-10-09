@@ -1,4 +1,8 @@
 {
-  "finding": "blocked",
-  "reason": "missing UX features and PR requirements for F16 UX wizards"
+  "kind": "artifact",
+  "provenance": "research",
+  "issue": "#27416",
+  "title": "Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture",
+  "status": "blocked_finding",
+  "reason": "The 'Stripe Terminal POS Integration' / 'Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture' proposing a mobile-first architecture for offline tap-to-pay is classified as an unauthorized feature expansion. It has not been explicitly authorized by RESEARCH.md."
 }
