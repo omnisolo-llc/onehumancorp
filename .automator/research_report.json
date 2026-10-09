@@ -1,1 +1,8 @@
-{"taskId":"11703072553372022736","status":"blocked","reason":"Evaluation of managed API vs API-key/cloud-account billing is currently blocked pending real usage data and owner interviews. Evaluation of provider-permitted native-client subscription vs local inference is blocked due to missing specific provider access prerequisites."}
+{
+  "kind": "artifact",
+  "provenance": "research",
+  "issue": "#27416",
+  "title": "Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture",
+  "status": "blocked_finding",
+  "reason": "The 'Stripe Terminal POS Integration' / 'Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture' proposing a mobile-first architecture for offline tap-to-pay is classified as an unauthorized feature expansion. It has not been explicitly authorized by RESEARCH.md."
+}
