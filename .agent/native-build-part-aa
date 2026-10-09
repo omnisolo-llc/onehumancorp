@@ -1,0 +1,111 @@
+# Native development, testing and build caches
+
+## One-command initialization
+
+```sh
+make init                             # Install prerequisites, prompting before sudo/Homebrew changes
+make doctor                           # Check readiness without installing dependencies
+make lint                             # Complete Rust + Node quality gates
+make test                             # Complete workspace, unit, contract and real-stack browser tests
+```
+
+Bootstrap inputs: Git, GNU Make and Python, plus permission to install missing host packages. The Python environment used by release/test tools must be 3.11 or newer with venv support (Ubuntu 24.04+/Debian 12+ include a suitable default). On older Linux distributions, install a suitable Python first. macOS requires Homebrew and Xcode command-line tools; `xcode-select --install` is an interactive Apple installation and is not run silently. Native Windows release builds retain their own MSVC/WebView2 requirements; use WSL2 Ubuntu with Docker integration for the full POSIX test environment.
+
+The initializer reads the repository's Node and Rust pins, installs Rust with rustfmt/Clippy without changing the global default, and uses verified official Node archives when the matching Node version is absent. npm/npx and tool links live in ignored `target/dev-tools/`. All four locked npm trees are installed with development dependencies: repository root, Next, CLI and `.github/test-tools` (OpenCode). Installation stamps include both manifests, Node, OS and architecture. Python packages use an isolated venv; Cargo dependencies are fetched with `--locked`. The initializer installs Chromium and its Linux system libraries, then actually launches and closes the browser during readiness checks.
+
+```sh
+make init INIT_ARGS=--plan             # Print the plan; no network, installations or writes
+make init INIT_ARGS=--yes              # Approve the described host package installations
+make init INIT_ARGS=--no-system        # Never invoke sudo/Homebrew; host libraries must exist
+make init INIT_ARGS=--force            # Reinstall locked npm trees even if stamps match
+source target/dev-tools/env.sh         # Use local tools directly; required for Homebrew keg paths
+```
+
+Make targets already prepend project-local tool links to PATH. The generated shell snippet does not modify your profile; on macOS source it to expose keg-only PostgreSQL/coreutils/OpenSSL paths to direct commands and shell-based deployment tests. No `.env`, provider key, signing credential, user/group membership or Docker permission is created or modified.
+
+**Docker remains an explicit host prerequisite.** Install/start Docker Engine or Docker Desktop, including Compose v2 and Buildx, and select the intended local context before initialization. `make init` does not make a privileged daemon or change your Docker group membership. It fails if the daemon is unavailable or the effective context is remote; `DOCKER_CONTEXT` takes precedence over `DOCKER_HOST`. Tests create isolated local containers, not a production deployment. Android SDK/NDK, Apple device provisioning, signing/notarization and registry credentials remain release-specific prerequisites rather than requirements for the ordinary host build.
+
+A failed or interrupted install is not recorded as successful. Check an existing `target/dev-tools/.initializing` lock before removing it after an interrupted run; never remove active compiler caches or another user's files. Successful initialization proves environment readiness, **not that application tests pass**. Run the quality gates separately.
+
+The [2026-09-19 measured cleanup record](../research/native_build_measurements_2026-09-19.md) records an **8m 33.94s empty-output backend build**, **1.87s unchanged rerun**, and **31.40s fresh Node build**. Dependency downloads/toolchains were already available; this is not completely cold hosted CI. Keep the **10-minute core backend compilation goal** distinct from the **60-minute full required-CI ceiling**. Repository-wide lint and full execution gates remain mandatory.
+
+Use the same `CARGO_TARGET_DIR` with Cargo and `npm run test:e2e`; the browser runner honors custom output directories instead of using old default-directory binaries. Web output remains at `target/native-web` and must pass its source/platform/Node/lockfile checks.
+
+Updated 2026-09-19. The supported build is Cargo/Rust + Next.js/Node + Tauri, not Bazel. Root `Cargo.toml`, `Cargo.lock`, `rust-toolchain.toml`, `.node-version`, and the root/Next/CLI npm lockfiles are authoritative.
+
+## Canonical quality gates
+
+Run `make lint` and `make test` from the repository root before accepting an implementation. GNU Make invokes the native tools; failures stop the target and return a nonzero exit status, including with `make -j`. These targets never silently skip an unavailable tool or test lane.
+
+- `make test`: all Cargo workspace members (including Tauri), Node script tests, Next Vitest, CLI Vitest with coverage, desktop UI Vitest, native contracts and the complete real-stack Playwright discovery. E2E builds fresh Rust binaries and Next output first.
+- `make lint`: rustfmt check, Clippy for all workspace targets with warnings denied, ESLint for handwritten JS/TS, and Next/CLI TypeScript checks. Generated output and dependency directories are excluded from ESLint, not source tests. Existing lint debt is a failure, not an automatic exemption.
+- Focused lanes: `make test-rust`, `make test-backend`, `make test-node`, `make test-contracts`, `make test-e2e`, `make lint-rust`, `make lint-node`. `make test-backend` excludes Tauri and cannot certify the full suite.
+- `make test-e2e E2E_ARGS='--workers=1'` adjusts browser concurrency. Filters are diagnostic only; do not claim full acceptance for filtered runs. `make build-web` builds just the maintained web package.
+
+The Redis reconnect focused gate additionally requires `redis-server` and `redis-cli`
+on PATH (Debian/Ubuntu: `redis-server redis-tools`; macOS: `redis`). Its runner
+starts a disposable loopback process and verifies the server PID before destructive
+connection tests; shared Redis services and supplied URLs are rejected. Run
+`bash scripts/redis-reconnect/fetch.sh` then
+`python3 scripts/focused_ci_gate.py redis-reconnect`. Native contracts enforce the
+fixture ownership and required CI wiring without running those connection tests.
+
+Full gates require GNU Make, the pinned Rust/Node toolchains, Python 3 with PyYAML, native Tauri/WebKit/GTK development libraries for the host, a running Docker daemon and Playwright Chromium plus its OS dependencies (`npx --no-install playwright install --with-deps chromium`). Install locked npm dependencies at root, `src/ui/next`, and `src/cli`. See the native CI setup action for platform package lists. Mobile SDK, signing and physical-device checks remain separate release verification, not implied by a host workspace pass.
+
+## Setup and boundaries
+
+Install Rust with rustup and the pinned Node release. Ensure `$HOME/.cargo/bin` is on PATH on Unix. Use `npm ci` at the repository root, `npm --prefix src/ui/next ci` and `npm --prefix src/cli ci`; none should update a lockfile. Use `--locked` with Cargo in automation. Proto generation uses the workspace build scripts and vendored protoc; do not invoke deleted Bazel targets.
+
+Standalone backend startup requires explicitly supplied `OMNISOLO_AGENT_TOKEN` and `OMNISOLO_AGENT_AUTH_KEY` (at least 32 bytes), using the operator's existing secret-management mechanism. Missing or invalid configuration fails before database initialization; the server never inserts development credentials. `OMNISOLO_AGENT_AUTH_DISABLED` is rejected by production binaries, and SPIFFE mode remains unavailable until verified peer extraction is implemented. The isolated browser runner supplies its own test-only credentials. Cluster mode does not create or overwrite agent credentials.
+
+The default Cargo members are the backend and harness worker. `app` is the Tauri package and is excluded only from focused headless checks. Full `make test` and `make lint` include it and require native desktop dependencies.
+
+```sh
+cargo check --locked --workspace --exclude app --all-targets
+cargo test --locked -p server_services_billing
+cargo test --locked -p server_pricing
+cargo test --locked -p server_harness
+cargo test --locked -p server_integrations_stripe
+cargo test --locked --workspace --exclude app
+npm run test:contracts
+npm run typecheck:web
+npm run typecheck:e2e
+npm run test:web
+```
+
+`typecheck:e2e` checks every source included by `playwright.tsconfig.json`, including archived contract files. It is required by `make lint` and the Node CI job. Static checking does not change native browser discovery or certify archived mock contracts as runtime acceptance.
+
+Focused checks accelerate iteration; they do not replace the complete regression suite. Test output must include nonzero executed tests where tests are expected. No `--pass-with-no-tests`, hidden failures, disabled assertions or changed business expectations merely to obtain green output.
+
+## Build once, consume real artifacts
+
+```sh
+make build-e2e
+npm run desktop:build -- --debug --no-bundle
+npx --no-install playwright install chromium
+npm run test:e2e -- --workers=1
+```
+
+`build:web` compiles the maintained Next application and only then creates a source-bound proof and standalone package in `target/native-web`. Tauri owns a loopback Node server for this package. The authenticated Next server routes are retained; a static HTML export would remove necessary application behavior. The packaged executable is a separate official Node distribution, verified against the pinned release checksums and shipped with its license—not a copied CI `process.execPath` that might depend on shared host libraries.
+
+The package manifest binds source, dependency lock, build ID, Node version, OS and architecture. Packaging refuses stale output even when dependency locks are unchanged. Environment files and build caches are excluded from standalone, public and static content. Never merge old artifacts into a new bundle. `OMNISOLO_PREBUILT_WEB` may reuse a validated artifact from the same workflow/source/platform, not an arbitrary cached directory.
+
+`make build-e2e` also snapshots native producer source before Cargo and records the resulting server and agent hashes after Cargo succeeds. The proof lives beside those binaries in `${CARGO_TARGET_DIR:-target}/debug/native-binary-proof.json`. The configured checkout session tests require this proof and refuse stale or unproved binaries. A direct Cargo build alone does not produce it; use the maintained Make target before local E2E execution.
+
+The inventory session tests start a separate backend and Next process pair from the verified outputs, using the runner-owned database, fresh test tenants and an owned loopback provider. The provider accepts only registered checkout terms and returns an unpaid session. A browser proxy allows only the owned application, including Playwright API CONNECT tunnels to that exact host and port, and refuses every other CONNECT target, including the observed HTTPS Stripe redirect. These tests establish cash receipt versus online session/stock-hold exclusion. They do not exercise hosted payment or a paid webhook. The existing backend binds all interfaces inside the test runner; the provider, proxy and Next bind loopback. Global unconfigured-provider tests keep their original environment.
+
+The Rust API runs separately, either locally or on a configured HTTPS host. Desktop owns only its packaged Node process; it must not claim to provision or supervise a missing Rust backend. Mobile builds point at explicit HTTPS `OMNISOLO_MOBILE_WEB_URL` and do not bundle a desktop Node runtime. Platform SDKs, signing keys, store enrollment and actual device/install tests remain separate release prerequisites.
+
+## Action-owned CI setup
+
+`make init` and `make doctor` are local developer commands, not CI setup steps. GitHub Actions uses `.github/actions/setup-native` to compose `actions/setup-node`, `dtolnay/rust-toolchain`, `Swatinem/rust-cache` and explicit `actions/cache/restore` / `actions/cache/save` steps. The redundant privileged `native-init` job has been removed. CI installs only each job's required host libraries and locked dependencies; it does not install a complete developer environment twice.
+
+The local initializer's regression tests remain in the inexpensive `check-changes` job and the normal script suite. `.github/scripts/check_native_cache_test.py` rejects any workflow/action invoking the initializer, checks scoped dependency installation with fake npm executables, verifies failure propagation and preserves every application/security gate. Existing ESLint/TypeScript, Rust, frontend/CLI/desktop unit, real-stack browser, deployment, security, release-matrix and timing requirements are unchanged. Tests of bootstrap functions are not a claim of performing a full hosted bootstrap.
+
+The headless Rust test job uses the shared setup action's `harness` Node scope, including the pinned OpenCode dependency. Its explicit version check and PATH setup still run before the real integration tests. Other jobs do not pay for this additional dependency tree.
+
+## CI cache design
+
+`.github/actions/setup-native/action.yml` configures **dependency-only** Rust caches by OS, architecture, runner image and job role; release roles include the target or matrix name. Rust-cache supplies the installed-compiler, Cargo manifest/lock, configuration and compiler-environment hashes, plus compatible dependency fallback behavior. Its environment fingerprint retains the default compiler inputs and also covers OpenSSL, pkg-config, vcpkg, SDKROOT and macOS deployment-target settings. A second manual manifest hash is not added to the job key. The `ohc-native-dependencies-v1` namespace retires previous caches containing workspace binaries. Source-bound workspace crates, installed toolchain executables, incremental graphs and failed builds are not saved; application/test binaries travel only as same-run artifacts. Cargo always revalidates fingerprints, and restored dependencies are not test results. Backend, desktop, release and cross-target jobs do not share incompatible target caches.
+
+This follows [rust-cache's documented dependency-cache behavior](https://github.com/Swatinem/rust-cache#cache-details) and avoids relying on updating an immutable cache with newer application binaries; [GitHub requires a new key to change cached contents](https://docs.github.com/en/actions/reference/workflows-and-actions/dependency-caching). The first run in the new namespace is expected to miss. Measure restore/save duration and total cache size before claiming a CI speedup.

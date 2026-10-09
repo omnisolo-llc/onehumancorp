@@ -1,0 +1,96 @@
+| [Google owner gallery O8](https://workspace.google.com/ai/customers/) | Google's written vignettes feature Delgado Guitars handling inquiries, The Woobles examining inventory run rates and The Village Store examining supply costs. | Needs extend beyond digital services. These are vendor-selected descriptions, not independently verified results or videos watched in this review. |
+
+Another parcel-loss thread was examined but contained authenticity disputes; it was not used as core evidence. No forum posts or outreach were made.
+
+**Provisional synthesis:** collect cash and avoid lost business; connect the data owners already have; carry out repeatable administration without creating supervision work; preserve customer context; and make consequential calculations/actions reviewable. These are candidate problem clusters, not a validated market ranking. The current evidence does not justify making web/design agencies the only eligible segment.
+
+## 5. What ChatGPT, Gemini and Claude already do
+
+Product observations checked 2026-09-18; vendor pages describe offered behavior, not independently measured superiority. Current overlap is much greater than “chatbots answer, OHC acts.”
+
+| Current primary source | Capability observation | Implication for OHC |
+|---|---|---|
+| [ChatGPT Work](https://openai.com/chatgpt-work/) | Uses files, connected tools and desktop apps to create work products; supports plugins and recurring tasks. | Documents, cross-tool actions and scheduling are competitive baseline capabilities. Compare a real OHC workflow against Work rather than old chat-only behavior. |
+| [Gemini in Workspace](https://workspace.google.com/solutions/ai/) and [Workspace Studio](https://workspace.google.com/studio/) | Assistance within the productivity suite, source-grounded research and no-code flows with connectors/custom extensions. | Owners already working in Gmail/Docs/Sheets may favor improving their existing workspace. Another generic assistant or flow builder needs a concrete advantage. |
+| [Claude SMB update](https://claude.com/blog/claude-for-small-business-launches-new-workflows-integrations-and-training-programs), **2026-09-15** | Announces 43 workflows and 27 new integrations, including commerce/finance tools; covers reporting, inquiries and proposals. Its Mothership Coffee example describes fragmented operational data brought together for reporting. | The earlier May-only comparison is stale. Source-linked reporting and lead-to-proposal workflows overlap directly with OHC's proposed value. This is vendor evidence, not proof of OHC demand. |
+| [Cowork/Claude interface update](https://claude.com/blog/cowork-is-now-claude), **2026-09-16** | Announces convergence of chat and task execution plus continuing/scheduled work. Initial rollout is Pro/Max, with other plan timing differentiated. | Do not claim all plans have identical availability, or that competitors cannot persist work beyond a conversation. |
+
+**Hypothesis worth testing:** OHC is an owner-controlled business operations workspace and execution environment that keeps durable records and business rules, works with the owner's chosen permitted AI provider, verifies effects and makes total costs understandable. Provider choice alone is not established willingness to pay. A provider-native plugin/connector to OHC and an OHC-controlled runtime are alternative distribution patterns, not two new products we must immediately build.
+
+## 6. BYOK, subscription access and who pays
+
+Do not use “BYOK” to imply that a consumer subscription supplies a general API credential. Technical support, commercial permission, privacy terms, quotas and owner authorization must all be checked for the exact mode.
+
+| Mode under evaluation | AI provider payer | OHC charging basis / unresolved question |
+|---|---|---|
+| Managed API | OHC's contracted API account | OHC compute/resources plus explicitly priced API consumption, subject to the provider's commercial terms. Do not assume permission to resell bare access or pool consumer subscriptions. |
+| Customer API key / cloud account | Customer directly | OHC hosting, storage, tools and other own costs; do not rebill customer-paid inference as OHC consumption. Inventory any embeddings/judges/background calls that still use an OHC-funded key. |
+| Provider-native client with an eligible subscription | Customer subscription/credits | Potentially OHC execution-environment resources, only within provider-permitted integration/auth patterns. Quota is not unlimited autonomous capacity and a token is not transferable general API access. |
+| Customer machine / local model | Customer hardware and applicable provider | OHC only charges for actual optional cloud services it provides. An owner-machine workflow cannot promise always-on hosted execution while that machine is offline. |
+
+### Provider-specific evidence
+
+**OpenAI:** [Business overview](https://help.openai.com/en/articles/8792828-chatgpt-business-overview) distinguishes Business from separately billed API usage. [Codex authentication](https://learn.chatgpt.com/docs/auth) supports ChatGPT subscription or API-key login; recommends API keys for programmatic CLI work; and documents Enterprise access tokens for trusted private Codex automation, not general API calls. This establishes different access modes, not approval for arbitrary hosted subscription brokering.
+
+**Anthropic:** [Claude Code legal/auth guidance](https://code.claude.com/docs/en/legal-and-compliance) permits hosting the **unmodified** Claude Code binary under stated conditions, including users authenticating and paying directly. It prohibits a third-party Claude.ai login/token relay and end-user usage resale/intermediation in that arrangement. An OHC-owned Agent SDK/API application needs API/cloud authentication. These are distinct architectures; confirm the proposed deployment against the full terms rather than treating consumer credentials as BYOK API keys.
+
+**Google:** [Gemini CLI quotas](https://geminicli.com/docs/resources/quota-and-pricing/) distinguishes eligible Google AI/Code Assist login allowances from API-key and Vertex billing. A generic Workspace subscription is not automatically a Gemini API entitlement. [Gemini API billing](https://ai.google.dev/gemini-api/docs/billing) ties API keys to projects and Cloud Billing; token classes and cache storage can have separate costs. Verify current plan eligibility and embedding terms, and never silently switch an exhausted subscription session to a paid OHC API key.
+
+This is product due diligence, not a legal opinion. No supported native-client subscription mode was demonstrated end-to-end in OHC. The existing Codex adapter and API/OAuth credential types are reuse assets, not that demonstration.
+
+## 7. Cost accounting before a price card
+
+The current source does not supply a measured deployment cost, representative workload distribution or reconciled provider invoice. Do not replace the former invented monthly budgets with invented per-token or per-compute prices.
+
+A proposed internal cost model is:
+
+```text
+OHC serving cost = OHC-funded model/tool usage
+                 + allocated CPU, memory and GPU resources
+                 + databases, storage, queues, backups and logs
+                 + browser/runtime capacity and network egress
+                 + paid external tools and communication
+                 + payment collection, support and incident handling
+                 + attributable idle/shared capacity
+```
+
+Customer-paid BYOK inference is tracked for owner visibility but excluded from OHC's provider expense and from an OHC inference debit. Keep OHC revenue, customer business revenue and money the customer pays directly to a provider separate. Also separate variable contribution from fixed engineering/admin/acquisition cost and company profit.
+
+Define compute precisely: active CPU-seconds, provisioned memory-time, GPU-time or reserved sandbox-time are different resources. A worker waiting on an API may use little CPU but still reserve memory and a browser. Avoid double-charging overlapping bundles; disclose whether waiting/reserved time is billable. Compare shared workers and idle suspension using actual workloads, without weakening tenant isolation.
+
+A 20% markup is not a 20% margin: an illustrative $10 cost sold at $12 yields $2, or **16.7% of revenue before other costs**. Small compute bills may not fund support. A minimum prepaid balance, explicit reserved-capacity charge or separately priced support could address this, but no particular fee is selected here. Test owner preference and unit economics rather than quietly reinstating the old subscription.
+
+### Minimum evidence required for usage billing
+
+Capture durable, deduplicated events with tenant/project/task/attempt and provider request IDs; payer and auth mode; provider/model; actual input/output/cache or tool quantities; resource unit and measured interval; rate-card version; estimated/reserved/settled/refunded state; and external reconciliation reference. API balances, subscription quota and customer cash are not interchangeable units.
+
+Use integer subunits or decimal arithmetic with sufficient precision, immutable adjustments rather than silent history edits, trusted producers and tenant-specific reads. Reserve a conservative ceiling before starting new paid work, bound concurrent work, settle actual usage, and reconcile incomplete streams or unknown outcomes. A local cap can bound OHC-originated work, not all other usage of the customer's shared API account. Provider reporting can lag; do not advertise exact global remaining funds from local counters alone.
+
+Retries and unsuccessful work can still consume resources. Decide and disclose the distinction between customer-requested attempts, provider-billed usage and retries caused by OHC defects. Record all economic cost even when OHC credits/refunds the customer's bill. A failure must not disappear from the cost denominator or become an invented successful outcome.
+
+The owner should see **estimated task cost and maximum authorized spend**, then an itemized OHC bill, separate customer-direct provider usage, and clear unknown or pending reconciliation. Internal token complexity can be hidden behind plain-language totals without hiding the actual charge basis.
+
+## 8. Evidence needed before a concrete implementation plan
+
+These are decision prerequisites, not an approved feature backlog:
+
+| Evidence question | Reuse / gap to investigate | Decision unlocked |
+|---|---|---|
+| Can one imported business produce a source-linked operational brief? | Existing Google clients, customer/finance data and agent feed; connection lifecycle still incomplete. | Whether connected reporting reduces effort beyond current provider-native tools. |
+| Can an inquiry become an accurate proposal and a usable payment request? | Existing proposals, invoices, calendars and Stripe client; replace or disable placeholder behavior with evidence. | Whether customer-to-payment execution is a viable first workflow and for which owner type. |
+| Can a recurring follow-up stop on payment, cancellation or revoked authority? | Existing approvals, queue/agent primitives and receivables code; actual delivery/recovery still needs proof. | Whether ongoing automation saves net owner time rather than requiring supervision. |
+| Can the same authorized workload be costed in managed API and customer-funded modes? | Existing proxy, native usage events and cost UI; meter feedback, tenancy, attribution and reservation defects block confidence. | Sustainable resource rates and a credible BYOK offering. |
+
+For each representative workload measure owner setup/review/correction time; observed success/failure; provider requests and token classes; active/reserved resources; cold starts, waits and retries; stored/network data; support effort; and an actual invoice reconciliation. Report workload size, deployment mode, payer, sample count and p50/p95 rather than extrapolating from one demo. Use provider sandbox/test boundaries where available; do not spend real money or run live customer actions without authorization.
+
+Collect a small, permissioned set of recent owner workflows across candidate segments before choosing a segment. Compare each against both its existing manual/SaaS process and the current AI business tools. Exact willingness to pay, usage tolerance, privacy preference and desired autonomy remain unknown. Public stories help select questions, not answer those commercial questions conclusively.
+
+**Current decision:** repair the evidence foundation and evaluate resource-based charging/customer-funded inference. Retain existing business modules; do not build another generic assistant, duplicate subsystem or broad ERP on the basis of this research. Keep proposal, launch, retail and field-service paths as candidates until code verification and owner evidence justify selection.
+
+## Source register
+
+All external sources linked inline were accessed **2026-09-18**. O1–O6 are anonymous/self-reported discussion threads with unverified publication timestamps, not interviews. O7 is Anthropic's dated workshop account; O8 is Google's undated written customer gallery. Product announcements have publication dates stated above; live provider help/terms and quota pages can change independently of announcements. No testimonial savings, profit uplift, installation counts or claimed market share were adopted as OHC evidence. No browsing of customer credentials or private owner documents was performed.
+
+### Implementation Blockers (Recorded 2026-09-19)
+- Evaluation of managed API vs API-key/cloud-account billing is currently blocked pending real usage data and owner interviews.
+- Evaluation of provider-permitted native-client subscription vs local inference is blocked due to missing specific provider access prerequisites.
