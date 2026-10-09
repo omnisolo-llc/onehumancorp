@@ -1,8 +1,5 @@
 {
-  "kind": "artifact",
-  "provenance": "research",
-  "issue": "#27416",
-  "title": "Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture",
-  "status": "blocked_finding",
-  "reason": "The 'Stripe Terminal POS Integration' / 'Multi-Tenant Offline-Tolerant Mobile POS Sync & Tap-to-Pay Architecture' proposing a mobile-first architecture for offline tap-to-pay is classified as an unauthorized feature expansion. It has not been explicitly authorized by RESEARCH.md."
+  "outcome": "blocked",
+  "reason": "Missing required specific owner interviews, provider sandboxes, and explicit metrics/economics data to make decisions about pricing, compute accounting, BYOK, and managed API. Task instructs to evaluate compute/API charging but blocks implementation due to missing evidence.",
+  "status": "F13, F14 and related BYOK/Billing tasks remain blocked"
 }
