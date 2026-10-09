@@ -215,47 +215,64 @@ impl RequestMeter {
 /// Neither prompts nor generated content are stored in the usage ledger.
 #[derive(Default)]
 pub struct UsageCapture {
-    bytes: Vec<u8>,
+    buffer: Vec<u8>,
     overflow: bool,
     pub provider_request_id: Option<String>,
+    counts: Option<TokenCounts>,
 }
 impl UsageCapture {
     pub fn invalidate(&mut self) {
-        self.bytes.clear();
+        self.buffer.clear();
         self.overflow = true;
     }
     pub fn push(&mut self, bytes: &[u8]) {
         if self.overflow {
             return;
         }
-        if self.bytes.len().saturating_add(bytes.len()) > 8 * 1024 * 1024 {
-            self.bytes.clear();
+        if self.buffer.len().saturating_add(bytes.len()) > 1024 * 1024 {
+            self.buffer.clear();
             self.overflow = true;
             return;
         }
-        self.bytes.extend_from_slice(bytes);
+        self.buffer.extend_from_slice(bytes);
+
+        while let Some(pos) = self.buffer.iter().position(|&b| b == b'\n') {
+            let line = &self.buffer[..pos];
+            if let Ok(line_str) = std::str::from_utf8(line) {
+                let trimmed = line_str.trim();
+                if trimmed.starts_with('{') {
+                    if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
+                        extract(&value, &mut self.provider_request_id, &mut self.counts);
+                    }
+                } else if let Some(data) = trimmed.strip_prefix("data:") {
+                    let data = data.trim();
+                    if data != "[DONE]" {
+                        if let Ok(value) = serde_json::from_str::<Value>(data) {
+                            extract(&value, &mut self.provider_request_id, &mut self.counts);
+                        }
+                    }
+                }
+            }
+            self.buffer.drain(..pos + 1);
+        }
     }
-    pub fn receipt(self, fallback: &str) -> UsageReceipt {
-        let mut id = self.provider_request_id;
-        let mut counts = None;
-        if !self.overflow {
-            if let Ok(value) = serde_json::from_slice::<Value>(&self.bytes) {
-                extract(&value, &mut id, &mut counts);
-            } else if let Ok(text) = std::str::from_utf8(&self.bytes) {
-                for line in text.lines() {
-                    if let Some(data) = line.strip_prefix("data:").map(str::trim)
-                        && let Ok(value) = serde_json::from_str::<Value>(data)
-                    {
-                        extract(&value, &mut id, &mut counts);
+    pub fn receipt(mut self, fallback: &str) -> UsageReceipt {
+        if !self.overflow && !self.buffer.is_empty() {
+            if let Ok(line_str) = std::str::from_utf8(&self.buffer) {
+                let trimmed = line_str.trim();
+                if trimmed.starts_with('{') {
+                    if let Ok(value) = serde_json::from_str::<Value>(trimmed) {
+                        extract(&value, &mut self.provider_request_id, &mut self.counts);
                     }
                 }
             }
         }
+
         UsageReceipt {
-            provider_request_id: id
+            provider_request_id: self.provider_request_id
                 .filter(|v| !v.is_empty() && v.len() <= 255)
                 .unwrap_or_else(|| format!("unknown:{fallback}")),
-            counts,
+            counts: self.counts,
         }
     }
 }
@@ -362,6 +379,36 @@ mod tests {
             b"data: {\"id\":\"r1\",\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":-1}}\n\n",
         );
         assert!(capture.receipt("event").counts.is_none());
+    }
+
+    #[test]
+    fn test_incremental_streaming_usage_capture() {
+        let mut capture = UsageCapture::default();
+
+        let header = b"data: {\"id\":\"r1\",\"choices\":[{\"delta\":{\"content\":\"start\"}}]}\n\n";
+        capture.push(header);
+
+        // Send a lot of chunks (but each is a complete or partial line handled incrementally)
+        // Simulate a stream larger than the 1MB buffer limit to prove we don't overflow
+        // because we process it incrementally.
+        for _ in 0..50000 {
+            capture.push(b"data: {\"choices\":[{\"delta\":{\"content\":\"x\"}}]}\n\n");
+        }
+
+        // Add the final usage chunk
+        let trailer = b"data: {\"id\":\"r1\",\"usage\":{\"input_tokens\":42,\"output_tokens\":50000,\"input_tokens_details\":{\"cached_tokens\":10}}}\n\ndata: [DONE]\n\n";
+        capture.push(trailer);
+
+        let receipt = capture.receipt("local");
+        assert_eq!(receipt.provider_request_id, "r1");
+        assert_eq!(
+            receipt.counts,
+            Some(TokenCounts {
+                input: 42,
+                output: 50000,
+                cached_input: 10
+            })
+        );
     }
     #[tokio::test]
     async fn unbounded_provider_context_is_rejected_before_reservation() {
