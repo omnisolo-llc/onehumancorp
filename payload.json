@@ -1,9 +1,0 @@
-{
-  "kind": "artifact",
-  "provenance": "research",
-  "path": ".automator/research_report.json",
-  "content": {
-    "issue_title": "🗺️ Guide: [new onboarding feature]",
-    "issue_description": "Blocked due to missing UX features and PR requirements as documented in F16. The requested guide onboarding feature lacks the necessary dependencies and authorization for implementation, classifying it as a no-work finding."
-  }
-}
