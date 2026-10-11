@@ -521,7 +521,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <div className="app-panel-body p-6 space-y-4">
-                <WithTooltip id="settings-delivery-tooltip" defaultText="Turn this on to offer local delivery to your customers.">
+                <WithTooltip id="settings-delivery-tooltip" className="block w-full" defaultText="Turn this on to offer local delivery to your customers.">
                   <label className="flex items-center justify-between rounded-xl border border-teal-55/60 p-4 text-sm font-medium text-gray-900 dark:text-white cursor-pointer bg-teal-50/10 hover:bg-teal-50/20 transition-colors">
                     <span>Enable Local Delivery</span>
                     <input

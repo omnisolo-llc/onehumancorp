@@ -146,12 +146,19 @@ pub fn get_mysql_pool_if_exists() -> Option<sqlx::MySqlPool> {
 pub fn get_pool() -> PgPool {
     GLOBAL_POOL
         .get_or_init(|| {
-            let database_url = database_url_from_environment()
+            let raw_url = database_url_from_environment()
                 .expect("invalid database configuration")
-                .unwrap_or_else(|| "postgres://postgres:postgres@localhost:5432/test".to_string());
+                .unwrap_or_default();
+            let is_pg = raw_url.starts_with("postgres://") || raw_url.starts_with("postgresql://");
+            let database_url = if is_pg {
+                raw_url
+            } else {
+                "postgres://postgres:postgres@127.0.0.1:5432/test".to_string()
+            };
+            let timeout_ms = if is_pg { 15000 } else { 100 };
             crate::db::secure_pg_pool_options()
                 .max_connections(100)
-                .acquire_timeout(std::time::Duration::from_millis(15000))
+                .acquire_timeout(std::time::Duration::from_millis(timeout_ms))
                 .connect_lazy(&database_url)
                 .expect("Failed to connect to DB pool lazily")
         })
@@ -442,6 +449,7 @@ impl DB {
 
         if database_url.starts_with("sqlite") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(100))
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -457,6 +465,7 @@ impl DB {
                     })
                 })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
+            let _ = GLOBAL_POOL.set(dummy_pool.clone());
 
             // Strip the pragma query parameter safely before parsing if it was set
             let safe_url = if database_url.contains("?pragma.key=") {
@@ -676,6 +685,7 @@ impl DB {
             })
         } else if database_url.starts_with("mysql") {
             let dummy_pool = sqlx::postgres::PgPoolOptions::new()
+                .acquire_timeout(std::time::Duration::from_millis(100))
                 .before_acquire(|conn, _meta| {
                     Box::pin(async move {
                         use sqlx::Executor;
@@ -691,6 +701,7 @@ impl DB {
                     })
                 })
                 .connect_lazy("postgres://postgres:postgres@localhost:5432/test")?;
+            let _ = GLOBAL_POOL.set(dummy_pool.clone());
 
             let mysql_pool = MySqlPoolOptions::new()
                 .max_connections(50)
@@ -3725,6 +3736,259 @@ CREATE TABLE IF NOT EXISTS omni_inbox_messages (
                         balance DOUBLE NOT NULL DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         PRIMARY KEY (tenant_id, envelope_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS orders (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        customer_name VARCHAR(255) NOT NULL DEFAULT '',
+                        customer_email VARCHAR(255) NOT NULL DEFAULT '',
+                        total_amount VARCHAR(64) NOT NULL DEFAULT '0.00',
+                        status VARCHAR(64) NOT NULL DEFAULT 'pending',
+                        shipping_address TEXT,
+                        tracking_number VARCHAR(255),
+                        shipping_label_url TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_orders_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS bookings (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        title VARCHAR(255) NOT NULL DEFAULT '',
+                        client_name VARCHAR(255) NOT NULL DEFAULT '',
+                        client_email VARCHAR(255) NOT NULL DEFAULT '',
+                        service_type VARCHAR(255) NOT NULL DEFAULT '',
+                        start_time VARCHAR(128) NOT NULL DEFAULT '',
+                        end_time VARCHAR(128) NOT NULL DEFAULT '',
+                        status VARCHAR(64) NOT NULL DEFAULT 'confirmed',
+                        notes TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_bookings_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS products (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        description TEXT NOT NULL,
+                        price VARCHAR(64) NOT NULL DEFAULT '0.00',
+                        stock INT NOT NULL DEFAULT 0,
+                        category VARCHAR(128) NOT NULL DEFAULT 'General',
+                        sku VARCHAR(128) NOT NULL DEFAULT '',
+                        status VARCHAR(64) NOT NULL DEFAULT 'Active',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_products_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        client VARCHAR(255) NOT NULL DEFAULT '',
+                        amount VARCHAR(64) NOT NULL DEFAULT '0.00',
+                        status VARCHAR(64) NOT NULL DEFAULT 'Draft',
+                        date VARCHAR(64) NOT NULL DEFAULT '',
+                        due_date VARCHAR(64) NOT NULL DEFAULT '',
+                        notes TEXT,
+                        line_items JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_invoices_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS inbox_messages (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        sender VARCHAR(255) NOT NULL DEFAULT '',
+                        sender_email VARCHAR(255),
+                        subject VARCHAR(512),
+                        preview TEXT NOT NULL,
+                        body TEXT,
+                        time VARCHAR(128) NOT NULL DEFAULT '',
+                        source VARCHAR(64) NOT NULL DEFAULT 'Email',
+                        unread BOOLEAN NOT NULL DEFAULT TRUE,
+                        ai_draft TEXT,
+                        sentiment VARCHAR(64) DEFAULT 'Neutral',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_inbox_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS vendors (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        contact_name VARCHAR(255) NOT NULL DEFAULT '',
+                        email VARCHAR(255) NOT NULL DEFAULT '',
+                        phone VARCHAR(128) NOT NULL DEFAULT '',
+                        lead_time_days INT NOT NULL DEFAULT 0,
+                        notes TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_vendors_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS raw_materials (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        sku VARCHAR(128) NOT NULL DEFAULT '',
+                        quantity DOUBLE NOT NULL DEFAULT 0,
+                        unit VARCHAR(64) NOT NULL DEFAULT 'unit',
+                        reorder_point DOUBLE NOT NULL DEFAULT 0,
+                        unit_cost VARCHAR(64) NOT NULL DEFAULT '0.00',
+                        vendor_id VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_raw_materials_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS bom_items (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        product_id VARCHAR(255) NOT NULL,
+                        raw_material_id VARCHAR(255) NOT NULL,
+                        quantity_required DOUBLE NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_bom_items_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_approvals (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        agent_id VARCHAR(255) NOT NULL DEFAULT '',
+                        action_type VARCHAR(128) NOT NULL DEFAULT '',
+                        payload JSON NOT NULL,
+                        status VARCHAR(64) NOT NULL DEFAULT 'pending',
+                        confidence DOUBLE NOT NULL DEFAULT 0.5,
+                        estimated_cost_usd DOUBLE NOT NULL DEFAULT 0.0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_agent_approvals_tenant (tenant_id, status)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_actions (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        action_type VARCHAR(128) NOT NULL DEFAULT '',
+                        description TEXT NOT NULL,
+                        payload JSON,
+                        status VARCHAR(64) NOT NULL DEFAULT 'PENDING',
+                        confidence_score DOUBLE,
+                        auto_approved BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_agent_actions_tenant (tenant_id, status)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS ohc_universal_ledger (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        source_type VARCHAR(64) NOT NULL DEFAULT '',
+                        source_id VARCHAR(255) NOT NULL DEFAULT '',
+                        entry_type VARCHAR(64) NOT NULL DEFAULT '',
+                        category VARCHAR(128) NOT NULL DEFAULT '',
+                        amount_cents BIGINT NOT NULL DEFAULT 0,
+                        currency VARCHAR(16) NOT NULL DEFAULT 'USD',
+                        description TEXT NOT NULL,
+                        status VARCHAR(64) NOT NULL DEFAULT 'posted',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_universal_ledger_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS agent_feed_items (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        agent_role VARCHAR(128) NOT NULL DEFAULT '',
+                        action_title VARCHAR(255) NOT NULL DEFAULT '',
+                        reasoning TEXT NOT NULL,
+                        confidence_score INT NOT NULL DEFAULT 80,
+                        payload JSON NOT NULL,
+                        status VARCHAR(64) NOT NULL DEFAULT 'pending',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_agent_feed_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS daily_work_items (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        item_type VARCHAR(64) NOT NULL DEFAULT '',
+                        priority VARCHAR(64) NOT NULL DEFAULT 'medium',
+                        title VARCHAR(255) NOT NULL DEFAULT '',
+                        summary TEXT NOT NULL,
+                        status VARCHAR(64) NOT NULL DEFAULT 'pending',
+                        payload JSON NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_daily_work_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS task_envelopes (
+                        task_id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        department VARCHAR(128) NOT NULL DEFAULT '',
+                        task_type VARCHAR(128) NOT NULL DEFAULT '',
+                        payload JSON NOT NULL,
+                        status VARCHAR(64) NOT NULL DEFAULT 'PENDING',
+                        priority INT NOT NULL DEFAULT 1,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_task_envelopes_tenant (tenant_id, status)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscription_plans (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        name VARCHAR(255) NOT NULL,
+                        price VARCHAR(64) NOT NULL DEFAULT '0.00',
+                        billing_interval VARCHAR(64) NOT NULL DEFAULT 'month',
+                        active_count INT NOT NULL DEFAULT 0,
+                        status VARCHAR(64) NOT NULL DEFAULT 'Active',
+                        features JSON,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_sub_plans_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscriptions (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        customer_email VARCHAR(255) NOT NULL DEFAULT '',
+                        plan_id VARCHAR(255) NOT NULL DEFAULT '',
+                        status VARCHAR(64) NOT NULL DEFAULT 'active',
+                        current_period_end TIMESTAMP NULL,
+                        stripe_subscription_id VARCHAR(255),
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_subscriptions_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS subscribers (
+                        id VARCHAR(255) PRIMARY KEY,
+                        tenant_id VARCHAR(255) NOT NULL,
+                        customer VARCHAR(255) NOT NULL DEFAULT '',
+                        email VARCHAR(255) NOT NULL DEFAULT '',
+                        plan VARCHAR(255) NOT NULL DEFAULT '',
+                        status VARCHAR(64) NOT NULL DEFAULT 'Active',
+                        next_billing VARCHAR(128) NOT NULL DEFAULT '',
+                        amount VARCHAR(64) NOT NULL DEFAULT '0.00',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        INDEX idx_subscribers_tenant (tenant_id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS onboarding_state (
+                        tenant_id VARCHAR(255) PRIMARY KEY,
+                        step INT NOT NULL DEFAULT 1,
+                        completed BOOLEAN NOT NULL DEFAULT FALSE,
+                        business_name VARCHAR(255),
+                        business_type VARCHAR(128),
+                        industry VARCHAR(128),
+                        goals JSON,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                     );
                 "#;
 

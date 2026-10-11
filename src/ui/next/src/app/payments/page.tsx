@@ -81,7 +81,7 @@ export default function PaymentLedger() {
       <div className="glassmorphism p-6 space-y-4">
         <h3 className="text-lg font-semibold font-outfit text-gray-900 dark:text-gray-100 mb-2">Request Payment</h3>
 
-        <WithTooltip id="payment-amount-input-tooltip" defaultText="Enter the exact amount to charge your customer">
+        <WithTooltip id="payment-amount-input-tooltip" className="block w-full" defaultText="Enter the exact amount to charge your customer">
         <input
           type="number"
           value={amount}
@@ -93,12 +93,12 @@ export default function PaymentLedger() {
         </WithTooltip>
 
         <WalkthroughTarget id="request-payment-btn">
-          <WithTooltip id="request-payment-btn-tooltip" defaultText="Click here to process a payment">
+          <WithTooltip id="request-payment-btn-tooltip" className="block w-full" defaultText="Click here to process a payment">
         <button
           onClick={handleRequestPayment}
           disabled={status === "Processing..."}
           data-testid="request-payment-button"
-          className={`w-full min-h-[44px] py-3 rounded-xl font-bold font-inter transition-all shadow-md active:scale-[0.98] ${
+          className={`w-full min-h-[44px] px-4 py-3 rounded-xl font-bold font-inter transition-all shadow-md active:scale-[0.98] ${
             status === "Processing..."
               ? "bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed"
               : "bg-[#0066FF] text-white hover:bg-[#0052cc]"

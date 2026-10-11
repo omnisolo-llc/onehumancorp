@@ -101,6 +101,32 @@ async fn fetch_subscription_plans(
     pool: &sqlx::PgPool,
     tenant_id: &str,
 ) -> Result<Vec<SubscriptionPlanResponse>, sqlx::Error> {
+    if let Some(mysql_pool) = crate::db::get_mysql_pool_if_exists() {
+        use sqlx::Row;
+        let rows = sqlx::query(
+            "SELECT id, name, price, billing_interval, status FROM subscription_plans WHERE tenant_id = ? ORDER BY created_at ASC, id ASC",
+        )
+        .bind(tenant_id)
+        .fetch_all(&mysql_pool)
+        .await
+        .unwrap_or_default();
+        return Ok(rows
+            .into_iter()
+            .map(|row| {
+                let price_str: String = row.try_get("price").unwrap_or_default();
+                let amount = (price_str.parse::<f64>().unwrap_or(0.0) * 100.0).round() as i64;
+                let status: String = row.try_get("status").unwrap_or_default();
+                SubscriptionPlanResponse {
+                    id: row.try_get("id").unwrap_or_default(),
+                    name: row.try_get("name").unwrap_or_default(),
+                    description: String::new(),
+                    amount,
+                    interval: row.try_get("billing_interval").unwrap_or_default(),
+                    active: status.eq_ignore_ascii_case("active"),
+                }
+            })
+            .collect());
+    }
     let mut transaction = begin_subscription_tenant_transaction(pool, tenant_id).await?;
     let plans = sqlx::query_as::<_, SubscriptionPlanResponse>(
         "SELECT
@@ -128,6 +154,25 @@ async fn fetch_subscribers(
     pool: &sqlx::PgPool,
     tenant_id: &str,
 ) -> Result<Vec<SubscriberResponse>, sqlx::Error> {
+    if let Some(mysql_pool) = crate::db::get_mysql_pool_if_exists() {
+        use sqlx::Row;
+        let rows = sqlx::query(
+            "SELECT id, customer_email, status FROM subscriptions WHERE tenant_id = ? ORDER BY created_at ASC, id ASC",
+        )
+        .bind(tenant_id)
+        .fetch_all(&mysql_pool)
+        .await
+        .unwrap_or_default();
+        return Ok(rows
+            .into_iter()
+            .map(|row| SubscriberResponse {
+                id: row.try_get("id").unwrap_or_default(),
+                customer_id: row.try_get("customer_email").unwrap_or_default(),
+                status: row.try_get("status").unwrap_or_default(),
+                health_score: Some(100),
+            })
+            .collect());
+    }
     let mut transaction = begin_subscription_tenant_transaction(pool, tenant_id).await?;
     let subscribers = sqlx::query_as::<_, SubscriberResponse>(
         "SELECT
@@ -150,6 +195,9 @@ async fn fetch_fulfillment_batches(
     pool: &sqlx::PgPool,
     tenant_id: &str,
 ) -> Result<Vec<FulfillmentBatchResponse>, sqlx::Error> {
+    if crate::db::get_mysql_pool_if_exists().is_some() {
+        return Ok(Vec::new());
+    }
     let mut transaction = begin_subscription_tenant_transaction(pool, tenant_id).await?;
     let batches = sqlx::query_as::<_, FulfillmentBatchResponse>(
         "SELECT

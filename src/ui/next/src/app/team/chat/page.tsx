@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useTeamApprovals } from '../useTeamApprovals';
 
 export default function TeamChatPage() {
@@ -15,7 +14,7 @@ export default function TeamChatPage() {
     <div className="min-h-screen bg-gray-50 p-4 font-inter">
       <main className="mx-auto max-w-2xl space-y-4 rounded-2xl border border-gray-200 bg-white p-6">
         <header>
-          <Link href="/team" className="text-blue-700 underline">Back to Team</Link>
+          <a href="/team" className="text-blue-700 underline">Back to Team</a>
           <h1 className="mt-3 text-2xl font-bold">Team Chat</h1>
           <p className="text-sm text-gray-600">Save a request for department review. Approval and external execution are tracked separately.</p>
         </header>
@@ -34,7 +33,7 @@ export default function TeamChatPage() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <button type="button" disabled={team.blocked(item.id)} onClick={() => void team.decide(item.id, 'APPROVED')} className="min-h-[44px] rounded-lg bg-blue-700 px-4 text-white disabled:opacity-50">Record approval</button>
                 <button type="button" disabled={team.blocked(item.id)} onClick={() => void team.decide(item.id, 'DISMISSED')} className="min-h-[44px] rounded-lg border px-4 disabled:opacity-50">Record dismissal</button>
-                <Link href="/team" className="self-center text-blue-700 underline">Review or edit in Team</Link>
+                <a href="/team" className="self-center text-blue-700 underline">Review or edit in Team</a>
               </div>
             </article>
           ))}

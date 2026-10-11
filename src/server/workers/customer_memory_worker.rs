@@ -38,6 +38,9 @@ impl CustomerMemoryWorker {
     }
 
     pub async fn poll(&self) -> Result<bool, String> {
+        if self.db.is_mysql() {
+            return Ok(false);
+        }
         let job = match &self.db.store {
             crate::db::DbStore::Postgres => {
                 let mut tx = self.db.pool.begin().await.map_err(|e| e.to_string())?;

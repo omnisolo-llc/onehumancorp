@@ -768,7 +768,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
                 <h3 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-[#F5F5F7]">
                   No pending proposals are recorded.
                 </h3>
-                <div className="w-full max-w-md text-left">
+                <div className="w-full max-w-xl text-left">
                   <GrowthReferralWidget />
                 </div>
               </div>

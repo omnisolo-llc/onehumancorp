@@ -9,7 +9,7 @@ sqlite='\n'.join(re.search(r'CREATE TABLE IF NOT EXISTS '+name+r' \(.*?\n\s{20}\
 (HERE/'sqlite_schema.sql').write_text(sqlite+'\n')
 (HERE/'schema.sql').write_text(schema+'\n'+(ROOT/'src/server/migrations/102_delivery_task_provider_tracking.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1029_delivery_provider_bindings.sql').read_text()+'\n'+(ROOT/'src/server/migrations/1031_shipping_purchase_intents.sql').read_text())
 modules={'fulfillment':'src/server/api/fulfillment.rs','shipping':'src/server/api/shipping.rs','ui_orders':'src/server/api/ui_orders.rs'}
-lines=['pub use server_common as common;','pub mod api { pub use crate::{fulfillment,shipping,ui_orders}; }','pub mod integrations { pub use server_integrations_shippo as shippo; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore } }']
+lines=['pub use server_common as common;','pub mod api { pub use crate::{fulfillment,shipping,ui_orders}; }','pub mod integrations { pub use server_integrations_shippo as shippo; }','pub mod db { pub enum DbStore { Postgres,Sqlite(sqlx::SqlitePool) } pub struct DB { pub pool:sqlx::PgPool,pub store:DbStore } pub fn get_mysql_pool_if_exists() -> Option<sqlx::MySqlPool> { None } }']
 for name,path in modules.items(): lines.append(f'#[path={json.dumps(str(ROOT/path))}]pub mod {name};')
 parent=(ROOT/'src/server/lib.rs').read_text()
 start=parent.index('        .nest(\n            "/api/v1/fulfillment",')

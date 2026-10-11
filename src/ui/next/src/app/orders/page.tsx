@@ -64,7 +64,7 @@ export default function OrdersPage() {
       actions={[{ label: "Dashboard", href: "/dashboard" }]}
     >
       <Card className="app-panel">
-        <CardHeader className="app-panel-header">
+        <CardHeader className="app-panel-header !items-start">
           <div>
             <CardTitle className="app-panel-title">Order List</CardTitle>
             <div className="app-list-subtitle text-sm text-gray-500 dark:text-[#A1A1A6]">Live orders for the current tenant.</div>
