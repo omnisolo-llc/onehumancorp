@@ -496,7 +496,8 @@ async fn approve_proposal(
         pool: pool.clone(),
         store: crate::db::DbStore::Postgres,
     };
-    let stripe_key_res = crate::api::tool_integrations::stripe_key_for_tenant(&db_view, &tenant_id).await;
+    let stripe_key_res =
+        crate::api::tool_integrations::stripe_key_for_tenant(&db_view, &tenant_id).await;
     let mut checkout_url = "".to_string();
 
     if let Ok(stripe_key) = stripe_key_res {
