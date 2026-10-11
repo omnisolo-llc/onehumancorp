@@ -149,8 +149,7 @@ pub fn get_pool() -> PgPool {
             let raw_url = database_url_from_environment()
                 .expect("invalid database configuration")
                 .unwrap_or_default();
-            let is_pg =
-                raw_url.starts_with("postgres://") || raw_url.starts_with("postgresql://");
+            let is_pg = raw_url.starts_with("postgres://") || raw_url.starts_with("postgresql://");
             let database_url = if is_pg {
                 raw_url
             } else {
