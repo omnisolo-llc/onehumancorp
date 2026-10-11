@@ -446,6 +446,14 @@ pub fn get_in_memory_keys() -> &'static Mutex<Vec<InMemoryApiKey>> {
     IN_MEMORY_API_KEYS.get_or_init(|| Mutex::new(Vec::new()))
 }
 
+fn has_postgres_db() -> bool {
+    std::env::var("DATABASE_URL")
+        .ok()
+        .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())
+        .map(|u| u.starts_with("postgres://") || u.starts_with("postgresql://"))
+        .unwrap_or(false)
+}
+
 async fn generate_api_key(
     Extension(claims): Extension<::server_common::Claims>,
     axum::Json(payload): axum::Json<CreateKeyRequest>,
@@ -463,8 +471,7 @@ async fn generate_api_key(
     let key_id = uuid::Uuid::new_v4().to_string();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
-    let has_db =
-        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db = has_postgres_db();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -522,8 +529,7 @@ async fn generate_api_key(
 
 async fn list_api_keys(Extension(claims): Extension<::server_common::Claims>) -> Response {
     let mut api_keys = Vec::new();
-    let has_db =
-        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db = has_postgres_db();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -595,8 +601,7 @@ async fn revoke_api_key(
     Extension(claims): Extension<::server_common::Claims>,
     axum::extract::Path(id): axum::extract::Path<String>,
 ) -> Response {
-    let has_db =
-        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db = has_postgres_db();
 
     if has_db {
         let pool = crate::db::get_pool();
@@ -682,8 +687,7 @@ async fn list_member_usage_analytics(
     }
 
     let mut analytics = Vec::new();
-    let has_db =
-        std::env::var("DATABASE_URL").is_ok() || std::env::var("OMNISOLO_DATABASE_URL").is_ok();
+    let has_db = has_postgres_db();
     let organization_id = claims.organization_id.clone().unwrap_or_default();
 
     if has_db {

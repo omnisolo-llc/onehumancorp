@@ -6,12 +6,10 @@ WORKDIR /src
 COPY package.json package-lock.json ./
 COPY src/ui/next/package.json src/ui/next/package-lock.json ./src/ui/next/
 RUN npm ci --no-audit --no-fund && npm --prefix src/ui/next ci --no-audit --no-fund
-COPY src/ui/next ./src/ui/next
-# Next's strict typecheck includes the shared browser-test helper. Keep the
-# build context complete instead of disabling checks or dropping test inputs.
-COPY src/e2e/db_utils.ts ./src/e2e/
 COPY .node-version ./
-COPY scripts/build-web.mjs scripts/package-web.mjs scripts/native-web-entry.cjs ./scripts/
+COPY scripts/ ./scripts/
+COPY src/e2e/db_utils.ts ./src/e2e/
+COPY src/ ./src/
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build:web
 
@@ -19,6 +17,7 @@ FROM node:22.23.3-bookworm-slim AS runtime
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 HOSTNAME=0.0.0.0 PORT=3000
 WORKDIR /app
 COPY --from=builder --chown=node:node /src/target/native-web ./
+RUN cd src/ui/next && npm install --no-save --no-audit --no-fund @img/sharp-linux-arm64 || true
 USER node
 EXPOSE 3000
 CMD ["node", "src/ui/next/server.js"]

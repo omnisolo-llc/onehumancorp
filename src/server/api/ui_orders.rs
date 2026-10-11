@@ -105,6 +105,37 @@ pub async fn load(
 ) -> Result<Vec<serde_json::Value>, sqlx::Error> {
     match &db.store {
         crate::db::DbStore::Postgres => {
+            if let Some(mysql_pool) = crate::db::get_mysql_pool_if_exists() {
+                return sqlx::query(
+                    "SELECT id, customer_name, CAST(COALESCE(total_amount, 0.0) AS DOUBLE) AS total_amount, COALESCE(status, '') AS status, CAST(created_at AS CHAR) AS created_at FROM orders WHERE tenant_id = ? AND (? IS NULL OR id = ?) ORDER BY created_at DESC, id DESC LIMIT 50",
+                )
+                .bind(tenant_id)
+                .bind(order_id)
+                .bind(order_id)
+                .fetch_all(&mysql_pool)
+                .await
+                .map(|rows| {
+                    rows.into_iter()
+                        .map(|row| {
+                            if mobile_optimized {
+                                serde_json::json!({
+                                    "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                                    "total_amount": row.try_get::<f64, _>("total_amount").unwrap_or(0.0),
+                                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                })
+                            } else {
+                                serde_json::json!({
+                                    "id": row.try_get::<String, _>("id").unwrap_or_default(),
+                                    "customer_name": row.try_get::<String, _>("customer_name").unwrap_or_default(),
+                                    "total_amount": row.try_get::<f64, _>("total_amount").unwrap_or(0.0),
+                                    "status": row.try_get::<String, _>("status").unwrap_or_default(),
+                                    "created_at": row.try_get::<String, _>("created_at").unwrap_or_default(),
+                                })
+                            }
+                        })
+                        .collect()
+                });
+            }
             let mut tx = db.pool.begin().await?;
             ::server_common::auth_utils::set_org_context(&mut *tx, tenant_id).await?;
             let res = if mobile_optimized {

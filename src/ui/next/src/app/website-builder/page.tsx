@@ -312,6 +312,8 @@ export default function WebsiteBuilderPage() {
                     >
                       Instant Build
                     </button>
+                  </div>
+                  <div className="mt-4 flex justify-center">
                     <PoweredByOmniSolo tenantId="omnisolo" />
                   </div>
                 </>

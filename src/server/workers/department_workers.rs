@@ -47,6 +47,9 @@ impl OperationsWorker {
     }
 
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+        if db.is_mysql() {
+            return Ok(false);
+        }
         let poll_op = async {
             let task = match &db.store {
                 crate::db::DbStore::Postgres => {
@@ -743,6 +746,9 @@ impl CustomerSuccessWorker {
     }
 
     pub async fn poll(db: &Arc<DB>) -> Result<bool, String> {
+        if db.is_mysql() {
+            return Ok(false);
+        }
         let poll_op = async {
             let task = match &db.store {
                 crate::db::DbStore::Postgres => {

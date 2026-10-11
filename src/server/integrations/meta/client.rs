@@ -1,12 +1,10 @@
 use async_trait::async_trait;
-use lazy_static::lazy_static;
 use regex::Regex;
 use reqwest::Client;
+use std::sync::LazyLock;
 
-lazy_static! {
-    static ref BSUID_REGEX: Regex =
-        Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$").unwrap();
-}
+static BSUID_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Z]{2}\.(?:ENT\.)?[A-Za-z0-9]{1,128}$").unwrap());
 
 pub fn is_business_scoped_recipient(to: &str) -> bool {
     BSUID_REGEX.is_match(to)

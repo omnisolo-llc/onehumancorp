@@ -270,7 +270,7 @@ export default function StorefrontBuilderPage() {
               </p>
 
               <label className="text-sm font-semibold text-gray-700 dark:text-[#a1a1a6] mb-2 block">Your Business Details</label>
-              <WalkthroughTarget id="bio-input-target"><WithTooltip id="bio-input-tooltip" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
+              <WalkthroughTarget id="bio-input-target"><WithTooltip id="bio-input-tooltip" className="block w-full" defaultText="Describe what you sell, your target audience, and the vibe of your brand.">
                 <textarea
                   id="bio-input"
                   enterKeyHint="done"
@@ -292,10 +292,10 @@ export default function StorefrontBuilderPage() {
               </WithTooltip></WalkthroughTarget>
 
               <div className="flex gap-4">
-                <WithTooltip id="generate-btn-tooltip" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
+                <WithTooltip id="generate-btn-tooltip" className="flex-[2] block" defaultText="Our AI agents will analyze your description and build a ready-to-launch store for you.">
                   <button
                     id="generate-btn"
-                    className={`flex-[2] p-4 font-bold font-outfit text-lg transition-all ${
+                    className={`w-full p-4 font-bold font-outfit text-lg transition-all ${
                       bio.trim().length > 5
                         ? "text-white shadow-md active:scale-[0.98] bg-[#0066FF]"
                         : "bg-gray-100 text-gray-400 cursor-not-allowed"

@@ -93,7 +93,7 @@ describe("resolveShellRoute", () => {
     });
   });
 
-  test.each(["/agents", "/visual-workflow"])(
+  test.each(["/agents", "/visual-workflow", "/payments", "/pos"])(
     "assigns shell-less workspace route %s to the guard",
     (pathname) => {
       expect(resolveShellRoute(pathname).owner).toBe("guard");

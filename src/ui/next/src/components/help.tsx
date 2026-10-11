@@ -28,11 +28,18 @@ type ChatMessage = { id: string; role: "bot" | "user"; text: string; linkUrl?: s
 
 const mobileHelpCollisionRoutes = new Set([
   "/website-builder",
+  "/storefront-builder",
+  "/brand-studio",
   "/login",
   "/agent-marketplace",
   "/integrations",
   "/agents",
   "/inbox",
+  "/pos",
+  "/payments",
+  "/services/new",
+  "/operations",
+  "/proposals",
 ]);
 
 export function shouldShowMobileHelpLauncher(pathname: string | null) {
