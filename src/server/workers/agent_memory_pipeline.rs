@@ -136,6 +136,9 @@ impl AgentMemoryPipeline {
     }
 
     pub async fn process_session_data(&self) -> Result<(), Box<dyn std::error::Error>> {
+        if self.db.is_mysql() {
+            return Ok(());
+        }
         match &self.db.store {
             DbStore::Sqlite(sqlite_pool) => {
                 let fetched = {

@@ -37,6 +37,8 @@ const pageOwnedExactRoutes = new Set([
   "/milestones",
   "/operations",
   "/orders",
+  "/payments",
+  "/pos",
   "/perplexity-harness",
   "/pipeline",
   "/products",
@@ -139,6 +141,14 @@ const routeMetadata: Record<string, { title: string; subtitle?: string }> = {
   "/onboarding": {
     title: "Setup",
     subtitle: "Configure your business workspace.",
+  },
+  "/payments": {
+    title: "Payments",
+    subtitle: "Process transactions, tap-to-pay, and view payment history.",
+  },
+  "/pos": {
+    title: "Point of Sale (POS)",
+    subtitle: "In-person checkout, tap-to-pay, and transaction sync.",
   },
   "/promoter": { title: "Promoter" },
   "/perplexity-harness": { title: "Perplexity-style Agent Harness" },

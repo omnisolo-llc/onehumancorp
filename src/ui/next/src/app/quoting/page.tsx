@@ -118,6 +118,20 @@ function QuotingContent() {
     return <div className="p-8 text-center">Loading quote...</div>;
   }
 
+  if (!quoteId) {
+    return (
+      <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-black font-inter p-8 items-center justify-center text-center">
+        <div className="max-w-md p-6 bg-white dark:bg-[#1C1C1E] rounded-xl border border-gray-200 dark:border-white/10 shadow-sm">
+          <h2 className="text-xl font-bold font-outfit text-[#1D1D1F] dark:text-white mb-2">Quote Proposal Viewer</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Select or generate a proposal from your orders or services page to view or approve a quote.</p>
+          <a href="/orders" className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg bg-[#0066FF] text-white hover:bg-[#0052cc] transition-colors">
+            Go to Orders
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   if (error || !quoteData) {
     return <div className="p-8 text-center text-red-600">{error || 'Quote not found'}</div>;
   }

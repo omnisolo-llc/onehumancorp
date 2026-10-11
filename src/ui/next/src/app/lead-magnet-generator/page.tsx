@@ -28,10 +28,14 @@ export default function LeadMagnetGeneratorPage() {
   const embedUrl = `https://cloud.omnisolo.co/api/v1/growth/lead-magnet/embed?tenant=${tenant}&theme=${theme}&title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}&buttonText=${encodeURIComponent(buttonText)}&hideBranding=${removeBranding}`;
   const embedCode = `<iframe src="${embedUrl}" width="100%" height="350" frameborder="0" scrolling="no" style="border:none; overflow:hidden; border-radius:16px;"></iframe>` + (removeBranding ? '' : `\n<div style="font-family: sans-serif; text-align: center; font-size: 12px; margin-top: 8px;"><a href="https://cloud.omnisolo.co/api/v1/growth/referrals/click?target=/onboarding&ref=${tenant}" target="_blank" style="color: #6b7280; text-decoration: none; font-weight: 600;">⚡ Powered by OmniSolo</a></div>`);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(embedCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Fallback if clipboard permission is not granted
+    }
   };
 
   const handleBrandingToggle = () => {
@@ -146,7 +150,7 @@ export default function LeadMagnetGeneratorPage() {
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
             <h2 className="font-semibold text-gray-900 mb-4">Embed Code</h2>
             <div className="relative">
-              <pre className="bg-gray-50 p-4 rounded-lg text-sm text-gray-600 overflow-x-auto whitespace-pre-wrap border border-gray-200">
+              <pre className="bg-gray-50 p-4 rounded-lg text-sm text-gray-600 overflow-x-auto whitespace-pre-wrap break-all border border-gray-200">
                 {embedCode}
               </pre>
               <button

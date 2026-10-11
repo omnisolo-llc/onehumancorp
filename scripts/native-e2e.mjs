@@ -160,7 +160,11 @@ export async function runNativeE2e(inputArgs = process.argv.slice(2), logicalCon
   if (logicalContext?.signal.aborted) interrupt();
   try {
     await execute('docker', ['info'], { env, quiet: true });
-    for (const image of [postgresImage, valkeyImage]) await execute('docker', ['pull', image], { env });
+    for (const image of [postgresImage, valkeyImage]) {
+    if (spawnSync('docker', ['image', 'inspect', image], { env, stdio: 'ignore' }).status !== 0) {
+      await execute('docker', ['pull', image], { env });
+    }
+  }
     await execute('docker', ['run', '-d', '--name', pg, '--label', `com.onehumancorp.e2e-run=${suffix}`, '-p', '127.0.0.1:0:5432',
       '-e', 'POSTGRES_USER=ohc', '-e', 'POSTGRES_PASSWORD=ohc', '-e', 'POSTGRES_DB=ohc', postgresImage], { env });
     await execute('docker', ['run', '-d', '--name', cache, '-p', '127.0.0.1:0:6379', valkeyImage], { env });

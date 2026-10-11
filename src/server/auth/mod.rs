@@ -25,15 +25,26 @@ pub mod db {
     pub fn get_pool() -> PgPool {
         GLOBAL_POOL
             .get_or_init(|| {
-                let database_url = std::env::var("DATABASE_URL")
+                let raw_url = std::env::var("DATABASE_URL")
                     .ok()
                     .or_else(|| std::env::var("OMNISOLO_DATABASE_URL").ok())
                     .unwrap_or_else(|| {
                         "postgres://postgres:postgres@localhost:5432/test".to_string()
                     });
+                let is_pg =
+                    raw_url.starts_with("postgres://") || raw_url.starts_with("postgresql://");
+                let database_url = if is_pg {
+                    raw_url
+                } else {
+                    "postgres://postgres:postgres@localhost:5432/test".to_string()
+                };
                 sqlx::postgres::PgPoolOptions::new()
                     .max_connections(100)
-                    .acquire_timeout(std::time::Duration::from_millis(15000))
+                    .acquire_timeout(std::time::Duration::from_millis(if is_pg {
+                        15000
+                    } else {
+                        100
+                    }))
                     .connect_lazy(&database_url)
                     .expect("Failed to connect to DB pool lazily")
             })

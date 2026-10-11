@@ -543,7 +543,7 @@ export default function AIWorkspacePage() {
               id={PAGE_IDS.actionPrioritize}
               onClick={handleAIPrioritize}
               disabled={isPrioritizing}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-sm font-semibold transition-all shadow-md hover:shadow-lg disabled:opacity-50 flex items-center gap-2"
             >
               <svg className={`w-4 h-4 ${isPrioritizing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -723,7 +723,7 @@ export default function AIWorkspacePage() {
               <div className="flex flex-col gap-6">
 
                 {/* Focus / Pomodoro Timer */}
-                <div className="p-6 rounded-2xl border border-white/20 dark:border-slate-800/40 bg-gradient-to-br from-indigo-900 to-slate-950 text-white shadow-xl text-center relative overflow-hidden">
+                <div className="p-6 rounded-2xl border border-white/20 dark:border-slate-800/40 bg-slate-950 bg-gradient-to-br from-indigo-900 to-slate-950 text-white shadow-xl text-center relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl"></div>
                   <h2 className="text-sm font-bold uppercase tracking-wider text-indigo-300 mb-3">Personal Productivity Timer</h2>
                   

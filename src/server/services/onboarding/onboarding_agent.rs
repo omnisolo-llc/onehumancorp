@@ -537,6 +537,46 @@ Your response:",
             tenant_id,
             user_id
         ); // pii-safe
+        if self.db.is_mysql() {
+            let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
+            let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| {
+                ::server_utils::cache::HybridCache::<serde_json::Value>::new(
+                    self.hub.redis_client(),
+                )
+            });
+            let mut merged_state = cache
+                .get(&cache_key)
+                .await
+                .unwrap_or_else(|| serde_json::json!({}));
+            let sanitized_state = if allow_system_fields {
+                sanitize_stored_onboarding_state(state_json)
+            } else {
+                sanitize_onboarding_state(state_json)
+            };
+            if let (Some(existing_obj), Some(new_obj)) =
+                (merged_state.as_object_mut(), sanitized_state.as_object())
+            {
+                for (k, v) in new_obj {
+                    existing_obj.insert(k.clone(), v.clone());
+                }
+            } else {
+                merged_state = sanitized_state;
+            }
+            let prev_step = merged_state
+                .get("step")
+                .and_then(|s| s.as_i64())
+                .unwrap_or(0) as i32;
+            merged_state["step"] = json!(std::cmp::max(prev_step, current_step));
+            merged_state["updated_at"] = json!(chrono::Utc::now().timestamp_millis());
+            cache
+                .set(
+                    &cache_key,
+                    merged_state,
+                    std::time::Duration::from_secs(86400),
+                )
+                .await;
+            return Ok(());
+        }
         let mut tx = self.hub.pool.begin().await.map_err(|e| e.to_string())?;
         crate::common::auth_utils::set_org_context(&mut *tx, tenant_id)
             .await
@@ -640,6 +680,24 @@ Your response:",
         tenant_id: &str,
         user_id: &str,
     ) -> Result<serde_json::Value, String> {
+        if self.db.is_mysql() {
+            let cache_key = format!("agent_onboarding_state_v2_{}_{}", tenant_id, user_id);
+            let cache = ONBOARDING_STATE_AGENT_CACHE.get_or_init(|| {
+                ::server_utils::cache::HybridCache::<serde_json::Value>::new(
+                    self.hub.redis_client(),
+                )
+            });
+            if let Some(mut cached) = cache.get(&cache_key).await {
+                if cached.get("preparation").is_none() {
+                    cached["preparation"] = serde_json::Value::Null;
+                }
+                return Ok(cached);
+            }
+            return Ok(json!({
+                "step": 0,
+                "preparation": serde_json::Value::Null
+            }));
+        }
         let (preparation, stored, step, updated_at) =
             super::preparation::read_state(&self.db.pool, tenant_id, user_id)
                 .await

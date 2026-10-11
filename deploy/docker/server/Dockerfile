@@ -3,9 +3,7 @@
 # Dependency compilation is a real exported Docker layer, not just a cache mount
 # that disappears when an ephemeral GitHub runner is destroyed.
 FROM rust:1.95.0-bookworm AS chef
-# The planner/cook stage does not yet have .cargo/config.toml. Bound it too,
-# rather than letting every CPU launch memory-heavy compiler/linker processes.
-ENV CARGO_BUILD_JOBS=2 CARGO_INCREMENTAL=0 MALLOC_ARENA_MAX=2
+ENV CARGO_BUILD_JOBS=4 CARGO_INCREMENTAL=0 MALLOC_ARENA_MAX=2
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates libssl-dev pkg-config \
     && rm -rf /var/lib/apt/lists/*
@@ -13,6 +11,7 @@ RUN cargo install cargo-chef --version 0.1.78 --locked
 WORKDIR /src
 
 FROM chef AS planner
+WORKDIR /src
 COPY . .
 RUN cargo chef prepare --recipe-path recipe.json
 

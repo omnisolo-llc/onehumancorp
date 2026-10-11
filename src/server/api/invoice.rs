@@ -377,6 +377,46 @@ impl InvoiceService for InvoiceServiceImpl {
         let req = request.into_inner();
 
         let pool = &self.hub.pool;
+        if let Some(mysql_pool) = crate::db::get_mysql_pool_if_exists() {
+            use sqlx::Row;
+            let rows = sqlx::query(
+                "SELECT id, client, amount, status, created_at, updated_at FROM invoices WHERE tenant_id = ? ORDER BY created_at DESC LIMIT 100",
+            )
+            .bind(&req.tenant_id)
+            .fetch_all(&mysql_pool)
+            .await
+            .unwrap_or_default();
+            let invoices = rows
+                .into_iter()
+                .map(|row| {
+                    let amount_str: String = row.try_get("amount").unwrap_or_default();
+                    let total_amount: f64 = amount_str.parse().unwrap_or(0.0);
+                    Invoice {
+                        id: row.try_get("id").unwrap_or_default(),
+                        client_id: String::new(),
+                        client_name: row.try_get("client").unwrap_or_default(),
+                        status: row.try_get("status").unwrap_or_default(),
+                        due_date: 0,
+                        currency: "USD".to_string(),
+                        base_currency: "USD".to_string(),
+                        transaction_currency: "USD".to_string(),
+                        exchange_rate: 1.0,
+                        total_amount,
+                        total_amount_cents: (total_amount * 100.0).round() as i32,
+                        payment_status: "unpaid".to_string(),
+                        view_count: 0,
+                        amount_paid_cents: 0,
+                        stripe_invoice_id: String::new(),
+                        stripe_payment_link: String::new(),
+                        line_items: vec![],
+                        created_at: 0,
+                        updated_at: 0,
+                    }
+                })
+                .collect();
+            return Ok(Response::new(ListInvoicesResponse { invoices }));
+        }
+
         let mut tx = pool
             .begin()
             .await

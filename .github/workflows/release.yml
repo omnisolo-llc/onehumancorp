@@ -91,9 +91,6 @@ jobs:
           target: x86_64-apple-darwin
     steps:
     - uses: actions/checkout@v6
-    - uses: ./.github/actions/prepare-release
-      with:
-        identity: ${{ needs.release-metadata.outputs.identity }}
     - name: Install Linux build dependencies
       if: matrix.install_linux_deps
       run: |
@@ -106,6 +103,9 @@ jobs:
       with:
         role: release-${{ matrix.target }}
         node: 'false'
+    - uses: ./.github/actions/prepare-release
+      with:
+        identity: ${{ needs.release-metadata.outputs.identity }}
     - name: Configure native MSVC compiler tools
       if: endsWith(matrix.target, '-windows-msvc')
       uses: ilammy/msvc-dev-cmd@v1
@@ -211,9 +211,6 @@ jobs:
           install_linux_deps: true
     steps:
     - uses: actions/checkout@v6
-    - uses: ./.github/actions/prepare-release
-      with:
-        identity: ${{ needs.release-metadata.outputs.identity }}
     - name: Install Linux desktop packaging dependencies
       if: matrix.install_linux_deps
       run: |
@@ -229,6 +226,9 @@ jobs:
       with:
         role: desktop-release-${{ matrix.name }}
         node-scope: web
+    - uses: ./.github/actions/prepare-release
+      with:
+        identity: ${{ needs.release-metadata.outputs.identity }}
     - name: Prepare release version and updater signing
       env:
         TAURI_SIGNING_PUBLIC_KEY_SECRET: ${{ secrets.TAURI_SIGNING_PUBLIC_KEY }}
@@ -399,13 +399,13 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     # The prior release matrix shipped Android APK/AAB, not an iOS IPA.
-    - uses: ./.github/actions/prepare-release
-      with:
-        identity: ${{ needs.release-metadata.outputs.identity }}
     - uses: ./.github/actions/setup-native
       with:
         role: android-release
         node-scope: root
+    - uses: ./.github/actions/prepare-release
+      with:
+        identity: ${{ needs.release-metadata.outputs.identity }}
     - uses: actions/setup-java@v4
       with:
         distribution: temurin

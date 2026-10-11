@@ -87,7 +87,7 @@ export default function HelpCenterPage() {
 
         <div className="mb-8 sm:mb-10 w-full max-w-2xl mx-auto block">
           <div className="w-full relative block">
-            <WithTooltip id="help-search-tooltip">
+            <WithTooltip id="help-search-tooltip" className="block w-full">
               <input
                 data-testid="help-search-input"
                 type="text"
