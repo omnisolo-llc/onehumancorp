@@ -39,7 +39,7 @@ test('release publication is gated by the same complete CI workflow', async () =
 test('release native builders restore dependency caches before version stamping and share ARM64 Buildx cache scope', async () => {
   const workflow = await read('.github/workflows/release.yml');
   for (const jobName of ['build-release-artifacts:', 'build-desktop-installers:', 'build-mobile-artifacts:']) {
-    const jobSection = workflow.split(`  ${jobName}`)[1].split(/\n  [a-z0-9-]+:/)[0];
+    const jobSection = workflow.split(`  ${jobName}`)[1].split(/\n {2}[a-z0-9-]+:/)[0];
     const setupIdx = jobSection.indexOf('uses: ./.github/actions/setup-native');
     const prepareIdx = jobSection.indexOf('uses: ./.github/actions/prepare-release');
     assert.ok(setupIdx > 0 && prepareIdx > setupIdx, `${jobName} must run setup-native before prepare-release so lockfile caches hit`);

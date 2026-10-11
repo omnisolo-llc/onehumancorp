@@ -80,7 +80,7 @@ async function runLiveAudit() {
     // 1. Login flow
     console.log(`[${vp.name}] Logging in at ${BASE_URL}/login...`);
     try {
-      const loginResp = await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: 30000 });
       await page.waitForTimeout(1000);
 
       // Fill login form
