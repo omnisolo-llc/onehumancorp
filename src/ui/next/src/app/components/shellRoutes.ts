@@ -37,8 +37,6 @@ const pageOwnedExactRoutes = new Set([
   "/milestones",
   "/operations",
   "/orders",
-  "/payments",
-  "/pos",
   "/perplexity-harness",
   "/pipeline",
   "/products",
