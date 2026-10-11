@@ -42,12 +42,14 @@ export default function WhatsAppLinkGeneratorPage() {
   const handleCopy = async () => {
     if (!generatedLink) return;
     try {
-      await navigator.clipboard.writeText(generatedLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(generatedLink);
+      }
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleBrandingToggle = () => {

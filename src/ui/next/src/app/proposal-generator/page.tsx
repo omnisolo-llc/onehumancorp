@@ -39,12 +39,14 @@ export default function ProposalGeneratorPage() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareLink);
+      }
     } catch (err) {
       console.error('Failed to copy text: ', err);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (

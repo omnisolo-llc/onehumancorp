@@ -30,12 +30,14 @@ export default function LeadMagnetGeneratorPage() {
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(embedCode);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(embedCode);
+      }
     } catch {
       // Fallback if clipboard permission is not granted
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleBrandingToggle = () => {
