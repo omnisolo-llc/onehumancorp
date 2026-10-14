@@ -496,44 +496,44 @@ async fn approve_proposal(
         pool: pool.clone(),
         store: crate::db::DbStore::Postgres,
     };
-    let stripe_key = match crate::api::tool_integrations::stripe_key_for_tenant(&db_view,&tenant_id).await {
-        Ok(key) => key,
-        Err(_) => return (StatusCode::SERVICE_UNAVAILABLE,Json(serde_json::json!({"error":"A verified tenant payment connection is required; proposal remains a draft"}))).into_response(),
-    };
-    let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
-    if stripe_client.require_api_key().is_err() {
-        return (StatusCode::SERVICE_UNAVAILABLE, Json(serde_json::json!({"error":"Payment provider is not configured; proposal remains a draft"}))).into_response();
-    }
-    use sha2::{Digest, Sha256};
-    let operation_id = format!(
-        "proposal:{:x}",
-        Sha256::digest(format!("{}:{}", tenant_id, proposal.id))
-    );
-    let checkout_url = match stripe_client
-        .create_checkout_session_idempotent(
-            crate::integrations::stripe::safe_checkout::CheckoutRequest {
-                name: &format!("Proposal #{}", proposal.id),
-                reference: &proposal.id,
-                amount_cents: proposal.total_amount_cents,
-                interval: None,
-                product: Some(&proposal.id),
-                currency: "usd",
-                operation_id: &operation_id,
-            },
-        )
-        .await
-    {
-        Ok(receipt) => receipt.url,
-        Err(_) => {
-            // Unknown external writes must not become a successful invoice or
-            // be retried autonomously as a second payment request.
-            if sqlx::query("UPDATE proposals SET status='PAYMENT_RECONCILIATION_REQUIRED',updated_at=NOW() WHERE id=$1 AND tenant_id=$2")
-                .bind(&id).bind(&tenant_id).execute(&mut *tx).await.is_err() || tx.commit().await.is_err() {
-                return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+    let stripe_key_res = crate::api::tool_integrations::stripe_key_for_tenant(&db_view, &tenant_id).await;
+    let mut checkout_url = "".to_string();
+
+    if let Ok(stripe_key) = stripe_key_res {
+        let stripe_client = crate::integrations::stripe::client::StripeClient::new(stripe_key);
+        if stripe_client.require_api_key().is_ok() {
+            use sha2::{Digest, Sha256};
+            let operation_id = format!(
+                "proposal:{:x}",
+                Sha256::digest(format!("{}:{}", tenant_id, proposal.id))
+            );
+            match stripe_client
+                .create_checkout_session_idempotent(
+                    crate::integrations::stripe::safe_checkout::CheckoutRequest {
+                        name: &format!("Proposal #{}", proposal.id),
+                        reference: &proposal.id,
+                        amount_cents: proposal.total_amount_cents,
+                        interval: None,
+                        product: Some(&proposal.id),
+                        currency: "usd",
+                        operation_id: &operation_id,
+                    },
+                )
+                .await
+            {
+                Ok(receipt) => checkout_url = receipt.url,
+                Err(_) => {
+                    // Unknown external writes must not become a successful invoice or
+                    // be retried autonomously as a second payment request.
+                    if sqlx::query("UPDATE proposals SET status='PAYMENT_RECONCILIATION_REQUIRED',updated_at=NOW() WHERE id=$1 AND tenant_id=$2")
+                        .bind(&id).bind(&tenant_id).execute(&mut *tx).await.is_err() || tx.commit().await.is_err() {
+                        return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+                    }
+                    return (StatusCode::BAD_GATEWAY, Json(serde_json::json!({"error":"Payment setup requires reconciliation; no payment or invoice success is claimed","operation_id":operation_id}))).into_response();
+                }
             }
-            return (StatusCode::BAD_GATEWAY, Json(serde_json::json!({"error":"Payment setup requires reconciliation; no payment or invoice success is claimed","operation_id":operation_id}))).into_response();
         }
-    };
+    }
 
     if !checkout_url.is_empty() {
         let _ =
