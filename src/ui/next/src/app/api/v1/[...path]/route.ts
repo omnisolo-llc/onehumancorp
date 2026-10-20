@@ -34,6 +34,7 @@ async function proxy(request: Request, context: RouteContext): Promise<Response>
     .startsWith("application/json");
   const streamResponse = /^\/api\/v1\/agents\/(?:metrics\/stream|[A-Za-z0-9._~-]+\/stream|orchestrate)$/.test(path);
   return proxyBackendRequest(request, path, {
+    forwardQuery: request.method === "GET" || request.method === "HEAD",
     ...(streamResponse ? { streamResponse: true as const } : {}),
     ...(isJson && hasRequestBody ? { transformRequestBody: stripBrowserIdentityJsonRequestBody } : {}),
   });

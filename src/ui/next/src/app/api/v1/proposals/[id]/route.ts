@@ -20,5 +20,5 @@ export async function GET(
       },
     );
   }
-  return proxyBackendRequest(request, `/api/v1/proposals/${id}`);
+  return proxyBackendRequest(request, `/api/v1/proposals/${id}`, { forwardQuery: true });
 }
