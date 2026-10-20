@@ -1,7 +1,7 @@
 import { test, expect } from './onboarding_fixtures';
 
 test.describe('Legacy authenticated onboarding team review', () => {
-  test('Uses the signed-in account without collecting replacement credentials', async ({ page }) => {
+  test('Uses the signed-in account without collecting replacement credentials', async ({ page, onboardingOwner }) => {
     // Navigate to the onboarding route directly
     await page.goto('/setup.html');
 
@@ -39,10 +39,11 @@ test.describe('Legacy authenticated onboarding team review', () => {
     await teamReview.locator('.next-step-btn').click();
     await expect(page.locator('#step-offer')).toBeVisible();
 
-    const credentialFields = await page.evaluate(() => {
-      const draft = JSON.parse(localStorage.getItem('onboardingState') || '{}');
+    const credentialFields = await page.evaluate((owner) => {
+      const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([owner.userId, owner.tenantId])) + ':legacy-draft';
+      const draft = JSON.parse(localStorage.getItem(key) || '{"state":{}}').state || {};
       return ['admin_name', 'admin_email', 'admin_password'].filter(field => Object.hasOwn(draft, field));
-    });
+    }, onboardingOwner);
     expect(credentialFields).toEqual([]);
   });
 });

@@ -75,7 +75,7 @@ test.describe('Setup Wizard 375px Flow', () => {
         await expect(nameError).toBeHidden();
         await expect(nameInput).not.toHaveClass(/invalid-input/);
 
-        const stateStr = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
+        const stateStr = await page.evaluate(() => window.localStorage.getItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:legacy-draft'));
         expect(stateStr).toContain('M');
 
         await nameInput.fill('My Cool Bakery');

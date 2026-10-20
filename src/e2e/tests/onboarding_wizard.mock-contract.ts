@@ -98,7 +98,7 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // wait for localstorage to populate
     await page.waitForTimeout(1000);
-    const storedData = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
+    const storedData = await page.evaluate(() => window.localStorage.getItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:legacy-draft'));
     expect(storedData).toContain('Storefront');
   });
 

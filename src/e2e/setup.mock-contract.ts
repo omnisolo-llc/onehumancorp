@@ -150,11 +150,14 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
 
     // Skip to template step (mock localStorage with an older state)
     await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 2,
-            businessName: 'Local Bakery',
-            categories: 'Home Baker',
-            updated_at: Date.now() - 10000 // Past timestamp
+        localStorage.setItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:legacy-draft', JSON.stringify({
+            version: 6,
+            state: {
+                step: 2,
+                businessName: 'Local Bakery',
+                categories: 'Home Baker',
+                updated_at: Date.now() - 10000 // Past timestamp
+            }
         }));
     });
 
@@ -232,11 +235,14 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
       });
     // Skip to template step (mock localStorage)
     await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 7, // step-template
-            businessName: 'Error Bakery',
-            categories: 'Home Baker',
-            templateSelection: 'Modern'
+        localStorage.setItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:legacy-draft', JSON.stringify({
+            version: 6,
+            state: {
+                step: 7, // step-template
+                businessName: 'Error Bakery',
+                categories: 'Home Baker',
+                templateSelection: 'Modern'
+            }
         }));
       });
     await page.reload();
