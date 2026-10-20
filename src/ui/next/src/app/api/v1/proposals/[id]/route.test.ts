@@ -10,7 +10,7 @@ beforeEach(() => proxyBackendRequest.mockClear());
 test("uses authenticated transport for a confined proposal id", async () => {
   const request = new Request("http://localhost/api/v1/proposals/proposal-1");
   await GET(request, { params: Promise.resolve({ id: "proposal-1" }) });
-  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/proposals/proposal-1");
+  expect(proxyBackendRequest).toHaveBeenCalledWith(request, "/api/v1/proposals/proposal-1", { forwardQuery: true });
 });
 
 test("rejects an invalid proposal id", async () => {
