@@ -1,0 +1,12 @@
+{
+  "kind": "artifact",
+  "provenance": "research",
+  "path": ".automator/research_report.json",
+  "content": {
+    "status": "blocked",
+    "reason": "Missing owner willingness-to-pay evidence and real usage data. No explicit unmitigated CRITICAL isolation violations were discovered during this run. E2E journey tests to be implemented once workflow requirements are settled.",
+    "loaded_skills": ["using-superpowers", "brainstorming", "verification-before-completion"],
+    "revision": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+    "verification": "make test and make lint timed out after 400s as expected for baseline on host."
+  }
+}
