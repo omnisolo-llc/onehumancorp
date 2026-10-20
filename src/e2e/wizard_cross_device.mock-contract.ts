@@ -12,6 +12,9 @@ test.describe('Wizard Cross Device E2E', () => {
         const content = fs.readFileSync(path.join(tauriUiDir, 'setup.html'), 'utf-8');
         await route.fulfill({ contentType: 'text/html', body: content });
     });
+    await context.route('**/api/v1/auth/session-identity', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({ userId: 'storefront', tenantId: 'storefront', expiresAt: Date.now() + 3600000 }) });
+    });
   });
 
 
@@ -21,7 +24,7 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('onboardingState');
+      localStorage.removeItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:draft');
     }, 'storefront');
     await page.goto('http://mock/setup.html');
     await page.waitForLoadState('networkidle');
@@ -46,11 +49,11 @@ test.describe('Wizard Cross Device E2E', () => {
 
     // Wait until local storage is updated with the business name
     await expect.poll(async () => {
-      const stateStr = await page.evaluate(() => localStorage.getItem('onboardingState'));
+      const stateStr = await page.evaluate(() => localStorage.getItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:draft'));
       if (!stateStr) return '';
       try {
-        const state = JSON.parse(stateStr);
-        return state.business_name;
+        const payload = JSON.parse(stateStr);
+        return payload.state.business_name;
       } catch  {
         return '';
       }
@@ -82,11 +85,11 @@ test.describe('Wizard Cross Device E2E', () => {
     // Inject the exact same local storage state to the new context to test restoration
     // We navigate to dashboard first to have the right origin
     await newPage.goto('http://mock/setup.html');
-    const wizardState = await page.evaluate(() => localStorage.getItem('onboardingState'));
+    const wizardState = await page.evaluate(() => localStorage.getItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:draft'));
 
     await newPage.evaluate((state) => {
         if(state) {
-            localStorage.setItem('onboardingState', state);
+            localStorage.setItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:draft', state);
         }
         localStorage.setItem('tenant_id', 'storefront');
         localStorage.setItem('user_id', 'storefront');

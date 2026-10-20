@@ -4,6 +4,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { test, expect } from '@playwright/test';
 test.describe.serial('OmniSolo Setup Wizard Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.route('**/api/v1/auth/session-identity', async route => {
+      await route.fulfill({ status: 200, body: JSON.stringify({ userId: 'storefront', tenantId: 'storefront', expiresAt: Date.now() + 3600000 }) });
+    });
+  });
+
   test('should complete the interactive setup wizard flow smoothly on desktop', async ({ page }) => {
     const tauriUiDir = path.join(process.cwd(), 'src/ui/tauri/src/ui');
     await page.route('**/setup.html', async route => {
@@ -150,11 +156,14 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
 
     // Skip to template step (mock localStorage with an older state)
     await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 2,
-            businessName: 'Local Bakery',
-            categories: 'Home Baker',
-            updated_at: Date.now() - 10000 // Past timestamp
+        localStorage.setItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:draft', JSON.stringify({
+            state: {
+                step: 2,
+                businessName: 'Local Bakery',
+                categories: 'Home Baker',
+                updated_at: Date.now() - 10000 // Past timestamp
+            },
+            version: 6
         }));
     });
 
@@ -232,11 +241,14 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
       });
     // Skip to template step (mock localStorage)
     await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 7, // step-template
-            businessName: 'Error Bakery',
-            categories: 'Home Baker',
-            templateSelection: 'Modern'
+        localStorage.setItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:draft', JSON.stringify({
+            state: {
+                step: 7, // step-template
+                businessName: 'Error Bakery',
+                categories: 'Home Baker',
+                templateSelection: 'Modern'
+            },
+            version: 6
         }));
       });
     await page.reload();
