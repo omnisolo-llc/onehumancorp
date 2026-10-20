@@ -26,7 +26,7 @@ describe("v1 fallback transport", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/v1/catalog/products",
-      {},
+      { forwardQuery: true },
     );
   });
 
@@ -52,7 +52,7 @@ describe("v1 fallback transport", () => {
     expect(proxyBackendRequest).toHaveBeenCalledWith(
       request,
       "/api/v1/incidents",
-      { transformRequestBody: stripBrowserIdentityJsonRequestBody },
+      { forwardQuery: false, transformRequestBody: stripBrowserIdentityJsonRequestBody },
     );
   });
 });
