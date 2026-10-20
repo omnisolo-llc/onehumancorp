@@ -21,7 +21,7 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      localStorage.removeItem('onboardingState');
+      Object.keys(localStorage).forEach(k => k.startsWith('omnisolo_onboarding_owned_v1:') && localStorage.removeItem(k));
     }, 'storefront');
     await page.goto('http://mock/setup.html');
     await page.waitForLoadState('networkidle');
@@ -46,11 +46,14 @@ test.describe('Wizard Cross Device E2E', () => {
 
     // Wait until local storage is updated with the business name
     await expect.poll(async () => {
-      const stateStr = await page.evaluate(() => localStorage.getItem('onboardingState'));
+      const stateStr = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:'));
+        return key ? localStorage.getItem(key) : null;
+      });
       if (!stateStr) return '';
       try {
         const state = JSON.parse(stateStr);
-        return state.business_name;
+        return state.state ? state.state.business_name : state.business_name;
       } catch  {
         return '';
       }
@@ -82,11 +85,14 @@ test.describe('Wizard Cross Device E2E', () => {
     // Inject the exact same local storage state to the new context to test restoration
     // We navigate to dashboard first to have the right origin
     await newPage.goto('http://mock/setup.html');
-    const wizardState = await page.evaluate(() => localStorage.getItem('onboardingState'));
+    const wizardState = await page.evaluate(() => {
+        const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:'));
+        return key ? { key, value: localStorage.getItem(key) } : null;
+    });
 
     await newPage.evaluate((state) => {
-        if(state) {
-            localStorage.setItem('onboardingState', state);
+        if(state && state.key && state.value) {
+            localStorage.setItem(state.key, state.value);
         }
         localStorage.setItem('tenant_id', 'storefront');
         localStorage.setItem('user_id', 'storefront');
