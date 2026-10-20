@@ -1,0 +1,14 @@
+{
+  "kind": "artifact",
+  "provenance": "research",
+  "path": ".automator/research_report.json",
+  "content": {
+    "issue_title": "Sentinel Authority Audit F12",
+    "issue_description": "Blocked: Evaluation of F12 Simulation, unknown provider outcome and approval paths. Requires truthful states/receipts, exact authority, stale approval/revocation, and reconciliation checks on affected paths. Needs actual implementation of the Automator lifecycle before these can be accurately addressed or verified. Currently blocked as per native_migration_and_remediation.md.",
+    "issue_priority": "high",
+    "issue_category": "security",
+    "issue_type": "audit",
+    "issue_label": "ohc:lane:security",
+    "assignees": ["Principal Security Engineer & Sentinel (L7)"]
+  }
+}
