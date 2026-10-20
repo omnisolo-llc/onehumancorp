@@ -40,7 +40,12 @@ test.describe('Legacy authenticated onboarding team review', () => {
     await expect(page.locator('#step-offer')).toBeVisible();
 
     const credentialFields = await page.evaluate(() => {
-      const draft = JSON.parse(localStorage.getItem('onboardingState') || '{}');
+      const userId = localStorage.getItem('user_id') || 'e2e-tenant';
+      const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+      const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+      const draftStr = localStorage.getItem(key);
+      const parsed = draftStr ? JSON.parse(draftStr) : {};
+      const draft = parsed.state || parsed;
       return ['admin_name', 'admin_email', 'admin_password'].filter(field => Object.hasOwn(draft, field));
     });
     expect(credentialFields).toEqual([]);

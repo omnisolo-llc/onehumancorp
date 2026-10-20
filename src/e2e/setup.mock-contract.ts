@@ -150,11 +150,16 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
 
     // Skip to template step (mock localStorage with an older state)
     await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 2,
-            businessName: 'Local Bakery',
-            categories: 'Home Baker',
-            updated_at: Date.now() - 10000 // Past timestamp
+        const userId = localStorage.getItem('user_id') || 'e2e-tenant';
+        const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+        const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+        localStorage.setItem(key, JSON.stringify({
+            state: {
+                step: 2,
+                business_name: 'Local Bakery',
+                categories: 'Home Baker',
+            },
+            version: 6
         }));
     });
 
@@ -232,11 +237,17 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
       });
     // Skip to template step (mock localStorage)
     await page.evaluate(() => {
-        localStorage.setItem('onboardingState', JSON.stringify({
-            step: 7, // step-template
-            businessName: 'Error Bakery',
-            categories: 'Home Baker',
-            templateSelection: 'Modern'
+        const userId = localStorage.getItem('user_id') || 'e2e-tenant';
+        const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+        const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+        localStorage.setItem(key, JSON.stringify({
+            state: {
+                step: 7, // step-template
+                business_name: 'Error Bakery',
+                categories: 'Home Baker',
+                templateSelection: 'Modern'
+            },
+            version: 6
         }));
       });
     await page.reload();

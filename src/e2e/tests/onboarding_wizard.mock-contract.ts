@@ -98,7 +98,12 @@ test.describe('Onboarding Wizard Flow', () => {
 
     // wait for localstorage to populate
     await page.waitForTimeout(1000);
-    const storedData = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
+    const storedData = await page.evaluate(() => {
+      const userId = window.localStorage.getItem('user_id') || 'e2e-tenant';
+      const tenantId = window.localStorage.getItem('tenant_id') || 'e2e-tenant';
+      const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+      return window.localStorage.getItem(key);
+    });
     expect(storedData).toContain('Storefront');
   });
 
