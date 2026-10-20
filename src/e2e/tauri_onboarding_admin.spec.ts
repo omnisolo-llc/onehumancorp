@@ -1,9 +1,9 @@
 import { test, expect } from './onboarding_fixtures';
 
 test.describe('Legacy authenticated onboarding team review', () => {
-  test('Uses the signed-in account without collecting replacement credentials', async ({ page }) => {
+  test('Uses the signed-in account without collecting replacement credentials', async ({ page, onboardingOwner }) => {
     await page.route('**/api/v1/auth/session-identity', async route => {
-      await route.fulfill({ status: 200, body: JSON.stringify({ userId: 'storefront', tenantId: 'storefront', expiresAt: Date.now() + 3600000 }) });
+      await route.fulfill({ status: 200, body: JSON.stringify({ userId: onboardingOwner.userId, tenantId: onboardingOwner.tenantId, expiresAt: Date.now() + 3600000 }) });
     });
     // Navigate to the onboarding route directly
     await page.goto('/setup.html');
