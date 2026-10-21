@@ -150,7 +150,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
 
     // Skip to template step (mock localStorage with an older state)
     await page.evaluate(() => {
-        const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:')) || 'omnisolo_onboarding_owned_v1:';
+        const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:')) || 'omnisolo_onboarding_owned_v1:default:legacy-draft';
         localStorage.setItem(key, JSON.stringify({ format: 1, state: {
             step: 2,
             businessName: 'Local Bakery',
@@ -233,7 +233,7 @@ test.describe.serial('OmniSolo Setup Wizard Flow', () => {
       });
     // Skip to template step (mock localStorage)
     await page.evaluate(() => {
-        const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:')) || 'omnisolo_onboarding_owned_v1:';
+        const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:')) || 'omnisolo_onboarding_owned_v1:default:legacy-draft';
         localStorage.setItem(key, JSON.stringify({ format: 1, state: {
             step: 7, // step-template
             businessName: 'Error Bakery',
