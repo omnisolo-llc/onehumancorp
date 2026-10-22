@@ -76,8 +76,8 @@ test.describe('Setup Wizard 375px Flow', () => {
         await expect(nameInput).not.toHaveClass(/invalid-input/);
 
         const stateStr = await page.evaluate(() => {
-            const key = Object.keys(window.localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:'));
-            return key ? window.localStorage.getItem(key) : null;
+            const key = Object.keys(localStorage).find(k => k.startsWith('omnisolo_onboarding_owned_v1:'));
+            return key ? localStorage.getItem(key) : null;
         });
         expect(stateStr).toContain('M');
 

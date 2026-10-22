@@ -21,7 +21,7 @@ test.describe('Wizard Cross Device E2E', () => {
     await page.addInitScript((tenantId) => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
-      Object.keys(localStorage).forEach(k => k.startsWith('omnisolo_onboarding_owned_v1:') && localStorage.removeItem(k));
+      Object.keys(localStorage).forEach(k => { if(k.startsWith('omnisolo_onboarding_owned_v1:')) localStorage.removeItem(k); });
     }, 'storefront');
     await page.goto('http://mock/setup.html');
     await page.waitForLoadState('networkidle');
