@@ -7,7 +7,7 @@ test.describe('Business Setup Wizard', () => {
       localStorage.setItem('tenant_id', tenantId);
       localStorage.setItem('user_id', tenantId);
       localStorage.removeItem('omnisolo_wizard_state');
-      localStorage.removeItem('onboardingState');
+      localStorage.removeItem('omnisolo_onboarding_owned_v1:["storefront","storefront"]:legacy-draft');
     }, id);
     await page.goto('/website-builder');
     await page.waitForLoadState('networkidle');
