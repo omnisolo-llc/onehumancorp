@@ -75,7 +75,12 @@ test.describe('Setup Wizard 375px Flow', () => {
         await expect(nameError).toBeHidden();
         await expect(nameInput).not.toHaveClass(/invalid-input/);
 
-        const stateStr = await page.evaluate(() => window.localStorage.getItem('onboardingState'));
+        const stateStr = await page.evaluate(() => {
+          const userId = localStorage.getItem('user_id') || 'e2e-tenant';
+          const tenantId = localStorage.getItem('tenant_id') || 'e2e-tenant';
+          const key = 'omnisolo_onboarding_owned_v1:' + encodeURIComponent(JSON.stringify([userId, tenantId])) + ':legacy-draft';
+          return window.localStorage.getItem(key);
+        });
         expect(stateStr).toContain('M');
 
         await nameInput.fill('My Cool Bakery');
