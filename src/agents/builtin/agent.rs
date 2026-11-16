@@ -1167,9 +1167,9 @@ impl Agent {
                     ));
                 }
                 if cfg.enable_visual_verification {
-                    if cfg.visual_verification_command == "playwright" {
+                    if cfg.visual_verification_command == "agent-browser" {
                         verification_manager.add_visual(std::sync::Arc::new(
-                            crate::verification_loops::PlaywrightVisualVerifier,
+                            crate::verification_loops::AgentBrowserVisualVerifier,
                         ));
                     } else if !cfg.visual_verification_command.is_empty() {
                         verification_manager.add_visual(std::sync::Arc::new(
@@ -4173,9 +4173,9 @@ impl Agent {
                     ));
                 }
                 if final_cfg.enable_visual_verification {
-                    if final_cfg.visual_verification_command == "playwright" {
+                    if final_cfg.visual_verification_command == "agent-browser" {
                         verification_manager.add_visual(Arc::new(
-                            crate::verification_loops::PlaywrightVisualVerifier,
+                            crate::verification_loops::AgentBrowserVisualVerifier,
                         ));
                     } else if !final_cfg.visual_verification_command.is_empty() {
                         verification_manager.add_visual(Arc::new(

@@ -30,7 +30,9 @@ test('audits all source-bound emitted versions, including the embedded sanitizer
     assert.equal(url, advisoryEndpoint);
     assert.equal(options.method, 'POST');
     const versions = JSON.parse(options.body);
-    assert.deepEqual(versions.dompurify, ['3.4.16']);
+    assert.deepEqual(versions.dompurify, ['3.4.17']);
+    assert.deepEqual(versions['deepmerge-ts'], ['8.0.2']);
+    assert.equal(versions.deepmerge, undefined);
     assert.deepEqual(versions['swagger-ui'], ['5.33.1']);
     assert.equal(versions.argparse, undefined);
     assert.equal(versions['sprintf-js'], undefined);

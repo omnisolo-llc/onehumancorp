@@ -314,7 +314,7 @@ impl LocalServiceRegistry {
                 "browser-service",
                 "task",
                 LocalServiceScope::Task,
-                ["browser.navigate", "browser.snapshot"],
+                ["browser.navigate", "browser.snapshot", "browser.act"],
             ),
             descriptor(
                 "omnisolo.cache",

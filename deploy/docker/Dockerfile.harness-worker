@@ -47,8 +47,10 @@ ENTRYPOINT ["/usr/local/bin/omnisolo-harness-worker"]
 
 FROM node-worker-base AS local-service-daemon
 USER root
-ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
-RUN npm install --global playwright@1.61.0 \
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers \
+    OMNISOLO_AGENT_BROWSER_BIN=/usr/local/bin/agent-browser
+RUN npm install --global agent-browser@0.43.0 playwright@1.61.0 \
+    && test -x /usr/local/bin/agent-browser \
     && playwright install --with-deps chromium \
     && chmod -R a+rX /opt/playwright-browsers \
     && install --directory --owner=1000 --group=1000 --mode=0700 /services

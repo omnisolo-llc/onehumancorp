@@ -1,12 +1,17 @@
 # Source-bound Swagger UI distribution
 
 The API reference uses official Swagger UI 5.33.1, rebuilt from commit
-`cac3d136b5e37bfbe3288c8591f6f4fcf9870599` with DOMPurify pinned to 3.4.16.
-The stock distribution embedded 3.4.13. Its package manifest did not expose that
-embedded version to application `npm audit`.
+`cac3d136b5e37bfbe3288c8591f6f4fcf9870599` with DOMPurify pinned to 3.4.17 and
+`deepmerge` aliased in the webpack build to `deepmerge-ts@8.0.2` via a local
+compatibility adapter (`webpack/safe-deepmerge.js`).
+The stock distribution embedded DOMPurify 3.4.13 and resolved `swagger-client`'s
+`deepmerge@4.3.1` runtime dependency. Its package manifest did not expose those
+embedded versions to application `npm audit`.
 
-No Swagger application source is modified. The small upstream patch changes the
-dependency pin and makes build metadata use the source commit's timestamp. The
+No Swagger application UI source under `src/` is modified. The small upstream
+patch changes the dependency pins, aliases `deepmerge` in webpack to the
+`deepmerge-ts` adapter so prototype-poisoning keys use safe own-property
+definition, and makes build metadata use the source commit's timestamp. The
 completed recipe lock preserves every other upstream package version and adds
 missing exact npm-registry tarball/integrity records. Install scripts and Scarf
 analytics are disabled. This is a locally rebuilt distribution, not an upstream
@@ -17,8 +22,9 @@ after a clean dependency reinstall on Linux x64 with official Node 24.21.0 and
 its bundled npm 11.19.0. `manifest.json` binds the source, recipe, runtime
 inventory and shipped assets. `runtime-inventory.json` is derived from emitted
 webpack modules, not the broader source-build dependency graph. It includes
-DOMPurify 3.4.16 and excludes the unused Remarkable CLI's argparse/sprintf-js
-modules. Build-only dependencies remain in the recipe lock and are not silently
+DOMPurify 3.4.17 and `deepmerge-ts` 8.0.2, and excludes the replaced `deepmerge`
+package as well as the unused Remarkable CLI's argparse/sprintf-js modules.
+Build-only dependencies remain in the recipe lock and are not silently
 represented as deployed code or declared advisory-free.
 
 `node scripts/audit-swagger-bundle.mjs` first verifies the asset/inventory hashes,

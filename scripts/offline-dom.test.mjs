@@ -90,7 +90,7 @@ test('all root DOM fixtures import the offline constructor', async () => {
 test('offline dispatcher is a direct locked dependency shared with jsdom', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   const lock = JSON.parse(await readFile(new URL('../package-lock.json', import.meta.url), 'utf8'));
-  assert.equal(manifest.devDependencies.undici, '7.29.1');
+  assert.equal(manifest.devDependencies.undici, '7.30.2');
   assert.equal(lock.packages[''].devDependencies.undici, manifest.devDependencies.undici);
   assert.equal(lock.packages['node_modules/undici'].version, manifest.devDependencies.undici);
   const require = createRequire(import.meta.url);

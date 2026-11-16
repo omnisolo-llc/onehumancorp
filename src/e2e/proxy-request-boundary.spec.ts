@@ -304,7 +304,8 @@ for (const [alias, canonical] of aliases) {
         const actionHeaders = { 'next-action': 'unregistered-boundary-action', origin, 'sec-fetch-site': 'same-origin' };
         loginBoundary(await observed(anonymousPage.request, observations, alias, { method: 'POST', headers: actionHeaders }), alias, origin, true);
         const missingAction = await observed(page.request, observations, alias, { method: 'POST', headers: actionHeaders });
-        expect.soft(missingAction.status()).toBe(404);
+        // /api/v1/ui/* hits the API route handler (404); Next 16.4+ rejects invalid next-action IDs on page paths with 400.
+        expect.soft(missingAction.status()).toBe(alias.startsWith('/api/v1/ui/') ? 404 : 400);
         noRedirect(missingAction);
         const action = await observed(page.request, observations, alias, { method: 'POST', headers: { ...actionHeaders, origin: 'https://foreign.invalid' } });
         expect.soft(action.status()).toBe(403);

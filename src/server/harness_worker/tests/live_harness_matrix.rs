@@ -1003,8 +1003,10 @@ fn required_env(name: &str) -> String {
 #[test]
 fn conformance_requires_successful_backend_receipts_and_withholds_reader_value() {
     assert!(verify_operations(&json!({"status":"bound"}), true).is_err());
-    let writer = json!({"operations":["memory.write","artifact.write","workspace.write","cache.write","mcp.catalog","mcp.invoke","integration.read","integration.invoke","browser.navigate","browser.snapshot"]});
+    let writer = json!({"operations":["memory.write","artifact.write","workspace.write","cache.write","mcp.catalog","mcp.invoke","integration.read","integration.invoke","browser.navigate","browser.snapshot","browser.act"]});
     assert!(verify_operations(&writer, true).is_ok());
+    let legacy_writer = json!({"operations":["memory.write","artifact.write","workspace.write","cache.write","mcp.catalog","mcp.invoke","integration.read","integration.invoke","browser.navigate","browser.snapshot"]});
+    assert!(verify_operations(&legacy_writer, true).is_ok());
     assert!(verify_operations(&writer, false).is_err());
     assert!(
         verify_read_values(

@@ -1,7 +1,7 @@
 "use client";
 
 
-import { currentVerifiedQueueOwner, currentVerifiedQueueLease, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '@/lib/sync/queueIdentity';
+import { currentVerifiedQueueOwner, currentVerifiedQueueLease, hasPendingQueueOwnerVerification, hasVerifiedOfflineQueueOwner, readQueueOwner, sameOwner, subscribeQueueIdentityReadiness, QUEUE_IDENTITY_EPOCH_KEY, type QueueOwner } from '@/lib/sync/queueIdentity';
 import { subscribeOnboardingInvalidation } from '../onboarding/draftSession';
 import { errorMessage } from '@/lib/errors';
 import { useEffect, useState, useMemo, useRef } from "react";
@@ -32,6 +32,7 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
   const pendingDecisionIdsRef = useRef<Set<string>>(new Set());
   const unconfirmedDecisionIdsRef = useRef<Set<string>>(new Set());
   const decisionTimers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const decisionWaiters = useRef(new Set<() => void>());
   const decisionEpoch = useRef(0);
   const [decisionStatus, setDecisionStatus] = useState('');
   const [items, setItems] = useState<AgentFeedItem[]>([]);
@@ -145,6 +146,8 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     const clearTimers = () => {
       for (const timer of decisionTimers.current) clearTimeout(timer);
       decisionTimers.current.clear();
+      for (const wake of decisionWaiters.current) wake();
+      decisionWaiters.current.clear();
     };
     const retireDecisions = () => {
       ++decisionEpoch.current;
@@ -604,6 +607,37 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
     if (!confirmed) throw new Error("Outcome unconfirmed. Your card and draft are retained. Check recorded decisions before retrying.");
   };
 
+  const waitForPendingQueueIdentity = (generation: number): Promise<void> => {
+    if (generation !== decisionEpoch.current || !hasPendingQueueOwnerVerification()) {
+      return Promise.resolve();
+    }
+    // Wait for any concurrent readQueueOwner() revalidation in another widget to
+    // settle instead of mistaking a temporarily suspended lease for a session switch.
+    return new Promise<void>((resolve) => {
+      let settled = false;
+      let unsubscribe = () => {};
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        decisionWaiters.current.delete(finish);
+        unsubscribe();
+        resolve();
+      };
+      const check = () => {
+        if (generation !== decisionEpoch.current || !hasPendingQueueOwnerVerification()) {
+          finish();
+        }
+      };
+      decisionWaiters.current.add(finish);
+      unsubscribe = subscribeQueueIdentityReadiness(check);
+      if (settled) {
+        unsubscribe();
+      } else {
+        check();
+      }
+    });
+  };
+
   const handleDecision = async (
     id: string,
     approved: boolean,
@@ -635,6 +669,10 @@ export function UnifiedAgentFeed({ initialData }: { initialData?: AgentFeedData 
         return false;
       }
       await submitDecision(id, approved, modified_content, event_source);
+      if (generation !== decisionEpoch.current) return false;
+      if (expectedOwner && !currentVerifiedQueueOwner() && hasPendingQueueOwnerVerification()) {
+        await waitForPendingQueueIdentity(generation);
+      }
       if (generation !== decisionEpoch.current) return false;
       const currentOwner = currentVerifiedQueueOwner();
       if (expectedOwner && (!currentOwner || !sameOwner(expectedOwner, currentOwner))) {

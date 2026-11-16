@@ -3,7 +3,7 @@
   "webpack": "5.105.2",
   "errors": 0,
   "warnings": [],
-  "includedModuleEntries": 1815,
+  "includedModuleEntries": 1816,
   "externals": [],
   "packages": [
     {
@@ -1060,16 +1060,16 @@
       ]
     },
     {
-      "name": "deepmerge",
-      "version": "4.3.1",
-      "license": "MIT",
-      "integrity": "sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==",
-      "resolved": "https://registry.npmjs.org/deepmerge/-/deepmerge-4.3.1.tgz",
+      "name": "deepmerge-ts",
+      "version": "8.0.2",
+      "license": "BSD-3-Clause",
+      "integrity": "sha512-uqbvqLUMrc6p0MO+WBRtTxY55hmyh94WRwI5a++PZe54X+bfVh59FSN7uWCBCW1CCVjzjnrwzfI8zidE2obMMw==",
+      "resolved": "https://registry.npmjs.org/deepmerge-ts/-/deepmerge-ts-8.0.2.tgz",
       "sourcePackages": [
-        "node_modules/deepmerge"
+        "node_modules/deepmerge-ts"
       ],
       "modules": [
-        "node_modules/deepmerge/dist/cjs.js"
+        "node_modules/deepmerge-ts/dist/index.cjs"
       ]
     },
     {
@@ -1087,10 +1087,10 @@
     },
     {
       "name": "dompurify",
-      "version": "3.4.16",
+      "version": "3.4.17",
       "license": "(MPL-2.0 OR Apache-2.0)",
-      "integrity": "sha512-sqo+pNp3qRhCIpbgRi1y8Tgk27Bo2Ry7w0dC1NBeNTdZChWjz9Xb/KOoZbRP/R6pQZ80Qw8YhXw13hWWBbMRnQ==",
-      "resolved": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.16.tgz",
+      "integrity": "sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==",
+      "resolved": "https://registry.npmjs.org/dompurify/-/dompurify-3.4.17.tgz",
       "sourcePackages": [
         "node_modules/dompurify"
       ],

@@ -25,6 +25,9 @@ reqwest = { workspace = true }
 schemars = "=1.2.1"
 serde = { workspace = true }
 serde_json = { workspace = true }
+sha2 = "0.10"
+flate2 = "1"
+tar = "0.4"
 server_omnisolo = { path = "../../../server/omnisolo" }
 sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "chrono", "uuid", "macros"] }
 tokio = { workspace = true }

@@ -515,3 +515,45 @@ it('cancels a confirmed decision exit when the account is invalidated', async ()
     expect(screen.queryByRole('status', { name: 'Decision status' })).not.toBeInTheDocument();
   } finally { vi.useRealTimers(); }
 });
+
+it.each([
+  ['same', () => Response.json({ userId: 'user-1', tenantId: 'tenant-1', expiresAt: Date.now() + 60_000 })],
+  ['different', () => Response.json({ userId: 'other-user', tenantId: 'tenant-1', expiresAt: Date.now() + 60_000 })],
+  ['unauthenticated', () => new Response('{}', { status: 401 })],
+] as const)('waits for overlapping identity revalidation after a committed decision (%s)', async (outcome, identityResponse) => {
+  let finishDecision!: (response: Response) => void;
+  let finishIdentity!: (response: Response) => void;
+  vi.stubGlobal('fetch', vi.fn((url: RequestInfo | URL, options?: RequestInit) => {
+    const target = String(url);
+    if (options?.method === 'PUT') return new Promise<Response>(resolve => { finishDecision = resolve; });
+    if (target.endsWith('/session-identity')) return new Promise<Response>(resolve => { finishIdentity = resolve; });
+    return Promise.resolve(Response.json({ items: [pendingItem] }));
+  }));
+  render(<UnifiedAgentFeed initialData={{ items: [pendingItem] }} />);
+  await screen.findByTestId('triage-card-decision-1');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Approve proposal' }));
+  await waitFor(() => expect(finishDecision).toBeTypeOf('function'));
+
+  let revalidation!: Promise<unknown>;
+  await act(async () => { revalidation = readQueueOwner().catch(() => null); });
+  await waitFor(() => expect(finishIdentity).toBeTypeOf('function'));
+
+  await act(async () => { finishDecision(Response.json(canonicalReceipt())); });
+  expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Waiting for the recorded decision');
+  expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+
+  await act(async () => {
+    finishIdentity(identityResponse());
+    await revalidation;
+  });
+
+  if (outcome === 'same') {
+    expect(screen.getByRole('status', { name: 'Decision status' })).toHaveTextContent('Approval recorded.');
+    await waitFor(() => expect(screen.queryByTestId('triage-card-decision-1')).not.toBeInTheDocument());
+  } else {
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your session changed. The decision outcome must be checked in the original account.');
+    expect(screen.queryByRole('status', { name: 'Decision status' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('triage-card-decision-1')).toBeVisible();
+  }
+});

@@ -1191,17 +1191,30 @@ impl AgentService for AgentServiceImpl {
                     )),
                 );
             }
-            if let Some(screenshot) = tools.iter().find(|tool| tool.name == "Screenshot") {
+            if tools.iter().any(|tool| tool.name == "BrowserObserve") {
+                let workspace_path = Self::workspace_path();
+                let runner = Arc::new(crate::tools::runner::SandboxedCommandRunner::new(Some(
+                    workspace_path.clone(),
+                )));
+                let controller = crate::tools::browser::AgentBrowserController::new(
+                    Some(workspace_path),
+                    runner,
+                );
+                let mut browser_policy = run_cfg.clone();
+                if !tools.iter().any(|tool| tool.name == "BrowserAct") {
+                    if let Some(allowed) = browser_policy.allowed_tools.as_mut() {
+                        allowed.retain(|name| name != "BrowserAct");
+                    } else {
+                        browser_policy.allowed_tools = Some(vec!["BrowserObserve".to_owned()]);
+                    }
+                }
                 gateway.register(
                     server_harness::middleware::local_services::LocalServiceKind::Browser,
-                    Arc::new(
-                        crate::local_service_adapters::ScreenshotBrowserBackend::new(
-                            screenshot.clone(),
-                            Self::workspace_path(),
-                            &scope,
-                            &run_cfg,
-                        ),
-                    ),
+                    Arc::new(crate::local_service_adapters::AgentBrowserBackend::new(
+                        controller,
+                        &scope,
+                        &browser_policy,
+                    )),
                 );
             }
             let gateway = Arc::new(gateway);
@@ -2091,5 +2104,30 @@ mod memory_tests {
             std::env::remove_var("OMNISOLO_ANTHROPIC_MEMORY_DIR");
         }
         let _ = tokio::fs::remove_dir_all(".test-agent-memory").await;
+    }
+
+    #[tokio::test]
+    async fn local_service_tools_exposes_agent_browser_and_omits_legacy_screenshot() {
+        let dir = tempfile::tempdir().unwrap();
+        let service = AgentServiceImpl::new_for_tenant(
+            "test-browser-tools",
+            AgentConfig::default(),
+            AuthMode::Disabled,
+            crate::tools::tenant::TenantContext::new("org-browser").expect("tenant"),
+        );
+        let tools = service
+            .local_service_tools(
+                dir.path().to_path_buf(),
+                &[
+                    "BrowserObserve".to_owned(),
+                    "BrowserAct".to_owned(),
+                    "Screenshot".to_owned(),
+                ],
+            )
+            .await;
+        let names: Vec<&str> = tools.iter().map(|t| t.name.as_str()).collect();
+        assert!(names.contains(&"BrowserObserve"));
+        assert!(names.contains(&"BrowserAct"));
+        assert!(!names.contains(&"Screenshot"));
     }
 }

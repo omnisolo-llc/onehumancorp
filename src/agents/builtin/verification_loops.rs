@@ -4,8 +4,15 @@ use crate::output_parser::{LlmClientForParser, parse_structured_output};
 /// Master Catalog C.4. Verification Loops: Guides (steer before action) vs Sensors (observe after action).
 /// Master Catalog B.10. Verification Loops
 use omnisolo_builtin_agent_core::types::{ChatRequest, ChatResponse, Message};
+use omnisolo_builtin_agent_tools::binary_dist::{ManagedBinaryKind, ensure_managed_binary};
+use omnisolo_builtin_agent_tools::browser_proxy::BrowserPolicyProxy;
+use omnisolo_builtin_agent_tools::network_policy;
 use serde::Deserialize;
+use std::path::Path;
+use std::process::Stdio;
 use std::sync::Arc;
+use std::time::Duration;
+use url::Url;
 
 /// A feedforward verification loop using linters, type-checkers, or unit tests.
 #[async_trait::async_trait]
@@ -13,7 +20,7 @@ pub trait ComputationalGuide: Send + Sync {
     async fn verify(&self, code: &str, context: &str) -> Result<(), String>;
 }
 
-/// A feedback verification loop using visual checks (screenshots via Playwright and/or Desktop/Mobile UI tests).
+/// A feedback verification loop using visual checks (screenshots via `agent-browser` and/or Desktop/Mobile UI tests).
 #[async_trait::async_trait]
 pub trait VisualVerifier: Send + Sync {
     async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String>;
@@ -27,7 +34,7 @@ pub trait InferentialSensor: Send + Sync {
 
 /// Master Catalog B.10. Verification Loops (Quality x3): Giving the model ways to verify work.
 ///     Mechanics: Computational/Guides (feedforward: linters, type-checkers, unit tests),
-///     Visual (screenshots via Playwright and/or Desktop/Mobile UI tests), and
+///     Visual (screenshots via `agent-browser` and/or Desktop/Mobile UI tests), and
 ///     Inferential/Sensors (feedback: a separate LLM-as-judge subagent evaluates the output).
 ///     A manager that coordinates the 3 distinct verification loops.
 
@@ -294,27 +301,151 @@ impl VerificationManager {
     }
 }
 
-/// An InferentialSensor that uses an LlmClient to act as a judge.
-// Verification Loops: Playwright UI tests
-pub struct PlaywrightVisualVerifier;
+/// Verification loop using headless `agent-browser` screenshots.
+pub struct AgentBrowserVisualVerifier;
+
+impl AgentBrowserVisualVerifier {
+    async fn run_command(
+        binary: &Path,
+        args: &[&str],
+        timeout: Duration,
+    ) -> Result<String, String> {
+        let mut cmd = tokio::process::Command::new(binary);
+        cmd.args(args)
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .kill_on_drop(true);
+
+        let output = tokio::time::timeout(timeout, cmd.output())
+            .await
+            .map_err(|_| {
+                format!(
+                    "Failed to execute agent-browser: command timed out after {}s",
+                    timeout.as_secs()
+                )
+            })?
+            .map_err(|e| format!("Failed to execute agent-browser: {e}"))?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+        if !output.status.success() {
+            let detail = match (stdout.is_empty(), stderr.is_empty()) {
+                (false, false) => format!("{stdout}\n{stderr}"),
+                (false, true) => stdout,
+                (true, false) => stderr,
+                (true, true) => format!("exit status {}", output.status),
+            };
+            return Err(format!("Visual check failed. AgentBrowser error: {detail}"));
+        }
+
+        if let Ok(val) = serde_json::from_str::<serde_json::Value>(&stdout)
+            && val.get("success").and_then(|v| v.as_bool()) == Some(false)
+        {
+            let err_msg = val.get("error").and_then(|v| v.as_str()).unwrap_or(&stdout);
+            return Err(format!(
+                "Visual check failed. AgentBrowser error: {err_msg}"
+            ));
+        }
+
+        Ok(stdout)
+    }
+
+    async fn verify_in_ephemeral_session(
+        binary: &Path,
+        url: &Url,
+        allow_private: bool,
+        session_id: &str,
+        profile_dir: &Path,
+        screenshot_path: &Path,
+    ) -> Result<(), String> {
+        let proxy = BrowserPolicyProxy::start(allow_private)
+            .await
+            .map_err(|e| format!("Failed to start browser policy proxy: {e}"))?;
+        let proxy_url = proxy.proxy_url();
+        let profile_str = profile_dir.to_string_lossy().into_owned();
+        let screenshot_str = screenshot_path.to_string_lossy().into_owned();
+
+        let mut base_args = vec![
+            "--json".to_string(),
+            "--session".to_string(),
+            session_id.to_string(),
+            "--profile".to_string(),
+            profile_str,
+            "--proxy".to_string(),
+            proxy_url,
+            "--no-auto-dialog".to_string(),
+        ];
+        if let Ok(chrome_bin) = std::env::var("OMNISOLO_CHROMIUM_EXECUTABLE")
+            && !chrome_bin.trim().is_empty()
+        {
+            base_args.push("--executable-path".to_string());
+            base_args.push(chrome_bin.trim().to_string());
+        }
+
+        let mut open_args: Vec<&str> = base_args.iter().map(String::as_str).collect();
+        open_args.push("open");
+        open_args.push(url.as_str());
+
+        let timeout = Duration::from_secs(45);
+        let open_res = Self::run_command(binary, &open_args, timeout).await;
+
+        let step_res = match open_res {
+            Ok(_) => {
+                let mut screenshot_args: Vec<&str> = base_args.iter().map(String::as_str).collect();
+                screenshot_args.push("screenshot");
+                screenshot_args.push(&screenshot_str);
+                Self::run_command(binary, &screenshot_args, timeout).await
+            }
+            Err(err) => Err(err),
+        };
+
+        let close_args = ["--json", "--session", session_id, "close"];
+        let _ = Self::run_command(binary, &close_args, Duration::from_secs(10)).await;
+
+        step_res.map(|_| ())
+    }
+}
 
 #[async_trait::async_trait]
-impl VisualVerifier for PlaywrightVisualVerifier {
+impl VisualVerifier for AgentBrowserVisualVerifier {
     async fn verify_visual(&self, ui_state_path: &str) -> Result<(), String> {
-        let output = std::process::Command::new("npx")
-            .arg("playwright")
-            .arg("screenshot")
-            .arg(ui_state_path)
-            .arg("test.png")
-            .output()
-            .map_err(|e| format!("Failed to execute Playwright: {}", e))?;
+        let trimmed = ui_state_path.trim();
+        let parsed = Url::parse(trimmed)
+            .map_err(|e| format!("AgentBrowser visual check invalid URL: {e}"))?;
+        let allow_private = network_policy::private_network_allowed();
+        network_policy::validate_url(&parsed, allow_private)
+            .map_err(|e| format!("AgentBrowser visual check invalid URL: {e}"))?;
 
-        if output.status.success() {
-            Ok(())
-        } else {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            Err(format!("Visual check failed. Playwright error: {}", stderr))
-        }
+        let binary = ensure_managed_binary(ManagedBinaryKind::AgentBrowser)
+            .await
+            .map_err(|e| format!("Failed to resolve agent-browser: {e}"))?;
+
+        let temp_dir = tempfile::tempdir()
+            .map_err(|e| format!("Failed to create agent-browser visual check tempdir: {e}"))?;
+        let profile_dir = temp_dir.path().join("profile");
+        tokio::fs::create_dir_all(&profile_dir)
+            .await
+            .map_err(|e| format!("Failed to create agent-browser profile directory: {e}"))?;
+        let screenshot_path = temp_dir.path().join("verify.png");
+        let session_id = format!("verify-{}", uuid::Uuid::new_v4());
+
+        let result = Self::verify_in_ephemeral_session(
+            &binary,
+            &parsed,
+            allow_private,
+            &session_id,
+            &profile_dir,
+            &screenshot_path,
+        )
+        .await;
+
+        let _ = tokio::fs::remove_file(&screenshot_path).await;
+        let _ = tokio::fs::remove_dir_all(&profile_dir).await;
+        let _ = temp_dir.close();
+
+        result
     }
 }
 
@@ -547,16 +678,207 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_playwright_visual_verifier() {
-        // We will mock the implementation via Command to fail smoothly if npx doesn't exist,
-        // but test the struct initialization.
-        let verifier = PlaywrightVisualVerifier;
-        // Run against an invalid path, expecting an error
-        let res = verifier.verify_visual("invalid_path_123").await;
-        assert!(res.is_err());
-        let err = res.unwrap_err();
-        assert!(err.contains("Playwright error:") || err.contains("Failed to execute Playwright:"));
+    #[test]
+    fn test_agent_browser_visual_verifier() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing_bin = dir.path().join("missing-agent-browser");
+
+        temp_env::with_vars(
+            [
+                ("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("false")),
+                (
+                    "OMNISOLO_AGENT_BROWSER_BIN",
+                    Some(missing_bin.to_str().unwrap()),
+                ),
+                ("OMNISOLO_AGENT_BROWSER_ARCHIVE", None::<&str>),
+                ("OMNISOLO_CHROMIUM_EXECUTABLE", None::<&str>),
+            ],
+            || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                rt.block_on(async {
+                    let verifier = AgentBrowserVisualVerifier;
+
+                    for invalid in [
+                        "invalid_path_123",
+                        "file:///etc/passwd",
+                        "https://user:secret@example.com/",
+                        "http://127.0.0.1:3000/",
+                        "http://localhost:3000/",
+                    ] {
+                        let err = verifier.verify_visual(invalid).await.unwrap_err();
+                        assert!(
+                            err.contains("AgentBrowser visual check invalid URL:"),
+                            "unexpected error for {invalid}: {err}"
+                        );
+                    }
+
+                    let missing_err = verifier
+                        .verify_visual("https://example.com/")
+                        .await
+                        .unwrap_err();
+                    assert!(
+                        missing_err.contains("Failed to resolve agent-browser:")
+                            && missing_err.contains("OMNISOLO_AGENT_BROWSER_BIN"),
+                        "unexpected missing-binary error: {missing_err}"
+                    );
+                });
+            },
+        );
+
+        temp_env::with_vars(
+            [
+                ("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("true")),
+                (
+                    "OMNISOLO_AGENT_BROWSER_BIN",
+                    Some(missing_bin.to_str().unwrap()),
+                ),
+                ("OMNISOLO_AGENT_BROWSER_ARCHIVE", None::<&str>),
+                ("OMNISOLO_CHROMIUM_EXECUTABLE", None::<&str>),
+            ],
+            || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                rt.block_on(async {
+                    let verifier = AgentBrowserVisualVerifier;
+                    let loopback_err = verifier
+                        .verify_visual("http://127.0.0.1:3000/")
+                        .await
+                        .unwrap_err();
+                    assert!(
+                        loopback_err.contains("Failed to resolve agent-browser:")
+                            && loopback_err.contains("OMNISOLO_AGENT_BROWSER_BIN"),
+                        "expected loopback URL to pass validation when private network enabled: {loopback_err}"
+                    );
+                });
+            },
+        );
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            let fail_bin = dir.path().join("fail-agent-browser");
+            std::fs::write(
+                &fail_bin,
+                "#!/bin/sh\necho 'mock browser failure' >&2\nexit 1\n",
+            )
+            .unwrap();
+            std::fs::set_permissions(&fail_bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+            temp_env::with_vars(
+                [
+                    ("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("false")),
+                    (
+                        "OMNISOLO_AGENT_BROWSER_BIN",
+                        Some(fail_bin.to_str().unwrap()),
+                    ),
+                    ("OMNISOLO_AGENT_BROWSER_ARCHIVE", None::<&str>),
+                    ("OMNISOLO_CHROMIUM_EXECUTABLE", None::<&str>),
+                ],
+                || {
+                    let rt = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap();
+                    rt.block_on(async {
+                        let verifier = AgentBrowserVisualVerifier;
+                        let err = verifier
+                            .verify_visual("https://example.com/")
+                            .await
+                            .unwrap_err();
+                        assert!(
+                            err.contains("Visual check failed. AgentBrowser error:")
+                                && err.contains("mock browser failure"),
+                            "unexpected mock failure error: {err}"
+                        );
+                    });
+                },
+            );
+
+            let ok_bin = dir.path().join("ok-agent-browser");
+            let log_file = dir.path().join("invocations.log");
+            let profile_record = dir.path().join("profile.path");
+            let png_record = dir.path().join("png.path");
+            std::fs::write(
+                &ok_bin,
+                "#!/bin/sh\n\
+printf '%s\\n' \"$*\" >> \"$OHC_TEST_AB_LOG\"\n\
+prev=\"\"\n\
+for arg in \"$@\"; do\n\
+  if [ \"$prev\" = \"--profile\" ]; then\n\
+    printf '%s' \"$arg\" > \"$OHC_TEST_AB_PROFILE\"\n\
+  elif [ \"$prev\" = \"screenshot\" ]; then\n\
+    printf 'PNG' > \"$arg\"\n\
+    printf '%s' \"$arg\" > \"$OHC_TEST_AB_PNG\"\n\
+  fi\n\
+  prev=\"$arg\"\n\
+done\n\
+printf '{\"success\":true}\\n'\n",
+            )
+            .unwrap();
+            std::fs::set_permissions(&ok_bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+            temp_env::with_vars(
+                [
+                    ("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("false")),
+                    ("OMNISOLO_AGENT_BROWSER_BIN", Some(ok_bin.to_str().unwrap())),
+                    ("OMNISOLO_AGENT_BROWSER_ARCHIVE", None::<&str>),
+                    ("OMNISOLO_CHROMIUM_EXECUTABLE", None::<&str>),
+                    ("OHC_TEST_AB_LOG", Some(log_file.to_str().unwrap())),
+                    (
+                        "OHC_TEST_AB_PROFILE",
+                        Some(profile_record.to_str().unwrap()),
+                    ),
+                    ("OHC_TEST_AB_PNG", Some(png_record.to_str().unwrap())),
+                ],
+                || {
+                    let rt = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .unwrap();
+                    rt.block_on(async {
+                        let verifier = AgentBrowserVisualVerifier;
+                        verifier
+                            .verify_visual("https://example.com/app")
+                            .await
+                            .unwrap();
+                    });
+                },
+            );
+
+            let logged = std::fs::read_to_string(&log_file).unwrap();
+            let lines: Vec<&str> = logged.lines().collect();
+            assert_eq!(lines.len(), 3, "expected open, screenshot, close: {logged}");
+            assert!(
+                lines[0].contains("--json --session verify-")
+                    && lines[0].contains("--profile ")
+                    && lines[0].contains("--proxy http://127.0.0.1:")
+                    && lines[0].contains("--no-auto-dialog open https://example.com/app"),
+                "unexpected open args: {}",
+                lines[0]
+            );
+            assert!(
+                lines[1].contains("--json --session verify-")
+                    && lines[1].contains("--no-auto-dialog screenshot "),
+                "unexpected screenshot args: {}",
+                lines[1]
+            );
+            assert!(
+                lines[2].starts_with("--json --session verify-") && lines[2].ends_with(" close"),
+                "unexpected close args: {}",
+                lines[2]
+            );
+
+            let recorded_profile = std::fs::read_to_string(&profile_record).unwrap();
+            let recorded_png = std::fs::read_to_string(&png_record).unwrap();
+            assert!(!Path::new(&recorded_profile).exists());
+            assert!(!Path::new(&recorded_png).exists());
+        }
     }
 
     struct MockLlmClient {

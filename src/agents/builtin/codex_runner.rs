@@ -479,7 +479,7 @@ impl AppServer {
                 }
                 "visual" => {
                     verification_manager.add_visual(std::sync::Arc::new(
-                        crate::verification_loops::PlaywrightVisualVerifier,
+                        crate::verification_loops::AgentBrowserVisualVerifier,
                     ));
                     verification_manager
                         .run_visual_verifiers(&output_text)

@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 
 HARNESSES = ('omnisolo', 'codex', 'opencode', 'deepseek', 'pi', 'kimi', 'openhands', 'openharness', 'aider', 'goose', 'open-interpreter', 'plandex')
-COMMON = {'mcp.catalog', 'mcp.invoke', 'integration.read', 'integration.invoke', 'browser.navigate', 'browser.snapshot'}
+COMMON = {'mcp.catalog', 'mcp.invoke', 'integration.read', 'integration.invoke', 'browser.navigate', 'browser.snapshot', 'browser.act'}
 WRITE = COMMON | {'memory.write', 'artifact.write', 'workspace.write', 'cache.write'}
 READ = COMMON | {'memory.search', 'artifact.read', 'workspace.read', 'cache.read'}
 

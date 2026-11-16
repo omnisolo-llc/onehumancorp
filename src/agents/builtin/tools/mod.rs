@@ -27,9 +27,13 @@ pub mod write;
 
 pub mod agent_tool;
 pub mod anthropic_memory;
+pub mod binary_dist;
 pub mod booking;
+pub mod browser;
+pub mod browser_proxy;
 pub mod checkout;
 pub mod create_skill;
+pub mod desktop;
 pub mod expert_team_tool;
 pub mod finance;
 pub mod find;
@@ -50,7 +54,6 @@ pub mod quote;
 pub mod recall;
 pub mod repo_map;
 pub mod restic;
-pub mod screenshot;
 pub mod skill;
 pub mod sleep;
 pub mod subagent;
@@ -126,6 +129,8 @@ pub fn all_tools(
 ) -> Vec<Tool> {
     let runner = Arc::new(runner::SandboxedCommandRunner::new(working_dir.clone()));
     let booking_store = Arc::new(RwLock::new(booking::BookingStore::default()));
+    let (browser_observe, browser_act, _) =
+        browser::browser_tools(working_dir.clone(), runner.clone());
     let mut tools = vec![
         repo_map::repomap_tool(working_dir.clone().unwrap_or_else(|| {
             std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("/"))
@@ -164,7 +169,8 @@ pub fn all_tools(
         subagent::subagent_tool(runner.clone(), llm.clone()),
         workflow::workflow_tool(runner.clone()),
         hybrid_blob::hybrid_blob_tool(),
-        screenshot::screenshot_tool(working_dir.clone(), runner.clone()),
+        browser_observe,
+        browser_act,
         generative_visibility::generative_visibility_tool(),
         magentic::magentic_tool(task_store.clone()),
         recall::recall_observation_tool(observation_store),
@@ -182,6 +188,7 @@ pub fn all_tools(
         aider_pair_programming::aider_pair_programming_tool(),
         superpowers_tool::superpowers_skill_tool(),
     ];
+    tools.extend(desktop::desktop_tools(working_dir, runner));
 
     if let Some(llm) = agent_llm {
         tools.push(llm_judge::llm_judge_tool(llm, "gemini-2.5-pro".to_string()));
@@ -273,6 +280,72 @@ mod tenant_aware_tool_schema_test {
         for tool in &tools {
             assert_tenant_is_not_model_selectable(tool);
         }
+    }
+
+    #[test]
+    fn all_tools_registers_agent_browser_and_gates_agent_desktop_opt_in() {
+        let dir = tempfile::tempdir().unwrap();
+        let make_tools = || {
+            super::all_tools(
+                None,
+                None,
+                None,
+                std::sync::Arc::new(tokio::sync::RwLock::new(super::task::TaskStore::default())),
+                std::sync::Arc::new(tokio::sync::RwLock::new(
+                    super::sendmessage::Mailbox::default(),
+                )),
+                Some(dir.path().to_path_buf()),
+                None,
+                std::sync::Arc::new(dashmap::DashMap::new()),
+                TenantContext::new("org-a").expect("tenant"),
+            )
+        };
+
+        temp_env::with_vars(
+            [
+                ("OMNISOLO_ENABLE_AGENT_DESKTOP", None::<&str>),
+                ("OMNISOLO_EXECUTION_MODE", Some("standalone")),
+                ("OMNISOLO_AGENT_DISABLE_TOOLS", None::<&str>),
+            ],
+            || {
+                let tools = make_tools();
+                assert!(!tools.iter().any(|t| t.name == "Screenshot"));
+                assert!(
+                    tools
+                        .iter()
+                        .any(|t| t.name == "BrowserObserve" && t.is_read_only)
+                );
+                assert!(
+                    tools
+                        .iter()
+                        .any(|t| t.name == "BrowserAct" && !t.is_read_only)
+                );
+                assert!(!tools.iter().any(|t| t.name == "DesktopObserve"));
+                assert!(!tools.iter().any(|t| t.name == "DesktopAct"));
+            },
+        );
+
+        temp_env::with_vars(
+            [
+                ("OMNISOLO_ENABLE_AGENT_DESKTOP", Some("true")),
+                ("OMNISOLO_EXECUTION_MODE", Some("standalone")),
+                ("OMNISOLO_AGENT_COMMAND_BACKEND", None::<&str>),
+                ("OMNISOLO_AGENT_SANDBOX_BACKEND", None::<&str>),
+            ],
+            || {
+                let tools = make_tools();
+                assert!(
+                    tools
+                        .iter()
+                        .any(|t| t.name == "DesktopObserve" && t.is_read_only)
+                );
+                assert!(
+                    tools
+                        .iter()
+                        .any(|t| t.name == "DesktopAct" && !t.is_read_only)
+                );
+            },
+        );
     }
 }
 

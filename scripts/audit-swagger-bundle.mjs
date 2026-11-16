@@ -33,7 +33,7 @@ export async function verifySwaggerAssets(root = repository) {
     if (['argparse', 'sprintf-js'].includes(dependency.name)) throw new Error('The CLI-only vulnerable graph must not be shipped');
     (request[dependency.name] ??= []).push(dependency.version);
   }
-  if (JSON.stringify(request.dompurify) !== JSON.stringify(['3.4.16'])) throw new Error('The reviewed patched DOMPurify must be present');
+  if (JSON.stringify(request.dompurify) !== JSON.stringify(['3.4.17'])) throw new Error('The reviewed patched DOMPurify must be present');
   return request;
 }
 

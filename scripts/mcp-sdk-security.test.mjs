@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const patchedVersion = '1.31.0';
+const patchedVersion = '1.32.2';
 const sdk = '@modelcontextprotocol/sdk';
 const readJson = relative => readFile(new URL(`../${relative}`, import.meta.url), 'utf8').then(JSON.parse);
 

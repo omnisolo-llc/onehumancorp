@@ -675,7 +675,23 @@ pub fn gateway_tool(
                 capabilities.join(", ")
             ),
             is_read_only: false,
-            parameters: json!({"type":"object","properties":{"operation":{"type":"string"},"content":{},"key":{"type":"string"},"query":{"type":"string"},"limit":{"type":"integer"},"tool":{"type":"string"},"arguments":{"type":"object"},"action":{"type":"string"},"url":{"type":"string"}},"required":["operation"]}),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "operation": {"type": "string"},
+                    "content": {},
+                    "key": {"type": "string"},
+                    "query": {"type": "string"},
+                    "limit": {"type": "integer"},
+                    "tool": {"type": "string"},
+                    "arguments": {"type": "object"},
+                    "action": {"type": "string"},
+                    "target": {"type": "string"},
+                    "value": {"type": "string"},
+                    "url": {"type": "string"}
+                },
+                "required": ["operation"]
+            }),
             execute: Arc::new(ScopedGatewayTool {
                 lease: lease.clone(),
             }),
@@ -808,51 +824,141 @@ impl LocalServiceBackend for ExistingToolBackend {
     }
 }
 
-/// Browser navigation uses the configured Playwright Screenshot executor. Each
-/// issued binding owns its own captured page; cookies and process handles never
-/// cross the gateway. The existing sandbox runner owns the browser process.
-pub struct ScreenshotBrowserBackend {
-    screenshot: crate::tools::Tool,
+/// Browser navigation and interaction use the configured `agent-browser` controller.
+/// Each issued binding owns its own isolated session (`--session <lease_id>`).
+pub struct AgentBrowserBackend {
+    controller: crate::tools::browser::AgentBrowserController,
     policy: crate::agent::AgentRunConfig,
-    root: std::path::PathBuf,
     tenant_id: String,
     project_id: Option<String>,
-    pages: tokio::sync::Mutex<std::collections::BTreeMap<uuid::Uuid, Vec<u8>>>,
+    navigated_leases: tokio::sync::Mutex<BTreeSet<uuid::Uuid>>,
     operation_lock: tokio::sync::Mutex<()>,
 }
-impl ScreenshotBrowserBackend {
+impl AgentBrowserBackend {
     pub fn new(
-        screenshot: crate::tools::Tool,
-        root: std::path::PathBuf,
+        controller: crate::tools::browser::AgentBrowserController,
         scope: &server_harness::middleware::local_services::LocalServiceScopeContext,
         policy: &crate::agent::AgentRunConfig,
     ) -> Self {
         Self {
-            screenshot,
+            controller,
             policy: policy.clone(),
-            root,
             tenant_id: scope.tenant_id.clone(),
             project_id: scope.project_id.clone(),
-            pages: tokio::sync::Mutex::new(std::collections::BTreeMap::new()),
+            navigated_leases: tokio::sync::Mutex::new(BTreeSet::new()),
             operation_lock: tokio::sync::Mutex::new(()),
         }
     }
-}
-#[async_trait]
-impl LocalServiceBackend for ScreenshotBrowserBackend {
-    fn capabilities(&self) -> BTreeSet<String> {
-        if self
-            .policy
+
+    fn allows_tool(&self, tool_name: &str) -> bool {
+        self.policy
             .allowed_tools
             .as_ref()
-            .is_some_and(|tools| !tools.contains(&self.screenshot.name))
+            .is_none_or(|tools| tools.iter().any(|tool| tool == tool_name))
+    }
+
+    fn check_browser_gating(
+        &self,
+        lease: uuid::Uuid,
+        suffix: &str,
+        tool_name: &str,
+        is_read_only: bool,
+        arguments: Value,
+    ) -> Result<(), LocalServiceGatewayError> {
+        let call = crate::types::ToolCall {
+            id: format!("browser-{lease}-{suffix}"),
+            name: tool_name.to_owned(),
+            arguments,
+        };
+        crate::tools_gating::ToolGater::check_gating(&call, is_read_only, &self.policy).map_err(
+            |_| {
+                LocalServiceGatewayError::Authorization(
+                    server_harness::middleware::local_services::LocalServiceError::CapabilityDenied(
+                        "browser tool policy rejected".to_owned(),
+                    ),
+                )
+            },
+        )
+    }
+
+    async fn validate_navigation_target(url: &str) -> Result<url::Url, LocalServiceGatewayError> {
+        let trimmed = url.trim();
+        if trimmed != url || url.chars().any(char::is_control) {
+            return Err(LocalServiceGatewayError::InvalidOperation);
+        }
+        #[cfg(test)]
         {
+            let parsed =
+                url::Url::parse(trimmed).map_err(|_| LocalServiceGatewayError::InvalidOperation)?;
+            crate::tools::network_policy::validate_url(
+                &parsed,
+                crate::tools::network_policy::private_network_allowed(),
+            )
+            .map_err(|_| LocalServiceGatewayError::InvalidOperation)?;
+            Ok(parsed)
+        }
+        #[cfg(not(test))]
+        {
+            crate::tools::browser::AgentBrowserController::validate_navigation_target(trimmed)
+                .await
+                .map_err(|_| LocalServiceGatewayError::InvalidOperation)
+        }
+    }
+
+    fn build_browser_act_command(
+        action: &str,
+        target: Option<&str>,
+        value: Option<&str>,
+    ) -> Result<(Vec<String>, bool), LocalServiceGatewayError> {
+        let require_target = |raw: Option<&str>| -> Result<String, LocalServiceGatewayError> {
+            raw.map(str::trim)
+                .filter(|s| !s.is_empty() && !s.starts_with('-'))
+                .map(str::to_owned)
+                .ok_or(LocalServiceGatewayError::InvalidOperation)
+        };
+        let action = action.trim().to_ascii_lowercase();
+        let cmd = match action.as_str() {
+            "back" | "forward" | "reload" => vec![action.clone()],
+            "click" | "hover" | "press" | "wait" => {
+                vec![action.clone(), require_target(target)?]
+            }
+            "fill" | "select" => {
+                let target = require_target(target)?;
+                let value = value.ok_or(LocalServiceGatewayError::InvalidOperation)?;
+                vec![action.clone(), target, value.to_owned()]
+            }
+            "scroll" => {
+                let direction = target.unwrap_or("down").trim();
+                if !matches!(direction, "up" | "down" | "left" | "right") {
+                    return Err(LocalServiceGatewayError::InvalidOperation);
+                }
+                let mut cmd = vec!["scroll".to_owned(), direction.to_owned()];
+                if let Some(amount) = value.map(str::trim).filter(|v| !v.is_empty()) {
+                    if amount.starts_with('-') {
+                        return Err(LocalServiceGatewayError::InvalidOperation);
+                    }
+                    cmd.push(amount.to_owned());
+                }
+                cmd
+            }
+            _ => return Err(LocalServiceGatewayError::InvalidOperation),
+        };
+        let is_mutating = action != "wait";
+        Ok((cmd, is_mutating))
+    }
+}
+#[async_trait]
+impl LocalServiceBackend for AgentBrowserBackend {
+    fn capabilities(&self) -> BTreeSet<String> {
+        if !self.allows_tool("BrowserObserve") {
             return BTreeSet::new();
         }
-        ["browser.navigate", "browser.snapshot"]
-            .into_iter()
-            .map(str::to_owned)
-            .collect()
+        let mut capabilities =
+            BTreeSet::from(["browser.navigate".to_owned(), "browser.snapshot".to_owned()]);
+        if self.allows_tool("BrowserAct") {
+            capabilities.insert("browser.act".to_owned());
+        }
+        capabilities
     }
     async fn execute(
         &self,
@@ -871,47 +977,89 @@ impl LocalServiceBackend for ScreenshotBrowserBackend {
             .ok_or(LocalServiceGatewayError::InvalidOperation)?;
         match operation {
             LocalServiceOperation::BrowserNavigate { url } => {
-                let parsed = reqwest::Url::parse(&url)
-                    .map_err(|_| LocalServiceGatewayError::InvalidOperation)?;
-                if !matches!(parsed.scheme(), "http" | "https")
-                    || !parsed.username().is_empty()
-                    || parsed.password().is_some()
-                {
+                Self::validate_navigation_target(&url).await?;
+                self.check_browser_gating(
+                    lease,
+                    "navigate",
+                    "BrowserObserve",
+                    true,
+                    json!({"action": "open", "url": url}),
+                )?;
+                self.controller
+                    .run_browser_command(
+                        &lease.to_string(),
+                        &["open".to_owned(), url.clone()],
+                        false,
+                        false,
+                    )
+                    .await
+                    .map_err(|err| {
+                        tracing::warn!("agent-browser navigate failed: {err}");
+                        LocalServiceGatewayError::BackendFailure
+                    })?;
+                self.navigated_leases.lock().await.insert(lease);
+                Ok(json!({"navigated": true, "url": url}))
+            }
+            LocalServiceOperation::BrowserSnapshot => {
+                self.check_browser_gating(
+                    lease,
+                    "snapshot",
+                    "BrowserObserve",
+                    true,
+                    json!({"action": "snapshot"}),
+                )?;
+                if !self.navigated_leases.lock().await.contains(&lease) {
                     return Err(LocalServiceGatewayError::InvalidOperation);
                 }
-                let file = format!("omnisolo-browser-{lease}.png");
-                let call = crate::types::ToolCall {
-                    id: format!("browser-{lease}"),
-                    name: self.screenshot.name.clone(),
-                    arguments: json!({"url":url,"path":file}),
-                };
-                crate::tools_gating::ToolGater::check_gating(&call,self.screenshot.is_read_only,&self.policy)
-                    .map_err(|_|LocalServiceGatewayError::Authorization(server_harness::middleware::local_services::LocalServiceError::CapabilityDenied("browser tool policy rejected".to_owned())))?;
-                self.screenshot
-                    .execute
-                    .execute(json!({"url":url,"path":file}))
+                let content = self
+                    .controller
+                    .run_browser_command(
+                        &lease.to_string(),
+                        &["snapshot".to_owned(), "-i".to_owned()],
+                        false,
+                        true,
+                    )
                     .await
-                    .map_err(|_| LocalServiceGatewayError::BackendFailure)?;
-                let path = self.root.join(&file);
-                let content = tokio::fs::read(&path)
-                    .await
-                    .map_err(|_| LocalServiceGatewayError::BackendFailure)?;
-                let _ = tokio::fs::remove_file(path).await;
+                    .map_err(|err| {
+                        tracing::warn!("agent-browser snapshot failed: {err}");
+                        LocalServiceGatewayError::BackendFailure
+                    })?;
                 if content.len() > 16 * 1024 * 1024 {
                     return Err(LocalServiceGatewayError::BackendFailure);
                 }
-                let digest = format!("sha256:{:x}", Sha256::digest(&content));
-                self.pages.lock().await.insert(lease, content);
-                Ok(json!({"snapshot_digest":digest}))
+                let digest = format!("sha256:{:x}", Sha256::digest(content.as_bytes()));
+                Ok(json!({
+                    "content": content,
+                    "content_type": "application/json",
+                    "digest": digest,
+                }))
             }
-            LocalServiceOperation::BrowserSnapshot => {
-                let pages = self.pages.lock().await;
-                let content = pages
-                    .get(&lease)
-                    .ok_or(LocalServiceGatewayError::InvalidOperation)?;
-                Ok(
-                    json!({"content":content,"content_type":"image/png","digest":format!("sha256:{:x}",Sha256::digest(content))}),
-                )
+            LocalServiceOperation::BrowserAct {
+                action,
+                target,
+                value,
+            } => {
+                self.check_browser_gating(
+                    lease,
+                    "act",
+                    "BrowserAct",
+                    false,
+                    json!({"action": action, "target": target, "value": value}),
+                )?;
+                if !self.navigated_leases.lock().await.contains(&lease) {
+                    return Err(LocalServiceGatewayError::InvalidOperation);
+                }
+                let (cmd_args, is_mutating) =
+                    Self::build_browser_act_command(&action, target.as_deref(), value.as_deref())?;
+                let out = self
+                    .controller
+                    .run_browser_command(&lease.to_string(), &cmd_args, is_mutating, false)
+                    .await
+                    .map_err(|err| {
+                        tracing::warn!("agent-browser act failed: {err}");
+                        LocalServiceGatewayError::BackendFailure
+                    })?;
+                Ok(json!({"result": out}))
             }
             _ => Err(LocalServiceGatewayError::InvalidOperation),
         }
@@ -919,9 +1067,8 @@ impl LocalServiceBackend for ScreenshotBrowserBackend {
     async fn release(&self, namespace: &ServiceNamespace) {
         let _operation = self.operation_lock.lock().await;
         if let Some(lease) = namespace.lease_id {
-            self.pages.lock().await.remove(&lease);
-            let _ = tokio::fs::remove_file(self.root.join(format!("omnisolo-browser-{lease}.png")))
-                .await;
+            self.navigated_leases.lock().await.remove(&lease);
+            self.controller.close_session(&lease.to_string()).await;
         }
     }
 }
@@ -1018,31 +1165,73 @@ mod scoped_backend_tests {
 mod browser_backend_tests {
     use super::*;
     use server_harness::middleware::local_services::*;
+    use std::collections::VecDeque;
+    use std::os::unix::fs::PermissionsExt;
     use std::os::unix::process::ExitStatusExt;
-    struct CaptureRunner;
+
+    struct MockBrowserRunner {
+        calls: std::sync::Mutex<Vec<(String, Vec<String>)>>,
+        responses: std::sync::Mutex<VecDeque<std::io::Result<std::process::Output>>>,
+    }
+
+    impl MockBrowserRunner {
+        fn new() -> Self {
+            Self {
+                calls: std::sync::Mutex::new(Vec::new()),
+                responses: std::sync::Mutex::new(VecDeque::new()),
+            }
+        }
+
+        fn push_stdout(&self, stdout: &str) {
+            self.responses
+                .lock()
+                .unwrap()
+                .push_back(Ok(std::process::Output {
+                    status: std::process::ExitStatus::from_raw(0),
+                    stdout: stdout.as_bytes().to_vec(),
+                    stderr: Vec::new(),
+                }));
+        }
+
+        fn calls(&self) -> Vec<(String, Vec<String>)> {
+            self.calls.lock().unwrap().clone()
+        }
+    }
+
     #[async_trait]
-    impl crate::tools::runner::CommandRunner for CaptureRunner {
+    impl crate::tools::runner::CommandRunner for MockBrowserRunner {
         async fn run(
             &self,
             program: &str,
             args: &[&str],
-            root: Option<&std::path::Path>,
-            _: Vec<(String, String)>,
+            _root: Option<&std::path::Path>,
+            _envs: Vec<(String, String)>,
         ) -> std::io::Result<std::process::Output> {
-            assert_eq!(program, "npx");
-            assert_eq!(&args[..2], &["playwright", "screenshot"]);
-            tokio::fs::write(root.unwrap().join(args[3]), args[2].as_bytes()).await?;
-            Ok(std::process::Output {
-                status: std::process::ExitStatus::from_raw(0),
-                stdout: vec![],
-                stderr: vec![],
-            })
+            self.calls.lock().unwrap().push((
+                program.to_owned(),
+                args.iter().map(|s| (*s).to_owned()).collect(),
+            ));
+            self.responses
+                .lock()
+                .unwrap()
+                .pop_front()
+                .unwrap_or_else(|| {
+                    Ok(std::process::Output {
+                        status: std::process::ExitStatus::from_raw(0),
+                        stdout: br#"{"success":true}"#.to_vec(),
+                        stderr: Vec::new(),
+                    })
+                })
         }
     }
-    #[tokio::test]
-    async fn configured_browser_executor_keeps_snapshots_in_distinct_service_leases() {
-        let root = std::env::temp_dir().join(format!("browser-service-{}", uuid::Uuid::new_v4()));
-        tokio::fs::create_dir_all(&root).await.unwrap();
+
+    #[test]
+    fn agent_browser_backend_isolates_leases_executes_flow_and_cleans_up_on_release() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake_bin = dir.path().join("fake-agent-browser");
+        std::fs::write(&fake_bin, b"#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&fake_bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+
         let scope = LocalServiceScopeContext::for_attempt(
             "tenant",
             Some("project"),
@@ -1056,80 +1245,373 @@ mod browser_backend_tests {
             permission_architecture: crate::types::PermissionArchitecture::Permissive,
             ..Default::default()
         };
-        let tool =
-            crate::tools::screenshot::screenshot_tool(Some(root.clone()), Arc::new(CaptureRunner));
-        let mut excluded_policy = policy.clone();
-        excluded_policy.allowed_tools = Some(vec!["Read".into()]);
-        assert!(
-            ScreenshotBrowserBackend::new(tool.clone(), root.clone(), &scope, &excluded_policy)
-                .capabilities()
-                .is_empty()
+
+        temp_env::with_vars(
+            [
+                (
+                    "OMNISOLO_AGENT_BROWSER_BIN",
+                    Some(fake_bin.to_str().unwrap()),
+                ),
+                ("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("false")),
+            ],
+            || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                rt.block_on(async {
+                    let runner = Arc::new(MockBrowserRunner::new());
+                    let controller = crate::tools::browser::AgentBrowserController::new(
+                        Some(dir.path().to_path_buf()),
+                        runner.clone(),
+                    );
+
+                    let mut excluded_policy = policy.clone();
+                    excluded_policy.allowed_tools = Some(vec!["Read".into()]);
+                    assert!(
+                        AgentBrowserBackend::new(controller.clone(), &scope, &excluded_policy)
+                            .capabilities()
+                            .is_empty()
+                    );
+
+                    let mut observe_only_policy = policy.clone();
+                    observe_only_policy.allowed_tools = Some(vec!["BrowserObserve".into()]);
+                    assert_eq!(
+                        AgentBrowserBackend::new(controller.clone(), &scope, &observe_only_policy)
+                            .capabilities(),
+                        BTreeSet::from([
+                            "browser.navigate".to_owned(),
+                            "browser.snapshot".to_owned()
+                        ])
+                    );
+
+                    let mut gateway =
+                        LocalServiceGateway::new(LocalServiceRegistry::with_defaults());
+                    gateway.register(
+                        LocalServiceKind::Browser,
+                        Arc::new(AgentBrowserBackend::new(
+                            controller.clone(),
+                            &scope,
+                            &policy,
+                        )),
+                    );
+                    let first = gateway.resolve(scope.clone()).unwrap();
+                    let second = gateway.resolve(scope.clone()).unwrap();
+                    let first_binding = first.binding(LocalServiceKind::Browser).unwrap();
+                    let second_binding = second.binding(LocalServiceKind::Browser).unwrap();
+                    let first_lease = first_binding.binding_id.to_string();
+
+                    let (tool, _lease) =
+                        gateway_tool(Arc::new(gateway.clone()), first.clone(), scope.clone());
+                    assert!(tool.parameters["properties"].get("target").is_some());
+                    assert!(tool.parameters["properties"].get("value").is_some());
+
+                    // SSRF and invalid schemes must be rejected before spawning agent-browser.
+                    for bad_url in [
+                        "http://127.0.0.1:8080/admin",
+                        "file:///etc/passwd",
+                        "https://user:secret@example.test/",
+                    ] {
+                        assert!(
+                            gateway
+                                .execute(
+                                    first_binding,
+                                    &scope,
+                                    LocalServiceOperation::BrowserNavigate {
+                                        url: bad_url.into(),
+                                    },
+                                )
+                                .await
+                                .is_err(),
+                            "expected rejection for {bad_url}"
+                        );
+                    }
+
+                    // 1. Navigate first lease
+                    runner.push_stdout(
+                        r#"{"success":true,"data":{"url":"https://example.test/first"}}"#,
+                    );
+                    let nav = gateway
+                        .execute(
+                            first_binding,
+                            &scope,
+                            LocalServiceOperation::BrowserNavigate {
+                                url: "https://example.test/first".into(),
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    assert_eq!(
+                        nav,
+                        json!({"navigated": true, "url": "https://example.test/first"})
+                    );
+
+                    // Foreign / unnavigated lease cannot snapshot or act.
+                    assert!(
+                        gateway
+                            .execute(
+                                second_binding,
+                                &scope,
+                                LocalServiceOperation::BrowserSnapshot
+                            )
+                            .await
+                            .is_err()
+                    );
+                    assert!(
+                        gateway
+                            .execute(
+                                second_binding,
+                                &scope,
+                                LocalServiceOperation::BrowserAct {
+                                    action: "click".into(),
+                                    target: Some("@e1".into()),
+                                    value: None,
+                                },
+                            )
+                            .await
+                            .is_err()
+                    );
+
+                    // 2. Snapshot first lease
+                    let snapshot_payload =
+                        r#"{"success":true,"data":{"tree":"@e1 button Submit"}}"#;
+                    runner.push_stdout(snapshot_payload);
+                    let snapshot = gateway
+                        .execute(
+                            first_binding,
+                            &scope,
+                            LocalServiceOperation::BrowserSnapshot,
+                        )
+                        .await
+                        .unwrap();
+                    let expected_digest =
+                        format!("sha256:{:x}", Sha256::digest(snapshot_payload.as_bytes()));
+                    assert_eq!(snapshot["content"], json!(snapshot_payload));
+                    assert_eq!(snapshot["content_type"], json!("application/json"));
+                    assert_eq!(snapshot["digest"], json!(expected_digest));
+
+                    // 3. Act on first lease (click + fill + wait; reject disallowed action)
+                    runner.push_stdout(r#"{"success":true,"clicked":"@e1"}"#);
+                    let click = gateway
+                        .execute(
+                            first_binding,
+                            &scope,
+                            LocalServiceOperation::BrowserAct {
+                                action: "click".into(),
+                                target: Some("@e1".into()),
+                                value: None,
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    assert_eq!(
+                        click["result"],
+                        json!(r#"{"success":true,"clicked":"@e1"}"#)
+                    );
+
+                    runner.push_stdout(r#"{"success":true,"filled":"@e2"}"#);
+                    let fill = gateway
+                        .execute(
+                            first_binding,
+                            &scope,
+                            LocalServiceOperation::BrowserAct {
+                                action: "fill".into(),
+                                target: Some("@e2".into()),
+                                value: Some("hello".into()),
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    assert_eq!(fill["result"], json!(r#"{"success":true,"filled":"@e2"}"#));
+
+                    runner.push_stdout(r#"{"success":true,"waited":"50"}"#);
+                    let wait = gateway
+                        .execute(
+                            first_binding,
+                            &scope,
+                            LocalServiceOperation::BrowserAct {
+                                action: "wait".into(),
+                                target: Some("50".into()),
+                                value: None,
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    assert_eq!(wait["result"], json!(r#"{"success":true,"waited":"50"}"#));
+
+                    assert!(
+                        gateway
+                            .execute(
+                                first_binding,
+                                &scope,
+                                LocalServiceOperation::BrowserAct {
+                                    action: "close".into(),
+                                    target: None,
+                                    value: None,
+                                },
+                            )
+                            .await
+                            .is_err()
+                    );
+
+                    for bad_act in [
+                        LocalServiceOperation::BrowserAct {
+                            action: "click".into(),
+                            target: Some("--headed".into()),
+                            value: None,
+                        },
+                        LocalServiceOperation::BrowserAct {
+                            action: "fill".into(),
+                            target: Some("-s".into()),
+                            value: Some("hello".into()),
+                        },
+                        LocalServiceOperation::BrowserAct {
+                            action: "scroll".into(),
+                            target: Some("down".into()),
+                            value: Some("--headed".into()),
+                        },
+                    ] {
+                        assert!(matches!(
+                            gateway.execute(first_binding, &scope, bad_act).await,
+                            Err(LocalServiceGatewayError::InvalidOperation)
+                        ));
+                    }
+
+                    let session_profile = dir
+                        .path()
+                        .join(".omnisolo-browser-sessions")
+                        .join(&first_lease);
+                    assert!(session_profile.exists());
+                    assert!(controller.session_metrics(&first_lease).is_some());
+
+                    // 4. Release first lease and verify session close + cleanup
+                    gateway.release(&first).await;
+                    assert!(!session_profile.exists());
+                    assert!(controller.session_metrics(&first_lease).is_none());
+                    assert!(
+                        gateway
+                            .execute(
+                                first_binding,
+                                &scope,
+                                LocalServiceOperation::BrowserSnapshot
+                            )
+                            .await
+                            .is_err()
+                    );
+
+                    let calls = runner.calls();
+                    assert!(calls.iter().any(|(prog, args)| {
+                        prog == fake_bin.to_str().unwrap()
+                            && args
+                                .windows(2)
+                                .any(|w| w == ["--session", first_lease.as_str()])
+                            && args.ends_with(&[
+                                "open".to_owned(),
+                                "https://example.test/first".to_owned(),
+                            ])
+                    }));
+                    assert!(calls.iter().any(|(_, args)| {
+                        args.ends_with(&["snapshot".to_owned(), "-i".to_owned()])
+                    }));
+                    assert!(calls.iter().any(|(_, args)| {
+                        args.ends_with(&["click".to_owned(), "@e1".to_owned()])
+                    }));
+                    assert!(calls.iter().any(|(_, args)| {
+                        args.ends_with(&["fill".to_owned(), "@e2".to_owned(), "hello".to_owned()])
+                    }));
+                    assert!(calls.iter().any(|(_, args)| {
+                        args.ends_with(&["wait".to_owned(), "50".to_owned()])
+                    }));
+                    assert!(calls.iter().any(|(_, args)| {
+                        args == &vec![
+                            "--json".to_owned(),
+                            "--session".to_owned(),
+                            first_lease.clone(),
+                            "close".to_owned(),
+                        ]
+                    }));
+                });
+            },
         );
-        let mut gateway = LocalServiceGateway::new(LocalServiceRegistry::with_defaults());
-        gateway.register(
-            LocalServiceKind::Browser,
-            Arc::new(ScreenshotBrowserBackend::new(
-                tool,
-                root.clone(),
-                &scope,
-                &policy,
-            )),
+    }
+
+    #[test]
+    fn agent_browser_backend_gates_mutating_act_under_restrictive_policy() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake_bin = dir.path().join("fake-agent-browser");
+        std::fs::write(&fake_bin, b"#!/bin/sh\nexit 0\n").unwrap();
+        std::fs::set_permissions(&fake_bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+
+        let scope = LocalServiceScopeContext::for_attempt(
+            "tenant",
+            Some("project"),
+            Some("workspace"),
+            uuid::Uuid::new_v4(),
+            Some(uuid::Uuid::new_v4()),
+            Some(uuid::Uuid::new_v4()),
         );
-        let first = gateway.resolve(scope.clone()).unwrap();
-        let second = gateway.resolve(scope.clone()).unwrap();
-        gateway
-            .execute(
-                &first.bindings[0],
-                &scope,
-                LocalServiceOperation::BrowserNavigate {
-                    url: "https://example.test/first".into(),
-                },
-            )
-            .await
-            .unwrap();
-        let snapshot = gateway
-            .execute(
-                &first.bindings[0],
-                &scope,
-                LocalServiceOperation::BrowserSnapshot,
-            )
-            .await
-            .unwrap();
-        assert_eq!(
-            snapshot["content"],
-            json!(b"https://example.test/first".to_vec())
+        let policy = crate::agent::AgentRunConfig {
+            hil_spectrum: crate::types::HumanInLoopSpectrum::Autonomous,
+            permission_architecture: crate::types::PermissionArchitecture::Restrictive,
+            ..Default::default()
+        };
+
+        temp_env::with_vars(
+            [
+                (
+                    "OMNISOLO_AGENT_BROWSER_BIN",
+                    Some(fake_bin.to_str().unwrap()),
+                ),
+                ("OMNISOLO_AGENT_ALLOW_PRIVATE_NETWORK", Some("false")),
+            ],
+            || {
+                let rt = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                rt.block_on(async {
+                    let runner = Arc::new(MockBrowserRunner::new());
+                    let controller = crate::tools::browser::AgentBrowserController::new(
+                        Some(dir.path().to_path_buf()),
+                        runner,
+                    );
+                    let mut gateway =
+                        LocalServiceGateway::new(LocalServiceRegistry::with_defaults());
+                    gateway.register(
+                        LocalServiceKind::Browser,
+                        Arc::new(AgentBrowserBackend::new(controller, &scope, &policy)),
+                    );
+                    let bundle = gateway.resolve(scope.clone()).unwrap();
+                    let binding = bundle.binding(LocalServiceKind::Browser).unwrap();
+
+                    gateway
+                        .execute(
+                            binding,
+                            &scope,
+                            LocalServiceOperation::BrowserNavigate {
+                                url: "https://example.test/restrictive".into(),
+                            },
+                        )
+                        .await
+                        .unwrap();
+                    assert!(
+                        gateway
+                            .execute(
+                                binding,
+                                &scope,
+                                LocalServiceOperation::BrowserAct {
+                                    action: "click".into(),
+                                    target: Some("@e1".into()),
+                                    value: None,
+                                },
+                            )
+                            .await
+                            .is_err()
+                    );
+                    gateway.release(&bundle).await;
+                });
+            },
         );
-        assert!(
-            gateway
-                .execute(
-                    &second.bindings[0],
-                    &scope,
-                    LocalServiceOperation::BrowserSnapshot
-                )
-                .await
-                .is_err()
-        );
-        gateway.release(&first).await;
-        assert!(
-            gateway
-                .execute(
-                    &first.bindings[0],
-                    &scope,
-                    LocalServiceOperation::BrowserSnapshot
-                )
-                .await
-                .is_err()
-        );
-        assert!(
-            tokio::fs::read_dir(&root)
-                .await
-                .unwrap()
-                .next_entry()
-                .await
-                .unwrap()
-                .is_none()
-        );
-        tokio::fs::remove_dir_all(root).await.unwrap();
     }
 }
 

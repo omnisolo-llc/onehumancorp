@@ -385,9 +385,7 @@ async fn revoke(
 async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Error> {
     use omnisolo_builtin_agent::{
         agent::AgentRunConfig,
-        local_service_adapters::{
-            ExistingBlobBackend, ExistingToolBackend, ScreenshotBrowserBackend,
-        },
+        local_service_adapters::{AgentBrowserBackend, ExistingBlobBackend, ExistingToolBackend},
         memory_store::FileBasedMemory,
     };
     let registry =
@@ -504,8 +502,12 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
                     .map_err(std::io::Error::other)?,
             );
             let mut names = config.allowed_tools.clone();
-            if config.browser && !names.iter().any(|name| name == "Screenshot") {
-                names.push("Screenshot".into());
+            if config.browser {
+                for browser_tool in ["BrowserObserve", "BrowserAct"] {
+                    if !names.iter().any(|name| name == browser_tool) {
+                        names.push(browser_tool.into());
+                    }
+                }
             }
             let tools = service.local_service_tools(directory.clone(), &names).await;
             if names
@@ -543,18 +545,25 @@ async fn selected_gateway(config: &Bootstrap) -> Result<LocalServiceGateway, Err
                 )) as Arc<dyn LocalServiceBackend>,
             );
             if config.browser {
-                let screenshot = tools
-                    .iter()
-                    .find(|tool| tool.name == "Screenshot")
-                    .ok_or("configured browser tool is unavailable")?;
+                if !tools.iter().any(|tool| tool.name == "BrowserObserve")
+                    || !tools.iter().any(|tool| tool.name == "BrowserAct")
+                {
+                    return Err("configured browser tool is unavailable".into());
+                }
+                let runner = Arc::new(
+                    omnisolo_builtin_agent::tools::runner::SandboxedCommandRunner::new(Some(
+                        directory.clone(),
+                    )),
+                );
+                let controller =
+                    omnisolo_builtin_agent::tools::browser::AgentBrowserController::new(
+                        Some(directory),
+                        runner,
+                    );
                 browsers.insert(
                     key,
-                    Arc::new(ScreenshotBrowserBackend::new(
-                        screenshot.clone(),
-                        directory,
-                        scope,
-                        &run,
-                    )) as Arc<dyn LocalServiceBackend>,
+                    Arc::new(AgentBrowserBackend::new(controller, scope, &run))
+                        as Arc<dyn LocalServiceBackend>,
                 );
             }
         }
@@ -1043,5 +1052,49 @@ mod daemon_tests {
                 .identity
         );
         assert_eq!(first.len(), 32);
+    }
+
+    #[tokio::test]
+    async fn selected_gateway_registers_browser_backend_only_when_browser_enabled() {
+        struct OwnedDir(std::path::PathBuf);
+        impl Drop for OwnedDir {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let tool_root =
+            std::env::temp_dir().join(format!("ohc-gateway-browser-{}", Uuid::new_v4()));
+        std::fs::create_dir_all(&tool_root).unwrap();
+        let _guard = OwnedDir(tool_root.clone());
+        let make_bootstrap = |browser: bool| {
+            Bootstrap::parse(
+                &serde_json::to_vec(&json!({
+                    "version": 1,
+                    "scopes": [scope()],
+                    "tool_root": tool_root,
+                    "browser": browser,
+                }))
+                .unwrap(),
+            )
+            .unwrap()
+        };
+
+        let without_browser = selected_gateway(&make_bootstrap(false)).await.unwrap();
+        assert!(
+            !without_browser
+                .available_capabilities()
+                .contains_key(&LocalServiceKind::Browser)
+        );
+
+        let with_browser = selected_gateway(&make_bootstrap(true)).await.unwrap();
+        let caps = with_browser.available_capabilities();
+        assert_eq!(
+            caps.get(&LocalServiceKind::Browser),
+            Some(&std::collections::BTreeSet::from([
+                "browser.navigate".to_owned(),
+                "browser.snapshot".to_owned(),
+                "browser.act".to_owned(),
+            ]))
+        );
     }
 }

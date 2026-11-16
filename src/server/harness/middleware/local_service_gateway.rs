@@ -12,22 +12,63 @@ use std::sync::Arc;
 #[serde(tag = "operation", rename_all = "snake_case")]
 pub enum LocalServiceOperation {
     ProviderModels,
-    ProviderResponses { body: Value },
-    ProviderChatCompletions { body: Value },
-    MemoryWrite { content: String },
-    MemorySearch { query: String, limit: usize },
-    ArtifactWrite { key: String, content: Vec<u8> },
-    ArtifactRead { key: String },
-    WorkspaceWrite { key: String, content: Vec<u8> },
-    WorkspaceRead { key: String },
+    ProviderResponses {
+        body: Value,
+    },
+    ProviderChatCompletions {
+        body: Value,
+    },
+    MemoryWrite {
+        content: String,
+    },
+    MemorySearch {
+        query: String,
+        limit: usize,
+    },
+    ArtifactWrite {
+        key: String,
+        content: Vec<u8>,
+    },
+    ArtifactRead {
+        key: String,
+    },
+    WorkspaceWrite {
+        key: String,
+        content: Vec<u8>,
+    },
+    WorkspaceRead {
+        key: String,
+    },
     McpCatalog,
-    McpInvoke { tool: String, arguments: Value },
-    BrowserNavigate { url: String },
+    McpInvoke {
+        tool: String,
+        arguments: Value,
+    },
+    BrowserNavigate {
+        url: String,
+    },
     BrowserSnapshot,
-    CacheWrite { key: String, content: Vec<u8> },
-    CacheRead { key: String },
-    IntegrationRead { key: String },
-    IntegrationInvoke { action: String, arguments: Value },
+    BrowserAct {
+        action: String,
+        #[serde(default)]
+        target: Option<String>,
+        #[serde(default)]
+        value: Option<String>,
+    },
+    CacheWrite {
+        key: String,
+        content: Vec<u8>,
+    },
+    CacheRead {
+        key: String,
+    },
+    IntegrationRead {
+        key: String,
+    },
+    IntegrationInvoke {
+        action: String,
+        arguments: Value,
+    },
 }
 impl LocalServiceOperation {
     pub fn capability(&self) -> (LocalServiceKind, &'static str) {
@@ -46,6 +87,7 @@ impl LocalServiceOperation {
             Self::McpInvoke { .. } => (Mcp, "mcp.invoke"),
             Self::BrowserNavigate { .. } => (Browser, "browser.navigate"),
             Self::BrowserSnapshot => (Browser, "browser.snapshot"),
+            Self::BrowserAct { .. } => (Browser, "browser.act"),
             Self::CacheWrite { .. } => (Cache, "cache.write"),
             Self::CacheRead { .. } => (Cache, "cache.read"),
             Self::IntegrationRead { .. } => (Integration, "integration.read"),

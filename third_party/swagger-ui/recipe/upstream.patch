@@ -1,12 +1,13 @@
 diff --git a/package.json b/package.json
-index 341dde3..a485129 100644
+index 341dde3..c2e474c 100644
 --- a/package.json
 +++ b/package.json
-@@ -85 +85 @@
+@@ -85 +85,2 @@
 -    "dompurify": "^3.4.13",
-+    "dompurify": "3.4.16",
++    "deepmerge-ts": "8.0.2",
++    "dompurify": "3.4.17",
 diff --git a/webpack/_config-builder.js b/webpack/_config-builder.js
-index c50244f..4a6f462 100644
+index c50244f..e58c852 100644
 --- a/webpack/_config-builder.js
 +++ b/webpack/_config-builder.js
 @@ -52,0 +53,3 @@ function buildConfig(
@@ -16,3 +17,144 @@ index c50244f..4a6f462 100644
 @@ -60 +63 @@ function buildConfig(
 -        BUILD_TIME: new Date().toUTCString(),
 +        BUILD_TIME: new Date(Number(process.env.SOURCE_DATE_EPOCH) * 1000).toUTCString(),
+@@ -119,0 +123 @@ function buildConfig(
++          deepmerge: path.resolve(__dirname, "safe-deepmerge.js"),
+diff --git a/webpack/safe-deepmerge.js b/webpack/safe-deepmerge.js
+new file mode 100644
+index 0000000..521f0a7
+--- /dev/null
++++ b/webpack/safe-deepmerge.js
+@@ -0,0 +1,133 @@
++"use strict";
++
++const { deepmergeCustom } = require("deepmerge-ts");
++
++const canUseSymbol = typeof Symbol === "function" && Symbol.for;
++const REACT_ELEMENT_TYPE = canUseSymbol ? Symbol.for("react.element") : 0xeac7;
++
++function isSpecial(value) {
++  const stringValue = Object.prototype.toString.call(value);
++  return (
++    stringValue === "[object RegExp]" ||
++    stringValue === "[object Date]" ||
++    value.$$typeof === REACT_ELEMENT_TYPE
++  );
++}
++
++function defaultIsMergeableObject(value) {
++  return !!value && typeof value === "object" && !isSpecial(value);
++}
++
++function emptyTarget(val) {
++  return Array.isArray(val) ? [] : {};
++}
++
++function defaultArrayMerge(target, source, options) {
++  return target.concat(source).map(function (element) {
++    return options.cloneUnlessOtherwiseSpecified(element, options);
++  });
++}
++
++function tryCustomMerge(values, meta, rightValue, opts, isMergeableObject) {
++  if (
++    values.length !== 2 ||
++    !meta ||
++    meta.key === undefined ||
++    !opts.customMerge ||
++    !isMergeableObject(rightValue)
++  ) {
++    return undefined;
++  }
++  const custom = opts.customMerge(meta.key);
++  return typeof custom === "function"
++    ? { value: custom(values[0], values[1], opts) }
++    : undefined;
++}
++
++/**
++ * Deepmerge-compatible wrapper backed by deepmerge-ts with safe own __proto__ definition.
++ */
++function deepmerge(target, source, options) {
++  const opts = Object.assign({}, options);
++  const isMergeableObject = opts.isMergeableObject || defaultIsMergeableObject;
++  const arrayMerge = opts.arrayMerge || defaultArrayMerge;
++
++  opts.isMergeableObject = isMergeableObject;
++  opts.arrayMerge = arrayMerge;
++
++  function cloneUnlessOtherwiseSpecified(value, currentOptions) {
++    const active = currentOptions || opts;
++    return active.clone !== false && active.isMergeableObject(value)
++      ? deepmerge(emptyTarget(value), value, active)
++      : value;
++  }
++  opts.cloneUnlessOtherwiseSpecified = cloneUnlessOtherwiseSpecified;
++
++  if (Array.isArray(target) !== Array.isArray(source)) {
++    return cloneUnlessOtherwiseSpecified(source, opts);
++  }
++  if (Array.isArray(source)) {
++    return arrayMerge(target, source, opts);
++  }
++  if (!isMergeableObject(source) || !isMergeableObject(target)) {
++    return cloneUnlessOtherwiseSpecified(source, opts);
++  }
++
++  const merge = deepmergeCustom({
++    filterValues: false,
++    metaDataUpdater: function (_previousMeta, info) {
++      return info;
++    },
++    mergeArrays: function (values, _utils, meta) {
++      const matched = tryCustomMerge(values, meta, values[1], opts, isMergeableObject);
++      if (matched) return matched.value;
++      if (values.length === 1) {
++        return values[0].map(function (element) {
++          return cloneUnlessOtherwiseSpecified(element, opts);
++        });
++      }
++      return arrayMerge(values[0], values[1], opts);
++    },
++    mergeRecords: function (values, utils, meta) {
++      const matched = tryCustomMerge(values, meta, values[1], opts, isMergeableObject);
++      if (matched) return matched.value;
++      if (values.length === 1) {
++        return cloneUnlessOtherwiseSpecified(values[0], opts);
++      }
++      if (!isMergeableObject(values[0]) || !isMergeableObject(values[1])) {
++        return cloneUnlessOtherwiseSpecified(values[values.length - 1], opts);
++      }
++      return utils.actions.defaultMerge;
++    },
++    mergeSets: function (values) {
++      return cloneUnlessOtherwiseSpecified(values[values.length - 1], opts);
++    },
++    mergeMaps: function (values) {
++      return cloneUnlessOtherwiseSpecified(values[values.length - 1], opts);
++    },
++    mergeOthers: function (values, _utils, meta) {
++      const last = values[values.length - 1];
++      const matched = tryCustomMerge(values, meta, last, opts, isMergeableObject);
++      if (matched) return matched.value;
++      if (values.length === 1) {
++        return cloneUnlessOtherwiseSpecified(values[0], opts);
++      }
++      return Array.isArray(last) || isMergeableObject(last)
++        ? cloneUnlessOtherwiseSpecified(last, opts)
++        : last;
++    },
++  });
++
++  return merge(target, source);
++}
++
++deepmerge.all = function deepmergeAll(array, options) {
++  if (!Array.isArray(array)) {
++    throw new Error("first argument should be an array");
++  }
++  return array.reduce(function (prev, next) {
++    return deepmerge(prev, next, options);
++  }, {});
++};
++
++module.exports = deepmerge;
